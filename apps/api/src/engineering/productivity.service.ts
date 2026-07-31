@@ -4,6 +4,7 @@
 import { redisCmd as redis } from "../db/redis.js";
 import type { DeveloperStats, ProductivitySummary } from "@windels/shared";
 import { DeploymentService } from "./deployments.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const LIST_KEY = "eng:devs";
 const DETAIL = (id: string) => `eng:dev:${id}`;
@@ -67,6 +68,9 @@ export const ProductivityService = {
     };
   },
   async seedIfEmpty() {
+    // Developer productivity figures (PR counts, review latency, focus score)
+    // were fabricated per-developer on first boot. Behind the demo gate now.
+    if (!demoDataEnabled()) return skipDemoSeed("engineering-productivity");
     const existing = await redis.smembers(LIST_KEY);
     if (existing.length > 0) return;
     for (const d of DEV_SEED) {

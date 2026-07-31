@@ -3,6 +3,7 @@
  */
 import { redisCmd as redis } from "../db/redis.js";
 import type { MetricTimeseries, MetricTimeseriesPoint, ServiceMetric } from "@windels/shared";
+import { demoDataEnabled } from "../config/demoData.js";
 
 const LIST_KEY = "eng:services";
 const DETAIL = (id: string) => `eng:svc:${id}`;
@@ -44,17 +45,24 @@ export const MetricsService = {
       case "availability": base = svc?.availabilityPct ?? 99.9; break;
       case "saturation": base = svc?.saturationPct ?? 45; break;
     }
-    for (let i = points - 1; i >= 0; i--) {
-      const noise = (Math.random() - 0.5) * (metric === "availability" ? 0.15 : base * 0.35);
-      let v = base + noise;
-      if (metric === "availability") v = Math.min(100, Math.max(95, v));
-      if (metric === "error_rate") v = Math.max(0, v);
-      if (metric === "saturation") v = Math.max(0, Math.min(100, v));
-      out.push({ t: new Date(now - i * 60_000).toISOString(), value: Math.round(v * 100) / 100 });
+    // No per-minute history is retained for these SLOs, so a series cannot be
+    // reconstructed. This previously fabricated one by scattering +/-35% noise
+    // around the current value, producing a convincing 60-point chart of
+    // measurements that were never taken. We report the current value as a
+    // single point instead of inventing the past.
+    if (svc) {
+      out.push({ t: new Date(now).toISOString(), value: Math.round(base * 100) / 100 });
     }
+    void points;
     return { serviceId, metric, points: out };
   },
+  /**
+   * Demo-only: nudges a service's stored metrics with random jitter so a demo
+   * dashboard visibly moves. Has no callers and is not wired to any route —
+   * gated so it can never run against real data.
+   */
   async refreshSynthetic(id: string) {
+    if (!demoDataEnabled()) return null;
     const m = await this.get(id);
     if (!m) return null;
     m.p50LatencyMs = synth(m.p50LatencyMs);

@@ -100,10 +100,21 @@ export async function bootstrapEngineering() {
     });
   }
 
-  // Pipeline runs — 50 over 7d
+  // Pipeline runs — 50 over 7d. Demo-only (this whole bootstrap is gated), but
+  // record() now requires the fields that describe a real run, so the demo data
+  // is explicit rather than minted inside the service.
+  const demoPipelines = ["ci-main", "ci-web", "ci-api", "ci-shared", "ci-e2e", "ci-release"];
+  const demoBranches = ["main", "develop", "feature/session-26", "release/1.3"];
   for (let i = 0; i < 50; i++) {
+    const failed = i % 7 === 0;
     await PipelineService.record({
+      pipeline: demoPipelines[i % demoPipelines.length]!,
+      branch: demoBranches[i % demoBranches.length]!,
+      author: ["alice", "bob", "carol", "dave", "super-admin"][i % 5]!,
+      status: failed ? "failed" : "passed",
+      durationMs: 120_000 + (i % 7) * 60_000,
       startedAt: new Date(Date.now() - Math.random() * 7 * 86400_000).toISOString(),
+      flaky: i % 13 === 0,
     });
   }
 

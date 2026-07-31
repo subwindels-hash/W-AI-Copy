@@ -48,7 +48,8 @@ export interface DeploymentRecord {
   startedAt: string;
   finishedAt?: string;
   durationMs: number;
-  leadTimeHours: number;
+  /** Commit-to-deploy lead time. Undefined unless the caller measured it. */
+  leadTimeHours?: number;
   rollbackOf?: string;
 }
 
@@ -77,8 +78,10 @@ export interface DebtItem {
   area: string;
   owner: string;
   status: DebtStatus;
-  estimatedEffortHours: number;
-  churnScore: number;
+  /** Estimated remediation effort. Undefined until someone estimates it. */
+  estimatedEffortHours?: number;
+  /** Code-churn score. Undefined until computed from real VCS history. */
+  churnScore?: number;
   createdAt: string;
   updatedAt?: string;
 }

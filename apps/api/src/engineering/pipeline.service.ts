@@ -12,10 +12,6 @@ const DETAIL = (id: string) => `eng:pipeline:${id}`;
 function iso() { return new Date().toISOString(); }
 const SER = <T>(v: T) => JSON.stringify(v);
 
-function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-
-const PIPELINE_NAMES = ["ci-main", "ci-web", "ci-api", "ci-shared", "ci-e2e", "ci-release"];
-const STAGE_NAMES = ["checkout", "install", "lint", "typecheck", "test", "build", "e2e", "deploy"];
 
 export const PipelineService = {
   async list(limit = 50): Promise<PipelineRun[]> {
@@ -27,33 +23,39 @@ export const PipelineService = {
     }
     return out;
   },
-  async record(input: Partial<PipelineRun>): Promise<PipelineRun> {
+  /**
+   * Record a CI pipeline run.
+   *
+   * This previously invented an entire run when called with no input: a random
+   * pipeline name, a status rolled from a 78/14/8 pass/fail/cancel
+   * distribution, a 2-9 minute duration split across 4-7 stages, a random
+   * author from a hard-coded list, and an 8% chance of being marked flaky.
+   * The HTTP route calls it with `{}`, so every request minted a fabricated
+   * build that then fed the CI analytics (pass rate, flaky rate, duration
+   * percentiles).
+   *
+   * A run must now describe something that actually ran: `pipeline`, `status`
+   * and `durationMs` are required. Stage timings are recorded, not apportioned,
+   * and `flaky` is only true when the caller observed a flake.
+   */
+  async record(input: Partial<PipelineRun> & { pipeline: string; status: PipelineStatus; durationMs: number }): Promise<PipelineRun> {
     const id = randomUUID();
-    const pipeline = input.pipeline ?? PIPELINE_NAMES[rand(0, PIPELINE_NAMES.length-1)];
-    const branches = ["main", "develop", "feature/session-26", "release/1.3"];
-    const statusRoll = Math.random();
-    const status: PipelineStatus = input.status ?? (statusRoll < 0.78 ? "passed" : statusRoll < 0.92 ? "failed" : "canceled");
-    const durationMs = input.durationMs ?? rand(120_000, 540_000);
-    const stageCount = rand(4, 7);
-    const chosen = STAGE_NAMES.slice(0, stageCount);
-    const stages = chosen.map((name) => {
-      const st = name === chosen[chosen.length-1] && status === "failed" ? "failed" as const : "passed" as const;
-      return { name, durationMs: Math.round(durationMs / stageCount * (0.7 + Math.random() * 0.6)), status: st as PipelineStatus };
-    });
     const n = await redis.incr(COUNTER);
     const run: PipelineRun = {
       id,
-      pipeline,
-      branch: input.branch ?? branches[n % branches.length],
-      commitSha: randomUUID().slice(0, 7),
-      author: input.author ?? ["alice","bob","carol","dave","super-admin"][n%5],
-      status,
-      startedAt: iso(),
-      finishedAt: new Date(Date.now() + durationMs).toISOString(),
-      durationMs,
-      stages,
-      flaky: Math.random() < 0.08,
+      pipeline: input.pipeline,
+      branch: input.branch ?? "unknown",
+      commitSha: input.commitSha ?? "unknown",
+      author: input.author ?? "unknown",
+      status: input.status,
+      startedAt: input.startedAt ?? iso(),
+      finishedAt: input.finishedAt ?? new Date(Date.now() + input.durationMs).toISOString(),
+      durationMs: input.durationMs,
+      // Stages come from the real build; nothing is synthesised or apportioned.
+      stages: input.stages ?? [],
+      flaky: input.flaky ?? false,
     };
+    void n;
     await redis.set(DETAIL(id), SER(run));
     await redis.lpush(LIST_KEY, id);
     await redis.ltrim(LIST_KEY, 0, 199);

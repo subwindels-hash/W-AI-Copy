@@ -36,8 +36,10 @@ export const TechDebtService = {
       area: input.area ?? "platform",
       owner: input.owner ?? "tbd",
       status: (input.status as DebtStatus) ?? "open",
-      estimatedEffortHours: input.estimatedEffortHours ?? rand(2, 24),
-      churnScore: input.churnScore ?? rand(10, 90),
+      // Effort is a human estimate and churn is derived from VCS history —
+      // both were invented here (2-24h, 10-90) and then ranked debt items.
+      estimatedEffortHours: input.estimatedEffortHours,
+      churnScore: input.churnScore,
       createdAt: iso(),
       updatedAt: iso(),
     };
@@ -66,11 +68,13 @@ export const TechDebtService = {
       bySeverity[i.severity] = (bySeverity[i.severity] ?? 0) + 1;
       byCategory[i.category] = (byCategory[i.category] ?? 0) + 1;
       byStatus[i.status] = (byStatus[i.status] ?? 0) + 1;
-      totalEffort += i.estimatedEffortHours;
+      // Only estimated items contribute to the effort rollup; unestimated ones
+      // are skipped rather than counted as 0h, which would understate the debt.
+      totalEffort += i.estimatedEffortHours ?? 0;
       if (!areaMap[i.area]) areaMap[i.area] = { items: 0, effortHours: 0, churn: 0 };
       areaMap[i.area].items++;
-      areaMap[i.area].effortHours += i.estimatedEffortHours;
-      areaMap[i.area].churn += i.churnScore;
+      areaMap[i.area].effortHours += i.estimatedEffortHours ?? 0;
+      areaMap[i.area].churn += i.churnScore ?? 0;
       if (now - new Date(i.createdAt).getTime() < 30*86400_000 && i.status !== "resolved") added++;
       if (i.updatedAt && i.status === "resolved" && now - new Date(i.updatedAt).getTime() < 30*86400_000) resolved++;
     }

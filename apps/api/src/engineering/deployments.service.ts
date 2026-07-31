@@ -30,7 +30,8 @@ export const DeploymentService = {
     const id = randomUUID();
     const n = await redis.incr(COUNTER);
     const startedAt = input.startedAt ?? iso();
-    const durationMs = input.durationMs ?? rand(90_000, 900_000);
+    // A deployment's duration is measured, not drawn from a 1.5-15 minute band.
+    const durationMs = input.durationMs ?? 0;
     // A deployment record reflects a real outcome. Absent an explicit status we
     // record "success" rather than rolling a 10% failure; a fabricated failure
     // is as misleading as a fabricated pass.
@@ -45,7 +46,9 @@ export const DeploymentService = {
       startedAt,
       finishedAt: new Date(Date.now() + durationMs).toISOString(),
       durationMs,
-      leadTimeHours: Math.round((2 + Math.random() * 20) * 10) / 10,
+      // Lead time is commit-to-deploy; it can only be derived from VCS data
+      // the caller holds. Previously a random 2-22h that fed the DORA rollup.
+      leadTimeHours: input.leadTimeHours,
       rollbackOf: input.rollbackOf,
     };
     await redis.set(DETAIL(id), SER(rec));
@@ -63,16 +66,24 @@ export const DeploymentService = {
     const in30d = deploys.filter(d => now - new Date(d.startedAt).getTime() < 30*86400_000);
     const failures = in30d.filter(d => d.status === "failed" || d.status === "rolled_back").length;
     const byService: Record<string, { deploys: number; failures: number; leadTimeHours: number }> = {};
+    // Only deployments that actually reported a lead time contribute to the
+    // DORA average; unmeasured ones are excluded rather than counted as 0h,
+    // which would silently drag the metric toward "elite".
     const leadTimes: number[] = [];
+    const leadCount: Record<string, number> = {};
     for (const d of in30d) {
-      if (!byService[d.service]) byService[d.service] = { deploys: 0, failures: 0, leadTimeHours: 0 };
+      if (!byService[d.service]) { byService[d.service] = { deploys: 0, failures: 0, leadTimeHours: 0 }; leadCount[d.service] = 0; }
       byService[d.service].deploys++;
       if (d.status === "failed" || d.status === "rolled_back") byService[d.service].failures++;
-      byService[d.service].leadTimeHours += d.leadTimeHours;
-      leadTimes.push(d.leadTimeHours);
+      if (typeof d.leadTimeHours === "number") {
+        byService[d.service].leadTimeHours += d.leadTimeHours;
+        leadCount[d.service]++;
+        leadTimes.push(d.leadTimeHours);
+      }
     }
     for (const s of Object.keys(byService)) {
-      byService[s].leadTimeHours = Math.round((byService[s].leadTimeHours / byService[s].deploys) * 10) / 10;
+      const n = leadCount[s] ?? 0;
+      byService[s].leadTimeHours = n ? Math.round((byService[s].leadTimeHours / n) * 10) / 10 : 0;
     }
     leadTimes.sort((a,b)=>a-b);
     const medianLead = leadTimes.length ? leadTimes[Math.floor(leadTimes.length/2)] : 0;

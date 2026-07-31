@@ -1732,7 +1732,7 @@ function EngineeringTab() {
                   <span className="font-semibold">{dep.service}</span>
                   <Badge variant="slate">v{dep.version}</Badge>
                   <span className="text-text-muted">by {dep.triggeredBy}</span>
-                  <span className="ml-auto text-text-muted">{Math.round(dep.durationMs/1000)}s · {dep.leadTimeHours.toFixed(1)}h lead</span>
+                  <span className="ml-auto text-text-muted">{Math.round(dep.durationMs/1000)}s{dep.leadTimeHours != null ? ` · ${dep.leadTimeHours.toFixed(1)}h lead` : ""}</span>
                 </div>
               ))}
             </CardContent>
