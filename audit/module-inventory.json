@@ -1618,10 +1618,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "config/moduleGates.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "constitution",
@@ -1686,10 +1688,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "config/moduleGates.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "conversations",
@@ -2520,11 +2524,11 @@
       "serviceFile": {
         "file": "disasterRecovery.service.ts",
         "path": "/home/user/WIN/apps/api/src/disasterRecovery/disasterRecovery.service.ts",
-        "sloc": 195,
+        "sloc": 206,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 395,
+      "serviceTotalSloc": 417,
       "serviceFiles": [
         "bootstrap.ts",
         "disasterRecovery.service.ts",
@@ -2578,10 +2582,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "config/moduleGates.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "education",
@@ -3780,7 +3786,8 @@
     },
     "tests": [
       "enterprise.spec.ts",
-      "sessions42-47.spec.ts"
+      "sessions42-47.spec.ts",
+      "config/moduleGates.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -4446,10 +4453,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "config/moduleGates.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "marketplace",
@@ -4664,6 +4673,7 @@
       "mediaFactory/publishing/uploads.test.ts",
       "mediaFactory/publishing/webhooks.test.ts",
       "config/liveFabrication.test.ts",
+      "config/moduleGates.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -5129,10 +5139,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "config/moduleGates.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "opex",
@@ -5442,7 +5454,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "platformServices.spec.ts"
+      "platformServices.spec.ts",
+      "config/moduleGates.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [

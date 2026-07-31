@@ -102,7 +102,18 @@ export const DisasterRecoveryService = {
     await redis.zadd(K.events(oid), start, s2(ev));
     await redis.zremrangebyrank(K.events(oid), 0, -201);
     const r = await redis.hgetall(K.status(oid, input.component));
-    if (r._doc) { const s: DrStatus = JSON.parse(r._doc); s.activeRegion = input.toRegion; s.lastFailoverAt = ev.completedAt; s.healthy = true; await redis.hset(K.status(oid,input.component),"_doc",s2(s)); }
+    if (r._doc) {
+      const s: DrStatus = JSON.parse(r._doc);
+      s.activeRegion = input.toRegion;
+      s.lastFailoverAt = ev.completedAt;
+      // Do NOT set `healthy = true` here. Recording that a failover was
+      // requested is not evidence that the component came up healthy in the
+      // target region — nothing in this method probes it — and `healthy` feeds
+      // the dashboard's `allHealthy` roll-up, so a failover would turn a
+      // previously-unhealthy component green by assertion. It is only set from
+      // a measured result in `recordDrillResult`.
+      await redis.hset(K.status(oid, input.component), "_doc", s2(s));
+    }
     await redis.hincrby(K.metrics(oid),"failovers30d",1);
     emitKernel("dr.failover.completed", { organizationId: oid, eventId: id, component: input.component, toRegion: input.toRegion });
     return ev;
