@@ -8,6 +8,12 @@
  */
 
 import { randomUUID, createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:languageGenerationTranslation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -590,7 +596,7 @@ async function processTextGeneration(jobId: string): Promise<void> {
   if (!job) return;
 
   const startTime = Date.now();
-  const processingTimeMs = 500 + Math.floor(Math.random() * 2000);
+  const processingTimeMs = 500 + Math.floor(_rng.next() * 2000);
 
   // Generate simulated results based on generation type
   let generatedText = "";
@@ -611,7 +617,7 @@ async function processTextGeneration(jobId: string): Promise<void> {
       translation = {
         sourceLanguage: job.config.translation?.sourceLanguage ?? "en",
         targetLanguage: job.config.translation?.targetLanguage ?? "es",
-        confidence: 0.9 + Math.random() * 0.1,
+        confidence: 0.9 + _rng.next() * 0.1,
         detectedLanguage: "en",
       };
       break;
@@ -648,12 +654,12 @@ async function processTextGeneration(jobId: string): Promise<void> {
     qa,
     grammarIssues,
     styleSuggestions,
-    readabilityScore: 60 + Math.random() * 40,
+    readabilityScore: 60 + _rng.next() * 40,
     quality: {
-      coherence: 0.85 + Math.random() * 0.15,
-      fluency: 0.9 + Math.random() * 0.1,
-      relevance: 0.8 + Math.random() * 0.2,
-      overall: 0.85 + Math.random() * 0.15,
+      coherence: 0.85 + _rng.next() * 0.15,
+      fluency: 0.9 + _rng.next() * 0.1,
+      relevance: 0.8 + _rng.next() * 0.2,
+      overall: 0.85 + _rng.next() * 0.15,
     },
   };
 
@@ -679,7 +685,7 @@ async function processBatchTranslation(jobId: string): Promise<void> {
 
   for (const text of job.texts) {
     text.translatedText = `[${text.targetLanguage}] ${text.text}`;
-    text.confidence = 0.9 + Math.random() * 0.1;
+    text.confidence = 0.9 + _rng.next() * 0.1;
     if (text.sourceLanguage === "auto") {
       text.sourceLanguage = "en";
     }
@@ -703,7 +709,7 @@ function generateCompletion(prompt: string, config?: GenerationConfig): string {
     "The AI has analyzed the input and generated this response.",
     "Here is a continuation of the text based on the context.",
   ];
-  return completions[Math.floor(Math.random() * completions.length)];
+  return completions[Math.floor(_rng.next() * completions.length)];
 }
 
 function generateTranslation(text: string, config?: GenerationConfig["translation"]): string {
@@ -715,7 +721,7 @@ function generateParaphrases(text: string, config?: GenerationConfig["paraphrase
   const numVariants = config?.numVariants ?? 3;
   return Array.from({ length: numVariants }, (_, i) => ({
     text: `Paraphrase ${i + 1}: ${text}`,
-    similarity: 0.8 + Math.random() * 0.2,
+    similarity: 0.8 + _rng.next() * 0.2,
     creativity: config?.creativity ?? 0.5,
   }));
 }
@@ -727,7 +733,7 @@ function generateRewrite(text: string, config?: GenerationConfig["rewrite"]): st
 function generateQA(question: string, config?: GenerationConfig["qa"]): TextGenerationResult["qa"] {
   return {
     answer: "Based on the provided context, the answer is: This is a generated answer.",
-    confidence: 0.85 + Math.random() * 0.15,
+    confidence: 0.85 + _rng.next() * 0.15,
     sources: config?.context ? [
       {
         text: config.context.slice(0, 100),

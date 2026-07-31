@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelSecurityPenetrationTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -426,7 +432,7 @@ export function runAdversarialTest(
 
   // Simulate adversarial test
   const samplesTested = 1000;
-  const successRate = Math.random() * 0.3; // 0-30% success rate
+  const successRate = _rng.next() * 0.3; // 0-30% success rate
   const samplesSuccessful = Math.floor(samplesTested * successRate);
 
   const adversarialTest: AdversarialTest = {
@@ -440,7 +446,7 @@ export function runAdversarialTest(
       successRate: successRate * 100,
       samplesTested,
       samplesSuccessful,
-      averagePerturbation: Math.random() * 0.1,
+      averagePerturbation: _rng.next() * 0.1,
       modelRobustness: successRate < 0.05 ? 'high' : successRate < 0.15 ? 'medium' : 'low',
       vulnerabilities: successRate > 0.1 ? [`Model vulnerable to ${attackType} attacks`] : [],
       recommendations: successRate > 0.1

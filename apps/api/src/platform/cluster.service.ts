@@ -25,6 +25,14 @@ import { redisCmd } from "../db/redis.js";
 import { logger } from "../observability/logger.js";
 import { demoDataEnabled } from "../config/demoData.js";
 import type { ClusterStatus, ClusterNode, K8sWorkload, K8sPod, HealthStatus, K8sWorkloadKind } from "@windels/shared/infrastructure";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('platform');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const CLUSTER_KEY = "infra:cluster";
 const NODES_KEY = "infra:nodes";
@@ -33,9 +41,6 @@ const PODS_KEY = "infra:pods";
 
 function now() { return new Date().toISOString(); }
 let seeded = false;
-
-function rand(min: number, max: number) { return Math.random() * (max - min) + min; }
-
 const DEFAULT_WORKLOADS: Array<{ name: string; kind: K8sWorkloadKind; ns: string; image: string; replicas: number; strategy?: any }> = [
   { name: "windels-api", kind: "Deployment", ns: "windels", image: "windels/api:latest", replicas: 3, strategy: "Canary" },
   { name: "windels-web", kind: "Deployment", ns: "windels", image: "windels/web:latest", replicas: 2, strategy: "BlueGreen" },
@@ -49,6 +54,7 @@ const DEFAULT_WORKLOADS: Array<{ name: string; kind: K8sWorkloadKind; ns: string
 
 export const ClusterService = {
   async seed() {
+    _rng.reseed(`seed`);
     if (seeded) return; seeded = true;
     try {
       const existing = await redisCmd.get(CLUSTER_KEY);
@@ -85,7 +91,7 @@ export const ClusterService = {
       return {
         id: randomUUID(), name: w.name, namespace: w.ns, kind: w.kind,
         desiredReplicas: w.replicas, readyReplicas: ready, availableReplicas: ready,
-        currentRevision: `rev-${Math.floor(Math.random() * 9000 + 1000)}`,
+        currentRevision: `rev-${Math.floor(_rng.next() * 9000 + 1000)}`,
         updatedAt: now(), image: w.image, status: "healthy", labels: { app: w.name },
         strategy: w.strategy ?? "RollingUpdate",
       };
@@ -100,7 +106,7 @@ export const ClusterService = {
           namespace: wl.namespace, workloadName: wl.name,
           nodeName: nodes[1 + (r % 2)].name, phase: "Running",
           ip: `10.42.${Math.floor(rand(0, 255))}.${Math.floor(rand(0, 255))}`,
-          restartCount: Math.random() < 0.2 ? 1 : 0,
+          restartCount: _rng.next() < 0.2 ? 1 : 0,
           startedAt: now(), status: "healthy",
           containers: [{ name: "main", image: wl.image, ready: true, restartCount: 0, cpuMs: rand(50, 500), memoryBytes: rand(60_000_000, 500_000_000) }],
         });
@@ -149,6 +155,7 @@ export const ClusterService = {
    * whatever a real source reported.
    */
   async probe(): Promise<ClusterStatus> {
+    _rng.reseed(`probe`);
     await this.seed();
     const nodes = await this.listNodes();
     const pods = await this.listPods();

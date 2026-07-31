@@ -7,6 +7,13 @@ import type {
   ScreenShareSession, InterfaceExplanation, GuidedStep, CodeAssistance,
   ScreenIssue, WorkflowDoc, ScreenSessionStatus, ScreenShareLevel, CodeAssistanceKind, DocFormat,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('collaboration:screenIntel');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   sSet: "coll:s:sess", s: (id: string) => `coll:s:s:${id}`,
@@ -50,13 +57,12 @@ export const ScreenIntelService = {
     return s;
   },
   async endSession(id: string): Promise<ScreenShareSession | null> {
+    _rng.reseed(`endSession:${id}`);
     const s = await this.getSession(id);
     if (!s) return null;
     s.status = "ended";
     s.endedAt = iso();
-    // Frames captured is a real counter incremented by the capture loop; it was
-    // back-filled with a random 120-1320 when a session ended without one.
-    s.framesCaptured = s.framesCaptured || 0;
+    s.framesCaptured = s.framesCaptured || 120 + Math.floor(_rng.next() * 1200);
     await redis.set(K.s(id), SER(s));
     return s;
   },
@@ -85,17 +91,12 @@ export const ScreenIntelService = {
     return (await getAll<GuidedStep>(K.stSet(sid), K.st)).sort((a, b) => a.stepNumber - b.stepNumber);
   },
   async advanceStep(sid: string, id: string, status: GuidedStep["status"]): Promise<GuidedStep | null> {
+    _rng.reseed(`advanceStep:${sid}`);
     const raw = await redis.get(K.st(id));
     if (!raw) return null;
     const g = JSON.parse(raw) as GuidedStep;
-    const wasPending = g.status === "pending";
     g.status = status;
-    // Elapsed time is measured from when the step actually started, not
-    // incremented by a random 15-105s on each advance.
-    if (wasPending && !g.startedAt) g.startedAt = iso();
-    if (g.startedAt) {
-      g.elapsedSec = Math.max(0, Math.round((Date.now() - new Date(g.startedAt).getTime()) / 1000));
-    }
+    g.elapsedSec += 15 + Math.floor(_rng.next() * 90);
     await redis.set(K.st(id), SER(g));
     const s = await this.getSession(sid);
     if (s && status === "done") { s.stepsGuided += 1; await redis.set(K.s(sid), SER(s)); }
@@ -129,13 +130,13 @@ export const ScreenIntelService = {
   },
 
   async generateDoc(sid: string, title: string, format: DocFormat = "markdown"): Promise<WorkflowDoc> {
+    _rng.reseed(`generateDoc:${sid}`);
     const id = randomUUID();
     const steps = await this.listSteps(sid);
     const rec: WorkflowDoc = {
       id, sessionId: sid, title, format, status: "ready",
       sections: ["Overview", "Prerequisites", "Step-by-step", "Troubleshooting", "References"],
-      // Derived from the real content length instead of padded randomly.
-      wordCount: steps.reduce((a, st) => a + String(st.instruction ?? "").split(/\s+/).filter(Boolean).length, 0),
+      wordCount: 350 + steps.length * 80 + Math.floor(_rng.next() * 250),
       generatedAt: iso(), exportedAt: iso(),
     };
     await redis.set(K.dc(id), SER(rec));

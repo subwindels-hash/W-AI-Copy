@@ -4,6 +4,8 @@
 import { redisCmd as redis } from "../db/redis.js";
 import type { MetricTimeseries, MetricTimeseriesPoint, ServiceMetric } from "@windels/shared";
 import { demoDataEnabled } from "../config/demoData.js";
+import { makeRng } from "../utils/detRng.js";
+const _rng = makeRng("engineering:metrics");
 
 const LIST_KEY = "eng:services";
 const DETAIL = (id: string) => `eng:svc:${id}`;
@@ -11,7 +13,7 @@ const DETAIL = (id: string) => `eng:svc:${id}`;
 const SER = <T>(v: T) => JSON.stringify(v);
 
 function synth(base: number, jitterPct = 0.2) {
-  return Math.max(0, Math.round(base * (1 + (Math.random() - 0.5) * jitterPct * 2)));
+  return Math.max(0, Math.round(base * (1 + (_rng.next() - 0.5) * jitterPct * 2)));
 }
 
 export const MetricsService = {
@@ -69,8 +71,8 @@ export const MetricsService = {
     m.p95LatencyMs = Math.round(m.p50LatencyMs * 2.2);
     m.p99LatencyMs = Math.round(m.p50LatencyMs * 3.5);
     m.rps = synth(m.rps, 0.25);
-    m.errorRatePct = Math.max(0, Math.round((m.errorRatePct + (Math.random() - 0.5) * 0.2) * 100) / 100);
-    m.saturationPct = Math.max(0, Math.min(100, Math.round(m.saturationPct + (Math.random() - 0.5) * 5)));
+    m.errorRatePct = Math.max(0, Math.round((m.errorRatePct + (_rng.next() - 0.5) * 0.2) * 100) / 100);
+    m.saturationPct = Math.max(0, Math.min(100, Math.round(m.saturationPct + (_rng.next() - 0.5) * 5)));
     const budgetBurn = (m.p95LatencyMs > m.sloLatencyMs ? 0.5 : 0) + m.errorRatePct * 0.5;
     m.errorBudgetRemainingPct = Math.max(0, Math.round((m.errorBudgetRemainingPct - budgetBurn) * 10) / 10);
     await this.upsert(m);

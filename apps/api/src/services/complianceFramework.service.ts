@@ -14,6 +14,12 @@
 import { prisma } from "../db/client.js";
 import { redisCmd } from "../db/redis.js";
 import { logger } from "../config/logger.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:complianceFramework');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -385,7 +391,7 @@ export async function addEvidence(
     if (control) {
       const newEvidence: ComplianceEvidence = {
         ...evidence,
-        id: `evidence_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        id: `evidence_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
         uploadedAt: new Date().toISOString(),
         uploadedBy,
         verified: false,
@@ -462,7 +468,7 @@ export async function addGap(
     if (control) {
       const newGap: ComplianceGap = {
         ...gap,
-        id: `gap_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+        id: `gap_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
         createdAt: new Date().toISOString(),
         status: "open",
       };
@@ -639,7 +645,7 @@ export async function generateComplianceReport(
   const executiveSummary = `Compliance assessment for ${framework.name} shows a compliance score of ${status.complianceScore}% with ${status.implementedControls + status.verifiedControls} of ${status.totalControls - status.notApplicableControls} applicable controls implemented. ${status.openGaps} gaps remain open, including ${status.criticalGaps} critical gaps requiring immediate attention.`;
 
   const report: ComplianceReport = {
-    id: `report_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `report_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
     frameworkId,
     generatedAt: new Date().toISOString(),
     generatedBy,

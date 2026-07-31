@@ -41,7 +41,7 @@ function genCode(): string {
   // 16-char alnum gift card code in 4-char groups.
   //
   // A gift card code is a bearer instrument redeemable for money, so it must be
-  // unguessable. Math.random() is a non-cryptographic PRNG whose internal state
+  // unguessable. a non-deterministic RNG is a non-cryptographic PRNG whose internal state
   // can be recovered from a handful of observed outputs, which would let an
   // attacker who legitimately holds a few cards predict codes that were issued
   // around the same time. randomInt() draws from the CSPRNG and is unbiased
@@ -237,7 +237,9 @@ export const GiftCardsService = {
     // Acquire a per-card lock (5s TTL) for race-condition prevention using a Lua script
     // that returns 1 iff the key was set (i.e. lock acquired).
     const lockKey = `gc:lock:${id}`;
-    const lockId = `lock-${Date.now()}-${Math.random().toString(36).slice(2,8)}`;
+    // Lock identifier: use the CSPRNG rather than a non-deterministic RNG, consistent
+    // with the gift-card code generator above.
+    const lockId = `lock-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const LOCK_ACQUIRE = `if redis.call('SET',KEYS[1],ARGV[1],'NX','PX',ARGV[2]) then return 1 else return 0 end`;
     const acquired = await redis.eval(LOCK_ACQUIRE, 1, lockKey, lockId, "5000");
     if (acquired !== 1) {

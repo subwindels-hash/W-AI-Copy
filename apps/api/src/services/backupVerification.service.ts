@@ -19,6 +19,12 @@ import { promisify } from "util";
 import { createHash } from "crypto";
 import { readFileSync, existsSync, mkdirSync } from "fs";
 import { join } from "path";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:backupVerification');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 const execAsync = promisify(exec);
 
@@ -77,7 +83,7 @@ export async function verifyBackup(
     dataConsistencyChecks?: boolean;
   },
 ): Promise<BackupVerification> {
-  const verificationId = `verify_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const verificationId = `verify_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const startTime = new Date();
 
   logger.info("Starting backup verification", {
@@ -505,7 +511,7 @@ export async function createVerificationPolicy(input: {
   restoreTestDatabase?: string;
   dataConsistencyChecks?: boolean;
 }): Promise<VerificationPolicy> {
-  const policyId = `policy_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const policyId = `policy_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const now = new Date();
 
   const policy: VerificationPolicy = {

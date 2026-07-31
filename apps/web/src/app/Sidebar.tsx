@@ -19,6 +19,8 @@ import {
   Mic,
   Film,
   BookOpen,
+  FolderKanban,
+  UsersRound,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -28,6 +30,8 @@ const navItems = [
   { to: "/app/voice", icon: Mic, label: "Voice Studio" },
   { to: "/app/media", icon: Film, label: "Media Factory" },
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
+  { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },
+  { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
   { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
   { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
   { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },
@@ -93,7 +97,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
             !collapsed && "bg-white/5"
           )}
         >
-          {collapsed ? "v0.89" : "Sessions 38–75 · v0.89.0"}
+          {collapsed ? "v0.90" : "Sessions 84–85 · v0.90.0"}
         </div>
       </div>
     </aside>

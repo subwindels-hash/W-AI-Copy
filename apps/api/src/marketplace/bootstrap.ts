@@ -78,7 +78,7 @@ export async function bootstrapMarketplace(logger?: any): Promise<void> {
       const ent = await DigitalTwinsService.addEntity(twin.id, { name: e.name, kind: e.kind, tags: e.tags, metadata: { twin: t.name } });
       // Seed a few telemetry points
       for (let i = 0; i < 3; i++) {
-        await DigitalTwinsService.recordTelemetry(twin.id, ent.id, ["temp","utilization","throughput"][i%3], Math.random()*100, ["°C","%","u/h"][i%3], "seed-bootstrap");
+        await DigitalTwinsService.recordTelemetry(twin.id, ent.id, ["temp","utilization","throughput"][i%3], 50, ["°C","%","u/h"][i%3], "seed-bootstrap");
       }
     }
   }

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiDataGovernance');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -455,7 +461,7 @@ export function runDataQualityCheck(assetId: string, ruleId: string): DataQualit
   const id = randomUUID();
 
   // Simulate quality check
-  const score = 85 + Math.random() * 15;
+  const score = 85 + _rng.next() * 15;
   const passed = score >= rule.threshold;
 
   const issues: DataQualityIssue[] = [];
@@ -465,8 +471,8 @@ export function runDataQualityCheck(assetId: string, ruleId: string): DataQualit
       type: 'invalid',
       severity: rule.severity,
       description: `Quality check failed: ${rule.name}`,
-      affectedRows: Math.floor(Math.random() * 100),
-      affectedPercentage: Math.random() * 10,
+      affectedRows: Math.floor(_rng.next() * 100),
+      affectedPercentage: _rng.next() * 10,
       detectedAt: now,
     });
   }
@@ -479,7 +485,7 @@ export function runDataQualityCheck(assetId: string, ruleId: string): DataQualit
     score,
     issues,
     executedAt: now,
-    duration: Math.random() * 60,
+    duration: _rng.next() * 60,
   };
 
   const assetChecks = dataQualityChecks.get(assetId) || [];

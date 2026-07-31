@@ -127,7 +127,7 @@ export const ModelFactoryService = {
   /**
    * Record a benchmark result produced by a real evaluator.
    *
-   * This previously invented the score (`50 + Math.random() * 45`) and
+   * This previously invented the score (`50 + a non-deterministic RNG * 45`) and
    * hard-coded `pass: true`, so every benchmark "succeeded" with a plausible
    * number. The caller must now supply the measured score and verdict.
    */

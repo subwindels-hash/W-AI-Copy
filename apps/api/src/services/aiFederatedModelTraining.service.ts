@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiFederatedModelTraining');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -1052,7 +1058,7 @@ function selectParticipants(job: FederatedTrainingJob): FederatedParticipant[] {
 }
 
 function selectRandom(participants: FederatedParticipant[], count: number): FederatedParticipant[] {
-  const shuffled = [...participants].sort(() => Math.random() - 0.5);
+  const shuffled = [...participants].sort(() => _rng.next() - 0.5);
   return shuffled.slice(0, count);
 }
 

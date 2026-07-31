@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelCodeReview');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -259,8 +265,8 @@ export function createReviewRequest(params: {
     path: f.path,
     type: f.type as any,
     size: f.size,
-    addedLines: Math.floor(Math.random() * 100),
-    removedLines: Math.floor(Math.random() * 50),
+    addedLines: Math.floor(_rng.next() * 100),
+    removedLines: Math.floor(_rng.next() * 50),
     comments: 0,
     status: 'pending',
   }));

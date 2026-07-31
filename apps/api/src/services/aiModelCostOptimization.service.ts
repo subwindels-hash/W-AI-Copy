@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelCostOptimization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -268,12 +274,12 @@ export function analyzeCosts(params: {
   const id = randomUUID();
 
   // Simulate cost calculation
-  const computeCost = 500 + Math.random() * 1000;
-  const storageCost = 50 + Math.random() * 100;
-  const networkCost = 30 + Math.random() * 50;
-  const inferenceCost = 200 + Math.random() * 500;
-  const trainingCost = 100 + Math.random() * 300;
-  const otherCost = 20 + Math.random() * 50;
+  const computeCost = 500 + _rng.next() * 1000;
+  const storageCost = 50 + _rng.next() * 100;
+  const networkCost = 30 + _rng.next() * 50;
+  const inferenceCost = 200 + _rng.next() * 500;
+  const trainingCost = 100 + _rng.next() * 300;
+  const otherCost = 20 + _rng.next() * 50;
 
   const totalCost = computeCost + storageCost + networkCost + inferenceCost + trainingCost + otherCost;
 
@@ -281,35 +287,35 @@ export function analyzeCosts(params: {
     compute: {
       cost: computeCost,
       percentage: (computeCost / totalCost) * 100,
-      usage: 1000 + Math.random() * 2000,
+      usage: 1000 + _rng.next() * 2000,
       unitPrice: 0.05,
       unit: 'GPU-hours',
     },
     storage: {
       cost: storageCost,
       percentage: (storageCost / totalCost) * 100,
-      usage: 100 + Math.random() * 200,
+      usage: 100 + _rng.next() * 200,
       unitPrice: 0.1,
       unit: 'GB-month',
     },
     network: {
       cost: networkCost,
       percentage: (networkCost / totalCost) * 100,
-      usage: 500 + Math.random() * 1000,
+      usage: 500 + _rng.next() * 1000,
       unitPrice: 0.01,
       unit: 'GB',
     },
     inference: {
       cost: inferenceCost,
       percentage: (inferenceCost / totalCost) * 100,
-      usage: 10000 + Math.random() * 50000,
+      usage: 10000 + _rng.next() * 50000,
       unitPrice: 0.001,
       unit: 'requests',
     },
     training: {
       cost: trainingCost,
       percentage: (trainingCost / totalCost) * 100,
-      usage: 50 + Math.random() * 100,
+      usage: 50 + _rng.next() * 100,
       unitPrice: 2,
       unit: 'hours',
     },
@@ -329,8 +335,8 @@ export function analyzeCosts(params: {
     const timestamp = new Date(Date.now() - (days - i) * 24 * 60 * 60 * 1000).toISOString();
     trends.push({
       timestamp,
-      cost: totalCost / days * (0.8 + Math.random() * 0.4),
-      usage: 1000 * (0.8 + Math.random() * 0.4),
+      cost: totalCost / days * (0.8 + _rng.next() * 0.4),
+      usage: 1000 * (0.8 + _rng.next() * 0.4),
       unitPrice: 0.05,
     });
   }

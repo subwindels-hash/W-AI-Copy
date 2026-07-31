@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelSmokeTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -300,8 +306,8 @@ function executeSmokeTests(run: SmokeTestRun, suite: SmokeTestSuite): void {
     }
 
     // Simulate test execution
-    const passed = Math.random() > 0.05; // 95% pass rate
-    const responseTime = 50 + Math.random() * 200; // 50-250ms
+    const passed = _rng.next() > 0.05; // 95% pass rate
+    const responseTime = 50 + _rng.next() * 200; // 50-250ms
     totalResponseTime += responseTime;
 
     results.push({

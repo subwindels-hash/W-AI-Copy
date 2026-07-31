@@ -10,6 +10,12 @@
 
 import { randomUUID } from "node:crypto";
 import { createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:smartContractManagement');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -337,8 +343,8 @@ export async function compileSmartContract(contractId: string): Promise<{
     // Calculate gas estimates
     const gasEstimate = success
       ? {
-          deployment: Math.floor(contract.sourceCode.length * 100 + 21000 + Math.random() * 500000),
-          averageFunctionCall: Math.floor(21000 + Math.random() * 100000),
+          deployment: Math.floor(contract.sourceCode.length * 100 + 21000 + _rng.next() * 500000),
+          averageFunctionCall: Math.floor(21000 + _rng.next() * 100000),
         }
       : undefined;
 
@@ -413,7 +419,7 @@ export async function deploySmartContract(params: {
     .digest("hex")
     .slice(0, 40);
   
-  const blockNumber = 18000000 + Math.floor(Math.random() * 1000000);
+  const blockNumber = 18000000 + Math.floor(_rng.next() * 1000000);
   const blockHash = "0x" + createHash("sha256")
     .update(`block-${blockNumber}`)
     .digest("hex");
@@ -543,7 +549,7 @@ export async function interactWithContract(params: {
     gasUsed = contract.gasEstimate?.averageFunctionCall ?? 50000;
     
     // 5% chance of revert for simulation
-    if (Math.random() < 0.05) {
+    if (_rng.next() < 0.05) {
       status = "reverted";
       errorMessage = "Transaction reverted: execution reverted";
     }
@@ -564,7 +570,7 @@ export async function interactWithContract(params: {
     callerAddress: params.callerAddress,
     status,
     errorMessage,
-    blockNumber: deployment.blockNumber + Math.floor(Math.random() * 1000),
+    blockNumber: deployment.blockNumber + Math.floor(_rng.next() * 1000),
     executedAt: now,
     confirmedAt: status === "success" ? now : undefined,
   };
@@ -952,7 +958,7 @@ function parseParams(paramString: string): ABIParam[] {
     const filteredParts = parts.filter(p => p !== "indexed" && p !== "memory" && p !== "storage" && p !== "calldata");
     
     return {
-      name: filteredParts[1] || `param${Math.floor(Math.random() * 100)}`,
+      name: filteredParts[1] || `param${Math.floor(_rng.next() * 100)}`,
       type: mapSolidityType(filteredParts[0] || "uint256"),
       indexed,
     };
@@ -1005,10 +1011,10 @@ function simulateReadOperation(
     return [contract.name];
   }
   if (methodLower === "totalsupply" || methodLower === "total_supply") {
-    return [String(Math.floor(Math.random() * 1e24))];
+    return [String(Math.floor(_rng.next() * 1e24))];
   }
   if (methodLower === "balanceof" || methodLower === "balance_of") {
-    return [String(Math.floor(Math.random() * 1e20))];
+    return [String(Math.floor(_rng.next() * 1e20))];
   }
   if (methodLower === "owner") {
     return ["0x" + createHash("sha256").update("owner").digest("hex").slice(0, 40)];
@@ -1017,7 +1023,7 @@ function simulateReadOperation(
     return [18];
   }
   if (methodLower.includes("get") || methodLower.includes("read")) {
-    return [Math.floor(Math.random() * 1000)];
+    return [Math.floor(_rng.next() * 1000)];
   }
 
   return [null];

@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiSystemOptimization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -383,10 +389,10 @@ function generateResourceSnapshots(run: SystemOptimizationRun): ResourceSnapshot
   const now = new Date().toISOString();
 
   for (const rt of run.scope.resourceTypes) {
-    const count = rt === "gpu" ? 4 + Math.floor(Math.random() * 8) : rt === "cpu" ? 8 + Math.floor(Math.random() * 16) : 2 + Math.floor(Math.random() * 4);
+    const count = rt === "gpu" ? 4 + Math.floor(_rng.next() * 8) : rt === "cpu" ? 8 + Math.floor(_rng.next() * 16) : 2 + Math.floor(_rng.next() * 4);
     for (let i = 0; i < count; i++) {
-      const util = 15 + Math.random() * 75;
-      const capacity = rt === "gpu" ? (16 + Math.floor(Math.random() * 3) * 8) * 1024 : rt === "cpu" ? 32 + Math.floor(Math.random() * 5) * 16 : rt === "memory" ? 128 + Math.floor(Math.random() * 4) * 64 : 1000;
+      const util = 15 + _rng.next() * 75;
+      const capacity = rt === "gpu" ? (16 + Math.floor(_rng.next() * 3) * 8) * 1024 : rt === "cpu" ? 32 + Math.floor(_rng.next() * 5) * 16 : rt === "memory" ? 128 + Math.floor(_rng.next() * 4) * 64 : 1000;
       snapshots.push({
         id: `rs_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
         resourceType: rt,
@@ -396,8 +402,8 @@ function generateResourceSnapshots(run: SystemOptimizationRun): ResourceSnapshot
         allocatedCapacity: capacity,
         usedCapacity: Math.round(capacity * util / 100),
         availableCapacity: Math.round(capacity * (1 - util / 100)),
-        temperature: rt === "gpu" ? 45 + Math.random() * 35 : undefined,
-        powerUsage: rt === "gpu" ? 100 + Math.random() * 250 : undefined,
+        temperature: rt === "gpu" ? 45 + _rng.next() * 35 : undefined,
+        powerUsage: rt === "gpu" ? 100 + _rng.next() * 250 : undefined,
         timestamp: now,
       });
     }
@@ -411,11 +417,11 @@ function generateWorkloadProfiles(run: SystemOptimizationRun): WorkloadProfile[]
   const modelNames = ["image-classifier-v3", "text-encoder-large", "recommendation-engine", "fraud-detector", "speech-to-text-v2", "object-detector-yolo", "sentiment-analyzer", "translation-model"];
 
   for (const wt of run.scope.workloadTypes) {
-    const numModels = 1 + Math.floor(Math.random() * 3);
+    const numModels = 1 + Math.floor(_rng.next() * 3);
     for (let i = 0; i < numModels; i++) {
-      const modelName = modelNames[Math.floor(Math.random() * modelNames.length)];
-      const rps = wt === "real-time-inference" ? 50 + Math.random() * 500 : wt === "batch-inference" ? 10 + Math.random() * 50 : wt === "streaming" ? 100 + Math.random() * 1000 : 5 + Math.random() * 20;
-      const baseLatency = wt === "real-time-inference" ? 10 + Math.random() * 50 : wt === "streaming" ? 5 + Math.random() * 20 : 100 + Math.random() * 500;
+      const modelName = modelNames[Math.floor(_rng.next() * modelNames.length)];
+      const rps = wt === "real-time-inference" ? 50 + _rng.next() * 500 : wt === "batch-inference" ? 10 + _rng.next() * 50 : wt === "streaming" ? 100 + _rng.next() * 1000 : 5 + _rng.next() * 20;
+      const baseLatency = wt === "real-time-inference" ? 10 + _rng.next() * 50 : wt === "streaming" ? 5 + _rng.next() * 20 : 100 + _rng.next() * 500;
 
       profiles.push({
         id: `wp_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
@@ -424,14 +430,14 @@ function generateWorkloadProfiles(run: SystemOptimizationRun): WorkloadProfile[]
         modelName: `${modelName}-${i}`,
         requestsPerSecond: Math.round(rps * 100) / 100,
         averageLatencyMs: Math.round(baseLatency * 100) / 100,
-        p99LatencyMs: Math.round(baseLatency * (2 + Math.random() * 3) * 100) / 100,
-        batchSize: wt === "batch-inference" ? 32 + Math.floor(Math.random() * 6) * 16 : 1 + Math.floor(Math.random() * 8),
-        gpuMemoryUsageMb: 2048 + Math.floor(Math.random() * 6) * 1024,
-        cpuUsagePercent: 20 + Math.random() * 60,
-        queueDepth: Math.floor(Math.random() * 50),
-        errorRate: Math.random() * 0.05,
-        slaCompliancePercent: 85 + Math.random() * 15,
-        activeReplicas: 1 + Math.floor(Math.random() * 4),
+        p99LatencyMs: Math.round(baseLatency * (2 + _rng.next() * 3) * 100) / 100,
+        batchSize: wt === "batch-inference" ? 32 + Math.floor(_rng.next() * 6) * 16 : 1 + Math.floor(_rng.next() * 8),
+        gpuMemoryUsageMb: 2048 + Math.floor(_rng.next() * 6) * 1024,
+        cpuUsagePercent: 20 + _rng.next() * 60,
+        queueDepth: Math.floor(_rng.next() * 50),
+        errorRate: _rng.next() * 0.05,
+        slaCompliancePercent: 85 + _rng.next() * 15,
+        activeReplicas: 1 + Math.floor(_rng.next() * 4),
       });
     }
   }
@@ -478,7 +484,7 @@ function analyzeUtilization(run: SystemOptimizationRun): UtilizationAnalysis {
         resourceName: s.resourceName,
         resourceType: rt,
         peakUtilization: s.utilizationPercent,
-        duration: 5 + Math.floor(Math.random() * 55),
+        duration: 5 + Math.floor(_rng.next() * 55),
         impact: `High ${rt} utilization causing increased latency and potential request queuing`,
         recommendedAction: `Scale up ${rt} resources or redistribute workloads from ${s.resourceName}`,
       });
@@ -491,7 +497,7 @@ function analyzeUtilization(run: SystemOptimizationRun): UtilizationAnalysis {
         resourceName: s.resourceName,
         resourceType: rt,
         averageUtilization: s.utilizationPercent,
-        duration: 30 + Math.floor(Math.random() * 30),
+        duration: 30 + Math.floor(_rng.next() * 30),
         wastedCostPerHour: Math.round((1 - s.utilizationPercent / 100) * (rt === "gpu" ? 3.5 : rt === "tpu" ? 4.0 : 0.5) * 100) / 100,
         recommendedAction: `Consolidate workloads or scale down ${s.resourceName} to reduce costs`,
       });
@@ -503,11 +509,11 @@ function analyzeUtilization(run: SystemOptimizationRun): UtilizationAnalysis {
     modelId: wp.modelId,
     modelName: wp.modelName,
     workloadType: wp.workloadType,
-    gpuEfficiencyPercent: Math.round((40 + Math.random() * 50) * 100) / 100,
-    memoryEfficiencyPercent: Math.round((50 + Math.random() * 40) * 100) / 100,
-    throughputEfficiencyPercent: Math.round((30 + Math.random() * 60) * 100) / 100,
-    costPerRequest: Math.round((0.001 + Math.random() * 0.01) * 10000) / 10000,
-    optimizationScore: Math.round((40 + Math.random() * 50) * 100) / 100,
+    gpuEfficiencyPercent: Math.round((40 + _rng.next() * 50) * 100) / 100,
+    memoryEfficiencyPercent: Math.round((50 + _rng.next() * 40) * 100) / 100,
+    throughputEfficiencyPercent: Math.round((30 + _rng.next() * 60) * 100) / 100,
+    costPerRequest: Math.round((0.001 + _rng.next() * 0.01) * 10000) / 10000,
+    optimizationScore: Math.round((40 + _rng.next() * 50) * 100) / 100,
   }));
 
   const recommendations: string[] = [];
@@ -541,7 +547,7 @@ function generateOptimizationActions(run: SystemOptimizationRun): OptimizationAc
       description: `Reduce ${cs.resourceType} allocation for ${cs.resourceName} (currently at ${cs.averageUtilization.toFixed(1)}% utilization)`,
       targetResource: cs.resourceId,
       targetResourceType: cs.resourceType,
-      impact: { latencyImprovementPercent: 0, throughputImprovementPercent: 0, costReductionPercent: 20 + Math.round(Math.random() * 30), resourceUtilizationDelta: 20 + Math.round(Math.random() * 20) },
+      impact: { latencyImprovementPercent: 0, throughputImprovementPercent: 0, costReductionPercent: 20 + Math.round(_rng.next() * 30), resourceUtilizationDelta: 20 + Math.round(_rng.next() * 20) },
       risk: "medium",
       estimatedDowntimeMs: cs.resourceType === "gpu" ? 30000 : 5000,
       requiresRestart: false,
@@ -561,7 +567,7 @@ function generateOptimizationActions(run: SystemOptimizationRun): OptimizationAc
       description: `Increase ${hs.resourceType} capacity for ${hs.resourceName} (peak utilization ${hs.peakUtilization.toFixed(1)}%)`,
       targetResource: hs.resourceId,
       targetResourceType: hs.resourceType,
-      impact: { latencyImprovementPercent: 15 + Math.round(Math.random() * 20), throughputImprovementPercent: 20 + Math.round(Math.random() * 25), costReductionPercent: 0, resourceUtilizationDelta: -(15 + Math.round(Math.random() * 15)) },
+      impact: { latencyImprovementPercent: 15 + Math.round(_rng.next() * 20), throughputImprovementPercent: 20 + Math.round(_rng.next() * 25), costReductionPercent: 0, resourceUtilizationDelta: -(15 + Math.round(_rng.next() * 15)) },
       risk: "low",
       estimatedDowntimeMs: 10000,
       requiresRestart: false,
@@ -581,7 +587,7 @@ function generateOptimizationActions(run: SystemOptimizationRun): OptimizationAc
       description: `Implement dynamic batching (batch_size=4-8, timeout=5ms) for ${wp.modelName} to improve GPU utilization`,
       targetResource: wp.modelId,
       targetResourceType: "inference-server",
-      impact: { latencyImprovementPercent: 5 + Math.round(Math.random() * 10), throughputImprovementPercent: 30 + Math.round(Math.random() * 40), costReductionPercent: 15 + Math.round(Math.random() * 15), resourceUtilizationDelta: 15 + Math.round(Math.random() * 20) },
+      impact: { latencyImprovementPercent: 5 + Math.round(_rng.next() * 10), throughputImprovementPercent: 30 + Math.round(_rng.next() * 40), costReductionPercent: 15 + Math.round(_rng.next() * 15), resourceUtilizationDelta: 15 + Math.round(_rng.next() * 20) },
       risk: "low",
       estimatedDowntimeMs: 0,
       requiresRestart: false,
@@ -601,7 +607,7 @@ function generateOptimizationActions(run: SystemOptimizationRun): OptimizationAc
       description: "Redistribute AI workloads from overloaded nodes to underutilized nodes",
       targetResource: "cluster",
       targetResourceType: "inference-server",
-      impact: { latencyImprovementPercent: 10 + Math.round(Math.random() * 15), throughputImprovementPercent: 10 + Math.round(Math.random() * 15), costReductionPercent: 5 + Math.round(Math.random() * 10), resourceUtilizationDelta: 10 },
+      impact: { latencyImprovementPercent: 10 + Math.round(_rng.next() * 15), throughputImprovementPercent: 10 + Math.round(_rng.next() * 15), costReductionPercent: 5 + Math.round(_rng.next() * 10), resourceUtilizationDelta: 10 },
       risk: "medium",
       estimatedDowntimeMs: 15000,
       requiresRestart: false,
@@ -621,7 +627,7 @@ function generateOptimizationActions(run: SystemOptimizationRun): OptimizationAc
       description: `Reduce tail latency for ${wp.modelName} (p99=${wp.p99LatencyMs.toFixed(0)}ms vs avg=${wp.averageLatencyMs.toFixed(0)}ms)`,
       targetResource: wp.modelId,
       targetResourceType: "inference-server",
-      impact: { latencyImprovementPercent: 20 + Math.round(Math.random() * 25), throughputImprovementPercent: 10 + Math.round(Math.random() * 15), costReductionPercent: 5 + Math.round(Math.random() * 10), resourceUtilizationDelta: 5 },
+      impact: { latencyImprovementPercent: 20 + Math.round(_rng.next() * 25), throughputImprovementPercent: 10 + Math.round(_rng.next() * 15), costReductionPercent: 5 + Math.round(_rng.next() * 10), resourceUtilizationDelta: 5 },
       risk: "medium",
       estimatedDowntimeMs: 5000,
       requiresRestart: true,
@@ -641,7 +647,7 @@ function generateOptimizationActions(run: SystemOptimizationRun): OptimizationAc
       description: "Place complementary models (e.g., encoder + decoder) on the same node to reduce network overhead",
       targetResource: "cluster",
       targetResourceType: "gpu",
-      impact: { latencyImprovementPercent: 8 + Math.round(Math.random() * 12), throughputImprovementPercent: 5 + Math.round(Math.random() * 10), costReductionPercent: 10 + Math.round(Math.random() * 15), resourceUtilizationDelta: 10 + Math.round(Math.random() * 10) },
+      impact: { latencyImprovementPercent: 8 + Math.round(_rng.next() * 12), throughputImprovementPercent: 5 + Math.round(_rng.next() * 10), costReductionPercent: 10 + Math.round(_rng.next() * 15), resourceUtilizationDelta: 10 + Math.round(_rng.next() * 10) },
       risk: "medium",
       estimatedDowntimeMs: 20000,
       requiresRestart: true,

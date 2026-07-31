@@ -3,6 +3,12 @@
  * Phase 1 — AI test orchestration infrastructure
  */
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiTestOrchestration');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 export type AITestSuiteStatus = "draft" | "active" | "archived";
 export type AITestCaseStatus = "draft" | "active" | "disabled";
@@ -145,7 +151,7 @@ export async function executeAITestSuite(suiteId: string, triggeredBy: any = "ma
   
   // Simulate test execution
   for (const testCaseId of suite.testCases) {
-    const passed = Math.random() > 0.2;
+    const passed = _rng.next() > 0.2;
     if (passed) testRun.passedTests++;
     else testRun.failedTests++;
   }

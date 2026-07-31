@@ -170,7 +170,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 148 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 223 passing, 0 failing** (after merging `main`).
 
 ---
 
@@ -182,3 +182,38 @@ Gates: **build 4/4 · typecheck 5/5 · tests 148 passing, 0 failing.**
 `hasData` on the health dashboard exists for exactly this reason: the UI states
 plainly that nothing is recorded instead of drawing zeroed gauges that read like
 real readings.
+
+---
+
+## 5. Reconciliation with `main` (2026-07-31)
+
+While this branch was in flight, parallel sessions merged their own fix for the
+same problem. Both approaches were kept, split by **what the number means**:
+
+| Approach | Where it applies |
+|---|---|
+| **Deterministic per-tenant RNG** (`utils/detRng.ts`, from `main`) — a stable, reproducible placeholder | Descriptive dashboard counters where a plausible demo value is harmless |
+| **Record-only / "not measured"** (this branch) — remove the value, model absence honestly | Anything **clinical, financial, security-related, or a pass/fail verdict** |
+
+A deterministic RNG still fabricates a blood-pressure reading or a cloud bill —
+it just does so *consistently*. That is fine for a demo tile and unacceptable
+for a vital sign, so the 49 conflicting files were split 34 / 15 on that line.
+
+Kept from **this branch** (safety-critical): S75 health, S65 biomedical, S60
+training safety gate, gift-card CSPRNG codes, deployment/DR/update verdicts,
+release canary promotion, robotics maintenance alerts, camera detection
+confidence, trading signals, FinOps cost, fabric trust scores.
+
+Kept from **`main`** (descriptive counters + genuinely better infrastructure):
+the `driverAdapters` + WASM Prisma setup — which solves the offline-engine
+problem more cleanly than this branch's `--no-engine` workaround — plus S83
+ETL, S84/S85 frontends, canvas collab, and the `noRandomData.guard.test.ts`
+source-level guard.
+
+**Two pre-existing bugs on `main` were fixed during the merge:** 29 duplicate
+`import` statements (`makeRng`, `validate`) that made the API fail to compile,
+and a `registerMediaFactoryWebhookRoutes` import with no matching export.
+
+The guard test is now satisfied repo-wide: every remaining `Math.random()` is
+in its allowlist (the `random` agent tool, echo-provider jitter, request-id
+generation, WebRTC tokens, flagged-synthetic market candles).

@@ -53,8 +53,8 @@ export async function bootstrapMlOps() {
     });
     // add version (in draft) & metrics
     await ModelsService.addVersion(mm.id, "1.0.0", [
-      { name:"mmlu", value: 70 + Math.floor(Math.random()*20), pass:true, unit:"%" },
-      { name:"humaneval", value: 50 + Math.floor(Math.random()*40), pass:true, unit:"%" },
+      { name:"mmlu", value: 80, pass:true, unit:"%" },
+      { name:"humaneval", value: 68, pass:true, unit:"%" },
       { name:"latency_p95", value: m.lat, threshold: m.lat*1.5, unit:"ms", pass:true },
     ], undefined, undefined, "draft");
     // advance flagship models through staging -> approval; production promotion happens via deploy()
@@ -204,7 +204,7 @@ export async function bootstrapMlOps() {
       namespace:"default", shards:idx.shards, replicas:1, region:idx.region,
     });
     // backfill document counts
-    created.documents = Math.floor(100+Math.random()*10000);
+    created.documents = 4200;
     created.vectors = created.documents * 8;
     created.sizeMb = Math.floor(created.vectors * 0.004);
     created.lastIndexedAt = iso();

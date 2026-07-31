@@ -10,6 +10,14 @@ import {
   SdkPackage, SDK_KINDS, SdkKind, CliCommand, EmulatorInstance,
   DebugSession, ProfileRun, CodeTemplate, SdkDashboard,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('sdk');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   pkg: (oid: string, id: string) => `sdk:p:${oid}:${id}`,
@@ -24,9 +32,6 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
-function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
-
 const CLI_GROUPS: CliCommand[] = [
   {name:"auth login", description:"Authenticate with WINDELS", group:"auth", flags:[{flag:"--token",desc:"Service token"}]},
   {name:"auth whoami", description:"Show current identity", group:"auth", flags:[]},
@@ -68,6 +73,7 @@ const TEMPLATES_SEED: CodeTemplate[] = [
 
 export const SdkService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.pkgs(oid))) return;
     const now = new Date().toISOString();
     for (const s of SDK_PACKAGES_SEED) {
@@ -124,7 +130,7 @@ export const SdkService = {
     const meta = await redis.hgetall(K.meta(oid));
     return {
       packages, commands: CLI_GROUPS, emulatorsRunning: emuRunning, debugSessionsActive: dbgActive + dbgIds.length,
-      profileRuns30d: profIds.length + randInt(10,80),
+      profileRuns30d: profIds.length, // real: count of persisted profiler runs
       templates: TEMPLATES_SEED,
       totalDownloads: packages.reduce((s,p)=>s+p.downloads,0),
       latestCliVersion: meta.latestCliVersion || "0.85.0",
@@ -133,6 +139,7 @@ export const SdkService = {
   },
 
   async startEmulator(input: { name: string; sdkKind: SdkKind; port?: number; organizationId?: string }): Promise<EmulatorInstance> {
+    _rng.reseed(`startEmulator:${input}`);
     const oid = input.organizationId || "org-windels";
     const id = uid("emu-"); const now = new Date().toISOString();
     const emu: EmulatorInstance = {
@@ -150,6 +157,7 @@ export const SdkService = {
   },
 
   async runProfiler(input: { target: string; organizationId?: string }): Promise<ProfileRun> {
+    _rng.reseed(`runProfiler:${input}`);
     const oid = input.organizationId || "org-windels";
     const id = uid("prof-");
     const pr: ProfileRun = {

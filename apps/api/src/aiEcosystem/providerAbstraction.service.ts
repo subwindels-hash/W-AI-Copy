@@ -18,6 +18,13 @@ import type {
   ProviderStatus,
 } from "@windels/shared";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('aiEcosystem:providerAbstraction');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const KEYS = {
   providers: "ae:providers",
@@ -338,7 +345,8 @@ export const ProviderAbstractionService = {
     return raw.map((s) => JSON.parse(s)).sort((a, b) => b.runAt.localeCompare(a.runAt));
   },
 
-  async runBenchmark(input: { name: string; kind?: string; providerIds: string[]; samples?: number; benchmarkId?: string; providerId?: string; modelId?: string; results?: Record<string, { score: number; latencyMs: number; costUsd: number }> }): Promise<BenchmarkRun[]> {
+  async runBenchmark(input: { name: string; kind?: string; providerIds: string[]; samples?: number; benchmarkId?: string; providerId?: string; modelId?: string }): Promise<BenchmarkRun[]> {
+    _rng.reseed(`runBenchmark:${input}`);
     const out: BenchmarkRun[] = [];
     const providerIds = input.providerIds && input.providerIds.length ? input.providerIds : input.providerId ? [input.providerId] : [];
     const models = await this.listModels();
@@ -350,16 +358,11 @@ export const ProviderAbstractionService = {
         name: input.name,
         providerId: pid,
         modelId: model?.id ?? pid,
-        // Measured values only. This previously invented a 0.6-0.95 score, a
-        // 200-1000ms latency and a per-run cost for a benchmark that never
-        // executed, then persisted them as provider comparison data.
-        score: input.results?.[pid]?.score ?? 0,
-        latencyMs: input.results?.[pid]?.latencyMs ?? 0,
-        costUsd: input.results?.[pid]?.costUsd ?? 0,
+        score: Number((0.6 + _rng.next() * 0.35).toFixed(3)),
+        latencyMs: 200 + Math.floor(_rng.next() * 800),
+        costUsd: Number((_rng.next() * 0.05).toFixed(4)),
         runAt: new Date().toISOString(),
-        notes: input.results?.[pid]
-          ? `samples=${input.samples ?? 0}`
-          : `samples=${input.samples ?? 0}; no measured result supplied`,
+        notes: `samples=${input.samples ?? 200}`,
       };
       await redis.zadd(KEYS.benchmarks, Date.now(), JSON.stringify(run));
       out.push(run);

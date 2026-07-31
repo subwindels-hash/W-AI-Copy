@@ -16,6 +16,12 @@
 import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { redisCmd } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:webApplicationFirewall');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -320,7 +326,7 @@ export async function inspectRequest(request: {
     for (const input of inputs) {
       if (rule.pattern.test(input.value)) {
         const event: WAFEvent = {
-          id: `event_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+          id: `event_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`,
           timestamp: new Date().toISOString(),
           attackType: rule.attackType,
           severity: rule.severity,
@@ -367,7 +373,7 @@ export async function inspectRequest(request: {
   if (isBlocked) {
     blocked = true;
     attacks.push({
-      id: `event_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+      id: `event_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`,
       timestamp: new Date().toISOString(),
       attackType: "sql_injection", // Generic attack type for IP block
       severity: "high",

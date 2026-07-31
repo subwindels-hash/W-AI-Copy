@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiBackupManagement');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -297,7 +303,7 @@ export async function executeBackup(
     record.status = 'completed';
     record.endTime = new Date().toISOString();
     record.duration = (new Date(record.endTime).getTime() - new Date(record.startTime).getTime()) / 1000;
-    record.sizeBytes = Math.floor(Math.random() * 10000000000); // 0-10GB
+    record.sizeBytes = Math.floor(_rng.next() * 10000000000); // 0-10GB
     record.compressedSizeBytes = Math.floor(record.sizeBytes * 0.6);
     record.storageLocation = `s3://backup-bucket/${policy.organizationId}/${backupId}`;
     record.checksum = generateChecksum();

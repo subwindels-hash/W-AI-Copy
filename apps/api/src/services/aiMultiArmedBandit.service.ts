@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiMultiArmedBandit');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -104,8 +110,8 @@ function epsilonGreedySelect(
   epsilon: number
 ): BanditArm {
   // Exploration: random arm with probability epsilon
-  if (Math.random() < epsilon) {
-    return arms[Math.floor(Math.random() * arms.length)];
+  if (_rng.next() < epsilon) {
+    return arms[Math.floor(_rng.next() * arms.length)];
   }
 
   // Exploitation: best arm with probability 1-epsilon
@@ -159,7 +165,7 @@ function thompsonSamplingSelect(
 function gammaSample(shape: number): number {
   // Simplified Gamma sampling (Marsaglia and Tsang's method)
   if (shape < 1) {
-    return gammaSample(shape + 1) * Math.pow(Math.random(), 1 / shape);
+    return gammaSample(shape + 1) * Math.pow(_rng.next(), 1 / shape);
   }
 
   const d = shape - 1/3;
@@ -175,7 +181,7 @@ function gammaSample(shape: number): number {
     } while (v <= 0);
 
     v = v * v * v;
-    const u = Math.random();
+    const u = _rng.next();
 
     if (u < 1 - 0.0331 * (x * x) * (x * x)) {
       return d * v;
@@ -189,8 +195,8 @@ function gammaSample(shape: number): number {
 
 function randomNormal(): number {
   // Box-Muller transform
-  const u1 = Math.random();
-  const u2 = Math.random();
+  const u1 = _rng.next();
+  const u2 = _rng.next();
   return Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
 }
 
@@ -203,7 +209,7 @@ function softmaxSelect(arms: BanditArm[], temperature: number): BanditArm {
   const probabilities = expRewards.map(e => e / sumExp);
 
   // Select based on probabilities
-  const random = Math.random();
+  const random = _rng.next();
   let cumulative = 0;
 
   for (let i = 0; i < arms.length; i++) {

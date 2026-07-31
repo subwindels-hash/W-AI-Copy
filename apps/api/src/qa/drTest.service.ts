@@ -10,6 +10,13 @@ import { assertion } from "./testRunner.service.js";
 import { env } from "../config/env.js";
 import { RegionService } from "../platform/region.service.js";
 import type { TestCase, TestCaseResult, DrConfig } from "@windels/shared/qa";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('qa:drTest');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const BASE = `http://127.0.0.1:${env.API_PORT}/api/v1`;
 
@@ -38,14 +45,14 @@ export async function runDrTest(c: TestCase): Promise<TestCaseResult> {
     } else if (cfg.scenario === "backup-restore" || cfg.scenario === "db-failover" || cfg.scenario === "redis-restore") {
       // Simulate backup snapshot + restore (no actual data loss in MVP)
       const t1 = performance.now();
-      await sleep(50 + Math.random()*150); // simulate backup
-      const snapshotBytes = Math.floor(1_000_000 + Math.random()*50_000_000);
-      await sleep(30 + Math.random()*200);  // simulate restore
+      await sleep(50 + _rng.next()*150); // simulate backup
+      const snapshotBytes = Math.floor(1_000_000 + _rng.next()*50_000_000);
+      await sleep(30 + _rng.next()*200);  // simulate restore
       rtoMs = performance.now() - t1; rpoMs = 200; // 200ms acceptable RPO for MVP
       res.logs.push(`restored snapshot (${(snapshotBytes/1024/1024).toFixed(1)} MiB) in ${Math.round(rtoMs)}ms`);
     } else if (cfg.scenario === "dns-failover" || cfg.scenario === "total-outage") {
       const t1 = performance.now();
-      await sleep(80 + Math.random()*300); // simulate DNS propagation / cold start
+      await sleep(80 + _rng.next()*300); // simulate DNS propagation / cold start
       // Verify health returns after recovery
       const h = await fetch(`${BASE}/health`);
       rtoMs = performance.now() - t1; rpoMs = 500; success = h.status === 200;

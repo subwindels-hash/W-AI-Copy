@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiErrorAnalysis');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -364,15 +370,15 @@ export async function recordError(params: {
     environment: "production",
     hardwareInfo: {
       gpuType: "NVIDIA A100",
-      gpuMemoryUsed: Math.floor(Math.random() * 40000) + 10000,
+      gpuMemoryUsed: Math.floor(_rng.next() * 40000) + 10000,
       gpuMemoryTotal: 80000,
-      cpuUsage: Math.random() * 100,
-      memoryUsed: Math.floor(Math.random() * 32000) + 8000,
+      cpuUsage: _rng.next() * 100,
+      memoryUsed: Math.floor(_rng.next() * 32000) + 8000,
       memoryTotal: 64000,
     },
     recentErrors: [],
-    concurrentRequests: Math.floor(Math.random() * 50) + 1,
-    timeSinceLastDeployment: Math.floor(Math.random() * 720) + 1,
+    concurrentRequests: Math.floor(_rng.next() * 50) + 1,
+    timeSinceLastDeployment: Math.floor(_rng.next() * 720) + 1,
   };
   const error: AIError = {
     id: `aie_${randomUUID().replace(/-/g, "").slice(0, 16)}`,
@@ -537,7 +543,7 @@ function generateRootCauses(error: AIError): RootCause[] {
     { desc: "Missing retry logic for transient failures causes permanent errors from temporary conditions", cat: "infrastructure-error", sub: "network-error", fix: "Implement exponential backoff retry with jitter for transient errors", effort: "small" },
     { desc: "Model version mismatch between training and serving environments", cat: "configuration-error", sub: "shape-mismatch", fix: "Implement model version pinning and validation at deployment time", effort: "medium" },
   ];
-  const secondary = secondaryCauses[Math.floor(Math.random() * secondaryCauses.length)];
+  const secondary = secondaryCauses[Math.floor(_rng.next() * secondaryCauses.length)];
   causes.push({
     id: `rc_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
     description: secondary.desc,

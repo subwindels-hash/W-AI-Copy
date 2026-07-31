@@ -33,11 +33,11 @@ export async function bootstrapCollaboration() {
   const connectors = [];
   for (const c of connDefs as unknown as any[]) {
     const co = await MeetingsService.registerConnector(c);
-    co.meetingsToday = 2 + Math.floor(Math.random() * 12);
-    co.minutesTranscribed24h = 420 + Math.floor(Math.random() * 4200);
+    co.meetingsToday = 6;
+    co.minutesTranscribed24h = 2400;
     co.languagesActive = c.platform === "slack-huddle" ? ["en"] : ["en", "es", "fr", "de"];
-    co.lastSyncAt = new Date(Date.now() - Math.random() * 1800_000).toISOString();
-    if (Math.random() < 0.1) co.status = "syncing";
+    co.lastSyncAt = new Date(Date.now() - 900_000).toISOString();
+    co.status = "connected";
     const { redisCmd } = await import("../db/redis.js");
     await redisCmd.set(`coll:m:conn:${co.id}`, JSON.stringify(co));
     connectors.push(co);
@@ -77,8 +77,8 @@ export async function bootstrapCollaboration() {
         principalId: i === 5 ? "ai_notetaker" : `u_${100 + i}`,
         displayName: speakerNames[i] || `Attendee ${i + 1}`,
         role: i === 0 ? "host" : i === 5 ? "ai-participant" : "attendee",
-        talkTimeSec: 60 + Math.floor(Math.random() * 900),
-        interjections: Math.floor(Math.random() * 8),
+        talkTimeSec: 300,
+        interjections: 3,
         sentiment: (["positive", "neutral", "mixed", "negative"] as const)[i % 4],
         permissionGated: i === 3,
       });
@@ -96,7 +96,7 @@ export async function bootstrapCollaboration() {
   for (const [mid, txt] of Object.entries(snippets)) {
     await MeetingsService.addSegment(mid, {
       startSec: 60, endSec: 78, speakerLabel: "Host",
-      text: txt, confidence: 0.92 + Math.random() * 0.06, language: "en",
+      text: txt, confidence: 0.95, language: "en",
       translated: { es: "[es] " + txt, fr: "[fr] " + txt },
     });
   }
@@ -186,11 +186,11 @@ export async function bootstrapCollaboration() {
   ];
   for (const fd of findDefs) {
     const p = camPipes[fd.pipe];
-    const conf = 0.62 + Math.random() * 0.34;
+    const conf = 0.79;
     const det = await CameraIntelService.emitDetection(p.id, {
-      cameraId: `cam-${fd.pipe}-${Math.floor(Math.random() * p.cameraCount) + 1}`,
+      cameraId: `cam-${fd.pipe}-1`,
       kind: fd.kind, label: fd.label, confidence: conf,
-      bbox: { x: 120 + Math.random() * 200, y: 80 + Math.random() * 200, w: 90, h: 90 },
+      bbox: { x: 200, y: 160, w: 90, h: 90 },
     });
     await CameraIntelService.openFinding(p.id, det.id, {
       kind: fd.kind, title: fd.title, severity: fd.sev, detail: fd.detail,

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiGovernanceAnalytics');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -237,11 +243,11 @@ const governanceDashboards = new Map<string, GovernanceDashboard>();
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
 function generatePolicyAnalytics(): PolicyAnalytics {
-  const totalViolations = Math.floor(Math.random() * 100) + 20;
+  const totalViolations = Math.floor(_rng.next() * 100) + 20;
   
   return {
-    totalPolicies: Math.floor(Math.random() * 20) + 5,
-    activePolicies: Math.floor(Math.random() * 15) + 5,
+    totalPolicies: Math.floor(_rng.next() * 20) + 5,
+    activePolicies: Math.floor(_rng.next() * 15) + 5,
     violationsByPolicy: [
       { policyId: 'pol_1', policyName: 'Data Privacy Policy', violationCount: Math.floor(totalViolations * 0.3), severity: 'high' },
       { policyId: 'pol_2', policyName: 'Model Approval Policy', violationCount: Math.floor(totalViolations * 0.25), severity: 'medium' },
@@ -263,15 +269,15 @@ function generatePolicyAnalytics(): PolicyAnalytics {
     ],
     violationTrend: Array.from({ length: 12 }, (_, i) => ({
       date: new Date(Date.now() - (11 - i) * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      value: Math.floor(Math.random() * 20) + 5,
+      value: Math.floor(_rng.next() * 20) + 5,
     })),
     topViolators: [
       { modelId: 'model_1', modelName: 'Customer Churn Predictor', violationCount: 15, lastViolationAt: new Date().toISOString(), severity: 'high' },
       { modelId: 'model_2', modelName: 'Fraud Detection v2', violationCount: 12, lastViolationAt: new Date().toISOString(), severity: 'medium' },
     ],
     resolutionMetrics: {
-      averageResolutionTimeHours: 48 + Math.random() * 24,
-      resolutionRate: 0.75 + Math.random() * 0.2,
+      averageResolutionTimeHours: 48 + _rng.next() * 24,
+      resolutionRate: 0.75 + _rng.next() * 0.2,
       unresolvedViolations: Math.floor(totalViolations * 0.25),
       escalatedViolations: Math.floor(totalViolations * 0.05),
     },
@@ -279,7 +285,7 @@ function generatePolicyAnalytics(): PolicyAnalytics {
 }
 
 function generateApprovalAnalytics(): ApprovalAnalytics {
-  const totalApprovals = Math.floor(Math.random() * 200) + 50;
+  const totalApprovals = Math.floor(_rng.next() * 200) + 50;
   const approvedCount = Math.floor(totalApprovals * 0.7);
   const rejectedCount = Math.floor(totalApprovals * 0.15);
   const pendingApprovals = totalApprovals - approvedCount - rejectedCount;
@@ -289,7 +295,7 @@ function generateApprovalAnalytics(): ApprovalAnalytics {
     pendingApprovals,
     approvedCount,
     rejectedCount,
-    averageApprovalTimeHours: 24 + Math.random() * 48,
+    averageApprovalTimeHours: 24 + _rng.next() * 48,
     bottlenecks: [
       {
         stage: 'Technical Review',
@@ -309,7 +315,7 @@ function generateApprovalAnalytics(): ApprovalAnalytics {
     approvalRate: approvedCount / totalApprovals,
     approvalTrend: Array.from({ length: 12 }, (_, i) => ({
       date: new Date(Date.now() - (11 - i) * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      value: Math.floor(Math.random() * 20) + 10,
+      value: Math.floor(_rng.next() * 20) + 10,
     })),
     reviewerWorkload: [
       { reviewerId: 'rev_1', reviewerName: 'Alice Johnson', assignedApprovals: 15, completedApprovals: 45, averageReviewTimeHours: 8, backlog: 5 },
@@ -319,7 +325,7 @@ function generateApprovalAnalytics(): ApprovalAnalytics {
 }
 
 function generateComplianceAnalytics(): ComplianceAnalytics {
-  const overallScore = 75 + Math.random() * 20;
+  const overallScore = 75 + _rng.next() * 20;
   
   return {
     overallComplianceScore: overallScore,
@@ -334,7 +340,7 @@ function generateComplianceAnalytics(): ComplianceAnalytics {
     ],
     complianceTrend: Array.from({ length: 12 }, (_, i) => ({
       date: new Date(Date.now() - (11 - i) * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      value: 70 + i * 2 + Math.random() * 5,
+      value: 70 + i * 2 + _rng.next() * 5,
     })),
     gapAnalysis: [
       {
@@ -359,7 +365,7 @@ function generateComplianceAnalytics(): ComplianceAnalytics {
 }
 
 function generateCertificationAnalytics(): CertificationAnalytics {
-  const totalCertifications = Math.floor(Math.random() * 100) + 30;
+  const totalCertifications = Math.floor(_rng.next() * 100) + 30;
   
   return {
     totalCertifications,
@@ -381,11 +387,11 @@ function generateCertificationAnalytics(): CertificationAnalytics {
     },
     expirationForecast: Array.from({ length: 6 }, (_, i) => ({
       month: new Date(Date.now() + (i + 1) * 30 * 24 * 60 * 60 * 1000).toISOString(),
-      expiringCount: Math.floor(Math.random() * 10) + 2,
+      expiringCount: Math.floor(_rng.next() * 10) + 2,
       standards: ['GDPR Compliance', 'Fairness Standards'],
     })),
     renewalRate: 0.85,
-    averageCertificationTime: 72 + Math.random() * 48,
+    averageCertificationTime: 72 + _rng.next() * 48,
   };
 }
 
@@ -403,7 +409,7 @@ export function generateGovernanceDashboard(params: {
   const complianceAnalytics = generateComplianceAnalytics();
   const certificationAnalytics = generateCertificationAnalytics();
   
-  const totalModels = Math.floor(Math.random() * 50) + 20;
+  const totalModels = Math.floor(_rng.next() * 50) + 20;
   const governanceHealthScore = (
     complianceAnalytics.overallComplianceScore * 0.4 +
     (100 - policyAnalytics.violationsBySeverity.critical * 5) * 0.3 +

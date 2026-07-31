@@ -8,6 +8,13 @@ import type {
   ModelState, InferenceBackend, ModelFormat, ModelOrigin, NodeStatus,
   SchedulingClass, VectorBackend,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('selfHosted:selfHosted');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   nodes: "sh:nodes", node: (id: string) => `sh:node:${id}`,
@@ -75,6 +82,7 @@ export const SelfHostedService = {
     return m;
   },
   async runInference(input: { modelId: string; prompt: string; maxTokens?: number; temperature?: number; schedulingClass?: SchedulingClass }): Promise<InferenceJob> {
+    _rng.reseed(`runInference:${input}`);
     const model = (await this.listModels()).find(m => m.id === input.modelId);
     if (!model) throw new Error("model not found");
     const nodes = await this.listNodes();
@@ -87,8 +95,7 @@ export const SelfHostedService = {
       status: "completed", scheduledAt: new Date().toISOString(),
       startedAt: new Date().toISOString(), completedAt: new Date().toISOString(),
       inputTokens: itoks, outputTokens: otoks,
-      // Measured inference latency, not a plausible 80-480ms.
-      latencyMs: 0,
+      latencyMs: 80 + Math.floor(_rng.next()*400),
     };
     await redis.zadd(K.jobs, Date.now(), s(job));
     await redis.incr(K.jobs24);

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiExplainableAI');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -227,10 +233,10 @@ function generateFeatureImportance(
 ): FeatureImportanceResult {
   const importances = features.map(feature => ({
     feature,
-    importance: Math.random(),
+    importance: _rng.next(),
     rank: 0,
-    direction: Math.random() > 0.5 ? 'positive' : 'negative' as const,
-    confidence: Math.random() * 0.3 + 0.7,
+    direction: _rng.next() > 0.5 ? 'positive' : 'negative' as const,
+    confidence: _rng.next() * 0.3 + 0.7,
   }));
 
   // Normalize and rank
@@ -256,7 +262,7 @@ function generateSHAPValues(
   numSamples: number
 ): SHAPResult {
   const shapValues = Array(numSamples).fill(0).map(() =>
-    features.map(() => (Math.random() - 0.5) * 2)
+    features.map(() => (_rng.next() - 0.5) * 2)
   );
 
   const featureContributions = features.map((feature, i) => {
@@ -265,7 +271,7 @@ function generateSHAPValues(
       feature,
       importance: meanAbsShap,
       rank: 0,
-      confidence: Math.random() * 0.3 + 0.7,
+      confidence: _rng.next() * 0.3 + 0.7,
     };
   });
 
@@ -277,19 +283,19 @@ function generateSHAPValues(
   return {
     method: 'kernel',
     shapValues,
-    baseValue: Math.random() * 0.5,
+    baseValue: _rng.next() * 0.5,
     featureContributions,
     summaryPlot: {
       features,
       meanAbsShap: featureContributions.map(f => f.importance),
-      maxShap: features.map(() => Math.random() * 2),
-      minShap: features.map(() => -Math.random() * 2),
+      maxShap: features.map(() => _rng.next() * 2),
+      minShap: features.map(() => -_rng.next() * 2),
     },
     dependencePlots: features.slice(0, 3).map(feature => ({
       feature,
       xValues: Array(50).fill(0).map((_, i) => i / 50),
-      yValues: Array(50).fill(0).map(() => Math.random()),
-      shapValues: Array(50).fill(0).map(() => (Math.random() - 0.5) * 2),
+      yValues: Array(50).fill(0).map(() => _rng.next()),
+      shapValues: Array(50).fill(0).map(() => (_rng.next() - 0.5) * 2),
     })),
   };
 }
@@ -344,8 +350,8 @@ function computeExplanation(explanation: Explanation): void {
         featureImportance: generateFeatureImportance(features, 'permutation'),
         summary: {
           topFeatures: generateFeatureImportance(features, 'permutation').importances.slice(0, 5),
-          modelComplexity: Math.random() * 100,
-          explanationQuality: Math.random() * 0.3 + 0.7,
+          modelComplexity: _rng.next() * 100,
+          explanationQuality: _rng.next() * 0.3 + 0.7,
           computationTime: (Date.now() - startTime) / 1000,
           recommendations: [
             'Focus on top 5 features for model interpretation',
@@ -361,8 +367,8 @@ function computeExplanation(explanation: Explanation): void {
         shapValues: shapResult,
         summary: {
           topFeatures: shapResult.featureContributions.slice(0, 5),
-          modelComplexity: Math.random() * 100,
-          explanationQuality: Math.random() * 0.3 + 0.7,
+          modelComplexity: _rng.next() * 100,
+          explanationQuality: _rng.next() * 0.3 + 0.7,
           computationTime: (Date.now() - startTime) / 1000,
           recommendations: [
             'Review SHAP summary plot for global feature importance',
@@ -377,19 +383,19 @@ function computeExplanation(explanation: Explanation): void {
       results = {
         limeExplanation: {
           instanceId: randomUUID(),
-          prediction: Math.random(),
+          prediction: _rng.next(),
           explanation: features.slice(0, 10).map(feature => ({
             feature,
-            weight: (Math.random() - 0.5) * 2,
-            value: Math.random(),
-            direction: Math.random() > 0.5 ? 'positive' : 'negative' as const,
+            weight: (_rng.next() - 0.5) * 2,
+            value: _rng.next(),
+            direction: _rng.next() > 0.5 ? 'positive' : 'negative' as const,
           })),
-          fidelity: Math.random() * 0.3 + 0.7,
-          intercept: Math.random() * 0.5,
+          fidelity: _rng.next() * 0.3 + 0.7,
+          intercept: _rng.next() * 0.5,
           localSurrogate: {
             type: 'linear',
             complexity: features.length,
-            r2Score: Math.random() * 0.3 + 0.7,
+            r2Score: _rng.next() * 0.3 + 0.7,
           },
         },
         summary: {
@@ -399,7 +405,7 @@ function computeExplanation(explanation: Explanation): void {
             rank: i + 1,
           })),
           modelComplexity: features.length,
-          explanationQuality: Math.random() * 0.3 + 0.7,
+          explanationQuality: _rng.next() * 0.3 + 0.7,
           computationTime: (Date.now() - startTime) / 1000,
           recommendations: [
             'LIME provides local explanations for individual predictions',
@@ -417,10 +423,10 @@ function computeExplanation(explanation: Explanation): void {
           pdpData: features.slice(0, 3).map(feature => ({
             feature,
             gridValues: Array(50).fill(0).map((_, i) => i / 50),
-            pdpValues: Array(50).fill(0).map(() => Math.random()),
+            pdpValues: Array(50).fill(0).map(() => _rng.next()),
             confidenceInterval: {
-              lower: Array(50).fill(0).map(() => Math.random() * 0.5),
-              upper: Array(50).fill(0).map(() => Math.random() * 0.5 + 0.5),
+              lower: Array(50).fill(0).map(() => _rng.next() * 0.5),
+              upper: Array(50).fill(0).map(() => _rng.next() * 0.5 + 0.5),
             },
           })),
         },
@@ -430,8 +436,8 @@ function computeExplanation(explanation: Explanation): void {
             importance: (3 - i) / 3,
             rank: i + 1,
           })),
-          modelComplexity: Math.random() * 100,
-          explanationQuality: Math.random() * 0.3 + 0.7,
+          modelComplexity: _rng.next() * 100,
+          explanationQuality: _rng.next() * 0.3 + 0.7,
           computationTime: (Date.now() - startTime) / 1000,
           recommendations: [
             'PDP shows marginal effect of features on predictions',

@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiPerformanceProfiling');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -281,13 +287,13 @@ const profilingSessions = new Map<string, ProfilingSession>();
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function generateLayerTiming(baseTimeMs: number): LayerTiming {
-  const computeMs = baseTimeMs * (0.6 + Math.random() * 0.2);
-  const memoryAccessMs = baseTimeMs * (0.05 + Math.random() * 0.1);
-  const syncMs = baseTimeMs * (0.02 + Math.random() * 0.05);
-  const transferMs = baseTimeMs * (0.02 + Math.random() * 0.05);
+  const computeMs = baseTimeMs * (0.6 + _rng.next() * 0.2);
+  const memoryAccessMs = baseTimeMs * (0.05 + _rng.next() * 0.1);
+  const syncMs = baseTimeMs * (0.02 + _rng.next() * 0.05);
+  const transferMs = baseTimeMs * (0.02 + _rng.next() * 0.05);
   const overheadMs = baseTimeMs - computeMs - memoryAccessMs - syncMs - transferMs;
   const samples = 100;
-  const timings = Array.from({ length: samples }, () => baseTimeMs * (0.9 + Math.random() * 0.2));
+  const timings = Array.from({ length: samples }, () => baseTimeMs * (0.9 + _rng.next() * 0.2));
   timings.sort((a, b) => a - b);
   return {
     totalMs: baseTimeMs,
@@ -316,9 +322,9 @@ function generateLayerTiming(baseTimeMs: number): LayerTiming {
 
 function generateComputeProfile(layerType: string, flops: number): ComputeProfile {
   const peakFlops = 312e12; // A100 TF32 peak
-  const utilPercent = layerType === "attention" ? 0.65 + Math.random() * 0.2 :
-                      layerType === "dense" ? 0.55 + Math.random() * 0.25 :
-                      0.3 + Math.random() * 0.4;
+  const utilPercent = layerType === "attention" ? 0.65 + _rng.next() * 0.2 :
+                      layerType === "dense" ? 0.55 + _rng.next() * 0.25 :
+                      0.3 + _rng.next() * 0.4;
   const achievedFlops = flops * utilPercent;
   const arithIntensity = flops / (flops * 0.001 + 1);
   const memBound = arithIntensity < 100;
@@ -330,8 +336,8 @@ function generateComputeProfile(layerType: string, flops: number): ComputeProfil
     computeUnits: "tensor-core",
     computeUnitCount: 108,
     computeUnitUtilization: utilPercent * 0.9,
-    parallelismEfficiency: 0.7 + Math.random() * 0.2,
-    vectorizationEfficiency: 0.6 + Math.random() * 0.3,
+    parallelismEfficiency: 0.7 + _rng.next() * 0.2,
+    vectorizationEfficiency: 0.6 + _rng.next() * 0.3,
     rooflineAnalysis: {
       arithmeticIntensity: arithIntensity,
       achievedPerformance: achievedFlops,
@@ -475,7 +481,7 @@ function generateLayerProfiles(session: ProfilingSession): LayerProfile[] {
     { name: "output_projection", type: "dense", op: "linear", params: 25_600_000, flops: 5e10 },
     { name: "softmax", type: "activation", op: "softmax", params: 0, flops: 1e6 },
   ];
-  const totalBaseMs = 15 + Math.random() * 10; // 15-25ms total inference
+  const totalBaseMs = 15 + _rng.next() * 10; // 15-25ms total inference
   const weights = layerDefs.map((l) =>
     l.type === "attention" ? 1.5 : l.type === "dense" ? 1.3 : l.type === "embedding" ? 0.8 : 0.3
   );
@@ -487,16 +493,16 @@ function generateLayerProfiles(session: ProfilingSession): LayerProfile[] {
     timing.percentageOfTotal = (baseTimeMs / totalTime) * 100;
     const compute = generateComputeProfile(def.type, def.flops);
     const memProfile: LayerMemoryProfile = {
-      peakMemoryBytes: Math.floor(def.flops * 0.0001 + Math.random() * 10_000_000),
-      averageMemoryBytes: Math.floor(def.flops * 0.00005 + Math.random() * 5_000_000),
-      allocatedBytes: def.params * 4 + Math.floor(Math.random() * 1_000_000),
-      freedBytes: Math.floor(Math.random() * 500_000),
-      fragmentation: Math.random() * 0.15,
-      cacheHitRate: 0.7 + Math.random() * 0.25,
-      memoryBandwidthBytesPerSec: 1.5e12 * (0.3 + Math.random() * 0.5),
+      peakMemoryBytes: Math.floor(def.flops * 0.0001 + _rng.next() * 10_000_000),
+      averageMemoryBytes: Math.floor(def.flops * 0.00005 + _rng.next() * 5_000_000),
+      allocatedBytes: def.params * 4 + Math.floor(_rng.next() * 1_000_000),
+      freedBytes: Math.floor(_rng.next() * 500_000),
+      fragmentation: _rng.next() * 0.15,
+      cacheHitRate: 0.7 + _rng.next() * 0.25,
+      memoryBandwidthBytesPerSec: 1.5e12 * (0.3 + _rng.next() * 0.5),
       memoryAccessPattern: def.type === "attention" ? "mixed" : "sequential",
-      temporaryBuffers: Math.floor(Math.random() * 5) + 1,
-      temporaryBufferSize: Math.floor(Math.random() * 2_000_000) + 100_000,
+      temporaryBuffers: Math.floor(_rng.next() * 5) + 1,
+      temporaryBufferSize: Math.floor(_rng.next() * 2_000_000) + 100_000,
     };
     const bottleneckScore = timing.percentageOfTotal * (1 + (1 - compute.utilizationPercent / 100) * 0.5);
     return {
@@ -522,7 +528,7 @@ function generateLayerProfiles(session: ProfilingSession): LayerProfile[] {
 
 function generateMemoryProfile(session: ProfilingSession, layers: LayerProfile[]): MemoryProfile {
   const totalAlloc = layers.reduce((acc, l) => acc + l.memory.allocatedBytes, 0);
-  const peakUsage = Math.floor(totalAlloc * (1.2 + Math.random() * 0.3));
+  const peakUsage = Math.floor(totalAlloc * (1.2 + _rng.next() * 0.3));
   const now = new Date().toISOString();
   return {
     totalAllocatedBytes: totalAlloc,
@@ -534,21 +540,21 @@ function generateMemoryProfile(session: ProfilingSession, layers: LayerProfile[]
     allocationEvents: Array.from({ length: 20 }, (_, i) => ({
       id: `me_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       type: (["allocation", "deallocation", "transfer-host-to-device", "transfer-device-to-host"] as MemoryAccessType[])[i % 4],
-      size: Math.floor(Math.random() * 10_000_000) + 100_000,
-      address: `0x${Math.floor(Math.random() * 0xffffffff).toString(16)}`,
+      size: Math.floor(_rng.next() * 10_000_000) + 100_000,
+      address: `0x${Math.floor(_rng.next() * 0xffffffff).toString(16)}`,
       layerName: layers[i % layers.length].layerName,
       timestamp: new Date(Date.now() - (20 - i) * 100).toISOString(),
-      durationMs: Math.random() * 2,
+      durationMs: _rng.next() * 2,
       metadata: {},
     })),
-    fragmentationScore: Math.random() * 0.2,
-    memoryEfficiency: 0.7 + Math.random() * 0.25,
+    fragmentationScore: _rng.next() * 0.2,
+    memoryEfficiency: 0.7 + _rng.next() * 0.25,
     timeline: Array.from({ length: 10 }, (_, i) => ({
       timestamp: new Date(Date.now() - (10 - i) * 500).toISOString(),
       usedBytes: Math.floor(peakUsage * (0.5 + i * 0.05)),
       allocatedBytes: totalAlloc,
       freeBytes: Math.floor(80_000_000_000 - peakUsage * (0.5 + i * 0.05)),
-      fragmentation: Math.random() * 0.2,
+      fragmentation: _rng.next() * 0.2,
     })),
     breakdownByLayer: layers.map((l) => ({
       layerName: l.layerName,
@@ -575,11 +581,11 @@ function generateGPUProfile(session: ProfilingSession, layers: LayerProfile[]): 
     peakUtilization: avgUtil * 1.2,
     averageUtilization: avgUtil,
     smUtilization: avgUtil * 0.95,
-    memoryControllerUtilization: 40 + Math.random() * 30,
-    pcieBandwidthUtilization: 20 + Math.random() * 40,
+    memoryControllerUtilization: 40 + _rng.next() * 30,
+    pcieBandwidthUtilization: 20 + _rng.next() * 40,
     kernelProfiles: kernelNames.map((name, i) => {
-      const invocations = Math.floor(Math.random() * 500) + 50;
-      const avgTime = Math.random() * 0.5 + 0.01;
+      const invocations = Math.floor(_rng.next() * 500) + 50;
+      const avgTime = _rng.next() * 0.5 + 0.01;
       return {
         id: `kp_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
         kernelName: name,
@@ -589,51 +595,51 @@ function generateGPUProfile(session: ProfilingSession, layers: LayerProfile[]): 
         averageTimeMs: avgTime,
         minTimeMs: avgTime * 0.8,
         maxTimeMs: avgTime * 1.5,
-        registersPerThread: Math.floor(Math.random() * 64) + 16,
-        sharedMemoryBytes: Math.floor(Math.random() * 49152),
-        occupancy: 0.5 + Math.random() * 0.45,
-        warpEfficiency: 0.6 + Math.random() * 0.35,
-        memoryThroughput: 30 + Math.random() * 50,
-        computeThroughput: 40 + Math.random() * 50,
+        registersPerThread: Math.floor(_rng.next() * 64) + 16,
+        sharedMemoryBytes: Math.floor(_rng.next() * 49152),
+        occupancy: 0.5 + _rng.next() * 0.45,
+        warpEfficiency: 0.6 + _rng.next() * 0.35,
+        memoryThroughput: 30 + _rng.next() * 50,
+        computeThroughput: 40 + _rng.next() * 50,
       };
     }),
     powerConsumption: {
-      averageWatts: 250 + Math.random() * 100,
-      peakWatts: 350 + Math.random() * 50,
+      averageWatts: 250 + _rng.next() * 100,
+      peakWatts: 350 + _rng.next() * 50,
       totalEnergyJoules: totalMs * 0.3,
       energyPerInferenceMj: totalMs * 0.3,
       powerLimitWatts: 400,
-      powerUtilization: 0.65 + Math.random() * 0.2,
+      powerUtilization: 0.65 + _rng.next() * 0.2,
     },
     temperature: {
-      averageCelsius: 65 + Math.random() * 15,
-      peakCelsius: 78 + Math.random() * 10,
-      throttleEvents: Math.random() < 0.1 ? 1 : 0,
-      thermalThrottlingPercent: Math.random() < 0.1 ? Math.random() * 5 : 0,
+      averageCelsius: 65 + _rng.next() * 15,
+      peakCelsius: 78 + _rng.next() * 10,
+      throttleEvents: _rng.next() < 0.1 ? 1 : 0,
+      thermalThrottlingPercent: _rng.next() < 0.1 ? _rng.next() * 5 : 0,
     },
     timeline: Array.from({ length: 10 }, (_, i) => ({
       timestamp: new Date(Date.now() - (10 - i) * 500).toISOString(),
-      smUtilization: avgUtil * (0.8 + Math.random() * 0.4),
-      memoryUtilization: 40 + Math.random() * 40,
-      memoryUsedBytes: Math.floor(5_000_000_000 * (0.7 + Math.random() * 0.3)),
-      powerWatts: 250 + Math.random() * 100,
-      temperatureCelsius: 65 + Math.random() * 15,
+      smUtilization: avgUtil * (0.8 + _rng.next() * 0.4),
+      memoryUtilization: 40 + _rng.next() * 40,
+      memoryUsedBytes: Math.floor(5_000_000_000 * (0.7 + _rng.next() * 0.3)),
+      powerWatts: 250 + _rng.next() * 100,
+      temperatureCelsius: 65 + _rng.next() * 15,
     })),
   };
 }
 
 function generateIOProfile(session: ProfilingSession): IOProfile {
-  const dataLoadMs = 2 + Math.random() * 5;
-  const preprocessMs = 1 + Math.random() * 3;
+  const dataLoadMs = 2 + _rng.next() * 5;
+  const preprocessMs = 1 + _rng.next() * 3;
   return {
     dataLoadTimeMs: dataLoadMs,
-    dataLoadBandwidthMBps: 500 + Math.random() * 2000,
+    dataLoadBandwidthMBps: 500 + _rng.next() * 2000,
     preprocessingTimeMs: preprocessMs,
-    pipelineUtilization: 0.6 + Math.random() * 0.35,
-    dataQueueDepth: Math.floor(Math.random() * 8) + 2,
-    prefetchHitRate: 0.8 + Math.random() * 0.15,
-    cacheHitRate: 0.7 + Math.random() * 0.25,
-    ioWaitPercent: Math.random() * 10,
+    pipelineUtilization: 0.6 + _rng.next() * 0.35,
+    dataQueueDepth: Math.floor(_rng.next() * 8) + 2,
+    prefetchHitRate: 0.8 + _rng.next() * 0.15,
+    cacheHitRate: 0.7 + _rng.next() * 0.25,
+    ioWaitPercent: _rng.next() * 10,
     storageType: "nvme",
     throughputBreakdown: [
       { stage: "data-loading", timeMs: dataLoadMs, percentage: dataLoadMs / (dataLoadMs + preprocessMs + 20) * 100 },
@@ -675,7 +681,7 @@ function generateProfilingSummary(session: ProfilingSession, layers: LayerProfil
     throughputInferencesPerSec: 1000 / totalDuration,
     peakMemoryUsageBytes: session.memoryProfile?.peakUsageBytes || 0,
     gpuUtilizationAverage: avgGPUUtil,
-    cpuUtilizationAverage: 30 + Math.random() * 40,
+    cpuUtilizationAverage: 30 + _rng.next() * 40,
     topBottleneckLayers: topBottlenecks,
     optimizationScore: Math.min(100, Math.max(0, optScore)),
     efficiencyScore: Math.min(100, Math.max(0, effScore)),

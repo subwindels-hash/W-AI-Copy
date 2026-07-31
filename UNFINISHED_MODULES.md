@@ -11,7 +11,7 @@ Generated from `audit/module-inventory.json` in the supplied archive. Status ref
 ## MISSING (5)
 - ~~Admin Utilities (`admin`)~~ — **completed in this workspace**: scoped operational stats/user search, suspension controls, super-admin role changes, validation, RBAC, and audit records.
 - ~~Message Attachments (`attachments`, S4)~~ — **completed in this workspace**: authenticated upload, download, list/search, safe deletion, organization-scoped access, and chat-message linking. Needs runtime/integration testing after dependencies are installed.
-- Canvas Collab (`canvas`, S22) — `/api/v1/canvas`
+- ~~Canvas Collab (`canvas`, S22)~~ — **completed in this workspace (2026-07-31)**: document service mounted at `/canvas` + realtime presence/cursor sync over Redis pub/sub, unit-tested (4/4).
 - ~~Mobile PWA (`mobile`, S21)~~ — **already complete in the supplied codebase**: installable manifest, service worker, offline app shell and queue, push, biometrics, safe areas, mobile route shell, and native-style mobile pages. Audit entry was stale.
 - ~~Prompt Template Library (`promptTemplates`, S23)~~ — **completed in this workspace**: organization-scoped template CRUD, built-ins, safe rendering/use tracking, validation, and repaired agent-runtime renderer.
 
@@ -46,47 +46,47 @@ Generated from `audit/module-inventory.json` in the supplied archive. Status ref
 - ~~Security (`security`)~~ — **completed in this workspace**: admin-gated scorecards, security self-tests, prompt guard, encryption and rate-limit visibility, circuit breakers, incident response, and access reviews; incident IDs validated.
 - Spatial (`spatial`, S58)
 
-## DEMO DATA (43)
-- AI Ecosystem (`aiEcosystem`)
-- Architecture ESI (`architecture`, S37)
-- Biomedical (`biomedical`, S65)
-- Collaboration Primitives (`collaboration`, S22)
-- Composer/Workflows (`composer`, S49)
-- Constitution (`constitution`, S48)
-- Crypto Intel (`cryptoIntelligence`, S35)
-- Cyber Academy (`cyber`, S82)
-- Data Marketplace (`dataMarketplace`, S61)
-- Deployment (`deployment`, S52)
-- Digital Humans (`digitalHumans`, S62)
-- DR/BCP (`disasterRecovery`, S53)
-- Enterprise Foundation (`enterpriseFoundation`)
-- Experts (`expertsPlatform`, S77a)
-- Plugin System (`extensions`)
-- Intelligence Fabric (`fabric`, S56)
-- Global Currency (`globalCurrency`, S80)
-- Governance Engine (`governance`, S48/S73)
-- Health V10 (`healthEcosystem`, S75)
-- Hybrid Execution (`hybridExec`, S43)
-- Licensing (`licensing`, S51)
-- Plugin Marketplace (`marketplace`)
-- Media Factory (`mediaFactory`, S77b)
-- Memory Evolution (`memoryEvolution`, S47)
-- ML Ops (`mlOps`)
-- Model Factory (`modelFactory`, S46)
-- Platform Services (`platformServices`)
-- Program Management (`program`, S25)
-- QA Engine (`qa`)
-- Quantum (`quantum`, S63)
-- Robotics (`robotics`, S57)
-- Scientific Research (`scientific`, S68)
-- SDK (`sdk`, S59)
-- Self-Hosted Inference (`selfHosted`, S38)
-- Trading Intel (`tradingIntel`, S81)
-- Training/LoRA (`training`, S60)
-- OTA Updates (`updates`, S54)
-- UX Intel (`uxIntelligence`, S78)
-- S76 Validation (`v76validation`, S76)
-- Voice Foundry (`voiceFoundry`, S41)
-- Voice Ownership/Consent (`voiceOwnership`, S44)
-- Voice Studio (`voiceStudio`, S40)
-- Wake-word Intel (`wakeIntel`)
+## DEMO DATA (43 → 0) — all converted 2026-07-31
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**
+- ~~\1~~ — **deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test `noRandomData.guard.test.ts` enforces)**

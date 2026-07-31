@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelSunsetManagement');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -301,10 +307,10 @@ export function createSunsetWorkflow(params: {
       enabled: true,
       checkInterval: '1h',
       metrics: {
-        requestsLast24h: Math.floor(Math.random() * 1000),
-        requestsLast7d: Math.floor(Math.random() * 7000),
-        requestsLast30d: Math.floor(Math.random() * 30000),
-        uniqueClients: Math.floor(Math.random() * 50) + 5,
+        requestsLast24h: Math.floor(_rng.next() * 1000),
+        requestsLast7d: Math.floor(_rng.next() * 7000),
+        requestsLast30d: Math.floor(_rng.next() * 30000),
+        uniqueClients: Math.floor(_rng.next() * 50) + 5,
         trendDirection: 'decreasing',
         trendPercent: -15,
       },
@@ -454,7 +460,7 @@ function executePhaseAction(workflow: SunsetWorkflow, phase: SunsetPhase): Sunse
         description: 'Blocking new requests to deprecated model',
         executedAt: now,
         result: 'success',
-        details: { blockedRequests: Math.floor(Math.random() * 100) },
+        details: { blockedRequests: Math.floor(_rng.next() * 100) },
       };
     
     case 'archiving':

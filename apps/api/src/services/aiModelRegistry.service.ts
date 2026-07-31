@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelRegistry');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -584,7 +590,7 @@ export function getModelStatistics(registryId: string): {
   // Generate recent activity (simplified)
   const recentActivity = Array(7).fill(0).map((_, i) => ({
     date: new Date(Date.now() - i * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-    count: Math.floor(Math.random() * 10),
+    count: Math.floor(_rng.next() * 10),
   })).reverse();
 
   return {

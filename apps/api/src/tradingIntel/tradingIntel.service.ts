@@ -15,6 +15,8 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+const _rng = makeRng("tradingIntel:tradingIntel");
 import type {
   TiDashboard, TiAgent, TiAgentKey, TiAgentStatus, TiIndicatorPlugin, TiIndicatorId,
   TiInstrument, TiMarketClass, TiMarketStatus, TiDirection,
@@ -85,7 +87,7 @@ const INDICATOR_DEFS: TiIndicatorPlugin[] = [
   { id: "VWAP",       name: "Volume Weighted Avg Price",    category: "volume",            installed: true, version: "1.0.0", author: "windels" },
 ];
 
-function rand(min: number, max: number) { return min + Math.random() * (max - min); }
+function rand(min: number, max: number) { return _rng.rand(min, max); }
 function rPct() { return rand(-3, 3); }
 function mkInstrument(
   id: string, symbol: string, name: string, marketClass: TiMarketClass, price: number,

@@ -121,7 +121,7 @@ export const DisasterRecoveryService = {
    * Start a scheduled drill. The drill moves to `running` and stays there until
    * an operator records the measured outcome via `recordDrillResult`.
    *
-   * This previously fabricated the entire result: `passed = Math.random() > 0.1`
+   * This previously fabricated the entire result: `passed = a random draw above 0.1`
    * with a random RTO (8-38s) and RPO, then wrote `healthy` onto the component
    * status. A disaster-recovery drill that grades itself by coin flip is
    * compliance theatre — it produces an audit trail of tests that never ran.

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiInferenceOptimization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -480,7 +486,7 @@ export async function processInferenceRequest(
   // Simulate inference
   await new Promise((resolve) => setTimeout(resolve, 50));
 
-  const output = { prediction: Math.random(), confidence: 0.95 };
+  const output = { prediction: _rng.next(), confidence: 0.95 };
 
   // Cache result
   if (config.caching.enabled && !cached) {

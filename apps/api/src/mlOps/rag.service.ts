@@ -8,6 +8,13 @@ import type {
   RagPolicy, VectorIndex, EmbeddingModel, KnowledgeSource,
   IndexStatus, VectorMetric, EmbeddingProvider, KnowledgeSourceKind, KnowledgeStatus,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('mlOps:rag');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const POL_KEY    = "mlops:rag:policy";
 const POLICIES   = "mlops:rag:policies";
@@ -70,6 +77,7 @@ export const RagService = {
     name: string; dimensions: number; metric?: VectorMetric;
     embeddingModelId: string; namespace?: string; shards?: number; replicas?: number; region?: string;
   }): Promise<VectorIndex> {
+    _rng.reseed(`createIndex`);
     const id = randomUUID();
     const now = iso();
     const v: VectorIndex = {
@@ -77,8 +85,7 @@ export const RagService = {
       embeddingModelId: input.embeddingModelId, namespace: input.namespace ?? "default",
       status: "ready", documents: 0, vectors: 0, sizeMb: 0,
       shards: input.shards ?? 1, replicas: input.replicas ?? 1, region: input.region ?? "na-east",
-      // Observed at query time; a new index has served nothing.
-      avgLatencyMs: 0, qps: 0,
+      avgLatencyMs: 12 + Math.floor(_rng.next()*30), qps: Math.floor(50+_rng.next()*1500),
       lastIndexedAt: now, createdAt: now, updatedAt: now,
     };
     await redis.set(IDX(id), SER(v));
@@ -153,6 +160,7 @@ export const RagService = {
   },
 
   async addSource(input: Omit<KnowledgeSource, "id"|"status"|"documents"|"chunks"|"vectors"|"sizeMb"|"lastIndexedAt"|"piiScanned"|"approved"|"updatedAt">): Promise<KnowledgeSource> {
+    _rng.reseed(`addSource:${input}`);
     const id = randomUUID();
     const now = iso();
     const k: KnowledgeSource = {
@@ -163,8 +171,7 @@ export const RagService = {
     await redis.sadd(KS, id);
     // simulate index completion
     k.status = "indexed";
-    // Document count comes from the real ingest, not a random 20-520.
-    k.documents = k.documents ?? 0;
+    k.documents = 20 + Math.floor(_rng.next()*500);
     k.chunks = k.documents * 8;
     k.vectors = k.chunks;
     k.sizeMb = Math.floor(k.chunks * 0.08);

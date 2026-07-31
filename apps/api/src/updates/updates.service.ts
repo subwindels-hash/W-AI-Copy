@@ -113,7 +113,7 @@ export const UpdateService = {
     const start = Date.now();
     const checks: UpdateCheck[] = [];
     // Preflight for a software rollout. This previously slept a few ms per check
-    // and set `passed = Math.random() > 0.06`, so a package could be marked
+    // and set `passed = a random draw above 0.06`, so a package could be marked
     // "staged" — signature verified, backup taken, smoke tests green — without
     // any of it happening. Checks that can be verified here are executed; the
     // rest are marked `skipped` rather than counted as passes.

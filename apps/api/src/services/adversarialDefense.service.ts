@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:adversarialDefense');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -690,12 +696,12 @@ async function runAttack(attack: AdversarialAttack): Promise<AttackResult> {
 
   for (let i = 0; i < numSamples; i++) {
     const originalInput = generateRandomInput(attack.config.inputShape);
-    const originalOutput = Math.floor(Math.random() * attack.config.outputClasses);
+    const originalOutput = Math.floor(_rng.next() * attack.config.outputClasses);
 
     // Simulate attack
     const perturbationMagnitude = attack.config.fgsm?.epsilon ?? attack.config.pgd?.epsilon ?? 0.1;
-    const successful = Math.random() < (0.7 - perturbationMagnitude); // Higher epsilon = lower success
-    const queries = attack.threatModel === "black_box" ? Math.floor(Math.random() * 1000) : undefined;
+    const successful = _rng.next() < (0.7 - perturbationMagnitude); // Higher epsilon = lower success
+    const queries = attack.threatModel === "black_box" ? Math.floor(_rng.next() * 1000) : undefined;
 
     const adversarialInput = successful ? perturbInput(originalInput, perturbationMagnitude) : originalInput;
     const adversarialOutput = successful ? (originalOutput + 1) % attack.config.outputClasses : originalOutput;
@@ -729,24 +735,24 @@ async function runAttack(attack: AdversarialAttack): Promise<AttackResult> {
     averagePerturbation,
     averageQueries,
     examples: examples.filter(e => e.successful).slice(0, 10),
-    attackTimeMs: Math.floor(Math.random() * 5000) + 1000,
+    attackTimeMs: Math.floor(_rng.next() * 5000) + 1000,
     bypassedDefenses: [],
   };
 }
 
 async function runDefense(defense: AdversarialDefense, attacks: AdversarialAttack[]): Promise<DefenseResult> {
-  const cleanAccuracy = 0.95 + Math.random() * 0.05; // High clean accuracy
-  const baseRobustAccuracy = 0.5 + Math.random() * 0.3; // Base robustness
+  const cleanAccuracy = 0.95 + _rng.next() * 0.05; // High clean accuracy
+  const baseRobustAccuracy = 0.5 + _rng.next() * 0.3; // Base robustness
 
   // Simulate defense effectiveness
-  let effectiveness = 0.3 + Math.random() * 0.5; // 30-80% effectiveness
+  let effectiveness = 0.3 + _rng.next() * 0.5; // 30-80% effectiveness
   let detectionRate: number | undefined;
   let falsePositiveRate: number | undefined;
   let certifiedRadius: number | undefined;
 
   if (defense.type === "detection") {
-    detectionRate = 0.7 + Math.random() * 0.3;
-    falsePositiveRate = Math.random() * 0.1;
+    detectionRate = 0.7 + _rng.next() * 0.3;
+    falsePositiveRate = _rng.next() * 0.1;
     effectiveness = detectionRate * (1 - falsePositiveRate);
   }
 
@@ -776,7 +782,7 @@ async function runDefense(defense: AdversarialDefense, attacks: AdversarialAttac
     detectionRate,
     falsePositiveRate,
     certifiedRadius,
-    defenseTimeMs: Math.floor(Math.random() * 2000) + 500,
+    defenseTimeMs: Math.floor(_rng.next() * 2000) + 500,
     bypassed,
     vulnerabilities,
   };
@@ -907,16 +913,16 @@ async function saveAdversarialExamples(job: AdversarialJob): Promise<void> {
 
 function generateRandomInput(shape: number[]): unknown {
   if (shape.length === 1) {
-    return Array.from({ length: shape[0] }, () => Math.random());
+    return Array.from({ length: shape[0] }, () => _rng.next());
   } else if (shape.length === 3) {
     // Image-like input
     return Array.from({ length: shape[0] }, () =>
       Array.from({ length: shape[1] }, () =>
-        Array.from({ length: shape[2] }, () => Math.random())
+        Array.from({ length: shape[2] }, () => _rng.next())
       )
     );
   }
-  return Math.random();
+  return _rng.next();
 }
 
 function perturbInput(input: unknown, magnitude: number): unknown {
@@ -925,8 +931,8 @@ function perturbInput(input: unknown, magnitude: number): unknown {
       if (Array.isArray(v)) {
         return perturbInput(v, magnitude);
       }
-      return typeof v === "number" ? v + (Math.random() - 0.5) * magnitude * 2 : v;
+      return typeof v === "number" ? v + (_rng.next() - 0.5) * magnitude * 2 : v;
     });
   }
-  return typeof input === "number" ? input + (Math.random() - 0.5) * magnitude * 2 : input;
+  return typeof input === "number" ? input + (_rng.next() - 0.5) * magnitude * 2 : input;
 }

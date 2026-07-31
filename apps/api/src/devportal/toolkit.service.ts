@@ -9,7 +9,6 @@ const TEST_RUNS_KEY = "dev:test-runs";
 const DEPLOY_RUNS_KEY = "dev:deploy-runs";
 const SER = <T>(v: T) => JSON.stringify(v);
 function iso() { return new Date().toISOString(); }
-function rand(min:number,max:number){return Math.floor(min+Math.random()*(max-min+1));}
 
 export const ToolkitService = {
   /**
@@ -53,7 +52,7 @@ export const ToolkitService = {
   /**
    * Record a deployment-kit run.
    *
-   * Previously fabricated the outcome (`ok = Math.random() > 0.05`) plus a
+   * Previously fabricated the outcome (`ok = a random draw above 0.05`) plus a
    * random 15-120s duration, and synthesised a plausible log transcript
    * ("running tests: passed", "healthy: svc on prod") for a deploy that never
    * happened. The caller now supplies the real result.

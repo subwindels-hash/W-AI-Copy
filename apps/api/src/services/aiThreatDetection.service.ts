@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiThreatDetection');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -430,7 +436,7 @@ function createThreatEvent(params: { organizationId: string; modelId: string; mo
     detection: {
       method: rule.detectionMethod,
       detectorId: rule.id,
-      confidenceScore: 0.8 + Math.random() * 0.15,
+      confidenceScore: 0.8 + _rng.next() * 0.15,
       evidence: [{ type: "query-pattern", description: `Rule "${rule.name}" matched`, data: { input: params.input.slice(0, 200) }, timestamp: now, source: rule.id }],
       indicators: [{ type: "rule-match", value: rule.name, confidence: 0.85, source: "detection-engine" }],
       firstSeenAt: now,

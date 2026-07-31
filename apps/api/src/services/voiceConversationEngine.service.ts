@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:voiceConversationEngine');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -621,10 +627,10 @@ export async function getConversationAnalytics(conversationId: string): Promise<
     escalationCount: conversation.outcome === "escalated" ? 1 : 0,
     topIntents,
     conversationQuality: {
-      coherenceScore: 0.8 + Math.random() * 0.2,
+      coherenceScore: 0.8 + _rng.next() * 0.2,
       responsivenessScore: conversation.averageResponseTimeMs < 2000 ? 0.9 : 0.7,
-      naturalnessScore: 0.75 + Math.random() * 0.25,
-      overallScore: Math.round((0.8 + Math.random() * 0.2) * 100) / 100,
+      naturalnessScore: 0.75 + _rng.next() * 0.25,
+      overallScore: Math.round((0.8 + _rng.next() * 0.2) * 100) / 100,
     },
   };
 }
@@ -739,7 +745,7 @@ function detectIntent(text: string): DetectedIntent {
       return {
         name: pattern.name,
         category: pattern.category,
-        confidence: 0.75 + Math.random() * 0.25,
+        confidence: 0.75 + _rng.next() * 0.25,
         slots: {},
         utterance: text,
         timestamp: now,
@@ -752,7 +758,7 @@ function detectIntent(text: string): DetectedIntent {
     return {
       name: "ask_question",
       category: "question",
-      confidence: 0.6 + Math.random() * 0.3,
+      confidence: 0.6 + _rng.next() * 0.3,
       slots: {},
       utterance: text,
       timestamp: now,
@@ -762,7 +768,7 @@ function detectIntent(text: string): DetectedIntent {
   return {
     name: "unknown",
     category: "unknown",
-    confidence: 0.3 + Math.random() * 0.3,
+    confidence: 0.3 + _rng.next() * 0.3,
     slots: {},
     utterance: text,
     timestamp: now,

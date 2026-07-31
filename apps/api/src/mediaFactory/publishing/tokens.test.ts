@@ -3,10 +3,14 @@
  * Global fetch is stubbed so the OAuth token endpoint is exercised offline.
  */
 import { describe, it, expect, afterEach, vi } from "vitest";
-import { saveToken, getToken, ensureFreshToken, connectionStatus, deleteToken } from "./tokens.js";
+import {
+  saveToken, getToken, ensureFreshToken, connectionStatus, deleteToken,
+  saveOrgToken, getOrgToken, ensureFreshOrgToken, orgConnectionStatus, deleteOrgToken,
+} from "./tokens.js";
 import { FakeKv } from "./fakeKv.js";
 
 const UID = "u-tok";
+const OID = "org-tok";
 const PLATFORM = "youtube";
 
 function jsonRes(status: number, body: unknown) {
@@ -70,5 +74,39 @@ describe("ensureFreshToken", () => {
     await saveToken(UID, PLATFORM, { accessToken: "tok-x" }, null, kv as any);
     await deleteToken(UID, PLATFORM, kv as any);
     expect((await connectionStatus(UID, PLATFORM, kv as any)).connected).toBe(false);
+  });
+});
+
+describe("org-scoped tokens (org-shared connections)", () => {
+  it("user and org slots are isolated", async () => {
+    const kv = new FakeKv();
+    await saveToken(UID, PLATFORM, { accessToken: "user-tok" }, null, kv as any);
+    await saveOrgToken(OID, PLATFORM, { accessToken: "org-tok" }, null, kv as any);
+    expect((await getToken(UID, PLATFORM, kv as any))?.accessToken).toBe("user-tok");
+    expect((await getOrgToken(OID, PLATFORM, kv as any))?.accessToken).toBe("org-tok");
+    expect((await getOrgToken("other-org", PLATFORM, kv as any))).toBeNull();
+    expect((await connectionStatus(UID, PLATFORM, kv as any)).connected).toBe(true);
+    expect((await orgConnectionStatus(OID, PLATFORM, kv as any)).connected).toBe(true);
+  });
+
+  it("ensureFreshOrgToken refreshes an expiring org token in place", async () => {
+    const kv = new FakeKv();
+    await saveOrgToken(OID, PLATFORM, { accessToken: "old", refreshToken: "rt", expiresInSec: 30 }, null, kv as any);
+    const fetchSpy = vi.fn(async () => jsonRes(200, { access_token: "org-new", expires_in: 3600 }));
+    vi.stubGlobal("fetch", fetchSpy);
+    await expect(ensureFreshOrgToken(OID, PLATFORM, kv as any)).resolves.toBe("org-new");
+    expect((await getOrgToken(OID, PLATFORM, kv as any))?.accessToken).toBe("org-new");
+  });
+
+  it("fails permanently when no org account is connected", async () => {
+    const kv = new FakeKv();
+    await expect(ensureFreshOrgToken(OID, PLATFORM, kv as any)).rejects.toThrow(/no org-shared/i);
+  });
+
+  it("deleteOrgToken disconnects only the org account", async () => {
+    const kv = new FakeKv();
+    await saveOrgToken(OID, PLATFORM, { accessToken: "org-tok" }, null, kv as any);
+    await deleteOrgToken(OID, PLATFORM, kv as any);
+    expect((await orgConnectionStatus(OID, PLATFORM, kv as any)).connected).toBe(false);
   });
 });

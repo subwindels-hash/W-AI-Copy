@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiDataLineage');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -650,7 +656,7 @@ export async function getLineageDashboard(organizationId: string): Promise<Linea
     .slice(0, 10);
 
   // Calculate lineage health metrics
-  const completeness = totalNodes > 0 ? 0.85 + Math.random() * 0.15 : 0;
+  const completeness = totalNodes > 0 ? 0.85 + _rng.next() * 0.15 : 0;
   const connectivity = totalEdges > 0 ? Math.min(1, totalEdges / (totalNodes * 2)) : 0;
   const freshness = allGraphs.length > 0
     ? allGraphs.reduce((sum, g) => {

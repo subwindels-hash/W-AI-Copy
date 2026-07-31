@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:automlPipeline');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -465,8 +471,8 @@ async function runAutoMLPipeline(jobId: string): Promise<void> {
 
 async function profileDataset(config: DatasetConfig, taskType: TaskType): Promise<DatasetProfile> {
   // Simulate dataset profiling
-  const numRows = 10000 + Math.floor(Math.random() * 90000);
-  const numColumns = 10 + Math.floor(Math.random() * 40);
+  const numRows = 10000 + Math.floor(_rng.next() * 90000);
+  const numColumns = 10 + Math.floor(_rng.next() * 40);
 
   const columnProfiles: ColumnProfile[] = [];
   const featureColumns = config.featureColumns ?? Array.from({ length: numColumns - 1 }, (_, i) => `feature_${i}`);
@@ -477,8 +483,8 @@ async function profileDataset(config: DatasetConfig, taskType: TaskType): Promis
     dtype: taskType === "classification" ? "categorical" : "numeric",
     isTarget: true,
     isFeature: false,
-    missingPercent: Math.random() * 5,
-    uniqueCount: taskType === "classification" ? 2 + Math.floor(Math.random() * 10) : numRows,
+    missingPercent: _rng.next() * 5,
+    uniqueCount: taskType === "classification" ? 2 + Math.floor(_rng.next() * 10) : numRows,
     uniquePercent: taskType === "classification" ? 0.1 : 100,
     isCategorical: taskType === "classification",
     isNumeric: taskType !== "classification",
@@ -490,16 +496,16 @@ async function profileDataset(config: DatasetConfig, taskType: TaskType): Promis
 
   // Feature columns
   for (const colName of featureColumns) {
-    const isNumeric = Math.random() > 0.4;
-    const isCategorical = !isNumeric && Math.random() > 0.3;
-    const uniqueCount = isCategorical ? 5 + Math.floor(Math.random() * 50) : numRows;
+    const isNumeric = _rng.next() > 0.4;
+    const isCategorical = !isNumeric && _rng.next() > 0.3;
+    const uniqueCount = isCategorical ? 5 + Math.floor(_rng.next() * 50) : numRows;
 
     columnProfiles.push({
       name: colName,
       dtype: isNumeric ? "numeric" : isCategorical ? "categorical" : "text",
       isTarget: false,
       isFeature: true,
-      missingPercent: Math.random() * 20,
+      missingPercent: _rng.next() * 20,
       uniqueCount,
       uniquePercent: (uniqueCount / numRows) * 100,
       isCategorical,
@@ -507,11 +513,11 @@ async function profileDataset(config: DatasetConfig, taskType: TaskType): Promis
       isDateTime: false,
       isText: !isNumeric && !isCategorical,
       cardinality: uniqueCount < 10 ? "low" : uniqueCount < 100 ? "medium" : "high",
-      outliers: isNumeric ? Math.floor(Math.random() * 50) : undefined,
+      outliers: isNumeric ? Math.floor(_rng.next() * 50) : undefined,
       distribution: isNumeric ? {
-        skewness: Math.random() * 4 - 2,
-        kurtosis: Math.random() * 10,
-        isNormal: Math.random() > 0.5,
+        skewness: _rng.next() * 4 - 2,
+        kurtosis: _rng.next() * 10,
+        isNormal: _rng.next() > 0.5,
       } : undefined,
       sampleValues: [],
     });
@@ -657,7 +663,7 @@ async function trainModels(job: AutoMLJob): Promise<AutoMLModel[]> {
     const family = modelFamilies[i % modelFamilies.length];
     const modelName = generateModelName(family, i);
     const hyperparameters = generateHyperparameters(family);
-    const trainingTimeMs = 5000 + Math.random() * 25000;
+    const trainingTimeMs = 5000 + _rng.next() * 25000;
 
     const metrics = generateMetrics(job.taskType, i);
 
@@ -680,8 +686,8 @@ async function trainModels(job: AutoMLJob): Promise<AutoMLModel[]> {
         params: hyperparameters,
       },
       postprocessingSteps: [],
-      estimatedLatencyMs: 10 + Math.random() * 90,
-      estimatedMemoryMb: 50 + Math.random() * 450,
+      estimatedLatencyMs: 10 + _rng.next() * 90,
+      estimatedMemoryMb: 50 + _rng.next() * 450,
     };
 
     models.push({
@@ -695,7 +701,7 @@ async function trainModels(job: AutoMLJob): Promise<AutoMLModel[]> {
       rank: i + 1,
       isSelected: i === 0,
       pipeline,
-      modelSizeMb: 10 + Math.random() * 90,
+      modelSizeMb: 10 + _rng.next() * 90,
       inferenceLatencyMs: pipeline.estimatedLatencyMs,
       featureImportance: generateFeatureImportance(job.profile),
       createdAt: new Date().toISOString(),
@@ -777,7 +783,7 @@ function generateHyperparameters(family: ModelFamily): Record<string, unknown> {
 
 function generateMetrics(taskType: TaskType, rank: number): Record<string, number> {
   const baseAccuracy = 0.95 - rank * 0.02;
-  const noise = (Math.random() - 0.5) * 0.05;
+  const noise = (_rng.next() - 0.5) * 0.05;
 
   if (taskType === "classification") {
     return {
@@ -804,7 +810,7 @@ function generateFeatureImportance(profile?: DatasetProfile): Record<string, num
   const featureColumns = profile.columnProfiles.filter(c => c.isFeature);
 
   for (const col of featureColumns) {
-    importance[col.name] = Math.random();
+    importance[col.name] = _rng.next();
   }
 
   // Normalize

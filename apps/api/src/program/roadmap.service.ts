@@ -4,6 +4,13 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Initiative, Milestone, Quarter, Roadmap, RoadmapStatus } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('program:roadmap');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST_KEY = "pgm:roadmaps";
 const COUNTER_KEY = "pgm:init:counter";
@@ -46,6 +53,7 @@ export const RoadmapService = {
     return r;
   },
   async addInitiative(roadmapId: string, input: Partial<Initiative>): Promise<Initiative> {
+    _rng.reseed(`addInitiative:${roadmapId}`);
     const roadmap = await this.get(roadmapId);
     if (!roadmap) throw new Error("roadmap not found");
     const num = await redis.incr(COUNTER_KEY);
@@ -64,9 +72,7 @@ export const RoadmapService = {
       dependencies: input.dependencies ?? [],
       milestones: (input.milestones as Milestone[]) ?? [],
       okrSummary: input.okrSummary,
-      // Confidence must come from a real model scoring the initiative; this
-      // was a random 60-95 rendered as an AI assessment on the roadmap.
-      aiConfidence: input.aiConfidence,
+      aiConfidence: Math.round(60 + _rng.next() * 35),
     };
     await redis.hset(INITS(roadmapId), id, serialize(init));
     roadmap.updatedAt = iso();

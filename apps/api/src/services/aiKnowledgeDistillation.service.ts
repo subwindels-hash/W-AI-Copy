@@ -11,6 +11,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiKnowledgeDistillation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -509,13 +515,13 @@ export async function simulateTrainingEpoch(jobId: string): Promise<EpochMetrics
   const teacherAccuracy = job.teacherModels.reduce((acc, t) => acc + t.accuracy, 0) / job.teacherModels.length;
   const maxStudentAccuracy = teacherAccuracy * 0.97;
   const baseAccuracy = 0.3 + (maxStudentAccuracy - 0.3) * (1 - Math.exp(-3 * progressRatio));
-  const noise = (Math.random() - 0.5) * 0.02;
+  const noise = (_rng.next() - 0.5) * 0.02;
   const valAccuracy = Math.min(maxStudentAccuracy, baseAccuracy + noise);
-  const trainLoss = 2.5 * Math.exp(-2.5 * progressRatio) + 0.1 + Math.random() * 0.05;
-  const teacherLoss = trainLoss * (0.5 + Math.random() * 0.2);
-  const gtLoss = trainLoss * (0.2 + Math.random() * 0.15);
-  const featureLoss = trainLoss * (0.1 + Math.random() * 0.1);
-  const valLoss = trainLoss * (1.1 + Math.random() * 0.2);
+  const trainLoss = 2.5 * Math.exp(-2.5 * progressRatio) + 0.1 + _rng.next() * 0.05;
+  const teacherLoss = trainLoss * (0.5 + _rng.next() * 0.2);
+  const gtLoss = trainLoss * (0.2 + _rng.next() * 0.15);
+  const featureLoss = trainLoss * (0.1 + _rng.next() * 0.1);
+  const valLoss = trainLoss * (1.1 + _rng.next() * 0.2);
   // Learning rate schedule
   let lr = job.trainingConfig.learningRate;
   if (epoch <= job.trainingConfig.warmupEpochs) {
@@ -526,7 +532,7 @@ export async function simulateTrainingEpoch(jobId: string): Promise<EpochMetrics
   }
   const ktScore = Math.min(1, (valAccuracy / teacherAccuracy) * (1 - Math.abs(teacherLoss - trainLoss)));
   const stGap = teacherAccuracy - valAccuracy;
-  const epochDuration = 30000 + Math.random() * 60000;
+  const epochDuration = 30000 + _rng.next() * 60000;
   const metrics: EpochMetrics = {
     epoch,
     trainLoss,
@@ -544,8 +550,8 @@ export async function simulateTrainingEpoch(jobId: string): Promise<EpochMetrics
   job.progress.epochMetrics.push(metrics);
   job.progress.currentLearningRate = lr;
   job.progress.elapsedTimeMs += epochDuration;
-  job.progress.gpuUtilization = 70 + Math.random() * 25;
-  job.progress.memoryUsageMB = 4000 + Math.random() * 12000;
+  job.progress.gpuUtilization = 70 + _rng.next() * 25;
+  job.progress.memoryUsageMB = 4000 + _rng.next() * 12000;
   if (valAccuracy > job.progress.bestValidationAccuracy) {
     job.progress.bestValidationAccuracy = valAccuracy;
     job.progress.bestValidationLoss = valLoss;
@@ -606,12 +612,12 @@ function generateDistillationResults(job: DistillationJob): DistillationResult {
   // Final metrics
   const finalMetrics: FinalMetrics = {
     accuracy: finalAccuracy,
-    top5Accuracy: Math.min(0.99, finalAccuracy + 0.05 + Math.random() * 0.03),
-    precision: finalAccuracy + (Math.random() - 0.5) * 0.02,
-    recall: finalAccuracy + (Math.random() - 0.5) * 0.02,
-    f1Score: finalAccuracy + (Math.random() - 0.5) * 0.01,
-    latencyMs: 5 + Math.random() * 10,
-    throughputPerSec: 100 + Math.random() * 200,
+    top5Accuracy: Math.min(0.99, finalAccuracy + 0.05 + _rng.next() * 0.03),
+    precision: finalAccuracy + (_rng.next() - 0.5) * 0.02,
+    recall: finalAccuracy + (_rng.next() - 0.5) * 0.02,
+    f1Score: finalAccuracy + (_rng.next() - 0.5) * 0.01,
+    latencyMs: 5 + _rng.next() * 10,
+    throughputPerSec: 100 + _rng.next() * 200,
     modelSizeMB: studentParams * 4 / 1_000_000,
     parameters: studentParams,
     flops: studentParams * 128 * 128,
@@ -675,20 +681,20 @@ function generateDistillationResults(job: DistillationJob): DistillationResult {
   const classNames = ["person", "car", "dog", "cat", "bird", "airplane", "ship", "truck", "horse", "deer"];
   const knowledgeRetention: KnowledgeRetentionAnalysis = {
     perClassRetention: classNames.map((name) => {
-      const tAcc = teacherAccuracy * (0.85 + Math.random() * 0.15);
-      const sAcc = finalAccuracy * (0.8 + Math.random() * 0.2);
+      const tAcc = teacherAccuracy * (0.85 + _rng.next() * 0.15);
+      const sAcc = finalAccuracy * (0.8 + _rng.next() * 0.2);
       return { className: name, teacherAccuracy: tAcc, studentAccuracy: sAcc, retentionPercent: (sAcc / tAcc) * 100 };
     }),
     perLayerSimilarity: ["layer_2", "layer_4", "layer_6"].map((name) => ({
       layerName: name,
-      similarity: 0.75 + Math.random() * 0.2,
-      representationQuality: 0.7 + Math.random() * 0.25,
+      similarity: 0.75 + _rng.next() * 0.2,
+      representationQuality: 0.7 + _rng.next() * 0.25,
     })),
     overallKnowledgeRetention: (finalAccuracy / teacherAccuracy) * 100,
-    darkKnowledgeCaptured: 0.6 + Math.random() * 0.3,
+    darkKnowledgeCaptured: 0.6 + _rng.next() * 0.3,
     hardestClasses: classNames.slice(0, 3).map((name) => ({
       className: name,
-      retentionPercent: 70 + Math.random() * 20,
+      retentionPercent: 70 + _rng.next() * 20,
       recommendation: `Increase training samples for "${name}" class or use class-weighted loss`,
     })),
   };

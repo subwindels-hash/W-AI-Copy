@@ -7,6 +7,8 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Logger } from "pino";
+import { makeRng } from "../utils/detRng.js";
+const _rng = makeRng("scientific:scientific");
 import {
   ScientificDashboard, Experiment, LiteratureRef, Hypothesis, RESEARCH_DOMAINS, ResearchDomain,
 } from "@windels/shared";
@@ -19,9 +21,9 @@ const K = {
 };
 const s2=(o:any)=>JSON.stringify(o);
 const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rnd(a:number,b:number){return Math.random()*(b-a)+a;}
+function rnd(a:number,b:number){return _rng.next()*(b-a)+a;}
 function rndInt(a:number,b:number){return Math.floor(rnd(a,b+1));}
-function pick<T>(a:T[]):T{return a[Math.floor(Math.random()*a.length)];}
+function pick<T>(a:T[]):T{return a[Math.floor(_rng.next()*a.length)];}
 const now=()=>new Date().toISOString();
 
 const LIT: Omit<LiteratureRef,"id"|"citations"|"relevanceScore">[] = [

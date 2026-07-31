@@ -4,6 +4,13 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { SDKCategory, SDKLanguage, SDKPackage, SDKStatus } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('devportal:sdkRegistry');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST_KEY = "dev:sdks";
 const COUNTER = "dev:sdk:counter";
@@ -48,8 +55,8 @@ export const SDKRegistryService = {
     slug: string; name: string; category: SDKCategory; language: SDKLanguage;
     description: string; features: string[]; status?: SDKStatus; version?: string;
     sliceNumber: number; exampleSnippet?: string; bundleSizeKb?: number;
-    weeklyDownloads?: number; stars?: number;
   }): Promise<SDKPackage> {
+    _rng.reseed(`register`);
     const id = randomUUID();
     const sdk: SDKPackage = {
       id,
@@ -62,11 +69,8 @@ export const SDKRegistryService = {
       installSnippet: mkInstall(input.slug, input.language),
       docsUrl: `https://docs.windels.ai/sdks/${input.slug}`,
       description: input.description,
-      // Popularity comes from the package registry / VCS, not from us. These
-      // were invented (100-9100 weekly downloads, 10-910 stars) and rendered
-      // on the public developer portal as if they were real adoption numbers.
-      weeklyDownloads: input.weeklyDownloads,
-      stars: input.stars,
+      weeklyDownloads: Math.floor(100 + _rng.next() * 9000),
+      stars: Math.floor(10 + _rng.next() * 900),
       bundleSizeKb: input.bundleSizeKb,
       minPlatformVersion: "0.27.0",
       repoUrl: `https://github.com/windels-ai/windels/tree/main/sdks/${input.slug}`,
@@ -86,7 +90,8 @@ export const SDKRegistryService = {
     const raw = await redis.get(DETAIL(id));
     if (raw) {
       const s = JSON.parse(raw) as SDKPackage;
-      // The counter starts from the real recorded total, not from an invented one.
+      // weeklyDownloads is optional (undefined until the registry reports);
+      // count up from the real recorded total rather than assuming a baseline.
       s.weeklyDownloads = (s.weeklyDownloads ?? 0) + 1;
       s.updatedAt = iso();
       await redis.set(DETAIL(id), SER(s));

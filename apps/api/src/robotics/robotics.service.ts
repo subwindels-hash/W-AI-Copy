@@ -8,6 +8,8 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+const _rng = makeRng("robotics:robotics");
 import {
   Robot, RobotKind, RobotStatus, ROBOT_KINDS, MaintenanceWindow,
   PredictiveMaintAlert, RoboticsDashboard,
@@ -23,8 +25,8 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
-function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
+// Seed-path helper on the deterministic RNG (demo topology only).
+function randInt(min:number,max:number) { return _rng.randInt(min,max); }
 
 async function emitTelemetry(r: Robot) {
   try {

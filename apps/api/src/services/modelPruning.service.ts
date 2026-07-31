@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:modelPruning');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -380,7 +386,7 @@ async function executePruningJob(jobId: string): Promise<void> {
     pruningJobs.set(jobId, job);
 
     // Simulate pruning
-    const pruningTimeMs = 8000 + Math.random() * 15000;
+    const pruningTimeMs = 8000 + _rng.next() * 15000;
     await new Promise(resolve => setTimeout(resolve, Math.min(pruningTimeMs, 100)));
 
     // Fine-tuning if enabled
@@ -389,7 +395,7 @@ async function executePruningJob(jobId: string): Promise<void> {
       job.updatedAt = new Date().toISOString();
       pruningJobs.set(jobId, job);
 
-      const fineTuningTimeMs = 15000 + Math.random() * 25000;
+      const fineTuningTimeMs = 15000 + _rng.next() * 25000;
       await new Promise(resolve => setTimeout(resolve, Math.min(fineTuningTimeMs, 100)));
     }
 
@@ -425,7 +431,7 @@ function generatePruningResult(job: PruningJob): PruningResult {
   const source = job.sourceModel;
 
   // Calculate actual sparsity (close to target with some variance)
-  const actualSparsity = config.targetSparsity * (0.95 + Math.random() * 0.1);
+  const actualSparsity = config.targetSparsity * (0.95 + _rng.next() * 0.1);
   const compressionRatio = 1 - actualSparsity * 0.8; // Pruning doesn't always compress as much as sparsity
   const prunedSizeBytes = Math.round(source.sizeBytes * compressionRatio);
   const sizeReductionPercent = ((source.sizeBytes - prunedSizeBytes) / source.sizeBytes) * 100;
@@ -453,12 +459,12 @@ function generatePruningResult(job: PruningJob): PruningResult {
 
   // Generate original accuracy
   const originalAccuracy: ModelAccuracy = {
-    overall: 0.92 + Math.random() * 0.05,
+    overall: 0.92 + _rng.next() * 0.05,
     metrics: {
-      accuracy: 0.92 + Math.random() * 0.05,
-      precision: 0.91 + Math.random() * 0.05,
-      recall: 0.90 + Math.random() * 0.05,
-      f1: 0.91 + Math.random() * 0.05,
+      accuracy: 0.92 + _rng.next() * 0.05,
+      precision: 0.91 + _rng.next() * 0.05,
+      recall: 0.90 + _rng.next() * 0.05,
+      f1: 0.91 + _rng.next() * 0.05,
     },
     dataset: "validation_set",
     evaluatedAt: new Date().toISOString(),
@@ -481,13 +487,13 @@ function generatePruningResult(job: PruningJob): PruningResult {
   const speedup = 1 + actualSparsity * 1.5; // Structured pruning gives better speedup
   const performanceMetrics: PerformanceMetrics = {
     inferenceLatencyMs: {
-      original: 50 + Math.random() * 50,
-      pruned: (50 + Math.random() * 50) / speedup,
+      original: 50 + _rng.next() * 50,
+      pruned: (50 + _rng.next() * 50) / speedup,
       speedup,
     },
     throughputPerSecond: {
-      original: 20 + Math.random() * 20,
-      pruned: (20 + Math.random() * 20) * speedup,
+      original: 20 + _rng.next() * 20,
+      pruned: (20 + _rng.next() * 20) * speedup,
       improvement: speedup,
     },
     memoryUsageMb: {
@@ -505,8 +511,8 @@ function generatePruningResult(job: PruningJob): PruningResult {
   // Generate pruning details
   const numTotalWeights = originalNumParameters;
   const numPrunedWeights = Math.round(numTotalWeights * actualSparsity);
-  const pruningTimeMs = 8000 + Math.random() * 15000;
-  const fineTuningTimeMs = config.fineTuningConfig?.enabled ? 15000 + Math.random() * 25000 : undefined;
+  const pruningTimeMs = 8000 + _rng.next() * 15000;
+  const fineTuningTimeMs = config.fineTuningConfig?.enabled ? 15000 + _rng.next() * 25000 : undefined;
 
   const pruningDetails: PruningDetails = {
     method: config.method,
@@ -526,17 +532,17 @@ function generatePruningResult(job: PruningJob): PruningResult {
   const sparsityAnalysis: SparsityAnalysis = {
     overallSparsity: actualSparsity,
     sparsityByLayerType: {
-      conv: actualSparsity * (0.9 + Math.random() * 0.2),
-      linear: actualSparsity * (0.8 + Math.random() * 0.2),
-      attention: actualSparsity * (0.7 + Math.random() * 0.2),
-      embedding: actualSparsity * (0.5 + Math.random() * 0.2),
+      conv: actualSparsity * (0.9 + _rng.next() * 0.2),
+      linear: actualSparsity * (0.8 + _rng.next() * 0.2),
+      attention: actualSparsity * (0.7 + _rng.next() * 0.2),
+      embedding: actualSparsity * (0.5 + _rng.next() * 0.2),
     },
     sparsityDistribution: {
-      zeroToTwenty: 10 + Math.random() * 10,
-      twentyToForty: 20 + Math.random() * 10,
-      fortyToSixty: 30 + Math.random() * 10,
-      sixtyToEighty: 25 + Math.random() * 10,
-      eightyToHundred: 15 + Math.random() * 10,
+      zeroToTwenty: 10 + _rng.next() * 10,
+      twentyToForty: 20 + _rng.next() * 10,
+      fortyToSixty: 30 + _rng.next() * 10,
+      sixtyToEighty: 25 + _rng.next() * 10,
+      eightyToHundred: 15 + _rng.next() * 10,
     },
     mostPrunedLayers: [
       { layerName: "conv_layer_15", sparsity: actualSparsity * 1.2 },

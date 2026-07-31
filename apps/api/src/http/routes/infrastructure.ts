@@ -57,11 +57,14 @@ const SvcEnum = z.enum(["api","web","desktop-updater","all"]);
 export function registerInfrastructureRoutes(router: Router) {
   // NOTE: the parent platformRouter already has authenticate applied.
 
+  // Reads are pure — they never call `probe()` or `refreshHealth()` which
+  // mutate state. A background ticker (started in the API bootstrap) refreshes
+  // metrics on a schedule, like a real Kubernetes metrics-server. Callers that
+  // want a fresh snapshot can hit POST /infra/probe explicitly.
+
   // ── Slice 177/183: Cluster & metrics ──────────────────────────────
   router.get("/infra/overview", async (_req, res, next) => {
     try {
-      await ClusterService.probe();
-      await RegionService.refreshHealth();
       const [cluster, nodes, workloads, alerts, regions, recsSavings, cost, releases] = await Promise.all([
         ClusterService.getCluster(), ClusterService.listNodes(), ClusterService.listWorkloads(),
         InfraMetricsService.alerts(), RegionService.list(),
@@ -78,15 +81,22 @@ export function registerInfrastructureRoutes(router: Router) {
           activeReleases: releases.length, openEscalations: alerts.filter((a) => a.severity === "crit").length,
           openRecommendations: recsSavings.open,
           estimatedMonthlySavingsUsd: recsSavings.totalUsd,
-          totalMonthlyCostUsd: cost.totalUsd, updatedAt: new Date().toISOString(),
+          totalMonthlyCostUsd: cost.totalUsd,
+          // Note: no updatedAt — the cluster payload carries lastProbedAt.
         },
       });
     } catch (e) { next(e); }
   });
 
   router.get("/infra/cluster", async (_req, res, next) => {
+    try { res.json({ ok: true, data: await ClusterService.getCluster() }); } catch (e) { next(e); }
+  });
+
+  // Explicit refresh — write endpoint, requires POST.
+  router.post("/infra/probe", async (_req, res, next) => {
     try { res.json({ ok: true, data: await ClusterService.probe() }); } catch (e) { next(e); }
   });
+
   router.get("/infra/nodes", async (_req, res, next) => {
     try { res.json({ ok: true, data: { nodes: await ClusterService.listNodes() } }); } catch (e) { next(e); }
   });

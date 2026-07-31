@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiGracefulDegradation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -516,10 +522,10 @@ export async function getDegradationStats(organizationId: string): Promise<Degra
 // ─── Internal Functions ───────────────────────────────────────────────────────
 
 async function simulateFallbackExecution(fallback: FallbackModel, _request: Record<string, unknown>): Promise<{ success: boolean; response?: Record<string, unknown>; latencyMs: number }> {
-  const latency = fallback.latencyMs * (0.8 + Math.random() * 0.4);
+  const latency = fallback.latencyMs * (0.8 + _rng.next() * 0.4);
   await new Promise(r => setTimeout(r, Math.min(latency, 50)));
   return {
-    success: Math.random() > 0.05, // 95% success rate for fallbacks
+    success: _rng.next() > 0.05, // 95% success rate for fallbacks
     response: { model: fallback.modelName, fallback: true, quality: fallback.qualityScore, timestamp: new Date().toISOString() },
     latencyMs: Math.round(latency),
   };
@@ -549,7 +555,7 @@ async function attemptRecovery(policyId: string): Promise<void> {
   if (!policy || policy.status !== "degraded") return;
 
   // Simulate health check
-  const healthScore = 0.5 + Math.random() * 0.5;
+  const healthScore = 0.5 + _rng.next() * 0.5;
 
   if (healthScore >= policy.recoveryConfig.recoveryThreshold) {
     if (policy.recoveryConfig.strategy === "gradual") {

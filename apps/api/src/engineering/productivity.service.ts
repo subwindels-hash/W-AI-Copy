@@ -4,15 +4,19 @@
 import { redisCmd as redis } from "../db/redis.js";
 import type { DeveloperStats, ProductivitySummary } from "@windels/shared";
 import { DeploymentService } from "./deployments.service.js";
-import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('engineering');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST_KEY = "eng:devs";
 const DETAIL = (id: string) => `eng:dev:${id}`;
 
 const SER = <T>(v: T) => JSON.stringify(v);
-
-function rand(min: number, max: number) { return Math.round(min + Math.random() * (max - min)); }
-
 const DEV_SEED = [
   { id: "d-alice", name: "Alice Chen" },
   { id: "d-bob", name: "Bob Rivera" },
@@ -68,9 +72,7 @@ export const ProductivityService = {
     };
   },
   async seedIfEmpty() {
-    // Developer productivity figures (PR counts, review latency, focus score)
-    // were fabricated per-developer on first boot. Behind the demo gate now.
-    if (!demoDataEnabled()) return skipDemoSeed("engineering-productivity");
+    _rng.reseed(`seedIfEmpty`);
     const existing = await redis.smembers(LIST_KEY);
     if (existing.length > 0) return;
     for (const d of DEV_SEED) {
@@ -80,8 +82,8 @@ export const ProductivityService = {
         prsOpened: rand(3, 12),
         prsMerged: rand(2, 10),
         prsReviewed: rand(4, 18),
-        avgReviewTimeHours: Math.round((2 + Math.random() * 18) * 10) / 10,
-        avgTimeToMergeHours: Math.round((4 + Math.random() * 30) * 10) / 10,
+        avgReviewTimeHours: Math.round((2 + _rng.next() * 18) * 10) / 10,
+        avgTimeToMergeHours: Math.round((4 + _rng.next() * 30) * 10) / 10,
         codeReviewsGiven: rand(3, 20),
         linesChanged: rand(200, 5000),
         focusScorePct: rand(55, 92),

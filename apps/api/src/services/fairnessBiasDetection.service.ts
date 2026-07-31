@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:fairnessBiasDetection');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -645,8 +651,8 @@ function computeFairnessMetric(metric: FairnessMetric, config: FairnessConfig): 
     const unprivilegedGroups = config.unprivilegedGroups[attribute] ?? [];
 
     // Simulate metric computation
-    const privilegedRate = 0.6 + Math.random() * 0.3;
-    const unprivilegedRate = privilegedRate - (Math.random() * 0.3);
+    const privilegedRate = 0.6 + _rng.next() * 0.3;
+    const unprivilegedRate = privilegedRate - (_rng.next() * 0.3);
     const difference = privilegedRate - unprivilegedRate;
     const ratio = unprivilegedRate / privilegedRate;
 
@@ -698,8 +704,8 @@ function analyzeProtectedAttribute(
   const groups = [...(config.privilegedGroups[attribute] ?? []), ...(config.unprivilegedGroups[attribute] ?? [])];
   
   const groupResults = groups.map(group => {
-    const count = Math.floor(Math.random() * 1000) + 100;
-    const favorableRate = 0.5 + Math.random() * 0.4;
+    const count = Math.floor(_rng.next() * 1000) + 100;
+    const favorableRate = 0.5 + _rng.next() * 0.4;
     const unfavorableRate = 1 - favorableRate;
     
     return {
@@ -708,11 +714,11 @@ function analyzeProtectedAttribute(
       favorableRate,
       unfavorableRate,
       selectionRate: favorableRate,
-      positivePredictiveValue: 0.7 + Math.random() * 0.2,
-      falsePositiveRate: Math.random() * 0.3,
-      falseNegativeRate: Math.random() * 0.3,
-      truePositiveRate: 0.6 + Math.random() * 0.3,
-      trueNegativeRate: 0.6 + Math.random() * 0.3,
+      positivePredictiveValue: 0.7 + _rng.next() * 0.2,
+      falsePositiveRate: _rng.next() * 0.3,
+      falseNegativeRate: _rng.next() * 0.3,
+      truePositiveRate: 0.6 + _rng.next() * 0.3,
+      trueNegativeRate: 0.6 + _rng.next() * 0.3,
     };
   });
 
@@ -730,7 +736,7 @@ function analyzeProtectedAttribute(
         difference,
         ratio,
         statisticallySignificant: difference > 0.1,
-        pValue: Math.random() * 0.1,
+        pValue: _rng.next() * 0.1,
       });
     }
   }
@@ -769,8 +775,8 @@ function analyzeIntersectional(config: FairnessConfig): IntersectionalResult[] {
 
         for (const group1 of groups1) {
           for (const group2 of groups2) {
-            const count = Math.floor(Math.random() * 100) + 10;
-            const favorableRate = 0.4 + Math.random() * 0.5;
+            const count = Math.floor(_rng.next() * 100) + 10;
+            const favorableRate = 0.4 + _rng.next() * 0.5;
             const disparity = Math.abs(favorableRate - 0.5);
 
             results.push({
@@ -818,8 +824,8 @@ function analyzeDisparateImpact(
   const tests = attributeResults.map(attr => ({
     attribute: attr.attribute,
     test: "chi_square",
-    statistic: Math.random() * 10,
-    pValue: Math.random(),
+    statistic: _rng.next() * 10,
+    pValue: _rng.next(),
     significant: attr.disparities.some(d => d.statisticallySignificant),
   }));
 
@@ -858,13 +864,13 @@ async function applyBiasMitigation(
   };
 
   // Simulate mitigation
-  const improvement = 0.1 + Math.random() * 0.2; // 10-30% improvement
+  const improvement = 0.1 + _rng.next() * 0.2; // 10-30% improvement
   const afterMitigation = {
     fairnessScore: Math.min(1, beforeMitigation.fairnessScore + improvement),
     metricValues: Object.fromEntries(
       Object.entries(beforeMitigation.metricValues).map(([metric, value]) => [
         metric,
-        Math.min(1, value + improvement * (0.5 + Math.random() * 0.5)),
+        Math.min(1, value + improvement * (0.5 + _rng.next() * 0.5)),
       ])
     ),
   };
@@ -876,7 +882,7 @@ async function applyBiasMitigation(
     ])
   );
 
-  const accuracyDrop = Math.random() * 0.05; // 0-5% accuracy drop
+  const accuracyDrop = _rng.next() * 0.05; // 0-5% accuracy drop
   const otherImpacts = [];
   if (accuracyDrop > 0.02) {
     otherImpacts.push("Minor accuracy reduction");

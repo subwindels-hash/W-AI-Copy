@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiBiasDetection');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -310,8 +316,8 @@ function performBiasAudit(audit: BiasAudit): void {
     const metricsByAttribute: Record<string, AttributeFairnessMetrics> = {};
 
     audit.configuration.protectedAttributes.forEach(attr => {
-      const privilegedRate = 0.6 + Math.random() * 0.2;
-      const unprivilegedRate = 0.4 + Math.random() * 0.2;
+      const privilegedRate = 0.6 + _rng.next() * 0.2;
+      const unprivilegedRate = 0.4 + _rng.next() * 0.2;
 
       const demographicParity = calculateDemographicParity(privilegedRate, unprivilegedRate);
       const disparateImpact = calculateDisparateImpact(privilegedRate, unprivilegedRate);
@@ -511,7 +517,7 @@ export function checkBiasDrift(modelId: string): BiasAlert[] {
   monitoring.configuration.protectedAttributes.forEach(attr => {
     monitoring.configuration.metrics.forEach(metric => {
       // Simulate drift detection
-      const value = Math.random();
+      const value = _rng.next();
       const threshold = 0.1;
       const breached = value > threshold;
 

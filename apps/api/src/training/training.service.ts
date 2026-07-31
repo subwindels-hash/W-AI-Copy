@@ -7,6 +7,8 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+const _rng = makeRng("training:training");
 import {
   TrainingDataset, TrainingJob, TUNING_STRATEGIES, TuningStrategy,
   DATASET_FORMATS, DatasetFormat, TrainingJobStatus, JOB_STATUS,
@@ -25,7 +27,7 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
+function rand(min:number,max:number) { return _rng.next()*(max-min)+min; }
 function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
 
 const SEED_DATASETS: Array<{name:string;fmt:DatasetFormat;rows:number;sizeMb:number;synthPct:number;cleaned:boolean;rag:boolean}> = [

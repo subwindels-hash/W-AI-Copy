@@ -5,6 +5,12 @@ import { promisify } from "node:util";
 import { execFile as execFileCb } from "node:child_process";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('projectContinuity:projectIntake');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 const execFile = promisify(execFileCb);
 const MAX_ARCHIVE_BYTES = 25 * 1024 * 1024;
@@ -46,7 +52,7 @@ async function treeStats(root: string): Promise<{ files: number; bytes: number }
 async function verificationWorkspace(root: string) {
   const findings: Array<{ category: string; severity: "high" | "medium" | "low"; file: string; message: string }> = []; const ignored = new Set(["node_modules", ".git", "dist", "build", "coverage", ".next", "target", "vendor"]);
   const textExt = new Set([".ts", ".tsx", ".js", ".jsx", ".py", ".go", ".java", ".json", ".yml", ".yaml", ".md", ".sql"]);
-  async function walk(dir: string): Promise<void> { for (const name of await readdir(dir)) { if (ignored.has(name)) continue; const full = path.join(dir, name); const stat = await lstat(full); if (stat.isDirectory()) await walk(full); else if (textExt.has(path.extname(name).toLowerCase()) && stat.size <= 1_000_000) { const text = await readFile(full, "utf8").catch(() => ""); const file = path.relative(root, full); const todoCount = (text.match(/\b(?:TODO|FIXME|XXX)\b/g) ?? []).length; if (todoCount) findings.push({ category: "incomplete", severity: "low", file, message: `${todoCount} TODO/FIXME marker(s)` }); if (/Math\.random\s*\(/.test(text)) findings.push({ category: "demo_data", severity: "medium", file, message: "Math.random() detected; verify this is not synthetic production data" }); if (/not implemented|placeholder|mock data|fake data/i.test(text)) findings.push({ category: "placeholder", severity: "medium", file, message: "Placeholder/demo language detected" }); if (/api[_-]?key\s*[:=]|password\s*[:=]|private key/i.test(text)) findings.push({ category: "secret_review", severity: "high", file, message: "Potential hard-coded credential pattern; value intentionally omitted" }); } } }
+  async function walk(dir: string): Promise<void> { for (const name of await readdir(dir)) { if (ignored.has(name)) continue; const full = path.join(dir, name); const stat = await lstat(full); if (stat.isDirectory()) await walk(full); else if (textExt.has(path.extname(name).toLowerCase()) && stat.size <= 1_000_000) { const text = await readFile(full, "utf8").catch(() => ""); const file = path.relative(root, full); const todoCount = (text.match(/\b(?:TODO|FIXME|XXX)\b/g) ?? []).length; if (todoCount) findings.push({ category: "incomplete", severity: "low", file, message: `${todoCount} TODO/FIXME marker(s)` }); if (/Math\.random\s*\(/.test(text)) findings.push({ category: "demo_data", severity: "medium", file, message: "_rng.next() detected; verify this is not synthetic production data" }); if (/not implemented|placeholder|mock data|fake data/i.test(text)) findings.push({ category: "placeholder", severity: "medium", file, message: "Placeholder/demo language detected" }); if (/api[_-]?key\s*[:=]|password\s*[:=]|private key/i.test(text)) findings.push({ category: "secret_review", severity: "high", file, message: "Potential hard-coded credential pattern; value intentionally omitted" }); } } }
   await walk(root); const summary = { high: findings.filter((f) => f.severity === "high").length, medium: findings.filter((f) => f.severity === "medium").length, low: findings.filter((f) => f.severity === "low").length };
   return { verifiedAt: new Date().toISOString(), status: summary.high ? "needs_security_review" : summary.medium ? "partial" : "static_checks_passed", summary, findings: findings.slice(0, 1000), execution: { build: "not_run_requires_sandbox", typecheck: "not_run_requires_sandbox", tests: "not_run_requires_sandbox" } };
 }

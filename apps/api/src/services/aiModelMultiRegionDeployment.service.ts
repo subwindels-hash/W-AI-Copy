@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelMultiRegionDeployment');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -251,7 +257,7 @@ function calculateOptimalRouting(
       // Weighted random selection
       const weights = strategy.configuration.weights || {};
       const totalWeight = Object.values(weights).reduce((sum, w) => sum + w, 0);
-      let random = Math.random() * totalWeight;
+      let random = _rng.next() * totalWeight;
       
       for (const [regionId, weight] of Object.entries(weights)) {
         random -= weight;

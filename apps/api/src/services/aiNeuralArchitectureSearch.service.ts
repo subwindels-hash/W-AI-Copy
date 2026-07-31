@@ -11,6 +11,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiNeuralArchitectureSearch');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -284,14 +290,14 @@ function generateRandomArchitecture(space: SearchSpace): SearchedArchitecture {
   const cellSelections = space.cellDefinitions.map((cell) => {
     const edgeOps: Record<string, OperationType> = {};
     cell.edges.forEach((edge) => {
-      edgeOps[edge.id] = edge.operationChoices[Math.floor(Math.random() * edge.operationChoices.length)];
+      edgeOps[edge.id] = edge.operationChoices[Math.floor(_rng.next() * edge.operationChoices.length)];
     });
     return { cellId: cell.id, edgeOperations: edgeOps };
   });
   const macroSelections = space.macroChoices.map((m) => ({
     layerIndex: m.layerIndex,
-    channels: m.channelOptions[Math.floor(Math.random() * m.channelOptions.length)],
-    depth: m.depthOptions[Math.floor(Math.random() * m.depthOptions.length)],
+    channels: m.channelOptions[Math.floor(_rng.next() * m.channelOptions.length)],
+    depth: m.depthOptions[Math.floor(_rng.next() * m.depthOptions.length)],
   }));
   const totalParams = macroSelections.reduce((acc, m) => acc + m.channels * m.channels * m.depth * 9, 0);
   const totalFlops = totalParams * 128 * 128;
@@ -301,27 +307,27 @@ function generateRandomArchitecture(space: SearchSpace): SearchedArchitecture {
     macroSelections,
     totalParameters: totalParams,
     totalFlops,
-    estimatedLatencyMs: 5 + Math.random() * 45,
-    estimatedMemoryMB: totalParams * 4 / 1_000_000 + 50 + Math.random() * 200,
+    estimatedLatencyMs: 5 + _rng.next() * 45,
+    estimatedMemoryMB: totalParams * 4 / 1_000_000 + 50 + _rng.next() * 200,
     depth,
     encodedRepresentation: `arch_${cellSelections.map((c) => Object.values(c.edgeOperations).join("")).join("_")}`,
   };
 }
 
 function generateMetrics(arch: SearchedArchitecture): ArchitectureMetrics {
-  const baseAcc = 0.72 + Math.random() * 0.15;
+  const baseAcc = 0.72 + _rng.next() * 0.15;
   const sizePenalty = Math.max(0, (arch.totalParameters - 10_000_000) / 100_000_000) * 0.02;
-  const accuracy = Math.min(0.95, baseAcc - sizePenalty + Math.random() * 0.03);
+  const accuracy = Math.min(0.95, baseAcc - sizePenalty + _rng.next() * 0.03);
   return {
     accuracy,
-    top5Accuracy: Math.min(0.99, accuracy + 0.05 + Math.random() * 0.05),
+    top5Accuracy: Math.min(0.99, accuracy + 0.05 + _rng.next() * 0.05),
     latencyMs: arch.estimatedLatencyMs,
     modelSizeMB: arch.totalParameters * 4 / 1_000_000,
     flops: arch.totalFlops,
     memoryMB: arch.estimatedMemoryMB,
-    energyMj: arch.estimatedLatencyMs * (5 + Math.random() * 10),
+    energyMj: arch.estimatedLatencyMs * (5 + _rng.next() * 10),
     throughputPerSec: 1000 / arch.estimatedLatencyMs,
-    trainingTimeHours: 2 + Math.random() * 48,
+    trainingTimeHours: 2 + _rng.next() * 48,
   };
 }
 
@@ -464,7 +470,7 @@ export async function runSearchGeneration(jobId: string): Promise<SearchResult[]
       architectureId: `arch_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       architecture: arch,
       metrics,
-      evaluationTimeMs: 1000 + Math.random() * 5000,
+      evaluationTimeMs: 1000 + _rng.next() * 5000,
       rank: 0,
       isOnParetoFrontier: false,
       parentIds: job.progress.currentGeneration > 0
@@ -612,7 +618,7 @@ function computeParetoFrontier(results: SearchResult[], objectives: SearchObject
         objectives: objValues as Record<ObjectiveType, number>,
         dominatedBy,
         dominates,
-        hypervolumeContribution: Math.random() * 0.5 + 0.1,
+        hypervolumeContribution: _rng.next() * 0.5 + 0.1,
       });
     }
   }

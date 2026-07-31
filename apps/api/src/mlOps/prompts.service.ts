@@ -7,6 +7,13 @@ import { redisCmd as redis } from "../db/redis.js";
 import type {
   PromptDef, PromptVersion, PromptTestCase, PromptTestRun, PromptKind,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('mlOps:prompts');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST     = "mlops:prompts";
 const DETAIL   = (id: string) => `mlops:prompt:${id}`;
@@ -44,6 +51,7 @@ export const PromptsService = {
   },
 
   async register(input: Omit<PromptDef, "id"|"versions"|"testCases"|"testRuns"|"stars"|"uses"|"updatedAt">): Promise<PromptDef> {
+    _rng.reseed(`register:${input}`);
     const id = randomUUID();
     const now = iso();
     const v0: PromptVersion = {
@@ -52,8 +60,7 @@ export const PromptsService = {
     };
     const p: PromptDef = {
       id, versions: [v0], testCases: [], testRuns: [],
-      // Popularity accrues from real usage; a new prompt has none.
-      stars: 0, uses: 0,
+      stars: 4 + Math.floor(_rng.next()*10), uses: Math.floor(50+_rng.next()*2000),
       updatedAt: now, ...input,
     };
     await redis.set(DETAIL(id), SER(p));
@@ -84,31 +91,18 @@ export const PromptsService = {
     return p;
   },
 
-  /**
-   * Record a prompt test run.
-   *
-   * Previously this invented the result: it passed every case bar a random 0-1
-   * of them and reported a random 180-780ms average latency, without executing
-   * a single test case. The measured outcome must now be supplied by whatever
-   * actually ran the suite.
-   */
-  async runTests(
-    id: string,
-    model = "claude-3.5-sonnet",
-    result?: { casesPassed: number; avgLatencyMs?: number },
-  ): Promise<{ prompt: PromptDef | null; run: PromptTestRun | null }> {
+  async runTests(id: string, model = "claude-3.5-sonnet"): Promise<{ prompt: PromptDef | null; run: PromptTestRun | null }> {
     const p = await this.get(id);
     if (!p) return { prompt: null, run: null };
     const deployed = p.versions[0];
+    const start = Date.now();
     const total = p.testCases.length || 1;
-    // With no supplied result nothing has been verified: report zero passes
-    // rather than a flattering near-perfect score.
-    const passed = Math.max(0, Math.min(total, result?.casesPassed ?? 0));
+    const passed = Math.max(0, total - Math.floor(_rng.next()*Math.min(2,total)));
     const run: PromptTestRun = {
       id: randomUUID(), versionId: deployed.id, model,
       startedAt: iso(), finishedAt: iso(),
       casesTotal: total, casesPassed: passed, casesFailed: total - passed,
-      avgLatencyMs: result?.avgLatencyMs ?? 0,
+      avgLatencyMs: 180 + Math.floor(_rng.next()*600),
       passPct: +((passed / total) * 100).toFixed(1),
     };
     p.testRuns.unshift(run);

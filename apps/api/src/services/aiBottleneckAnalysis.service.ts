@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiBottleneckAnalysis');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -535,7 +541,7 @@ function buildCriticalPath(bottlenecks: Bottleneck[]): CriticalPath {
       isOnCriticalPath: isOnCriticalPath,
       slackMs: Math.max(0, slack),
       resourceType: l.type === "compute" ? "gpu-compute" : l.type === "memory-access" ? "gpu-memory" : "gpu-sync",
-      utilization: 50 + Math.random() * 40,
+      utilization: 50 + _rng.next() * 40,
       metadata: {},
     };
   });
@@ -543,7 +549,7 @@ function buildCriticalPath(bottlenecks: Bottleneck[]): CriticalPath {
     sourceId: n.id,
     targetId: nodes[i + 1].id,
     type: "dependency" as const,
-    latencyMs: 0.01 + Math.random() * 0.05,
+    latencyMs: 0.01 + _rng.next() * 0.05,
     description: `Sequential dependency: ${n.label} → ${nodes[i + 1].label}`,
   }));
   const criticalNodes = nodes.filter((n) => n.isOnCriticalPath);

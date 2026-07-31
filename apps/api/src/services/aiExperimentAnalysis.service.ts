@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiExperimentAnalysis');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -392,10 +398,10 @@ export async function performStatisticalAnalysis(
           experiment1Id: experimentIds[i],
           experiment2Id: experimentIds[j],
           testType: 't-test',
-          statistic: Math.random() * 5,
-          pValue: Math.random(),
-          significant: Math.random() > 0.5,
-          effectSize: Math.random() * 2,
+          statistic: _rng.next() * 5,
+          pValue: _rng.next(),
+          significant: _rng.next() > 0.5,
+          effectSize: _rng.next() * 2,
           confidence: 0.95,
         });
       }
@@ -403,8 +409,8 @@ export async function performStatisticalAnalysis(
   }
 
   const confidenceIntervals = metrics.reduce((acc, metric) => {
-    const mean = Math.random() * 100;
-    const margin = Math.random() * 10;
+    const mean = _rng.next() * 100;
+    const margin = _rng.next() * 10;
     acc[metric] = {
       metric,
       lower: mean - margin,
@@ -482,11 +488,11 @@ export async function analyzeParameterImportance(
   const importances: ParameterImportance[] = parameters
     .map((param, idx) => ({
       parameter: param,
-      importance: Math.random(),
+      importance: _rng.next(),
       rank: idx + 1,
-      direction: (Math.random() > 0.5 ? 'positive' : 'negative') as 'positive' | 'negative',
-      confidence: 0.7 + Math.random() * 0.3,
-      pValue: Math.random() * 0.1,
+      direction: (_rng.next() > 0.5 ? 'positive' : 'negative') as 'positive' | 'negative',
+      confidence: 0.7 + _rng.next() * 0.3,
+      pValue: _rng.next() * 0.1,
     }))
     .sort((a, b) => b.importance - a.importance)
     .map((imp, idx) => ({ ...imp, rank: idx + 1 }));
@@ -583,8 +589,8 @@ export async function performCorrelationAnalysis(
         matrix[i][j] = matrix[j][i];
         pValues[i][j] = pValues[j][i];
       } else {
-        matrix[i][j] = (Math.random() - 0.5) * 2;
-        pValues[i][j] = Math.random();
+        matrix[i][j] = (_rng.next() - 0.5) * 2;
+        pValues[i][j] = _rng.next();
       }
     }
   }
@@ -664,15 +670,15 @@ export async function detectExperimentAnomalies(
 
   // Simulate anomaly detection
   const anomalies: ExperimentAnomaly[] = experimentIds
-    .filter(() => Math.random() > 0.8) // 20% anomaly rate
+    .filter(() => _rng.next() > 0.8) // 20% anomaly rate
     .map((expId) => ({
       experimentId: expId,
       experimentName: `Experiment ${expId.slice(0, 8)}`,
-      anomalyScore: 0.7 + Math.random() * 0.3,
+      anomalyScore: 0.7 + _rng.next() * 0.3,
       affectedMetrics: ['accuracy', 'loss'],
       affectedParameters: ['learning_rate'],
       reason: 'Unusual metric values detected',
-      severity: (Math.random() > 0.7 ? 'high' : Math.random() > 0.4 ? 'medium' : 'low') as any,
+      severity: (_rng.next() > 0.7 ? 'high' : _rng.next() > 0.4 ? 'medium' : 'low') as any,
     }));
 
   const insights: Insight[] = anomalies.length > 0
@@ -819,15 +825,15 @@ export async function getAnalysisDashboard(organizationId: string): Promise<Anal
 // ─── Helper Functions ──────────────────────────────────────────────────────────
 
 function generateMetricStatistics(): MetricStatistics {
-  const mean = Math.random() * 100;
-  const std = Math.random() * 20;
+  const mean = _rng.next() * 100;
+  const std = _rng.next() * 20;
   return {
-    count: 100 + Math.floor(Math.random() * 900),
+    count: 100 + Math.floor(_rng.next() * 900),
     mean,
     std,
     min: mean - std * 3,
     max: mean + std * 3,
-    median: mean + (Math.random() - 0.5) * std,
+    median: mean + (_rng.next() - 0.5) * std,
     percentiles: {
       p25: mean - std * 0.67,
       p50: mean,
@@ -837,12 +843,12 @@ function generateMetricStatistics(): MetricStatistics {
     },
     distribution: {
       type: 'normal',
-      skewness: (Math.random() - 0.5) * 2,
-      kurtosis: 3 + (Math.random() - 0.5) * 2,
+      skewness: (_rng.next() - 0.5) * 2,
+      kurtosis: 3 + (_rng.next() - 0.5) * 2,
       normalityTest: {
-        statistic: Math.random(),
-        pValue: Math.random(),
-        isNormal: Math.random() > 0.5,
+        statistic: _rng.next(),
+        pValue: _rng.next(),
+        isNormal: _rng.next() > 0.5,
       },
     },
   };

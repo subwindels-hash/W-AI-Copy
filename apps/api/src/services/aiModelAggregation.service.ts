@@ -8,6 +8,12 @@
  */
 
 import { randomUUID, createHash } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelAggregation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -738,7 +744,7 @@ export async function performSecureAggregation(
 
   // Add noise for differential privacy
   const noiseScale = privacyConfig.sensitivity * privacyConfig.noiseMultiplier / privacyConfig.epsilon;
-  const noise = (Math.random() - 0.5) * 2 * noiseScale;
+  const noise = (_rng.next() - 0.5) * 2 * noiseScale;
   aggregatedAccuracy = Math.max(0, Math.min(1, aggregatedAccuracy + noise));
 
   const aggregatedModel: AggregatedModel = {

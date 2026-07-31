@@ -9,6 +9,12 @@
  */
 
 import { randomUUID, createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:textAnalysisUnderstanding');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -608,7 +614,7 @@ async function processTextAnalysis(jobId: string): Promise<void> {
   if (!job) return;
 
   const startTime = Date.now();
-  const processingTimeMs = 200 + Math.floor(Math.random() * 1500);
+  const processingTimeMs = 200 + Math.floor(_rng.next() * 1500);
 
   // Generate simulated results based on analysis types
   const result: TextAnalysisResult = {
@@ -617,8 +623,8 @@ async function processTextAnalysis(jobId: string): Promise<void> {
       wordCount: job.text.split(/\s+/).length,
       sentenceCount: job.text.split(/[.!?]+/).length,
       language: job.language ?? "en",
-      languageConfidence: 0.95 + Math.random() * 0.05,
-      readabilityScore: 50 + Math.random() * 50,
+      languageConfidence: 0.95 + _rng.next() * 0.05,
+      readabilityScore: 50 + _rng.next() * 50,
       readingTimeMs: job.text.split(/\s+/).length * 250, // ~250ms per word
     },
     sentiment: job.analysisTypes.includes("sentiment") || job.analysisTypes.includes("full-analysis")
@@ -670,16 +676,16 @@ async function processTextAnalysis(jobId: string): Promise<void> {
 
 function generateSentimentResult(text: string, config?: AnalysisConfig["sentiment"]): SentimentResult {
   const sentences = text.split(/[.!?]+/).filter(s => s.trim().length > 0);
-  const overallScore = Math.random() * 2 - 1; // -1 to 1
+  const overallScore = _rng.next() * 2 - 1; // -1 to 1
   const overallLabel: SentimentLabel = overallScore > 0.2 ? "positive" : overallScore < -0.2 ? "negative" : "neutral";
 
   const sentenceSentiments = sentences.map((sentence, i) => {
-    const score = Math.random() * 2 - 1;
+    const score = _rng.next() * 2 - 1;
     return {
       text: sentence.trim(),
       sentiment: (score > 0.2 ? "positive" : score < -0.2 ? "negative" : "neutral") as SentimentLabel,
       score,
-      confidence: 0.8 + Math.random() * 0.2,
+      confidence: 0.8 + _rng.next() * 0.2,
       offset: text.indexOf(sentence),
     };
   });
@@ -687,7 +693,7 @@ function generateSentimentResult(text: string, config?: AnalysisConfig["sentimen
   return {
     overall: overallLabel,
     score: overallScore,
-    confidence: 0.85 + Math.random() * 0.15,
+    confidence: 0.85 + _rng.next() * 0.15,
     sentenceSentiments: config?.granularity !== "document" ? sentenceSentiments : [],
   };
 }
@@ -713,7 +719,7 @@ function generateNamedEntities(text: string, config?: AnalysisConfig["ner"]): Na
           type,
           startIndex,
           endIndex: startIndex + match.length,
-          confidence: 0.8 + Math.random() * 0.2,
+          confidence: 0.8 + _rng.next() * 0.2,
           normalizedValue: type === "money" ? match.replace(/[$,]/g, "") : match,
         });
       }
@@ -735,8 +741,8 @@ function generateClassifications(config?: AnalysisConfig["classification"]): Tex
 
   return categories.map(category => ({
     category: category as TextClassificationCategory,
-    label: (labels[category] ?? ["unknown"])[Math.floor(Math.random() * (labels[category] ?? ["unknown"]).length)],
-    confidence: 0.7 + Math.random() * 0.3,
+    label: (labels[category] ?? ["unknown"])[Math.floor(_rng.next() * (labels[category] ?? ["unknown"]).length)],
+    confidence: 0.7 + _rng.next() * 0.3,
   }));
 }
 
@@ -748,7 +754,7 @@ function generateSummary(text: string, config?: AnalysisConfig["summarization"])
   const keySentences = sentences
     .map((sentence, index) => ({
       text: sentence.trim(),
-      score: Math.random(),
+      score: _rng.next(),
       index,
     }))
     .sort((a, b) => b.score - a.score)
@@ -798,7 +804,7 @@ function generateKeyphrases(text: string, config?: AnalysisConfig["keywords"]): 
     .map(p => ({
       ...p,
       frequency: (text.toLowerCase().match(new RegExp(p.phrase, "g")) ?? []).length,
-      relevance: 0.8 + Math.random() * 0.2,
+      relevance: 0.8 + _rng.next() * 0.2,
     }));
 }
 
@@ -806,7 +812,7 @@ function generateSimilarities(text: string, config?: AnalysisConfig["similarity"
   if (!config || !config.comparisonTexts) return [];
   return config.comparisonTexts.map(comparisonText => ({
     comparisonText,
-    similarityScore: 0.5 + Math.random() * 0.5,
+    similarityScore: 0.5 + _rng.next() * 0.5,
     method: config.method ?? "cosine",
   }));
 }
@@ -828,7 +834,7 @@ function generatePreprocessedText(text: string): PreprocessedText {
 
 function generateSimulatedEmbedding(): number[] {
   // Generate 1536-dimensional embedding vector (OpenAI text-embedding-3-large)
-  return Array.from({ length: 1536 }, () => Math.random() * 2 - 1);
+  return Array.from({ length: 1536 }, () => _rng.next() * 2 - 1);
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {

@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:ethicalComplianceImpactAssessment');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -732,7 +738,7 @@ async function conductEthicalAssessment(job: EthicalAssessmentJob): Promise<Ethi
 }
 
 function assessEthicalPrinciple(principle: EthicalPrinciple, config: EthicalAssessmentConfig): PrincipleAssessment {
-  const score = 60 + Math.random() * 40; // 60-100
+  const score = 60 + _rng.next() * 40; // 60-100
   const passed = score >= 70;
 
   const evidence = [
@@ -794,7 +800,7 @@ function analyzeStakeholders(config: EthicalAssessmentConfig): StakeholderAnalys
       impacts,
       concerns: stakeholder.concerns ?? [],
       engagementStatus: "consulted" as const,
-      satisfaction: 70 + Math.random() * 30,
+      satisfaction: 70 + _rng.next() * 30,
     };
   });
 
@@ -989,8 +995,8 @@ function isWithinAppetite(riskLevel: EthicalRiskLevel, riskAppetite: EthicalRisk
 function conductReview(config: EthicalAssessmentConfig): ReviewResult {
   const reviewers = config.reviewWorkflow!.reviewers.map(reviewer => ({
     ...reviewer,
-    status: (Math.random() > 0.3 ? "approved" : "requires_revision") as "pending" | "approved" | "rejected" | "requires_revision",
-    comments: Math.random() > 0.5 ? "Assessment is thorough and well-documented" : undefined,
+    status: (_rng.next() > 0.3 ? "approved" : "requires_revision") as "pending" | "approved" | "rejected" | "requires_revision",
+    comments: _rng.next() > 0.5 ? "Assessment is thorough and well-documented" : undefined,
     reviewedAt: new Date().toISOString(),
   }));
 

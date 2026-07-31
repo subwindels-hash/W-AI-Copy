@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelRegressionTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -483,16 +489,16 @@ function executeRegressionTests(
     const baselineOutput = baselineResult?.currentOutput || testCase.expectedOutput;
 
     // Simulate current output
-    const hasRegression = Math.random() > 0.9; // 10% regression rate
+    const hasRegression = _rng.next() > 0.9; // 10% regression rate
     const currentOutput = hasRegression
-      ? { ...baselineOutput, value: baselineOutput.value * (1 + Math.random() * 0.2) }
+      ? { ...baselineOutput, value: baselineOutput.value * (1 + _rng.next() * 0.2) }
       : baselineOutput;
 
     const difference = calculateDifference(baselineOutput, currentOutput);
     const withinTolerance = difference <= testCase.tolerance;
     const regressionDetected = !withinTolerance;
 
-    const duration = Math.random() * 2;
+    const duration = _rng.next() * 2;
     totalDuration += duration;
 
     const status = regressionDetected ? 'regression' : 'passed';

@@ -5,11 +5,9 @@
  * review runs). Produces actionable reports and audit logs.
  */
 import { randomUUID } from "node:crypto";
-import { PrismaClient } from "@prisma/client";
+import { prisma } from "../db/client.js";
 import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
-
-const prisma = new PrismaClient();
 
 export type IncidentSeverity = "low"|"medium"|"high"|"critical";
 export type IncidentStatus = "reported"|"investigating"|"contained"|"resolved"|"postmortem";

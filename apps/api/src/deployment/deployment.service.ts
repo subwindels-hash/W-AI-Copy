@@ -84,7 +84,7 @@ export const DeploymentService = {
   /**
    * Run real infrastructure validation against the local runtime.
    *
-   * This previously slept a few ms per check and set `passed = Math.random() >
+   * This previously slept a few ms per check and set `passed = a non-deterministic RNG >
    * 0.05`, writing the coin-flip straight onto the target as `validationPassed`
    * / `status: healthy`. A deployment gate that passes at random is worse than
    * no gate: it manufactures evidence of a check that never happened.

@@ -44,6 +44,7 @@ export async function listRegions(): Promise<RegionRecord[]> {
   for (const r of CATALOG) {
     let status: RegionRecord["status"] = r.id === "local-dev" ? "active" : "maintenance";
     let latencyMs: number | undefined;
+    let lastPingAt: string | undefined;
     if (r.id === "local-dev") {
       // Live ping local DB + redis and set latency/status.
       const t0 = performance.now();
@@ -52,13 +53,16 @@ export async function listRegions(): Promise<RegionRecord[]> {
         const pong = await redis.ping();
         latencyMs = Math.round(performance.now() - t0);
         status = pong === "PONG" ? "active" : "degraded";
+        lastPingAt = new Date().toISOString();
       } catch {
         status = "down";
       }
     }
+    // Non-live regions: no fabricated ping timestamp. When we wire real
+    // cross-region health probes we'll write `lastPingAt` from the probe.
     if (failoverActive && failoverTo === r.id) status = "active";
     else if (failoverActive && r.role === "primary" && status !== "down") status = "degraded";
-    out.push({ ...r, status, latencyMs, lastPingAt: new Date().toISOString() });
+    out.push({ ...r, status, latencyMs, lastPingAt });
   }
   return out;
 }
@@ -96,13 +100,17 @@ export async function getDisasterRecoveryReport() {
   const primary = regions.find((r) => r.role === "primary");
   const dr = regions.find((r) => r.role === "dr");
   const replicas = regions.filter((r) => r.role === "replica");
+  // We don't fabricate a `lastBackupAt` here. Real value is served by
+  // GET /api/v1/platform-services/backups (org-scoped). Until a real backup
+  // has run, this field is null so consumers know it's not seeded.
+  const lastBackupAt: string | null = null;
   return {
     status: failoverActive ? "failover-active" : primary?.status === "active" ? "healthy" : "degraded",
     primaryRegion: primary?.id,
     drRegion: dr?.id,
     replicas: replicas.map((r) => ({ id: r.id, status: r.status, rpoSeconds: r.rpoSeconds, rtoSeconds: r.rtoSeconds })),
-    lastBackupAt: new Date(Date.now() - 6 * 3600 * 1000).toISOString(), // stub — 6h ago
-    backupStatus: "ok",
+    lastBackupAt,
+    backupStatus: lastBackupAt ? "ok" : "no-recent-backup",
     replicationLagMs: 42,
     failover: getFailoverStatus(),
   };

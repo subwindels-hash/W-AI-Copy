@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelOptimization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -406,14 +412,14 @@ function generateProfilingResults(profile: ModelOptimizationProfile): ProfilingR
 
   const baseInference = 10 + paramFactor * 100 * factor;
   const inferenceMs = baseInference * (cfg.precision === "fp32" ? 1.0 : cfg.precision === "fp16" ? 0.6 : 0.35);
-  const preprocessingMs = 2 + Math.random() * 5;
-  const postprocessingMs = 1 + Math.random() * 3;
+  const preprocessingMs = 2 + _rng.next() * 5;
+  const postprocessingMs = 1 + _rng.next() * 3;
   const totalLatency = preprocessingMs + inferenceMs + postprocessingMs;
 
   const layerProfiles: LayerProfile[] = [];
   let cumTime = 0;
   for (let i = 0; i < Math.min(model.numLayers, 20); i++) {
-    const layerTime = (inferenceMs / model.numLayers) * (0.5 + Math.random() * 1.5);
+    const layerTime = (inferenceMs / model.numLayers) * (0.5 + _rng.next() * 1.5);
     cumTime += layerTime;
     const layerType = i === 0 ? "embedding" : i === model.numLayers - 1 ? "output" : model.architecture === "transformer" ? (i % 3 === 0 ? "attention" : i % 3 === 1 ? "feedforward" : "layernorm") : model.architecture === "cnn" ? (i % 2 === 0 ? "conv2d" : "relu") : "linear";
     layerProfiles.push({
@@ -422,9 +428,9 @@ function generateProfilingResults(profile: ModelOptimizationProfile): ProfilingR
       index: i,
       executionTimeMs: Math.round(layerTime * 100) / 100,
       percentOfTotal: 0,
-      memoryUsageMb: Math.round((model.sizeBytes / 1024 / 1024 / model.numLayers) * (0.5 + Math.random()) * 100) / 100,
-      flops: Math.round((model.numParameters / model.numLayers) * 2 * (0.8 + Math.random() * 0.4)),
-      computeEfficiency: 0.4 + Math.random() * 0.5,
+      memoryUsageMb: Math.round((model.sizeBytes / 1024 / 1024 / model.numLayers) * (0.5 + _rng.next()) * 100) / 100,
+      flops: Math.round((model.numParameters / model.numLayers) * 2 * (0.8 + _rng.next() * 0.4)),
+      computeEfficiency: 0.4 + _rng.next() * 0.5,
       inputShape: model.inputShape,
       outputShape: model.outputShape,
       numParameters: Math.round(model.numParameters / model.numLayers),
@@ -432,8 +438,8 @@ function generateProfilingResults(profile: ModelOptimizationProfile): ProfilingR
   }
   for (const l of layerProfiles) l.percentOfTotal = Math.round((l.executionTimeMs / cumTime) * 10000) / 100;
 
-  const peakMem = (model.sizeBytes / 1024 / 1024) * (1.5 + Math.random() * 0.5);
-  const activationMem = peakMem * (0.3 + Math.random() * 0.2);
+  const peakMem = (model.sizeBytes / 1024 / 1024) * (1.5 + _rng.next() * 0.5);
+  const activationMem = peakMem * (0.3 + _rng.next() * 0.2);
 
   return {
     latency: {
@@ -454,7 +460,7 @@ function generateProfilingResults(profile: ModelOptimizationProfile): ProfilingR
       batchesPerSecond: Math.round((1000 / totalLatency) * 100) / 100,
       maxBatchThroughput: Math.round((1000 / totalLatency) * cfg.batchSize * 4 * 100) / 100,
       optimalBatchSize: Math.max(1, Math.round(8 * factor)),
-      scalingEfficiency: 0.6 + Math.random() * 0.3,
+      scalingEfficiency: 0.6 + _rng.next() * 0.3,
     },
     memory: {
       peakUsageMb: Math.round(peakMem * 100) / 100,
@@ -462,23 +468,23 @@ function generateProfilingResults(profile: ModelOptimizationProfile): ProfilingR
       modelSizeMb: Math.round((model.sizeBytes / 1024 / 1024) * 100) / 100,
       activationMemoryMb: Math.round(activationMem * 100) / 100,
       temporaryBuffersMb: Math.round((peakMem - (model.sizeBytes / 1024 / 1024) - activationMem) * 100) / 100,
-      fragmentationPercent: Math.round(Math.random() * 15 * 100) / 100,
-      memoryByLayerType: { attention: 35 + Math.random() * 10, feedforward: 25 + Math.random() * 10, embedding: 15 + Math.random() * 5, normalization: 5 + Math.random() * 3 },
+      fragmentationPercent: Math.round(_rng.next() * 15 * 100) / 100,
+      memoryByLayerType: { attention: 35 + _rng.next() * 10, feedforward: 25 + _rng.next() * 10, embedding: 15 + _rng.next() * 5, normalization: 5 + _rng.next() * 3 },
     },
     compute: {
       totalFlops: Math.round(model.numParameters * 2 * cfg.batchSize),
-      effectiveFlops: Math.round(model.numParameters * 2 * cfg.batchSize * (0.5 + Math.random() * 0.3)),
-      computeUtilization: 0.4 + Math.random() * 0.4,
-      memoryBandwidthUtilization: 0.3 + Math.random() * 0.5,
-      rooflineEfficiency: 0.3 + Math.random() * 0.4,
+      effectiveFlops: Math.round(model.numParameters * 2 * cfg.batchSize * (0.5 + _rng.next() * 0.3)),
+      computeUtilization: 0.4 + _rng.next() * 0.4,
+      memoryBandwidthUtilization: 0.3 + _rng.next() * 0.5,
+      rooflineEfficiency: 0.3 + _rng.next() * 0.4,
       opsByType: { matmul: { count: Math.round(model.numLayers * 2), flops: Math.round(model.numParameters * 1.5), timeMs: Math.round(inferenceMs * 0.5 * 100) / 100 }, add: { count: Math.round(model.numLayers * 3), flops: Math.round(model.numParameters * 0.1), timeMs: Math.round(inferenceMs * 0.1 * 100) / 100 }, softmax: { count: model.numLayers, flops: Math.round(model.numParameters * 0.05), timeMs: Math.round(inferenceMs * 0.15 * 100) / 100 }, layernorm: { count: model.numLayers, flops: Math.round(model.numParameters * 0.02), timeMs: Math.round(inferenceMs * 0.05 * 100) / 100 } },
     },
     layerProfiles,
     powerProfile: cfg.includePowerProfile ? {
-      averageWatts: 100 + Math.random() * 200,
-      peakWatts: 200 + Math.random() * 300,
-      energyPerInferenceMj: Math.round(totalLatency * (100 + Math.random() * 200) / 1000 * 100) / 100,
-      powerByComponent: { gpu_compute: 60 + Math.random() * 20, gpu_memory: 15 + Math.random() * 10, cpu: 5 + Math.random() * 5 },
+      averageWatts: 100 + _rng.next() * 200,
+      peakWatts: 200 + _rng.next() * 300,
+      energyPerInferenceMj: Math.round(totalLatency * (100 + _rng.next() * 200) / 1000 * 100) / 100,
+      powerByComponent: { gpu_compute: 60 + _rng.next() * 20, gpu_memory: 15 + _rng.next() * 10, cpu: 5 + _rng.next() * 5 },
     } : undefined,
   };
 }
@@ -576,15 +582,15 @@ function generateRecommendations(profile: ModelOptimizationProfile): Optimizatio
       description: "Convert model weights from FP32 to INT8 to reduce memory footprint and improve inference speed",
       rationale: `Model is ${Math.round(model.sizeBytes / 1e6)}MB in FP32 — INT8 quantization typically achieves 3-4x size reduction with <1% accuracy loss`,
       impact: "high",
-      estimatedLatencyImprovementPercent: 30 + Math.round(Math.random() * 15),
-      estimatedMemoryImprovementPercent: 60 + Math.round(Math.random() * 10),
-      estimatedThroughputImprovementPercent: 40 + Math.round(Math.random() * 20),
-      estimatedAccuracyImpactPercent: -(0.1 + Math.random() * 0.9),
+      estimatedLatencyImprovementPercent: 30 + Math.round(_rng.next() * 15),
+      estimatedMemoryImprovementPercent: 60 + Math.round(_rng.next() * 10),
+      estimatedThroughputImprovementPercent: 40 + Math.round(_rng.next() * 20),
+      estimatedAccuracyImpactPercent: -(0.1 + _rng.next() * 0.9),
       effort: "medium",
       priority: priority++,
       prerequisites: ["Calibration dataset (100-1000 samples)", "Accuracy validation pipeline"],
       applicableLayers: results.layerProfiles.filter(l => l.layerType !== "normalization").map(l => l.layerName),
-      confidenceScore: 0.85 + Math.random() * 0.1,
+      confidenceScore: 0.85 + _rng.next() * 0.1,
     });
   }
 
@@ -598,15 +604,15 @@ function generateRecommendations(profile: ModelOptimizationProfile): Optimizatio
       description: "Remove redundant weights in low-efficiency layers to reduce computation",
       rationale: `${sparsityPotential} of ${results.layerProfiles.length} profiled layers have compute efficiency below 50%, indicating pruning potential`,
       impact: sparsityPotential > model.numLayers * 0.4 ? "high" : "medium",
-      estimatedLatencyImprovementPercent: 15 + Math.round(Math.random() * 20),
-      estimatedMemoryImprovementPercent: 20 + Math.round(Math.random() * 15),
-      estimatedThroughputImprovementPercent: 15 + Math.round(Math.random() * 20),
-      estimatedAccuracyImpactPercent: -(0.5 + Math.random() * 2.0),
+      estimatedLatencyImprovementPercent: 15 + Math.round(_rng.next() * 20),
+      estimatedMemoryImprovementPercent: 20 + Math.round(_rng.next() * 15),
+      estimatedThroughputImprovementPercent: 15 + Math.round(_rng.next() * 20),
+      estimatedAccuracyImpactPercent: -(0.5 + _rng.next() * 2.0),
       effort: "high",
       priority: priority++,
       prerequisites: ["Fine-tuning dataset", "Pruning-aware training pipeline", "Accuracy regression testing"],
       applicableLayers: results.layerProfiles.filter(l => l.computeEfficiency < 0.5).map(l => l.layerName),
-      confidenceScore: 0.7 + Math.random() * 0.15,
+      confidenceScore: 0.7 + _rng.next() * 0.15,
     });
   }
 
@@ -619,15 +625,15 @@ function generateRecommendations(profile: ModelOptimizationProfile): Optimizatio
       description: "Fuse adjacent operators to reduce kernel launch overhead and memory traffic",
       rationale: `Roofline efficiency is ${(results.compute.rooflineEfficiency * 100).toFixed(1)}% — operator fusion can reduce memory-bound operations significantly`,
       impact: "medium",
-      estimatedLatencyImprovementPercent: 10 + Math.round(Math.random() * 15),
-      estimatedMemoryImprovementPercent: 10 + Math.round(Math.random() * 10),
-      estimatedThroughputImprovementPercent: 15 + Math.round(Math.random() * 10),
+      estimatedLatencyImprovementPercent: 10 + Math.round(_rng.next() * 15),
+      estimatedMemoryImprovementPercent: 10 + Math.round(_rng.next() * 10),
+      estimatedThroughputImprovementPercent: 15 + Math.round(_rng.next() * 10),
       estimatedAccuracyImpactPercent: 0,
       effort: "medium",
       priority: priority++,
       prerequisites: ["ONNX/TensorRT compilation pipeline"],
       applicableLayers: results.layerProfiles.filter((_, i) => i > 0 && i < results.layerProfiles.length - 1).map(l => l.layerName),
-      confidenceScore: 0.8 + Math.random() * 0.1,
+      confidenceScore: 0.8 + _rng.next() * 0.1,
     });
   }
 
@@ -640,15 +646,15 @@ function generateRecommendations(profile: ModelOptimizationProfile): Optimizatio
       description: "Implement dynamic batching to maximize throughput while respecting latency SLAs",
       rationale: `Current scaling efficiency is ${(results.throughput.scalingEfficiency * 100).toFixed(1)}% — optimal batch size is ${results.throughput.optimalBatchSize}`,
       impact: "high",
-      estimatedLatencyImprovementPercent: 5 + Math.round(Math.random() * 10),
+      estimatedLatencyImprovementPercent: 5 + Math.round(_rng.next() * 10),
       estimatedMemoryImprovementPercent: 0,
-      estimatedThroughputImprovementPercent: 30 + Math.round(Math.random() * 30),
+      estimatedThroughputImprovementPercent: 30 + Math.round(_rng.next() * 30),
       estimatedAccuracyImpactPercent: 0,
       effort: "low",
       priority: priority++,
       prerequisites: ["Request queue with timeout", "Latency SLA definition"],
       applicableLayers: [],
-      confidenceScore: 0.9 + Math.random() * 0.05,
+      confidenceScore: 0.9 + _rng.next() * 0.05,
     });
   }
 
@@ -661,15 +667,15 @@ function generateRecommendations(profile: ModelOptimizationProfile): Optimizatio
       description: "Replace standard attention with memory-efficient implementations to reduce activation memory",
       rationale: `Memory bandwidth utilization is ${(results.compute.memoryBandwidthUtilization * 100).toFixed(1)}% — attention optimization can significantly reduce memory traffic`,
       impact: "high",
-      estimatedLatencyImprovementPercent: 15 + Math.round(Math.random() * 20),
-      estimatedMemoryImprovementPercent: 30 + Math.round(Math.random() * 20),
-      estimatedThroughputImprovementPercent: 20 + Math.round(Math.random() * 15),
+      estimatedLatencyImprovementPercent: 15 + Math.round(_rng.next() * 20),
+      estimatedMemoryImprovementPercent: 30 + Math.round(_rng.next() * 20),
+      estimatedThroughputImprovementPercent: 20 + Math.round(_rng.next() * 15),
       estimatedAccuracyImpactPercent: 0,
       effort: "medium",
       priority: priority++,
       prerequisites: ["Compatible CUDA version", "GPU architecture support (Ampere+)"],
       applicableLayers: results.layerProfiles.filter(l => l.layerType === "attention").map(l => l.layerName),
-      confidenceScore: 0.85 + Math.random() * 0.1,
+      confidenceScore: 0.85 + _rng.next() * 0.1,
     });
   }
 
@@ -682,15 +688,15 @@ function generateRecommendations(profile: ModelOptimizationProfile): Optimizatio
       description: "Distill the large model into a smaller student model that preserves most of the performance",
       rationale: `Model has ${Math.round(model.numParameters / 1e9 * 10) / 10}B parameters — distillation can achieve 4-8x reduction with <3% quality loss`,
       impact: "high",
-      estimatedLatencyImprovementPercent: 50 + Math.round(Math.random() * 20),
-      estimatedMemoryImprovementPercent: 60 + Math.round(Math.random() * 15),
-      estimatedThroughputImprovementPercent: 50 + Math.round(Math.random() * 30),
-      estimatedAccuracyImpactPercent: -(1.0 + Math.random() * 2.0),
+      estimatedLatencyImprovementPercent: 50 + Math.round(_rng.next() * 20),
+      estimatedMemoryImprovementPercent: 60 + Math.round(_rng.next() * 15),
+      estimatedThroughputImprovementPercent: 50 + Math.round(_rng.next() * 30),
+      estimatedAccuracyImpactPercent: -(1.0 + _rng.next() * 2.0),
       effort: "high",
       priority: priority++,
       prerequisites: ["Training infrastructure", "Distillation dataset", "Student architecture design", "Evaluation pipeline"],
       applicableLayers: [],
-      confidenceScore: 0.65 + Math.random() * 0.15,
+      confidenceScore: 0.65 + _rng.next() * 0.15,
     });
   }
 
@@ -704,15 +710,15 @@ function generateRecommendations(profile: ModelOptimizationProfile): Optimizatio
       description: "Cache frequently computed embeddings and outputs to avoid redundant computation",
       rationale: "Embedding and output layers can benefit from semantic caching for repeated or similar inputs",
       impact: "medium",
-      estimatedLatencyImprovementPercent: 10 + Math.round(Math.random() * 20),
+      estimatedLatencyImprovementPercent: 10 + Math.round(_rng.next() * 20),
       estimatedMemoryImprovementPercent: 0,
-      estimatedThroughputImprovementPercent: 20 + Math.round(Math.random() * 25),
+      estimatedThroughputImprovementPercent: 20 + Math.round(_rng.next() * 25),
       estimatedAccuracyImpactPercent: 0,
       effort: "low",
       priority: priority++,
       prerequisites: ["Cache infrastructure (Redis/similar)", "Cache invalidation strategy", "Similarity threshold tuning"],
       applicableLayers: cacheableLayers.map(l => l.layerName),
-      confidenceScore: 0.75 + Math.random() * 0.15,
+      confidenceScore: 0.75 + _rng.next() * 0.15,
     });
   }
 

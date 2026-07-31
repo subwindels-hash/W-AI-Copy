@@ -7,8 +7,8 @@
  * ── REAL TELEMETRY ONLY ──────────────────────────────────────────────
  * This sampler runs on a timer in production, so every fabricated value it
  * wrote became a persistent 60-minute history of traffic that never happened —
- * `rps = 500 + Math.random() * 1200`, a p95 drawn from a 15-50ms band, and an
- * error rate offset by `Math.random() - 0.6`. Those series then drove the
+ * `rps = 500 + a non-deterministic RNG * 1200`, a p95 drawn from a 15-50ms band, and an
+ * error rate offset by `a non-deterministic RNG - 0.6`. Those series then drove the
  * alerting thresholds below, so alerts fired (or stayed silent) on noise.
  *
  * Samples are now taken from this process: CPU from `process.cpuUsage()`

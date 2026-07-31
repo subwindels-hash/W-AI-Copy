@@ -14,8 +14,6 @@ const CACHE_TTL = 60;
 function iso() { return new Date().toISOString(); }
 const SER = <T>(v: T) => JSON.stringify(v);
 
-function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
-
 export const DeploymentService = {
   async list(limit = 50): Promise<DeploymentRecord[]> {
     const ids = await redis.lrange(LIST_KEY, 0, limit - 1);

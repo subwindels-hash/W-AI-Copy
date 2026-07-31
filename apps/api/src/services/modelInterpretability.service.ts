@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:modelInterpretability');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -607,7 +613,7 @@ function generateSHAPExplanation(job: ExplanationJob): ExplanationResult {
     let explanationValue = 0;
 
     for (let j = 0; j < numFeatures; j++) {
-      const shapValue = (Math.random() - 0.5) * 0.5;
+      const shapValue = (_rng.next() - 0.5) * 0.5;
       featureImportance.push({
         featureName: config.inputData.featureNames[j],
         featureIndex: j,
@@ -631,7 +637,7 @@ function generateSHAPExplanation(job: ExplanationJob): ExplanationResult {
         explanationValue,
       },
       method: "shap",
-      confidence: 0.85 + Math.random() * 0.1,
+      confidence: 0.85 + _rng.next() * 0.1,
     });
   }
 
@@ -681,7 +687,7 @@ function generateSHAPExplanation(job: ExplanationJob): ExplanationResult {
         local.explanation.featureImportance.map(f => ({
           feature: f.featureName,
           shapValue: f.importance * (f.direction === "positive" ? 1 : -1),
-          featureValue: Math.random(),
+          featureValue: _rng.next(),
         }))
       ),
     },
@@ -691,7 +697,7 @@ function generateSHAPExplanation(job: ExplanationJob): ExplanationResult {
       baseValue: local.explanation.baseValue,
       features: local.explanation.featureImportance.slice(0, 10).map(f => ({
         name: f.featureName,
-        value: Math.random(),
+        value: _rng.next(),
         shapValue: f.importance * (f.direction === "positive" ? 1 : -1),
       })),
     })),
@@ -699,10 +705,10 @@ function generateSHAPExplanation(job: ExplanationJob): ExplanationResult {
 
   // Calculate explanation quality
   const explanationQuality: ExplanationQuality = {
-    fidelity: 0.92 + Math.random() * 0.05,
-    stability: 0.88 + Math.random() * 0.08,
-    sparsity: 0.75 + Math.random() * 0.15,
-    completeness: 0.90 + Math.random() * 0.08,
+    fidelity: 0.92 + _rng.next() * 0.05,
+    stability: 0.88 + _rng.next() * 0.08,
+    sparsity: 0.75 + _rng.next() * 0.15,
+    completeness: 0.90 + _rng.next() * 0.08,
     overallScore: 0,
   };
   explanationQuality.overallScore = (
@@ -743,18 +749,18 @@ function generateLIMEExplanation(job: ExplanationJob): ExplanationResult {
 
     // Select top features for LIME
     const selectedFeatures = Array.from({ length: numFeatures }, (_, idx) => idx)
-      .sort(() => Math.random() - 0.5)
+      .sort(() => _rng.next() - 0.5)
       .slice(0, numLIMEFeatures);
 
     for (const featureIndex of selectedFeatures) {
-      const weight = (Math.random() - 0.5) * 2;
+      const weight = (_rng.next() - 0.5) * 2;
       featureImportance.push({
         featureName: config.inputData.featureNames[featureIndex],
         featureIndex,
         importance: Math.abs(weight),
         direction: weight > 0 ? "positive" : "negative",
         rank: 0,
-        confidence: 0.80 + Math.random() * 0.15,
+        confidence: 0.80 + _rng.next() * 0.15,
       });
     }
 
@@ -763,14 +769,14 @@ function generateLIMEExplanation(job: ExplanationJob): ExplanationResult {
 
     localExplanations.push({
       sampleIndex: i,
-      prediction: Math.random(),
+      prediction: _rng.next(),
       explanation: {
         featureImportance,
         baseValue: 0.5,
         explanationValue: featureImportance.reduce((sum, f) => sum + f.importance, 0),
       },
       method: "lime",
-      confidence: 0.75 + Math.random() * 0.15,
+      confidence: 0.75 + _rng.next() * 0.15,
     });
   }
 
@@ -794,7 +800,7 @@ function generatePermutationExplanation(job: ExplanationJob): ExplanationResult 
   const globalFeatureImportance: FeatureImportance[] = [];
 
   for (let i = 0; i < numFeatures; i++) {
-    const importance = Math.random();
+    const importance = _rng.next();
     const stdDev = importance * 0.2;
 
     globalFeatureImportance.push({
@@ -835,7 +841,7 @@ function generatePartialDependenceExplanation(job: ExplanationJob): ExplanationR
   for (const featureName of features) {
     const featureIndex = config.inputData.featureNames.indexOf(featureName);
     const values = Array.from({ length: gridResolution }, (_, i) => i / (gridResolution - 1));
-    const pdpValues = values.map(v => Math.sin(v * Math.PI) + Math.random() * 0.1);
+    const pdpValues = values.map(v => Math.sin(v * Math.PI) + _rng.next() * 0.1);
 
     partialDependence.push({
       featureName,
@@ -888,22 +894,22 @@ function generateCounterfactualExplanation(job: ExplanationJob): ExplanationResu
 
   for (let i = 0; i < Math.min(numSamples, 10); i++) {
     const originalSample = config.inputData.samples[i] as number[];
-    const originalPrediction = Math.random();
+    const originalPrediction = _rng.next();
 
     for (let j = 0; j < numCounterfactuals; j++) {
       const counterfactualSample = [...originalSample];
       const changes: CounterfactualExplanation["changes"] = [];
 
       // Randomly change 1-3 features
-      const numChanges = 1 + Math.floor(Math.random() * 3);
+      const numChanges = 1 + Math.floor(_rng.next() * 3);
       const changedFeatures = featuresToVary
-        .sort(() => Math.random() - 0.5)
+        .sort(() => _rng.next() - 0.5)
         .slice(0, numChanges);
 
       for (const featureName of changedFeatures) {
         const featureIndex = config.inputData.featureNames.indexOf(featureName);
         const originalValue = originalSample[featureIndex];
-        const changeMagnitude = (Math.random() - 0.5) * 2;
+        const changeMagnitude = (_rng.next() - 0.5) * 2;
         const counterfactualValue = originalValue + changeMagnitude;
 
         counterfactualSample[featureIndex] = counterfactualValue;
@@ -924,12 +930,12 @@ function generateCounterfactualExplanation(job: ExplanationJob): ExplanationResu
         originalSample,
         originalPrediction,
         counterfactualSample,
-        counterfactualPrediction: originalPrediction + (Math.random() - 0.5) * 0.5,
+        counterfactualPrediction: originalPrediction + (_rng.next() - 0.5) * 0.5,
         changes,
         proximity,
         sparsity,
-        validity: Math.random() > 0.3,
-        diversity: Math.random(),
+        validity: _rng.next() > 0.3,
+        diversity: _rng.next(),
       });
     }
   }

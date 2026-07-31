@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:syntheticDataGeneration');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -538,8 +544,8 @@ function generateQualityMetrics(job: SyntheticDataGenerationJob): QualityMetrics
   };
 
   // Add some randomness
-  const fidelityScore = baseFidelity[method] + (Math.random() - 0.5) * 0.1;
-  const diversityScore = baseDiversity[method] + (Math.random() - 0.5) * 0.1;
+  const fidelityScore = baseFidelity[method] + (_rng.next() - 0.5) * 0.1;
+  const diversityScore = baseDiversity[method] + (_rng.next() - 0.5) * 0.1;
 
   // Privacy score based on mechanism
   let privacyScore = 1.0;
@@ -551,7 +557,7 @@ function generateQualityMetrics(job: SyntheticDataGenerationJob): QualityMetrics
       l_diversity: 0.85,
       t_closeness: 0.85,
     };
-    privacyScore = privacyScores[privacy.mechanism] + (Math.random() - 0.5) * 0.1;
+    privacyScore = privacyScores[privacy.mechanism] + (_rng.next() - 0.5) * 0.1;
   }
 
   // Utility score (trade-off between fidelity and privacy)
@@ -571,13 +577,13 @@ function generateQualityMetrics(job: SyntheticDataGenerationJob): QualityMetrics
 
 function generateStatisticalComparison(job: SyntheticDataGenerationJob): StatisticalComparison {
   // Simulate univariate tests
-  const numColumns = 10 + Math.floor(Math.random() * 20);
+  const numColumns = 10 + Math.floor(_rng.next() * 20);
   const univariateTests = Array.from({ length: numColumns }, (_, i) => {
-    const pValue = Math.random();
+    const pValue = _rng.next();
     return {
       column: `column_${i}`,
-      test: Math.random() > 0.5 ? "kolmogorov_smirnov" : "chi_square",
-      statistic: Math.random(),
+      test: _rng.next() > 0.5 ? "kolmogorov_smirnov" : "chi_square",
+      statistic: _rng.next(),
       pValue,
       passed: pValue > 0.05,
     };
@@ -587,22 +593,22 @@ function generateStatisticalComparison(job: SyntheticDataGenerationJob): Statist
   const multivariateTests = [
     {
       test: "maximum_mean_discrepancy",
-      statistic: Math.random() * 0.1,
-      pValue: Math.random(),
-      passed: Math.random() > 0.3,
+      statistic: _rng.next() * 0.1,
+      pValue: _rng.next(),
+      passed: _rng.next() > 0.3,
     },
     {
       test: "energy_distance",
-      statistic: Math.random() * 0.1,
-      pValue: Math.random(),
-      passed: Math.random() > 0.3,
+      statistic: _rng.next() * 0.1,
+      pValue: _rng.next(),
+      passed: _rng.next() > 0.3,
     },
   ];
 
   // Simulate correlation comparison
   const correlationComparison = {
-    pearsonCorrelation: 0.85 + Math.random() * 0.1,
-    spearmanCorrelation: 0.83 + Math.random() * 0.1,
+    pearsonCorrelation: 0.85 + _rng.next() * 0.1,
+    spearmanCorrelation: 0.83 + _rng.next() * 0.1,
   };
 
   return {
@@ -664,20 +670,20 @@ function generateSamplePreview(job: SyntheticDataGenerationJob): unknown[] {
   if (job.dataType === "tabular") {
     return Array.from({ length: numPreviewSamples }, () => ({
       id: randomUUID(),
-      feature1: Math.random() * 100,
-      feature2: Math.random() > 0.5 ? "A" : "B",
-      feature3: Math.floor(Math.random() * 100),
-      label: Math.random() > 0.5 ? 1 : 0,
+      feature1: _rng.next() * 100,
+      feature2: _rng.next() > 0.5 ? "A" : "B",
+      feature3: Math.floor(_rng.next() * 100),
+      label: _rng.next() > 0.5 ? 1 : 0,
     }));
   } else if (job.dataType === "image") {
     return Array.from({ length: numPreviewSamples }, () => ({
       imageUrl: `https://storage.example.com/synthetic/${randomUUID()}.jpg`,
-      label: Math.floor(Math.random() * 10),
+      label: Math.floor(_rng.next() * 10),
     }));
   } else if (job.dataType === "text") {
     return Array.from({ length: numPreviewSamples }, () => ({
       text: "This is a synthetic text sample for training.",
-      label: Math.random() > 0.5 ? "positive" : "negative",
+      label: _rng.next() > 0.5 ? "positive" : "negative",
     }));
   }
 

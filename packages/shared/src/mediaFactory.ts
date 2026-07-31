@@ -60,10 +60,25 @@ export type PubPlatformId = "youtube" | "tiktok" | "instagram" | "facebook" | "x
 
 export type PubJobStatus = "queued" | "scheduled" | "uploading" | "published" | "failed" | "cancelled";
 
+/** Which account's OAuth token a job (or connect flow) resolves: the user's own or the org-shared one. */
+export type PubTokenScope = "user" | "org";
+
+/** Platform-reported live status of an already-uploaded post (webhook sync, S77B completion pass). */
+export type PubPlatformLiveStatus = "processing" | "processed" | "available" | "uploaded" | "failed" | "rejected";
+
 export type PubAuditKind =
   | "connect.start" | "connect.success" | "connect.failed" | "disconnect"
   | "job.created" | "job.scheduled" | "job.attempt" | "job.retry"
-  | "job.published" | "job.failed" | "job.cancelled";
+  | "job.published" | "job.failed" | "job.cancelled"
+  | "webhook.synced";
+
+/** One entry of the append-only per-job status history (capped, newest last). */
+export interface PubStatusHistoryEntry {
+  status: PubJobStatus;
+  at: string;
+  by: string;
+  detail?: string;
+}
 
 /** Input accepted by POST /media-factory/publishing/:platform/publish. */
 export interface PubPublishInput {
@@ -108,6 +123,8 @@ export interface PubJob {
   platform: PubPlatformId;
   input: PubPublishInput;
   status: PubJobStatus;
+  /** Which OAuth token scope this job executes with — "user" (owner's account) or "org" (org-shared account). */
+  tokenScope: PubTokenScope;
   attempts: number;
   maxAttempts: number;
   /** epoch ms of next processing attempt (jobs are due when <= now). */
@@ -117,6 +134,12 @@ export interface PubJob {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
+  /** Latest status reported by the platform after upload (webhook sync), e.g. "processing" or "available". */
+  platformStatus?: string;
+  /** ISO time the platform reported the post fully available. */
+  platformAvailableAt?: string;
+  /** Append-only transition log (capped at 50), newest last. */
+  statusHistory?: PubStatusHistoryEntry[];
 }
 
 export interface PubPlatformInfo {
@@ -127,6 +150,10 @@ export interface PubPlatformInfo {
   connected: boolean;
   /** Token present but refresh failed — reconnect required. */
   needsReauth: boolean;
+  /** An org-shared (org-scoped) account is connected for this platform. */
+  orgConnected: boolean;
+  /** Org-shared token present but refresh failed — reconnect required. */
+  orgNeedsReauth: boolean;
   scope: string;
   expiresAt?: string;
   requiresMedia: boolean;
@@ -159,3 +186,46 @@ export interface PubConnectionStatus {
   expiresAt?: string;
   hasRefreshToken: boolean;
 }
+
+/* ── Webhook status sync (platform → WINDELS job state) ─────────────── */
+
+/** Inbound platform callback payload accepted by POST /media-factory/publishing/webhooks/:platform/callback. */
+export interface PubPlatformCallbackUpdate {
+  /** Platform post/video id (matches the job's result.postId). */
+  postId?: string;
+  /** YouTube-style alias for postId. */
+  videoId?: string;
+  status: PubPlatformLiveStatus;
+  reason?: string;
+  /** ISO time the platform reported the post available (optional). */
+  availableAt?: string;
+}
+
+export interface PubWebhookConfig {
+  platform: PubPlatformId;
+  /** Public callback URL to register with the platform's hub (includes ?oid=<orgId>). */
+  callbackUrl: string;
+  /** HMAC secret — full value on registration, masked in list responses. */
+  secret: string;
+  enabled: boolean;
+  createdAt: string;
+}
+
+export interface PubWebhookRegistration extends PubWebhookConfig {}
+
+/* ── Browser-side direct media upload ──────────────────────────────── */
+
+export interface PubUploadRecord {
+  /** Storage file name on the server. */
+  file: string;
+  /** URL the publish endpoint accepts (served by /media-factory/render/<file>). */
+  url: string;
+  /** Original client file name (for display). */
+  fileName: string;
+  contentType: string;
+  sizeBytes: number;
+  ownerUserId: string;
+  createdAt: string;
+}
+
+export interface PubUploadResult extends PubUploadRecord {}
