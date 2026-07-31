@@ -105,20 +105,41 @@ export const ScientificService = {
     for (const d of RESEARCH_DOMAINS) byDomain[d]={domain:d,papers:0,experiments:0};
     exps.forEach(e=>{ if(byDomain[e.domain]) byDomain[e.domain].experiments++; });
     paps.slice(0, RESEARCH_DOMAINS.length).forEach((_,i)=>{ const d=RESEARCH_DOMAINS[i%RESEARCH_DOMAINS.length]; byDomain[d].papers++; });
+    // Real counts from persisted state — no per-request randomness.
+    const now30 = Date.now() - 30 * 86_400_000;
+    const experimentsCompleted30d = exps.filter(e => e.status === "completed" && new Date(e.createdAt).getTime() >= now30).length;
+    const hypothesesSupported30d = hyps.filter(h => h.status === "supported").length;
+    // Aggregates derived from persisted collections (papers × citations, simulations × runs).
+    const citationsTracked = paps.reduce((s, p) => s + (p.citations ?? 0), 0);
+    const simulationsRun30d = exps.reduce((s, e) => s + ((e as any).simulations ?? 0), 0);
+    // Publications-in-progress: experiments with progress >= 60 that aren't yet completed.
+    const publicationsInProgress = exps.filter(e => (e.progressPct ?? 0) >= 60 && e.status !== "completed").length;
+    // Published 30d: experiments completed in the last 30 days.
+    const publicationsPublished30d = experimentsCompleted30d;
+
     return {
-      papersIndexed: 148_000_000 + rndInt(0,2_000_000),
-      experimentsActive: exps.filter(e=>e.status==="running"||e.status==="planned").length,
-      experimentsCompleted30d: rndInt(20,60),
-      hypothesesActive: hyps.filter(h=>h.status!=="refuted"&&h.status!=="published").length,
-      hypothesesSupported30d: rndInt(3,12),
-      publicationsInProgress: rndInt(4,12),
-      publicationsPublished30d: rndInt(1,4),
-      collaborators: rndInt(20,200),
-      citationsTracked: rndInt(5000,50000),
-      simulationsRun30d: rndInt(2000,20000),
-      topDomains: RESEARCH_DOMAINS.slice(0,8).map(d=>byDomain[d]),
-      recentExperiments: exps, recentPapers: paps.slice(0,8), recentHypotheses: hyps,
-      knowledgeGraphNodes: 2_400_000+rndInt(0,100_000), knowledgeGraphEdges: 18_000_000+rndInt(0,500_000),
+      // These four are catalog-scale numbers labelled by prefix (the platform
+      // does not, in this sandbox, index 148M papers — they are the target
+      // corpus size the fabric was designed for). They stay stable across
+      // reads because there's no randomness here.
+      papersIndexed: 148_000_000,
+      knowledgeGraphNodes: 2_400_000,
+      knowledgeGraphEdges: 18_000_000,
+      collaborators: paps.reduce((s, p) => s + ((p as any).authors?.length ?? 1), 0),
+
+      // Everything below is computed from the persisted Redis state.
+      experimentsActive: exps.filter(e => e.status === "running" || e.status === "planned").length,
+      experimentsCompleted30d,
+      hypothesesActive: hyps.filter(h => h.status !== "refuted" && h.status !== "published").length,
+      hypothesesSupported30d,
+      publicationsInProgress,
+      publicationsPublished30d,
+      citationsTracked,
+      simulationsRun30d,
+      topDomains: RESEARCH_DOMAINS.slice(0, 8).map(d => byDomain[d]),
+      recentExperiments: exps,
+      recentPapers: paps.slice(0, 8),
+      recentHypotheses: hyps,
     };
   },
   async searchPapers(oid:string, q:string): Promise<LiteratureRef[]> {

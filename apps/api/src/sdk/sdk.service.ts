@@ -120,7 +120,6 @@ export const SdkService = {
   },
 
   async dashboard(oid = "org-windels"): Promise<SdkDashboard> {
-    _rng.reseed(`dashboard:${oid}`);
     const pkgIds = await redis.smembers(K.pkgs(oid));
     const packages: SdkPackage[] = [];
     for (const id of pkgIds) { const r = await redis.hgetall(K.pkg(oid,id)); if (r._doc) packages.push(JSON.parse(r._doc)); }
@@ -131,7 +130,7 @@ export const SdkService = {
     const meta = await redis.hgetall(K.meta(oid));
     return {
       packages, commands: CLI_GROUPS, emulatorsRunning: emuRunning, debugSessionsActive: dbgActive + dbgIds.length,
-      profileRuns30d: profIds.length + randInt(10,80),
+      profileRuns30d: profIds.length, // real: count of persisted profiler runs
       templates: TEMPLATES_SEED,
       totalDownloads: packages.reduce((s,p)=>s+p.downloads,0),
       latestCliVersion: meta.latestCliVersion || "0.85.0",

@@ -83,36 +83,80 @@ export const BiomedicalService = {
   },
 
   async dashboard(oid="org-windels"): Promise<BiomedicalDashboard>{
-    _rng.reseed(`dashboard:${oid}`);
     if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
-    const ids=await redis.smembers(K.imgs(oid));
-    const studies:ImagingStudy[]=[];
-    let reviewed=0, escalations=0;
-    for (const id of ids){const r=await redis.hgetall(K.img(oid,id)); if(r._doc){const s:ImagingStudy=JSON.parse(r._doc); studies.push(s); if(s.radiologistReviewed)reviewed++; if(s.status==="escalated")escalations++;}}
-    const last24=studies.filter(s=>Date.now()-new Date(s.createdAt).getTime()<86400000);
+
+    // Pull real persisted state.
+    const ids = await redis.smembers(K.imgs(oid));
+    const studies: ImagingStudy[] = [];
+    let reviewed = 0, escalations = 0;
+    for (const id of ids) {
+      const r = await redis.hgetall(K.img(oid, id));
+      if (r._doc) {
+        const s: ImagingStudy = JSON.parse(r._doc);
+        studies.push(s);
+        if (s.radiologistReviewed) reviewed++;
+        if (s.status === "escalated") escalations++;
+      }
+    }
+    const last24 = studies.filter(s => Date.now() - new Date(s.createdAt).getTime() < 86400000);
+
+    const phIds = await redis.smembers(K.phs(oid));
+    const pharm: PharmacyAlert[] = [];
+    for (const id of phIds) { const r = await redis.hgetall(K.ph(oid, id)); if (r._doc) pharm.push(JSON.parse(r._doc)); }
+    const pharm24 = pharm.filter(p => Date.now() - new Date(p.at).getTime() < 86400000);
+
+    const tlIds = await redis.smembers(K.tls(oid));
+    let tlActive = 0;
+    for (const id of tlIds) {
+      const r = await redis.hgetall(K.tl(oid, id));
+      if (r._doc) { const t: TelemedicineSession = JSON.parse(r._doc); if (!t.endedAt) tlActive++; }
+    }
+
+    // Hospital-ops metrics computed from actual persisted counts.
+    const pendingReview = studies.filter(s => s.status === "review").length;
+    const aiAssisted = studies.filter(s => (s as any).aiFindings && (s as any).aiFindings.length).length;
     const ops: HospitalOpsMetric[] = [
-      {label:"ED Wait (min)",value:randInt(18,62),unit:"min",target:30,status:randInt(0,1)?"warn":"ok"},
-      {label:"ICU Beds",value:randInt(68,98),unit:"%",target:90,status:"ok"},
-      {label:"OR Utilization",value:+rand(62,96).toFixed(1),unit:"%",target:85,status:"ok"},
-      {label:"Discharges / hr",value:randInt(4,18),unit:"/hr",target:10,status:"ok"},
-      {label:"Readmission 30d",value:+rand(3.8,9.2).toFixed(1),unit:"%",target:7,status:"warn"},
-      {label:"Lab TAT",value:randInt(42,140),unit:"min",target:90,status:"ok"},
+      { label: "Imaging studies (24h)", value: last24.length, unit: "studies", target: 100, status: last24.length >= 80 ? "warn" : "ok" },
+      { label: "Pending radiologist review", value: pendingReview, unit: "studies", target: 5, status: pendingReview > 5 ? "warn" : "ok" },
+      { label: "Escalated cases (open)", value: escalations, unit: "cases", target: 0, status: escalations > 0 ? "warn" : "ok" },
+      { label: "Pharmacy alerts (24h)", value: pharm24.length, unit: "alerts", target: 10, status: pharm24.length > 10 ? "warn" : "ok" },
+      { label: "Active telemedicine sessions", value: tlActive, unit: "sessions", target: 0, status: "ok" },
+      { label: "AI-assisted diagnosis rate", value: studies.length ? Math.round((aiAssisted / studies.length) * 100) : 0, unit: "%", target: 80, status: "ok" },
     ];
-    const phIds=await redis.smembers(K.phs(oid)); const pharm:PharmacyAlert[]=[];
-    for (const id of phIds){const r=await redis.hgetall(K.ph(oid,id)); if(r._doc) pharm.push(JSON.parse(r._doc));}
-    const tlIds=await redis.smembers(K.tls(oid)); let tlActive=0;
-    for (const id of tlIds){const r=await redis.hgetall(K.tl(oid,id)); if(r._doc){const t:TelemedicineSession=JSON.parse(r._doc); if(!t.endedAt) tlActive++;}}
+
+    // Per-area rollup derived from actual studies.
     const areas: BiomedicalDashboard["areas"] = {} as any;
-    for (const a of BIOMED_AREAS) areas[a] = { enabled:true, models:randInt(1,6), reviewed24h:randInt(0,20), escalations24h:randInt(0,a==="clinical_decision"?3:1) };
+    const modalitiesPerArea: Record<string, Set<string>> = {};
+    for (const s of studies) {
+      const area = s.status === "escalated" ? "clinical_decision" : "medical_imaging";
+      (modalitiesPerArea[area] = modalitiesPerArea[area] ?? new Set()).add(s.modality);
+    }
+    for (const a of BIOMED_AREAS) {
+      const areaStudies = a === "medical_imaging" ? studies : (a === "clinical_decision" ? studies.filter(s => s.status === "escalated") : []);
+      const areaLast24 = areaStudies.filter(s => Date.now() - new Date(s.createdAt).getTime() < 86400000);
+      areas[a] = {
+        enabled: true,
+        models: modalitiesPerArea[a]?.size ?? 0,
+        reviewed24h: areaLast24.filter(s => s.radiologistReviewed).length,
+        escalations24h: areaLast24.filter(s => s.status === "escalated").length,
+      };
+    }
+
     const compliance: BiomedicalDashboard["complianceStatus"] = {
-      HIPAA:"compliant", HITECH:"compliant", "FDA-AI-AAP":"at_risk", "CE-MDR":"gap", "ISO-13485":"compliant", "21 CFR Part 11":"compliant", "GDPR-H":"compliant",
+      HIPAA: "compliant", HITECH: "compliant", "FDA-AI-AAP": "at_risk", "CE-MDR": "gap",
+      "ISO-13485": "compliant", "21 CFR Part 11": "compliant", "GDPR-H": "compliant",
     };
+
+    // Real turnaround from persisted study lifecycle.
+    const withTat = studies.filter(s => (s as any).completedAt).map(s => (new Date((s as any).completedAt!).getTime() - new Date(s.createdAt).getTime()) / 60000);
+    const avgTurnaroundMin = withTat.length ? Math.round(withTat.reduce((a, b) => a + b, 0) / withTat.length) : 0;
+
     return {
       areas,
-      imaging:{studies24h:last24.length, aiAssisted:Math.round(last24.length*0.86), pendingReview:studies.filter(s=>s.status==="review").length, avgTurnaroundMin:randInt(22,90)},
-      ops, alerts24h: pharm.length, pharmacyAlerts:pharm, telemetryActive:tlActive,
-      complianceStatus:compliance,
-      recentStudies: studies.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,8),
+      imaging: { studies24h: last24.length, aiAssisted, pendingReview, avgTurnaroundMin },
+      ops, alerts24h: pharm24.length, pharmacyAlerts: pharm, telemetryActive: tlActive,
+      complianceStatus: compliance,
+      recentStudies: studies.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8),
     };
   },
 
