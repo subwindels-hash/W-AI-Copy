@@ -3,6 +3,13 @@
 The AI-Native Enterprise Operating System. Built session-by-session per the master
 specification (`uploads/CLAUDE.md`).
 
+> **Build status as of 2026-07-31:** the monorepo now builds, typechecks, and tests
+> green end-to-end — `pnpm build` (4/4), `pnpm typecheck` (5/5), `pnpm test` (7/7,
+> 84 unit tests passing, 3 integration suites auto-skipped without a live server).
+> This is the first end-to-end clean build; see **[BUILD_STATUS.md](./BUILD_STATUS.md)**
+> for what was fixed and the two environment caveats (Prisma engine download,
+> local Postgres/Redis).
+
 > **Status as of 2026-07-21:** All sessions S1–S82 are scaffolded with routes, services,
 > UI tabs, and plausible synthetic/demo data. Core infrastructure (auth, Postgres, Redis,
 > JWT, Kernel event bus, AI provider registry, consent ledger, gift-card ledger, memory

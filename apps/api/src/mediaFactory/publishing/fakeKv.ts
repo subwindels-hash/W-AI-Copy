@@ -8,6 +8,7 @@ export class FakeKv {
   hashes = new Map<string, Record<string, string>>();
   zsets = new Map<string, Map<string, number>>();
   lists = new Map<string, string[]>();
+  sets = new Map<string, Set<string>>();
 
   private fresh(key: string): { value: string; expiresAt?: number } | undefined {
     const e = this.strings.get(key);
@@ -30,9 +31,36 @@ export class FakeKv {
   }
 
   async del(key: string): Promise<number> {
-    const had = this.strings.delete(key) || this.hashes.delete(key) || this.zsets.delete(key) || this.lists.delete(key);
+    const had =
+      this.strings.delete(key) || this.hashes.delete(key) || this.zsets.delete(key) ||
+      this.lists.delete(key) || this.sets.delete(key);
     return had ? 1 : 0;
   }
+
+  async exists(key: string): Promise<number> {
+    return this.fresh(key) || this.hashes.has(key) || this.zsets.has(key) ||
+      this.lists.has(key) || this.sets.has(key) ? 1 : 0;
+  }
+
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    const s = this.sets.get(key) ?? new Set<string>();
+    let added = 0;
+    for (const m of members.flat()) if (!s.has(String(m))) { s.add(String(m)); added++; }
+    this.sets.set(key, s);
+    return added;
+  }
+
+  async smembers(key: string): Promise<string[]> { return [...(this.sets.get(key) ?? [])]; }
+
+  async srem(key: string, ...members: string[]): Promise<number> {
+    const s = this.sets.get(key);
+    if (!s) return 0;
+    let removed = 0;
+    for (const m of members.flat()) if (s.delete(String(m))) removed++;
+    return removed;
+  }
+
+  async scard(key: string): Promise<number> { return this.sets.get(key)?.size ?? 0; }
 
   async hset(key: string, field: string, value: string): Promise<number> {
     const h = this.hashes.get(key) ?? {};
