@@ -395,8 +395,14 @@ export async function runDunning(organizationId: string) {
 // ─── Predictive analytics (kept from original, still real DB) ────────────
 export async function getPredictiveAnalytics(userId: string) {
   const ctx = await resolveUserContext(userId);
-  const now = new Date();
-  const since30 = new Date(now.getTime() - 30 * 86_400_000);
+  // Snap window boundaries to UTC midnight so repeated reads within the same
+  // UTC day return byte-identical output (only the underlying counts move
+  // when real data lands).
+  const nowMs = Date.now();
+  const dayMs = 86_400_000;
+  const untilMs = Math.floor(nowMs / dayMs) * dayMs + dayMs; // next UTC midnight
+  const now = new Date(untilMs);
+  const since30 = new Date(untilMs - 30 * dayMs);
 
   const [runs30, messages30, convs30, tasks30, agents30, revenue30] = await Promise.all([
     prisma.workflowRun.count({ where: { workflow: { organizationId: ctx.organizationId }, createdAt: { gte: since30 } } }),
