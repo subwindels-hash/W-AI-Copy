@@ -5,7 +5,7 @@
  */
 import { describe, it, expect, beforeEach } from "vitest";
 import { createPublishEngine, backoffMs, type PublishEngine } from "./publishJobs.js";
-import { saveToken, connectionStatus } from "./tokens.js";
+import { saveToken, connectionStatus, saveOrgToken } from "./tokens.js";
 import { FakeKv } from "./fakeKv.js";
 import { PlatformPublishError, type PlatformAdapter } from "./platforms.js";
 
@@ -229,5 +229,102 @@ describe("token store", () => {
     const st = await connectionStatus("u1", "youtube", kv as any);
     expect(st.connected).toBe(true);
     expect(st.scope).toBe("yt.upload");
+  });
+});
+
+describe("token scope on jobs", () => {
+  let kv: FakeKv;
+  let clock: number;
+
+  it("org-scoped jobs execute with the org token, not the user token", async () => {
+    kv = new FakeKv();
+    clock = 1_000_000;
+    let usedToken: string | undefined;
+    const deps: any = {
+      kv,
+      adapters: { youtube: fakeAdapter(async (ctx) => { usedToken = ctx.accessToken; return { postId: "org-post" }; }) },
+      now: () => clock,
+      resolveMedia: async () => MEDIA,
+      kernelDispatch: async () => {},
+    };
+    const eng = createPublishEngine(deps);
+    // User token exists but is NOT used for an org-scoped job.
+    await saveToken(UID, "youtube", { accessToken: "user-token" }, null, kv as any);
+    await saveOrgToken(OID, "youtube", { accessToken: "org-token" }, null, kv as any);
+
+    const { job } = await eng.createJob(OID, UID, "youtube", { title: "Org post", mediaUrl: "/render/a.mp4" }, { tokenScope: "org" });
+    expect(job.tokenScope).toBe("org");
+    await eng.processDueJobs();
+    expect(usedToken).toBe("org-token");
+    const done = await eng.getJob(OID, job.id);
+    expect(done.status).toBe("published");
+    expect(done.statusHistory?.map((h) => h.status)).toContain("uploading");
+  });
+
+  it("fails an org-scoped job permanently when no org token is connected", async () => {
+    kv = new FakeKv();
+    clock = 1_000_000;
+    const deps: any = {
+      kv,
+      adapters: { youtube: fakeAdapter(async () => ({ postId: "x" })) },
+      now: () => clock,
+      resolveMedia: async () => MEDIA,
+      kernelDispatch: async () => {},
+    };
+    const eng = createPublishEngine(deps);
+    const { job } = await eng.createJob(OID, UID, "youtube", { title: "Org post", mediaUrl: "/render/a.mp4" }, { tokenScope: "org" });
+    await eng.processDueJobs();
+    const done = await eng.getJob(OID, job.id);
+    expect(done.status).toBe("failed");
+    expect(done.error?.code).toBe("NOT_CONNECTED");
+  });
+});
+
+describe("status history", () => {
+  let kv: FakeKv;
+  let clock: number;
+
+  it("records every transition on the job (create → uploading → published)", async () => {
+    kv = new FakeKv();
+    clock = 1_000_000;
+    const deps: any = {
+      kv,
+      adapters: { youtube: fakeAdapter(async () => ({ postId: "h-1", url: "https://youtu.be/h-1" })) },
+      now: () => clock,
+      resolveMedia: async () => MEDIA,
+      kernelDispatch: async () => {},
+    };
+    const eng = createPublishEngine(deps);
+    await saveToken(UID, "youtube", { accessToken: "t" }, null, kv as any);
+    const { job } = await eng.createJob(OID, UID, "youtube", { title: "Hist", mediaUrl: "/render/a.mp4" });
+    await eng.processDueJobs();
+    const done = await eng.getJob(OID, job.id);
+    const statuses = done.statusHistory?.map((h) => h.status) ?? [];
+    expect(statuses).toEqual(["queued", "uploading", "published"]);
+  });
+
+  it("cancel and retry append history entries", async () => {
+    kv = new FakeKv();
+    clock = 1_000_000;
+    const deps: any = {
+      kv,
+      adapters: { youtube: fakeAdapter(async () => { throw new PlatformPublishError("HARD_FAIL", "permanent", true); }) },
+      now: () => clock,
+      resolveMedia: async () => MEDIA,
+      kernelDispatch: async () => {},
+    };
+    const eng = createPublishEngine(deps);
+    await saveToken(UID, "youtube", { accessToken: "t" }, null, kv as any);
+    const { job } = await eng.createJob(OID, UID, "youtube", { title: "Fail", mediaUrl: "/render/a.mp4" });
+    await eng.processDueJobs();
+    const failed = await eng.getJob(OID, job.id);
+    expect(failed.status).toBe("failed");
+    await eng.retryJob(OID, job.id, UID);
+    await eng.cancelJob(OID, job.id, UID);
+    const final = await eng.getJob(OID, job.id);
+    const statuses = final.statusHistory?.map((h) => h.status) ?? [];
+    expect(statuses).toContain("failed");
+    expect(statuses).toContain("queued"); // retry
+    expect(statuses).toContain("cancelled");
   });
 });

@@ -1313,3 +1313,38 @@ Bumped to **Sessions 38–75 · v0.89.0** (collapsed "v0.89").
 - Register OAuth apps per platform; set `*_CLIENT_ID/*_CLIENT_SECRET`, `FACEBOOK_PAGE_ID`, `PINTEREST_BOARD_ID`, `INSTAGRAM_IG_USER_ID` (or rely on token self-resolution), and `PUBLISH_REDIRECT_URI` to the web `/media` route.
 - TikTok/X public posting requires app review (unaudited apps post SELF_ONLY drafts — adapter warns); Instagram requires a professional account bound to the OAuth token.
 - Optional later milestones: publish-job webhook status sync (YouTube video processing state), per-org connection sharing (currently per-user tokens, by design), browser-side direct media upload (currently server-fetched URL/render artifact).
+
+## Session 77B — Publishing completion pass II (webhook sync · direct upload · org-shared connections, 2026-07-31)
+
+**Status:** ✅ Shipped — closes the three "optional later milestones" from the first 77B pass with real, tested code.
+
+### 1. Webhook status sync (platform → job state)
+- **Per-org per-platform webhook registration:** `POST /publishing/webhooks/:platform/register` returns the public callback URL (embeds `?oid=<orgId>`, base configurable via `PUBLISH_WEBHOOK_BASE_URL`) + a 64-hex HMAC secret (rotates on re-register, stored AES-256-GCM encrypted). `GET /publishing/webhooks` lists with masked secrets; `DELETE /publishing/webhooks/:platform` removes.
+- **Public inbound callback** `POST /media-factory/publishing/webhooks/:platform/callback?oid=<orgId>` — mounted BEFORE the authenticated media-factory router (platform hubs have no JWT), signature-verified in constant time against the org's secret (`X-Windels-Signature: sha256=<hex>` generic, `X-Hub-Signature: sha1=<hex>` PubSubHubbub-compatible). The global `express.json` now stashes `req.rawBody` via a `verify` hook so the exact bytes are signed. Unknown post ids are acknowledged quietly (`matched:false`); known ones sync the job.
+- **Job sync semantics** (`applyPlatformWebhook`): non-terminal updates (`processing|processed|available|uploaded`) record `platformStatus` (+ `platformAvailableAt` when available) while the job stays `published` (the platform accepted it); terminal updates (`failed|rejected`) flip the job to `failed` with code `PLATFORM_REJECTED` + reason and are never re-queued. Idempotent repeats are no-ops. Every sync appends to the job's new **status history**, writes an `webhook.synced` audit entry, and dispatches a Kernel `media.publish.status` event.
+- **Per-job status history:** `PubJob.statusHistory` (capped 50, newest last) now records every transition (`queued → uploading → published/failed`, retries, cancels, webhook syncs) — surfaced in the UI as an expandable "History" block.
+
+### 2. Browser-side direct upload
+- `POST /publishing/upload` (multipart field `file`, cap `PUBLISH_UPLOAD_MAX_MB` default 512MB — the shared `multipartSingle` middleware gained an optional `maxBytes`) accepts video/image only (mime + extension allowlist), stores the file in the shared media cache dir under a uuid name, and returns `{ file, url: /api/v1/media-factory/render/<file>, fileName, contentType, sizeBytes, ... }` — the publish endpoint resolves it as an internal artifact.
+- `GET /publishing/uploads` lists org uploads (newest first); `DELETE /publishing/uploads/:file` deletes disk + metadata and is blocked (409) while any queued/scheduled/uploading job references the file.
+- UI: "Media source" selector in the publish panel (rendered MP4 ↔ uploaded file), file picker with progress, and an upload library row.
+
+### 3. Org-shared connections
+- Tokens are now two-scope: user `pub:tok:<uid>:<platform>` (existing) + org `pub:tok:org:<oid>:<platform>` (new), both encrypted. `ensureFreshOrgToken` mirrors the user refresh/revoke contract.
+- `POST /publishing/:platform/connect/start` accepts `{scope:"org"}` (state doc binds the org; the exchanged token lands in the org slot); `DELETE /connect?scope=org` and `GET /:platform/status?scope=org` added; `GET /publishing/org-connections` returns org status for all platforms. `platformsForUser` now reports `orgConnected`/`orgNeedsReauth` per platform.
+- `POST /publishing/:platform/publish` accepts `tokenScope:"org"` — the job stores it and the worker resolves the org token (`job.tokenScope`, default `"user"`; user and org slots stay isolated). Missing org token → `NOT_CONNECTED` with remediation.
+- UI: per-platform "Connect org" / "Unlink org" + Org badge, and a "publish with the organization-shared account" checkbox.
+
+### Tests
+- **Unit (vitest), deterministic (FakeKv + injected clock/fs):** `webhooks.test.ts` (11 — registration/rotation/masking, sha256+sha1 signature verification, non-terminal sync idempotency, terminal rejection → failed + never re-queued, ref mismatch, `findJobByPlatformRef`, org-token job sync), `uploads.test.ts` (6 — naming allowlist, disk+metadata round trip, empty/type rejection, delete, newest-first + corrupt-meta skip), `tokens.test.ts` (+4 org-scope: isolation, org refresh in place, not-connected failure, org delete), `publishJobs.test.ts` (+4: org-token execution, org NOT_CONNECTED permanent failure, full status-history transitions, cancel/retry history). **Publishing suite: 54/54 pass** (was 29/29).
+- **Regression:** mediaFactory + tradingIntel + security suites — **103/103 pass** (was 78/78).
+- **Typecheck:** `@windels/shared` tsc clean; `@windels/web` tsc clean + vite build clean (MediaFactoryPage chunk 27.3 kB / 7.7 kB gz); API tsc adds **0 new errors** (all remaining errors are the pre-existing Prisma-client-not-generated `Permission` pattern — engine binary download blocked in this sandbox).
+
+### Files
+- Shared: `packages/shared/src/mediaFactory.ts` (`PubTokenScope`, `PubPlatformLiveStatus`, `PubStatusHistoryEntry`, job fields `tokenScope|platformStatus|platformAvailableAt|statusHistory`, `PubPlatformInfo.orgConnected|orgNeedsReauth`, `PubPlatformCallbackUpdate`, `PubWebhookConfig|Registration`, `PubUploadRecord|Result`).
+- API: `publishing/tokens.ts` (org scope + `ensureFreshOrgToken`), `publishing/publishJobs.ts` (history, token scope, `findJobByPlatformRef`, `applyPlatformWebhook`), `publishing/webhooks.ts` (new), `publishing/uploads.ts` (new), `publishing.service.ts` (scope plumbing, webhook + upload delegates), `http/routes/mediaFactory.ts` (+webhook/upload/org endpoints, scope params, `registerMediaFactoryWebhookRoutes` public callback), `http/middleware/multipart.ts` (`maxBytes` opt), `http/server.ts` (`rawBody` verify hook + public webhook router mounted before the authed media-factory router), tests ×4.
+- Web: `lib/mediaFactory.ts` (upload via FormData fetch honoring `VITE_API_URL`, webhook/upload/org client methods), `pages/media/MediaFactoryPage.tsx` (media source picker + upload, org connect/publish, webhook panel, status history).
+- Env: `.env.example` (`PUBLISH_UPLOAD_MAX_MB`, `PUBLISH_WEBHOOK_BASE_URL`).
+
+### Follow-ups (unchanged)
+- Register real OAuth apps + set `*_CLIENT_ID/*_CLIENT_SECRET`, `PUBLISH_REDIRECT_URI`, `PUBLISH_WEBHOOK_BASE_URL`; TikTok/X app review; optional outbound org notification webhooks (status → URL) as a future pass.

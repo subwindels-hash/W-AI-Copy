@@ -11,9 +11,11 @@ interface FilePart {
 /**
  * Minimal multipart/form-data parser for single-file uploads (Session 3).
  * Not production-grade for huge files — the enterprise upload pipeline arrives in
- * Session 18. Sufficient for attachments < 25MB.
+ * Session 18. Sufficient for attachments < 25MB; the publishing upload route
+ * raises the cap via `opts.maxBytes` (configurable, still buffered in memory).
  */
-export function multipartSingle(fieldname: string) {
+export function multipartSingle(fieldname: string, opts?: { maxBytes?: number }) {
+  const maxBytes = opts?.maxBytes ?? 30 * 1024 * 1024;
   return (req: Request, _res: Response, next: NextFunction) => {
     const contentType = req.headers["content-type"] ?? "";
     if (!contentType.startsWith("multipart/form-data")) {
@@ -29,7 +31,7 @@ export function multipartSingle(fieldname: string) {
     req.on("data", (chunk: Buffer) => {
       chunks.push(chunk);
       totalLength += chunk.length;
-      if (totalLength > 30 * 1024 * 1024) req.destroy(new Error("Upload too large"));
+      if (totalLength > maxBytes) req.destroy(new Error("Upload too large"));
     });
     req.on("end", () => {
       try {

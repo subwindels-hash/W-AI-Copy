@@ -10,7 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
-import { publishingApi, type PubJob, type PubPlatformId, type PubPlatformInfo, type PubAuditEvent } from "@/lib/mediaFactory";
+import { publishingApi, type PubJob, type PubPlatformId, type PubPlatformInfo, type PubAuditEvent, type PubUploadRecord, type PubWebhookConfig, type PubWebhookRegistration } from "@/lib/mediaFactory";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -21,6 +21,7 @@ import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Film, Upload, Video, Loader2, CheckCircle2, AlertTriangle, Youtube, Music2,
   Send, Link2, Unlink, RotateCcw, XCircle, ExternalLink, CalendarClock, History,
+  FileUp, Copy, RadioTower, Trash2, Building2,
 } from "lucide-react";
 
 type Aspect = "16:9"|"9:16"|"1:1";
@@ -69,6 +70,15 @@ export function MediaFactoryPage() {
   const [pubSchedule, setPubSchedule] = useState("");
   const [pubBusy, setPubBusy] = useState(false);
   const [connectBusy, setConnectBusy] = useState<string | null>(null);
+  // Completion pass state: uploads, webhooks, org token usage, media source.
+  const [pubMediaUrl, setPubMediaUrl] = useState<string | null>(null);
+  const [pubUploads, setPubUploads] = useState<PubUploadRecord[]>([]);
+  const [uploadBusy, setUploadBusy] = useState(false);
+  const [webhooks, setWebhooks] = useState<PubWebhookConfig[]>([]);
+  const [whBusy, setWhBusy] = useState<string | null>(null);
+  const [whRegistration, setWhRegistration] = useState<PubWebhookRegistration | null>(null);
+  const [useOrgToken, setUseOrgToken] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const refreshPublishing = useCallback(async () => {
@@ -82,6 +92,11 @@ export function MediaFactoryPage() {
       setPubJobs(j);
       setAudit(a);
     } catch { /* publishing endpoints are admin-gated; page degrades silently */ }
+    try {
+      const [u, w] = await Promise.all([publishingApi.uploads(20), publishingApi.webhooks()]);
+      setPubUploads(u);
+      setWebhooks(w);
+    } catch { /* uploads/webhooks are optional surface; degrade silently */ }
   }, []);
 
   const loadStatus = useCallback(async () => {
@@ -143,13 +158,15 @@ export function MediaFactoryPage() {
     } finally { setBusy(false); }
   }, [title, script, aspect, duration]);
 
-  const connect = useCallback(async (platform: PubPlatformId) => {
-    setConnectBusy(platform); setPubError(null); setPubNotice(null);
+  const connect = useCallback(async (platform: PubPlatformId, scope: "user" | "org" = "user") => {
+    setConnectBusy(`${platform}:${scope}`); setPubError(null); setPubNotice(null);
     try {
-      const r = await publishingApi.connectStart(platform);
+      const r = await publishingApi.connectStart(platform, scope);
       if (r.authUrl) {
         window.open(r.authUrl, "_blank", "noopener,width=720,height=860");
-        setPubNotice("Complete the consent in the new window — you'll return here automatically.");
+        setPubNotice(scope === "org"
+          ? `Complete the consent in the new window — this will connect ${platform} as the organization-shared account.`
+          : "Complete the consent in the new window — you'll return here automatically.");
       } else {
         setPubError(r.error ?? "Platform credentials not configured on the server.");
       }
@@ -158,28 +175,76 @@ export function MediaFactoryPage() {
     } finally { setConnectBusy(null); }
   }, []);
 
-  const disconnect = useCallback(async (platform: PubPlatformId) => {
-    setConnectBusy(platform); setPubError(null);
+  const disconnect = useCallback(async (platform: PubPlatformId, scope: "user" | "org" = "user") => {
+    setConnectBusy(`${platform}:${scope}`); setPubError(null);
     try {
-      await publishingApi.disconnect(platform);
-      setPubNotice(`${platform} disconnected.`);
+      await publishingApi.disconnect(platform, scope);
+      setPubNotice(`${platform} ${scope === "org" ? "org" : "account"} disconnected.`);
       void refreshPublishing();
     } catch (e) {
       setPubError(e instanceof ApiError ? e.message : String(e));
     } finally { setConnectBusy(null); }
   }, [refreshPublishing]);
 
+  const uploadMedia = useCallback(async (file: File | undefined) => {
+    if (!file) return;
+    setUploadBusy(true); setPubError(null); setPubNotice(null);
+    try {
+      const rec = await publishingApi.upload(file);
+      setPubMediaUrl(rec.url);
+      setPubNotice(`Uploaded ${rec.fileName} (${Math.round(rec.sizeBytes / 1024)} KB) — ready to publish.`);
+      void refreshPublishing();
+    } catch (e) {
+      setPubError(e instanceof ApiError ? e.message : String(e));
+    } finally { setUploadBusy(false); }
+  }, [refreshPublishing]);
+
+  const registerWebhook = useCallback(async (platform: PubPlatformId) => {
+    setWhBusy(platform); setPubError(null); setWhRegistration(null);
+    try {
+      const reg = await publishingApi.registerWebhook(platform);
+      setWhRegistration(reg);
+      setPubNotice(`Webhook registered for ${platform} — copy the secret now (it is shown once).`);
+      void refreshPublishing();
+    } catch (e) {
+      setPubError(e instanceof ApiError ? e.message : String(e));
+    } finally { setWhBusy(null); }
+  }, [refreshPublishing]);
+
+  const deleteWebhook = useCallback(async (platform: PubPlatformId) => {
+    setWhBusy(platform); setPubError(null);
+    try {
+      await publishingApi.deleteWebhook(platform);
+      setPubNotice(`Webhook removed for ${platform}.`);
+      void refreshPublishing();
+    } catch (e) {
+      setPubError(e instanceof ApiError ? e.message : String(e));
+    } finally { setWhBusy(null); }
+  }, [refreshPublishing]);
+
+  const deleteUpload = useCallback(async (file: string) => {
+    setPubError(null);
+    try {
+      await publishingApi.deleteUpload(file);
+      setPubMediaUrl((u) => (u?.includes(file) ? null : u));
+      void refreshPublishing();
+    } catch (e) {
+      setPubError(e instanceof ApiError ? e.message : String(e));
+    }
+  }, [refreshPublishing]);
+
   const publish = useCallback(async () => {
     setPubBusy(true); setPubError(null); setPubNotice(null);
     try {
-      const mediaUrl = job?.outputUrl;
-      if (!mediaUrl) throw new Error("Render a video first (or provide one below in a future upload flow).");
+      const mediaUrl = pubMediaUrl ?? job?.outputUrl;
+      if (!mediaUrl) throw new Error("Render a video or upload media first.");
       const out = await publishingApi.publish(pubPlatform, {
         title: pubTitle.trim(),
         description: pubDescription.trim() || undefined,
         mediaUrl,
         scheduledAt: pubSchedule ? new Date(pubSchedule).toISOString() : undefined,
         idempotencyKey: job?.id ? `render-${job.id}-${pubPlatform}` : undefined,
+        tokenScope: useOrgToken ? "org" : undefined,
       });
       setPubNotice(out.deduplicated
         ? `Already submitted — reusing existing job ${out.job.id}.`
@@ -190,7 +255,7 @@ export function MediaFactoryPage() {
     } catch (e) {
       setPubError(e instanceof Error ? e.message : String(e));
     } finally { setPubBusy(false); }
-  }, [job, pubPlatform, pubTitle, pubDescription, pubSchedule, refreshPublishing]);
+  }, [job, pubMediaUrl, pubPlatform, pubTitle, pubDescription, pubSchedule, useOrgToken, refreshPublishing]);
 
   const jobAction = useCallback(async (id: string, action: "retry" | "cancel") => {
     try {
@@ -251,7 +316,7 @@ export function MediaFactoryPage() {
         </Card>
 
         <Card>
-          <CardHeader><CardTitle>Publishing Platforms</CardTitle><CardDescription>Connect an account, then publish any rendered video.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Publishing Platforms</CardTitle><CardDescription>Connect a personal or org-shared account, then publish any rendered video.</CardDescription></CardHeader>
           <CardContent className="space-y-2">
             {!platforms && <div className="text-sm text-text-muted">Loading…</div>}
             {platforms?.map(p => (
@@ -261,20 +326,32 @@ export function MediaFactoryPage() {
                     {p.id === "youtube" ? <Youtube className="h-4 w-4 text-rose-400"/> : <Upload className="h-4 w-4 text-azure"/>}
                     <span className="text-sm capitalize">{p.id === "x" ? "X / Twitter" : p.id}</span>
                   </div>
-                  {p.connected
-                    ? <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30">Connected</Badge>
-                    : p.needsReauth
-                      ? <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30">Reconnect needed</Badge>
-                      : <Badge variant="outline" className="text-amber-300">{p.configured ? "Not connected" : "Credentials required"}</Badge>}
+                  <div className="flex items-center gap-1.5">
+                    {p.connected && <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30">Connected</Badge>}
+                    {p.orgConnected && <Badge className="bg-azure/15 text-azure border-azure/30 gap-1"><Building2 className="h-3 w-3"/> Org</Badge>}
+                    {!p.connected && !p.orgConnected && !p.needsReauth && !p.orgNeedsReauth && (
+                      <Badge variant="outline" className="text-amber-300">{p.configured ? "Not connected" : "Credentials required"}</Badge>
+                    )}
+                    {(p.needsReauth || p.orgNeedsReauth) && <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30">Reconnect needed</Badge>}
+                  </div>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-wrap gap-2">
                   {p.connected || p.needsReauth ? (
-                    <Button size="sm" variant="outline" onClick={() => disconnect(p.id)} disabled={connectBusy === p.id} className="gap-1 h-7 text-xs">
-                      {connectBusy === p.id ? <Loader2 className="h-3 w-3 animate-spin"/> : <Unlink className="h-3 w-3"/>} Disconnect
+                    <Button size="sm" variant="outline" onClick={() => disconnect(p.id, "user")} disabled={connectBusy === `${p.id}:user`} className="gap-1 h-7 text-xs">
+                      {connectBusy === `${p.id}:user` ? <Loader2 className="h-3 w-3 animate-spin"/> : <Unlink className="h-3 w-3"/>} Disconnect
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline" onClick={() => connect(p.id)} disabled={!p.configured || connectBusy === p.id} className="gap-1 h-7 text-xs">
-                      {connectBusy === p.id ? <Loader2 className="h-3 w-3 animate-spin"/> : <Link2 className="h-3 w-3"/>} Connect
+                    <Button size="sm" variant="outline" onClick={() => connect(p.id, "user")} disabled={!p.configured || connectBusy === `${p.id}:user`} className="gap-1 h-7 text-xs">
+                      {connectBusy === `${p.id}:user` ? <Loader2 className="h-3 w-3 animate-spin"/> : <Link2 className="h-3 w-3"/>} Connect
+                    </Button>
+                  )}
+                  {p.orgConnected || p.orgNeedsReauth ? (
+                    <Button size="sm" variant="outline" onClick={() => disconnect(p.id, "org")} disabled={connectBusy === `${p.id}:org`} className="gap-1 h-7 text-xs" title="Disconnect the org-shared account">
+                      {connectBusy === `${p.id}:org` ? <Loader2 className="h-3 w-3 animate-spin"/> : <Building2 className="h-3 w-3"/>} Unlink org
+                    </Button>
+                  ) : (
+                    <Button size="sm" variant="outline" onClick={() => connect(p.id, "org")} disabled={!p.configured || connectBusy === `${p.id}:org`} className="gap-1 h-7 text-xs" title="Connect one org-shared account the whole team can publish with">
+                      {connectBusy === `${p.id}:org` ? <Loader2 className="h-3 w-3 animate-spin"/> : <Building2 className="h-3 w-3"/>} Connect org
                     </Button>
                   )}
                   {p.connected && p.expiresAt && <span className="text-[11px] text-text-muted self-center">token until {fmtTime(p.expiresAt)}</span>}
@@ -319,7 +396,7 @@ export function MediaFactoryPage() {
                   <div>
                     <label className="text-[11px] uppercase tracking-wider text-text-muted">Platform</label>
                     <Select value={pubPlatform} onChange={e=>setPubPlatform(e.target.value as PubPlatformId)}>
-                      {(platforms ?? []).map(p => <option key={p.id} value={p.id}>{p.id === "x" ? "X / Twitter" : p.id[0]!.toUpperCase() + p.id.slice(1)}{p.connected ? " ✓" : ""}</option>)}
+                      {(platforms ?? []).map(p => <option key={p.id} value={p.id}>{p.id === "x" ? "X / Twitter" : p.id[0]!.toUpperCase() + p.id.slice(1)}{p.connected || p.orgConnected ? " ✓" : ""}</option>)}
                     </Select>
                   </div>
                   <div className="md:col-span-2">
@@ -335,13 +412,50 @@ export function MediaFactoryPage() {
                   <label className="text-[11px] uppercase tracking-wider text-text-muted">Description / caption</label>
                   <Textarea rows={2} value={pubDescription} onChange={e=>setPubDescription(e.target.value)} maxLength={selectedPlatform?.maxDescription ?? 2200}/>
                 </div>
+                <div className="rounded-lg border border-white/10 bg-black/20 p-2.5 space-y-2">
+                  <div className="text-[11px] uppercase tracking-wider text-text-muted flex items-center gap-1"><FileUp className="h-3 w-3"/> Media source</div>
+                  <div className="flex flex-wrap items-center gap-2 text-xs text-text-muted">
+                    {job.outputUrl && (
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" className="accent-azure" checked={!pubMediaUrl} onChange={() => setPubMediaUrl(null)}/>
+                        Rendered MP4 ({job.title})
+                      </label>
+                    )}
+                    {pubMediaUrl && (
+                      <label className="flex items-center gap-1.5 cursor-pointer">
+                        <input type="radio" className="accent-azure" checked={!!pubMediaUrl} onChange={() => {}} readOnly/>
+                        Uploaded file ({pubUploads.find(u => u.url === pubMediaUrl)?.fileName ?? pubMediaUrl.split("/").pop()})
+                      </label>
+                    )}
+                    <input ref={fileRef} type="file" accept="video/*,image/*" className="hidden" onChange={(e) => { void uploadMedia(e.target.files?.[0]); e.target.value = ""; }}/>
+                    <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploadBusy} className="gap-1 h-7 text-xs">
+                      {uploadBusy ? <Loader2 className="h-3 w-3 animate-spin"/> : <FileUp className="h-3 w-3"/>} Upload media…
+                    </Button>
+                  </div>
+                  {pubUploads.length > 0 && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {pubUploads.map(u => (
+                        <button key={u.file} onClick={() => setPubMediaUrl(u.url)}
+                          className={`px-2 py-0.5 rounded-md text-[11px] border ${pubMediaUrl === u.url ? "border-azure/60 bg-azure/15 text-azure" : "border-white/10 bg-white/5 text-text-muted hover:border-white/30"}`}>
+                          {u.fileName} ({Math.round(u.sizeBytes / 1024)} KB)
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                {selectedPlatform?.orgConnected && (
+                  <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer select-none">
+                    <input type="checkbox" className="accent-azure" checked={useOrgToken} onChange={(e) => setUseOrgToken(e.target.checked)}/>
+                    <Building2 className="h-3.5 w-3.5 text-azure"/> Publish with the organization-shared {pubPlatform} account
+                  </label>
+                )}
                 <div className="flex items-center gap-3">
-                  <Button onClick={publish} disabled={pubBusy || !pubTitle.trim() || !selectedPlatform?.connected} className="gap-2">
+                  <Button onClick={publish} disabled={pubBusy || !pubTitle.trim() || !((useOrgToken && selectedPlatform?.orgConnected) || (!useOrgToken && selectedPlatform?.connected))} className="gap-2">
                     {pubBusy ? <Loader2 className="h-4 w-4 animate-spin"/> : <Send className="h-4 w-4"/>}
                     {pubSchedule ? "Schedule post" : "Publish now"}
                   </Button>
-                  {selectedPlatform && !selectedPlatform.connected && (
-                    <span className="text-xs text-amber-300">Connect {pubPlatform} first to publish.</span>
+                  {selectedPlatform && !(selectedPlatform.connected || selectedPlatform.orgConnected) && (
+                    <span className="text-xs text-amber-300">Connect {pubPlatform} (or the org account) first to publish.</span>
                   )}
                 </div>
               </div>
@@ -372,11 +486,14 @@ export function MediaFactoryPage() {
                   <Badge className={JOB_BADGE[j.status].cls}>{JOB_BADGE[j.status].label}</Badge>
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-text-muted">
-                  <span>
-                    attempt {j.attempts}/{j.maxAttempts}
-                    {j.status === "queued" && j.nextAttemptAt > Date.now() && <> · retry {fmtTime(new Date(j.nextAttemptAt).toISOString())}</>}
-                    {j.status === "scheduled" && <> · due {fmtTime(j.input.scheduledAt)}</>}
-                    {j.publishedAt && <> · {fmtTime(j.publishedAt)}</>}
+                  <span className="flex items-center gap-2">
+                    {j.tokenScope === "org" && <Badge className="bg-azure/15 text-azure border-azure/30 h-5">org token</Badge>}
+                    <span>
+                      attempt {j.attempts}/{j.maxAttempts}
+                      {j.status === "queued" && j.nextAttemptAt > Date.now() && <> · retry {fmtTime(new Date(j.nextAttemptAt).toISOString())}</>}
+                      {j.status === "scheduled" && <> · due {fmtTime(j.input.scheduledAt)}</>}
+                      {j.publishedAt && <> · {fmtTime(j.publishedAt)}</>}
+                    </span>
                   </span>
                   <span className="flex items-center gap-2">
                     {j.result?.url && (
@@ -392,6 +509,23 @@ export function MediaFactoryPage() {
                     )}
                   </span>
                 </div>
+                {j.platformStatus && (
+                  <div className="text-[11px] text-azure/90 flex items-center gap-1.5">
+                    <RadioTower className="h-3 w-3"/>
+                    platform: {j.platformStatus}
+                    {j.platformAvailableAt && <> · available {fmtTime(j.platformAvailableAt)}</>}
+                  </div>
+                )}
+                {j.statusHistory && j.statusHistory.length > 1 && (
+                  <details className="text-[11px] text-text-muted">
+                    <summary className="cursor-pointer hover:text-text-bright">History ({j.statusHistory.length})</summary>
+                    <ul className="mt-1 space-y-0.5 pl-2 border-l border-white/10">
+                      {j.statusHistory.slice(-8).map((h, i) => (
+                        <li key={i}>{fmtTime(h.at)} · <span className="text-text-bright">{h.status}</span>{h.detail ? ` — ${h.detail}` : ""}</li>
+                      ))}
+                    </ul>
+                  </details>
+                )}
                 {j.error && <div className="text-[11px] text-rose-300/90">{j.error.code}: {j.error.message}</div>}
                 {j.result?.warnings?.map((w, i) => <div key={i} className="text-[11px] text-amber-300/80">{w}</div>)}
               </div>
@@ -416,6 +550,47 @@ export function MediaFactoryPage() {
           </CardContent>
         </Card>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2"><RadioTower className="h-5 w-5 text-azure"/>Webhook Status Sync</CardTitle>
+          <CardDescription>Register a callback endpoint per platform, then platforms push post-processing state (processing → available / rejected) onto your jobs. Sign the callback at the platform with the secret below.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-2">
+          {!platforms && <div className="text-sm text-text-muted">Loading…</div>}
+          {(platforms ?? []).map(p => {
+            const cfg = webhooks.find(w => w.platform === p.id);
+            return (
+              <div key={p.id} className="p-2 rounded-lg bg-white/[0.03] space-y-1.5">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-sm capitalize">{p.id === "x" ? "X / Twitter" : p.id}</span>
+                  <div className="flex items-center gap-2">
+                    {cfg
+                      ? <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30">Registered</Badge>
+                      : <Badge variant="outline" className="text-amber-300">Not registered</Badge>}
+                    <Button size="sm" variant="outline" onClick={() => cfg ? void deleteWebhook(p.id) : void registerWebhook(p.id)} disabled={whBusy === p.id} className="gap-1 h-7 text-xs">
+                      {whBusy === p.id ? <Loader2 className="h-3 w-3 animate-spin"/> : cfg ? <Trash2 className="h-3 w-3"/> : <RadioTower className="h-3 w-3"/>}
+                      {cfg ? "Remove" : "Register"}
+                    </Button>
+                  </div>
+                </div>
+                {(cfg || whRegistration?.platform === p.id) && (
+                  <div className="space-y-1 text-[11px] text-text-muted">
+                    <div className="flex items-center gap-2">
+                      <code className="truncate bg-black/30 px-1.5 py-0.5 rounded">{cfg?.callbackUrl ?? whRegistration?.callbackUrl}</code>
+                      <button onClick={() => { void navigator.clipboard?.writeText(cfg?.callbackUrl ?? whRegistration?.callbackUrl ?? ""); setPubNotice("Callback URL copied."); }} className="text-azure hover:underline shrink-0 flex items-center gap-1"><Copy className="h-3 w-3"/> Copy</button>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span>Secret: <code className="bg-black/30 px-1.5 py-0.5 rounded">{whRegistration?.platform === p.id ? whRegistration.secret : cfg?.secret}</code></span>
+                      {whRegistration?.platform === p.id && <span className="text-amber-300">shown once — copy it now</span>}
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </CardContent>
+      </Card>
 
       <Card>
         <CardHeader><CardTitle className="flex items-center gap-2"><Music2 className="h-5 w-5 text-azure"/>Pipeline Stages</CardTitle></CardHeader>

@@ -247,8 +247,8 @@ bump the sidebar.
 
 | Suite | File(s) | Coverage | Status |
 |---|---|---|---|
-| Publishing units (vitest) | `apps/api/src/mediaFactory/publishing/{publishJobs,tokens,platforms}.test.ts` | 29 tests: state machine, backoff, dedupe, encrypted tokens, per-platform protocols | ✅ 29/29 |
-| Regression (vitest) | mediaFactory + tradingIntel + security suites | 78 tests | ✅ 78/78 |
+| Publishing units (vitest) | `apps/api/src/mediaFactory/publishing/{publishJobs,tokens,platforms,webhooks,uploads}.test.ts` | 54 tests: state machine, backoff, dedupe, encrypted tokens, per-platform protocols, webhook sync, org tokens, uploads | ✅ 54/54 |
+| Regression (vitest) | mediaFactory + tradingIntel + security suites | 103 tests | ✅ 103/103 |
 | Trading units (vitest) | `tradingIntel/{indicators,marketData,risk}.test.ts` | 42 tests incl. live CoinGecko candles | ✅ |
 | Education / Media / Security units | `education/lecturer.test.ts`, `mediaFactory/pipeline.test.ts`, `security/serviceToken.test.ts` | real ffmpeg MP4 render, JWT, gift-card dedupe | ✅ |
 | E2E (Playwright, 26 specs) | `tests/e2e/*.spec.ts` | smoke, S37–40 (9), S42–47 (7), S54–60 (8), S61–72+82 (15), S73–75 (4), release (4), extensions (4), platformServices (4), mlOps (4), enterpriseFoundation, mediaPublishing, others | ✅ 57/57 baseline (needs live server+DB) |
@@ -269,7 +269,9 @@ bump the sidebar.
 4. **Real provider integrations** — market data (Polygon/TwelveData), voice TTS,
    media generation, CV inference (YOLO), ETL connectors (SFTP/S3 live), OCR.
 5. **Publishing production config** — register OAuth apps, set `*_CLIENT_ID/*_CLIENT_SECRET`,
-   `PUBLISH_REDIRECT_URI`, app reviews (TikTok/X), webhook status sync.
+   `PUBLISH_REDIRECT_URI` + `PUBLISH_WEBHOOK_BASE_URL`, app reviews (TikTok/X). The code-level
+   milestones (webhook status sync, browser-side direct upload, org-shared connections) shipped
+   2026-07-31 (54/54 unit tests); optional outbound org notification webhooks remain a future pass.
 6. **Session 88+** — no in-repo spec; user supplies next session spec via `uploads/`.
 
 ---

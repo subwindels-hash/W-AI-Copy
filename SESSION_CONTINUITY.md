@@ -96,7 +96,7 @@ is marked complete before all five.
 - **Environment:** Node v22.22.3 present; **pnpm NOT installed**; `node_modules` NOT installed; no `dist/`; no `.env`
 - **Routes:** 97 route modules in `apps/api/src/http/routes/`
 - **Test suites:** 26 Playwright specs in `tests/e2e/`; k6 load tests in `tests/load/`; vitest unit suites per module
-- **Known test baseline:** 78/78 regression pass (mediaFactory+tradingIntel+security) · 29/29 publishing unit tests · 50 vitest (completion report) · 57/57 Playwright (smoke + S37–82) — all pass **on a working dev environment** (Postgres+Redis running)
+- **Known test baseline:** 103/103 regression pass (mediaFactory+tradingIntel+security) · 54/54 publishing unit tests (incl. webhook sync, org tokens, uploads) · 57/57 Playwright (smoke + S37–82) — all pass **on a working dev environment** (Postgres+Redis running)
 
 ---
 
@@ -116,8 +116,9 @@ is marked complete before all five.
    integrations (market data, voice, media, CV inference, ETL connectors) are the big
    remaining milestone.
 5. **Publishing follow-ups:** register OAuth apps per platform + set `*_CLIENT_ID`/
-   `*_CLIENT_SECRET`, `PUBLISH_REDIRECT_URI`; TikTok/X app review; optional webhook
-   status sync, org-shared connections, browser-side direct upload.
+   `*_CLIENT_SECRET`, `PUBLISH_REDIRECT_URI`, `PUBLISH_WEBHOOK_BASE_URL`; TikTok/X app
+   review. The code-level milestones (webhook status sync, browser-side direct upload,
+   org-shared connections) shipped 2026-07-31 — publishing suite now 54/54, regression 103/103.
 6. **Infra-pinned tests** (chat-e2e, core-platform, lecturer, ai-runtime) need a live
    server + Redis/Postgres to run.
 
