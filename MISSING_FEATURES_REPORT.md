@@ -1,5 +1,11 @@
 # MISSING FEATURES REPORT — WINDELS AI OS
 
+> **⚠️ PARTIALLY SUPERSEDED (2026-07-31).** Several entries are stale (the MFA
+> form, the Google sign-in button, and the S84/S85 frontends all exist). The
+> mock-data inventory in §3 was directionally correct but understated the
+> severity — fabrication reached clinical and payment paths. See
+> **[AUDIT-REPORT.md](./AUDIT-REPORT.md)** for the corrected status.
+
 **Date:** 2026-07-28  
 **Scope:** Sessions 1–88 Missing, Incomplete, and Mock-gated Subsystems  
 

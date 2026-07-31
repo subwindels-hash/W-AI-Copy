@@ -1,5 +1,11 @@
 # Unfinished modules — audit baseline
 
+> **⚠️ Status drift (2026-07-31).** This inventory reflects an older audit
+> snapshot. Route registration was re-verified programmatically: **every
+> `register*Routes` export is invoked**, including `infrastructure`, which is
+> mounted via `platform.ts` rather than `server.ts`. See
+> **[AUDIT-REPORT.md](./AUDIT-REPORT.md)** for current status.
+
 Generated from `audit/module-inventory.json` in the supplied archive. Status reflects the audit snapshot and should be revalidated before each implementation; some later completion notes may supersede an entry.
 
 ## MISSING (5)

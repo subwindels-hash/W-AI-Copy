@@ -132,9 +132,17 @@ function simulate(kind: ScenarioKind, assumptions: ScenarioAssumption[]): { kpis
   if (baseKpis.riskScore.deltaPct > 5) risks.push("risk score elevated — governance review required");
   if (baseKpis.revenue.deltaPct < -5) risks.push("revenue downside exceeds threshold");
   if (baseKpis.opex.deltaPct > 3) risks.push("opex growth above target");
+  // Confidence must describe the run, not be drawn at random: a random 0.72–0.92
+  // told the reader nothing and changed on every identical re-run. Monte-Carlo
+  // standard error narrows with 1/sqrt(n), so derive it from the iteration
+  // count and widen it when the scenario is thinly specified.
+  const assumptionPenalty = assumptions.length ? 0 : 0.1;
+  const confidence = Number(
+    Math.max(0.5, Math.min(0.95, 1 - 1 / Math.sqrt(iterations) - assumptionPenalty)).toFixed(2),
+  );
   return {
     kpis, narrative: narratives[kind], actions: actionsBase[kind],
-    risks, confidence: Number((0.72 + Math.random() * 0.2).toFixed(2)), iterations,
+    risks, confidence, iterations,
   };
 }
 
