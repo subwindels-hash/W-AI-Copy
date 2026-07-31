@@ -196,7 +196,8 @@ export class FakePrisma {
     return out;
   }
 
-  private sort(rows: Row[], orderBy?: Row | Row[]): Row[] {
+  /** Exposed to delegates (groupBy) as well as findMany. */
+  sort(rows: Row[], orderBy?: Row | Row[]): Row[] {
     if (!orderBy) return rows;
     const specs = Array.isArray(orderBy) ? orderBy : [orderBy];
     return [...rows].sort((a, b) => {
@@ -247,8 +248,17 @@ export class FakePrisma {
         const rows = self.sort(self.rows(model).filter((r) => self.matches(model, r, where)), orderBy);
         return rows[0] ? self.hydrate(model, rows[0], { include, select }) : null;
       },
-      async findMany({ where, include, select, orderBy, skip, take }: Row = {}) {
+      async findMany({ where, include, select, orderBy, skip, take, distinct }: Row = {}) {
         let rows = self.sort(self.rows(model).filter((r) => self.matches(model, r, where)), orderBy);
+        if (distinct) {
+          const fields: string[] = Array.isArray(distinct) ? distinct : [distinct];
+          const seen = new Set<string>();
+          rows = rows.filter((r) => {
+            const key = JSON.stringify(fields.map((f) => r[f]));
+            if (seen.has(key)) return false;
+            seen.add(key); return true;
+          });
+        }
         if (skip) rows = rows.slice(skip);
         if (take !== undefined) rows = rows.slice(0, take);
         return rows.map((r) => self.hydrate(model, r, { include, select }));
@@ -282,6 +292,52 @@ export class FakePrisma {
         self.tables.set(model, keep);
         return { count: n };
       },
+      /** Supports _count / _sum / _avg / _min / _max over a filtered set. */
+      async aggregate({ where, _count, _sum, _avg, _min, _max }: Row = {}) {
+        const rows = self.rows(model).filter((r) => self.matches(model, r, where));
+        const nums = (f: string) => rows.map((r) => Number(r[f] ?? 0));
+        const out: Row = {};
+        if (_count) out._count = typeof _count === "object"
+          ? Object.fromEntries(Object.keys(_count).map((f) => [f, rows.length]))
+          : rows.length;
+        for (const [key, spec, fn] of [
+          ["_sum", _sum, (v: number[]) => v.reduce((a, b) => a + b, 0)],
+          ["_avg", _avg, (v: number[]) => (v.length ? v.reduce((a, b) => a + b, 0) / v.length : null)],
+          ["_min", _min, (v: number[]) => (v.length ? Math.min(...v) : null)],
+          ["_max", _max, (v: number[]) => (v.length ? Math.max(...v) : null)],
+        ] as Array<[string, Row | undefined, (v: number[]) => number | null]>) {
+          if (!spec) continue;
+          out[key] = Object.fromEntries(Object.keys(spec).map((f) => [f, fn(nums(f))]));
+        }
+        return out;
+      },
+
+      /** groupBy with _count/_sum aggregates, as used by the rollup services. */
+      async groupBy({ by, where, _count, _sum, orderBy }: Row) {
+        const fields: string[] = Array.isArray(by) ? by : [by];
+        const rows = self.rows(model).filter((r) => self.matches(model, r, where));
+        const groups = new Map<string, Row[]>();
+        for (const r of rows) {
+          const key = JSON.stringify(fields.map((f) => r[f]));
+          if (!groups.has(key)) groups.set(key, []);
+          groups.get(key)!.push(r);
+        }
+        let out = [...groups.entries()].map(([key, members]) => {
+          const g: Row = {};
+          const values = JSON.parse(key) as any[];
+          fields.forEach((f, i) => { g[f] = values[i]; });
+          if (_count) g._count = typeof _count === "object"
+            ? Object.fromEntries(Object.keys(_count).map((f) => [f, members.length]))
+            : members.length;
+          if (_sum) g._sum = Object.fromEntries(
+            Object.keys(_sum).map((f) => [f, members.reduce((a, m) => a + Number(m[f] ?? 0), 0)]),
+          );
+          return g;
+        });
+        if (orderBy) out = self.sort(out, orderBy);
+        return out;
+      },
+
       async count({ where }: Row = {}) {
         return self.rows(model).filter((r) => self.matches(model, r, where)).length;
       },

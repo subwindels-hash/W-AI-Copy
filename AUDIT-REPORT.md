@@ -170,7 +170,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 245 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 264 passing, 0 failing.**
 
 ---
 
@@ -335,3 +335,53 @@ appear in the persisted row, with revoked/expired/prefix-less keys rejected.
 Two test assumptions were wrong and were corrected against the implementation,
 not the reverse: `updateAgentStatus(agentId, status)` takes no user argument,
 and a status change does not implicitly write an `AgentEvent`.
+
+---
+
+## 7. Thin stubs fleshed out (2026-07-31)
+
+Seven modules — **cognitive, command, usage, opex, sustainability, aiEconomy,
+autonomous** — were 11–34 lines each. They had been de-faked earlier in this
+session by replacing invented metrics with zeros, which was correct, but left
+them hollow: most dashboard fields were hardcoded `0` or `[]` **even where the
+data to compute them already existed** in `AiRequest`, `Alert`, `WorkflowRun`,
+`Task` and each module's own ledger.
+
+| Module | Was | Now derives from real records |
+|---|---|---|
+| **usage** | 22 ln; every delta `0`, no series, no models | Request/token/latency/error counts from `AiRequest`; 30-day daily series; per-channel and per-model rollups; **period-over-period deltas** against the prior 30 days; adoption measured as members who *actually generated traffic*, not merely enrolled |
+| **cognitive** | 22 ln; accuracy `0`, health pinned `100%` | Success rate over real AI traffic; observatory `healthy` per category from failed runs / failed requests / open alerts, so the headline can drop below 100% |
+| **command** | 21 ln; incidents `0`, health = tasks only | Incidents from the `Alert` table; health blends task completion **with** open incidents and workflow failures, so an org drowning in alerts can no longer report 100% |
+| **opex** | 15 ln; every trust dimension `0` | Reliability and data-freshness from real AI traffic; safety pass-rate, mitigations and bottlenecks from the recorded register; approval rate from tasks |
+| **sustainability** | 11 ln; only a total | Per-scope grouping by activity, **year-on-year change**, a real 12-month kWh series, and compute rolled up under scope 2; added `GET /records` so the derived dashboard can be audited against its inputs |
+| **aiEconomy** | 34 ln; credits/forecast `0` | Credits and spend from the ledger; GPU in-use vs idle from allocation utilisation; a forward projection explicitly labelled as linear extrapolation |
+| **autonomous** | 17 ln; autonomy index `0` | Review rate, rejection rate as the true "override" signal, per-department rollups, and realised impact from **approved** proposals only |
+
+Everything still genuinely unmeasurable stays `0` with an inline reason — ESG
+scores (an external attestation), cloud cost, MTTR (needs paired open/close
+timestamps), carbon intensity, host CPU/memory. **No value is estimated.**
+
+Four `as SomeDashboard` casts were removed in favour of `satisfies`, which
+immediately surfaced four real shape mismatches the casts had been hiding:
+`ObservatoryNode` and `ReasoningCapability` take fixed enums, `Department`
+needs `autonomyLevel`/`health`, `GreenAiMetric` wants `gpuHours`/`co2eKg`, and
+`BoardDecision` rejected the register's own `"critical"` risk level and
+free-form departments — the shared type was widened to match what the service
+actually records.
+
+### Critical 5 — per-module tests
+
+The 22 tests previously lived in one shared file under `agents/`. Split so each
+module owns its own suite (`conversations.test.ts`, `attachments.test.ts`, …),
+matching the layout the rest of the repo uses.
+
+### Coverage
+
+`usage/rollups.test.ts` — **19 tests** across all seven modules, pinning two
+properties: an empty organization reports zeros (nothing invented), and once
+records exist the rollups reflect them. Includes a cross-tenant check that one
+organization's AI traffic never appears in another's dashboard.
+
+`FakePrisma` gained `aggregate`, `groupBy` and `distinct` to support them.
+
+**Gates: build 4/4 · typecheck 5/5 · 264 tests passing** (was 245).

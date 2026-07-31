@@ -227,10 +227,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2085,
+      "serviceTotalSloc": 1928,
       "serviceFiles": [
         "agents.service.ts",
-        "coreCrud.test.ts",
+        "agents.test.ts",
         "agents/agents.service.ts",
         "services/ai/registry.ts",
         "services/agentSkills.service.ts",
@@ -287,11 +287,8 @@
         "Membership",
         "Agent",
         "Activity",
-        "Conversation",
         "Message",
-        "PromptTemplate",
-        "AgentEvent",
-        "ApiKey"
+        "AgentEvent"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -319,11 +316,11 @@
       "serviceFile": {
         "file": "aiEconomy.service.ts",
         "path": "/home/user/WIN/apps/api/src/aiEconomy/aiEconomy.service.ts",
-        "sloc": 35,
+        "sloc": 53,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 73,
+      "serviceTotalSloc": 109,
       "serviceFiles": [
         "aiEconomy.service.ts",
         "bootstrap.ts",
@@ -590,9 +587,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 260,
+      "serviceTotalSloc": 344,
       "serviceFiles": [
         "attachments.service.ts",
+        "attachments.test.ts",
         "attachments/attachments.service.ts"
       ],
       "importedServiceFiles": [
@@ -623,7 +621,9 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Workspace",
+        "Membership",
         "Conversation",
         "Message",
         "MessageAttachment",
@@ -775,11 +775,11 @@
       "serviceFile": {
         "file": "autonomous.service.ts",
         "path": "/home/user/WIN/apps/api/src/autonomous/autonomous.service.ts",
-        "sloc": 18,
+        "sloc": 82,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 39,
+      "serviceTotalSloc": 167,
       "serviceFiles": [
         "autonomous.service.ts",
         "bootstrap.ts",
@@ -809,7 +809,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/autonomous.ts (65 LOC)",
+    "sharedTypes": "packages/shared/src/autonomous.ts (70 LOC)",
     "web": {
       "client": "apps/web/src/lib/autonomous.ts (8 LOC)",
       "pages": []
@@ -1226,11 +1226,11 @@
       "serviceFile": {
         "file": "cognitive.service.ts",
         "path": "/home/user/WIN/apps/api/src/cognitive/cognitive.service.ts",
-        "sloc": 23,
+        "sloc": 72,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 49,
+      "serviceTotalSloc": 147,
       "serviceFiles": [
         "bootstrap.ts",
         "cognitive.service.ts",
@@ -1275,7 +1275,9 @@
         "AgentMemory",
         "AgentKnowledge",
         "Workflow",
-        "WorkflowRun"
+        "WorkflowRun",
+        "AiRequest",
+        "Alert"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -1479,11 +1481,11 @@
       "serviceFile": {
         "file": "command.service.ts",
         "path": "/home/user/WIN/apps/api/src/command/command.service.ts",
-        "sloc": 22,
+        "sloc": 41,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 47,
+      "serviceTotalSloc": 85,
       "serviceFiles": [
         "bootstrap.ts",
         "command.service.ts",
@@ -1528,7 +1530,9 @@
         "Task",
         "Conversation",
         "Workflow",
-        "WorkflowRun"
+        "WorkflowRun",
+        "AiRequest",
+        "Alert"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -1736,9 +1740,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 546,
+      "serviceTotalSloc": 620,
       "serviceFiles": [
         "conversations.service.ts",
+        "conversations.test.ts",
         "conversations/conversations.service.ts",
         "services/message.service.ts"
       ],
@@ -1787,7 +1792,9 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Workspace",
+        "Membership",
         "Agent",
         "Conversation",
         "Message",
@@ -5198,11 +5205,11 @@
       "serviceFile": {
         "file": "opex.service.ts",
         "path": "/home/user/WIN/apps/api/src/opex/opex.service.ts",
-        "sloc": 16,
+        "sloc": 93,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 35,
+      "serviceTotalSloc": 189,
       "serviceFiles": [
         "bootstrap.ts",
         "opex.service.ts",
@@ -5240,7 +5247,9 @@
     "db": {
       "prismaModels": [
         "User",
+        "Task",
         "Message",
+        "AiRequest",
         "Alert"
       ],
       "migrations": [],
@@ -5693,10 +5702,11 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 212,
+      "serviceTotalSloc": 300,
       "serviceFiles": [
         "bootstrap.ts",
         "promptTemplates.service.ts",
+        "promptTemplates.test.ts",
         "promptTemplates/promptTemplates.service.ts"
       ],
       "importedServiceFiles": [
@@ -5729,6 +5739,7 @@
         "User",
         "Organization",
         "Workspace",
+        "Membership",
         "Conversation",
         "Message",
         "PromptTemplate"
@@ -5756,9 +5767,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 952,
+      "serviceTotalSloc": 1031,
       "serviceFiles": [
         "publicApi.service.ts",
+        "publicApi.test.ts",
         "services/workflow.service.ts",
         "services/webhook.service.ts"
       ],
@@ -5800,6 +5812,7 @@
         "User",
         "Organization",
         "Workspace",
+        "Membership",
         "Agent",
         "Message",
         "TalkChannel",
@@ -6551,11 +6564,11 @@
       "serviceFile": {
         "file": "sustainability.service.ts",
         "path": "/home/user/WIN/apps/api/src/sustainability/sustainability.service.ts",
-        "sloc": 12,
+        "sloc": 165,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 30,
+      "serviceTotalSloc": 336,
       "serviceFiles": [
         "bootstrap.ts",
         "sustainability.service.ts",
@@ -6569,10 +6582,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/sustainability.ts",
-        "sloc": 11,
+        "sloc": 29,
         "counts": {
-          "total": 2,
-          "GET": 1,
+          "total": 3,
+          "GET": 2,
           "POST": 1,
           "PUT": 0,
           "PATCH": 0,
@@ -6580,6 +6593,7 @@
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "GET /records",
           "POST /activity"
         ]
       }
@@ -6603,7 +6617,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "STUB"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "talk",
@@ -7000,13 +7014,14 @@
       "serviceFile": {
         "file": "usage.service.ts",
         "path": "/home/user/WIN/apps/api/src/usage/usage.service.ts",
-        "sloc": 23,
+        "sloc": 168,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 56,
+      "serviceTotalSloc": 618,
       "serviceFiles": [
         "bootstrap.ts",
+        "rollups.test.ts",
         "usage.service.ts",
         "usage/usage.service.ts"
       ],
@@ -7034,7 +7049,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/usage.ts (68 LOC)",
+    "sharedTypes": "packages/shared/src/usage.ts (84 LOC)",
     "web": {
       "client": "apps/web/src/lib/usage.ts (9 LOC)",
       "pages": []
@@ -7042,14 +7057,18 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Membership",
         "Agent",
         "Task",
+        "Activity",
         "Conversation",
         "Message",
         "TalkMessage",
         "Workflow",
-        "WorkflowRun"
+        "WorkflowRun",
+        "AiRequest",
+        "Alert"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
