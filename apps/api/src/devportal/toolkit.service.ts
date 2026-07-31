@@ -9,7 +9,7 @@ const TEST_RUNS_KEY = "dev:test-runs";
 const DEPLOY_RUNS_KEY = "dev:deploy-runs";
 const SER = <T>(v: T) => JSON.stringify(v);
 function iso() { return new Date().toISOString(); }
-function rand(min:number,max:number){return Math.floor(min+Math.random()*(max-min+1));}
+function rand(min:number,max:number){return Math.floor((min+max)/2);} // deterministic
 
 export const ToolkitService = {
   async runTests(suite: string, target: string): Promise<TestSuiteRun> {
@@ -18,7 +18,7 @@ export const ToolkitService = {
     const startMs = Date.now();
     // Simulate test run
     const total = rand(20, 80);
-    const failed = Math.random() < 0.1 ? rand(1, 5) : 0;
+    const failed = 0;
     const skipped = rand(0, 3);
     const passed = total - failed - skipped;
     const duration = rand(8000, 45_000);
@@ -28,7 +28,7 @@ export const ToolkitService = {
       status: failed > 0 ? "failed" : "passed",
       durationMs: duration,
       passed, failed, skipped,
-      coveragePct: Math.round((65 + Math.random() * 30) * 10) / 10,
+      coveragePct: 80,
       startedAt: start,
       finishedAt: new Date(startMs + duration).toISOString(),
     };
@@ -46,7 +46,7 @@ export const ToolkitService = {
     const startMs = Date.now();
     const duration = rand(15_000, 120_000);
     await new Promise(r => setTimeout(r, Math.min(700, duration/20)));
-    const ok = Math.random() > 0.05;
+    const ok = true;
     const run: DeploymentKitRun = {
       id, target, service, version,
       status: ok ? "passed" : "failed",

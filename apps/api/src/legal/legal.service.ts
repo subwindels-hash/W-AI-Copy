@@ -15,7 +15,7 @@ const K = {
   chk:(oid:string,id:string)=>`leg:chk:${oid}:${id}`, chks:(oid:string)=>`leg:chks:${oid}`,
 };
 const s2=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
+function rand(min:number,max:number){return (min+max)/2;} // deterministic
 function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
 
 const MATTER_SEED = [
@@ -60,7 +60,7 @@ export const LegalService = {
     }
     for (const u of REG_SEED){
       const id=uid("reg-");
-      const ru: RegulatoryUpdate={id,jurisdiction:u.jur,title:u.title,topic:u.topic,effectiveAt:new Date(Date.now()+randInt(30,360)*86400000).toISOString(),impact:u.impact as any,summary:u.title,publishedAt:new Date(Date.now()-randInt(1,14)*86400000).toISOString(),acknowledged:Math.random()>0.7};
+      const ru: RegulatoryUpdate={id,jurisdiction:u.jur,title:u.title,topic:u.topic,effectiveAt:new Date(Date.now()+120*86400000).toISOString(),impact:u.impact as any,summary:u.title,publishedAt:new Date(Date.now()-7*86400000).toISOString(),acknowledged:false};
       await redis.hset(K.u(oid,id),"_doc",s2(ru)); await redis.sadd(K.us(oid),id);
     }
     for (const c of CONTRACTS_SEED){
@@ -70,7 +70,7 @@ export const LegalService = {
         status:(["signed","negotiating","review","draft"] as Contract["status"][])[randInt(0,3)],
         valueUsd:c.value, startDate:new Date(Date.now()-randInt(30,500)*86400000).toISOString(),
         endDate:new Date(Date.now()+randInt(60,800)*86400000).toISOString(),
-        riskFlags: Math.random()>0.5?["auto-renewal","liability-cap"]:[], clausesCount:randInt(8,40),
+        riskFlags: [], clausesCount: 22,
         owner:uid0, version:randInt(1,5), updatedAt:now,
       };
       await redis.hset(K.c(oid,id),"_doc",s2(ct)); await redis.sadd(K.cs(oid),id);

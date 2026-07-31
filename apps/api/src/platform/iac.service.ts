@@ -39,8 +39,8 @@ export const IaCService = {
     for (const d of DEFAULT_STACKS) {
       const stack: IaCStack = {
         id: randomUUID(), ...d,
-        resources: Math.floor(20 + Math.random() * 80),
-        status: "applied", driftDetected: Math.random() < 0.15, updatedAt: now(),
+        resources: 48,
+        status: "applied", driftDetected: false, updatedAt: now(),
       };
       await redisCmd.set(sk(stack.id), JSON.stringify(stack));
       await redisCmd.sadd(STACKS_KEY, stack.id);
@@ -64,7 +64,7 @@ export const IaCService = {
     const run: IaCRun = {
       id, stackId, kind, triggeredBy, status: "succeeded",
       summary: kind === "plan"
-        ? { add: Math.floor(Math.random()*3), change: Math.floor(Math.random()*5), destroy: Math.floor(Math.random()*2) }
+        ? { add: 1, change: 2, destroy: 0 }
         : { add: 0, change: 0, destroy: 0 },
       startedAt: now(), finishedAt: now(), logRef: `runs/${id}.log`,
     };

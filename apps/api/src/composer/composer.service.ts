@@ -200,7 +200,7 @@ export const ComposerService = {
     if (!wf) throw Object.assign(new Error("not found"), { status: 404 });
     const start = Date.now();
     let fail = false;
-    for (let i=0;i<wf.nodes.length;i++) { await new Promise(r=>setTimeout(r, 15+Math.random()*30)); if (Math.random()<0.01) fail = true; }
+    for (let i=0;i<wf.nodes.length;i++) { await new Promise(r=>setTimeout(r, 25)); }
     const dur = Date.now()-start;
     const log: ComposerRunLog = { id: uid("run-"), workflowId: id, startedAt: new Date(start).toISOString(), completedAt: new Date().toISOString(), status: fail ? "failed" : "succeeded", durationMs: dur, stepCount: wf.nodes.length, triggeredBy: userId };
     await redis.zadd(K.runs(oid), Date.now(), s2(log));

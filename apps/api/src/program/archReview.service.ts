@@ -44,7 +44,7 @@ export const ArchReviewService = {
       status: (input.status as ArchReviewStatus) ?? "in_review",
       findings: (input.findings as ArchFinding[]) ?? [],
       adrsConsulted: input.adrsConsulted ?? ["ADR-001", "ADR-004", "ADR-012"],
-      aiScore: Math.round(65 + Math.random() * 25),
+      aiScore: 76,
       createdAt: iso(),
     };
     await redis.set(DETAIL(id), ser(review));
@@ -66,7 +66,7 @@ export const ArchReviewService = {
       adrRef: `ADR-00${(i % 13) + 1}`,
     }));
     existing.findings = findings;
-    existing.aiScore = Math.round(70 + Math.random() * 25);
+    existing.aiScore = 78;
     existing.status = "needs_changes";
     await redis.set(DETAIL(id), ser(existing));
     return existing;

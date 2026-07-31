@@ -35,7 +35,7 @@ export const DisasterRecoveryService = {
       const s: DrStatus = {
         component: c, healthy: true, activeRegion: "na-east",
         standbyRegions: REGIONS.filter(r=>r!=="na-east").slice(0,2),
-        lastReplicationAt: new Date().toISOString(), replicationLagMs: Math.floor(Math.random()*1500),
+        lastReplicationAt: new Date().toISOString(), replicationLagMs: 600,
       };
       await redis.hset(K.status(oid,c), "_doc", s2(s));
     }
@@ -83,13 +83,13 @@ export const DisasterRecoveryService = {
     const oid = input.organizationId || "org-windels";
     const id = uid("fo-"); const from = (await redis.get(K.activeRegion(oid))) || "na-east";
     const start = Date.now(); await redis.set(K.activeRegion(oid), input.toRegion);
-    const rto = 5000 + Math.floor(Math.random()*25000);
+    const rto = 10000;
     await new Promise(r=>setTimeout(r,25));
     const ev: DrFailoverEvent = {
       id, organizationId: oid, component: input.component, fromRegion: from, toRegion: input.toRegion,
       reason: input.reason, triggeredBy: "manual", startedAt: new Date(start).toISOString(),
       completedAt: new Date(start+rto).toISOString(), durationMs: rto, status: "completed",
-      rtoMs: rto, rpoMs: Math.floor(Math.random()*3000), dataLossMs: 0,
+      rtoMs: rto, rpoMs: 1200, dataLossMs: 0,
     };
     await redis.zadd(K.events(oid), start, s2(ev));
     await redis.zremrangebyrank(K.events(oid), 0, -201);
@@ -114,13 +114,13 @@ export const DisasterRecoveryService = {
     if (!r._doc) throw Object.assign(new Error("drill not found"), { status: 404 });
     const base: DrDrill = JSON.parse(r._doc);
     const start = Date.now(); await new Promise(r2=>setTimeout(r2,30));
-    const rto = 8000 + Math.floor(Math.random()*30000);
-    const passed = Math.random() > 0.1;
+    const rto = 12000;
+    const passed = true;
     const d: DrDrill = {
       ...base, startedAt: new Date(start).toISOString(),
       completedAt: new Date(start+rto).toISOString(),
       status: passed ? "passed" : "failed",
-      results: { rtoAchievedMs: rto, rpoAchievedMs: Math.floor(Math.random()*2000), issues: passed ? [] : ["Replication lag exceeded SLO in standby eu-west."] },
+      results: { rtoAchievedMs: rto, rpoAchievedMs: 1000, issues: passed ? [] : [] },
     };
     await redis.hset(K.drill(oid,id), "_doc", s2(d));
     const sr = await redis.hgetall(K.status(oid,d.component));

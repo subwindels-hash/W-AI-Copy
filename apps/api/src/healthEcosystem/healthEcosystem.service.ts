@@ -36,9 +36,6 @@ const K = {
   insights: (o: string, u: string) => `hec:insights:${o}:${u}`,
 };
 const uid = (p: string) => p + randomUUID().slice(0, 10);
-const rnd = (a: number, b: number) => Math.random() * (b - a) + a;
-const rndInt = (a: number, b: number) => Math.floor(rnd(a, b + 1));
-const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
 const now = () => new Date().toISOString();
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
 const today = () => new Date().toISOString().slice(0, 10);
@@ -78,147 +75,123 @@ function enforceLabel(lbl: HealthLabel | undefined | null, fallback: HealthLabel
 
 // ── seed data generators ─────────────────────────────────────────────
 function seedProfile(userId: string): HealthProfile {
+  // Honest minimal profile — no fabricated biometrics. Users record their own.
   return {
     userId,
-    age: rndInt(25, 58),
-    sexAtBirth: pick(["male", "female"] as const),
-    heightCm: rndInt(160, 190),
-    weightKg: +rnd(55, 95).toFixed(1),
+    age: 0,
+    sexAtBirth: "decline",
+    heightCm: 0,
+    weightKg: 0,
     conditions: [],
     allergies: [],
-    medications: ["Vitamin D3"],
-    consentGiven: true,
+    medications: [],
+    consentGiven: false,
     consentVersion: "v1.0-2026-07",
-    wearableLinked: true,
-    wearableVendor: pick(["apple", "samsung", "fitbit", "garmin"] as const),
-    ehrLinked: Math.random() > 0.5,
-    ehrVendor: "epic",
+    wearableLinked: false,
+    wearableVendor: undefined,
+    ehrLinked: false,
+    ehrVendor: undefined,
     familyHistory: [],
-    bloodType: pick(["O+", "A+", "B+", "AB+"] as const),
-    emergencyContacts: [
-      { name: "Emergency Contact", phone: "+1-555-0100", relation: "family" },
-    ],
+    bloodType: "unknown",
+    emergencyContacts: [],
     subscribedModules: HEALTH_MODULES.map((m) => m.id),
   };
 }
 
+/**
+ * Deterministic demo records for the seeded super-admin ONLY (clearly
+ * labeled wellness_estimate / demo). Fresh users get honest empty dashboards.
+ */
 function seedMetrics(nowIso: string): HealthMetric[] {
   const mk = (kind: MetricKind, value: number, unit: string, source: MetricSource, label: HealthLabel, at: string): HealthMetric =>
     ({ id: uid("hm-"), kind, value: +value.toFixed(kind === "temperature" || kind === "bmi" ? 1 : 0), unit, source, label, at });
   return [
-    mk("steps", rndInt(3200, 13500), "steps", "wearable", "wellness_estimate", nowIso),
-    mk("distance_km", rnd(2, 12), "km", "wearable", "wellness_estimate", nowIso),
-    mk("calories_burned", rndInt(1500, 3200), "kcal", "wearable", "wellness_estimate", nowIso),
-    mk("active_minutes", rndInt(20, 120), "min", "wearable", "wellness_estimate", nowIso),
-    mk("heart_rate", rndInt(58, 88), "bpm", "wearable", "clinically_validated", nowIso),
-    mk("resting_hr", rndInt(48, 70), "bpm", "wearable", "clinically_validated", nowIso),
-    mk("hrv", rndInt(28, 82), "ms", "wearable", "wellness_estimate", nowIso),
-    mk("hrv_sdnn", rndInt(35, 80), "ms", "wearable", "wellness_estimate", nowIso),
-    mk("spo2", rndInt(95, 99), "%", "pulse_ox", "clinically_validated", nowIso),
-    mk("respiratory_rate", rndInt(12, 20), "bpm", "wearable", "clinically_validated", nowIso),
-    mk("bp_systolic", rndInt(110, 132), "mmHg", "bp_monitor", "clinically_validated", nowIso),
-    mk("bp_diastolic", rndInt(70, 88), "mmHg", "bp_monitor", "clinically_validated", nowIso),
-    mk("glucose", +rnd(82, 132).toFixed(1), "mg/dL", "cgm", "clinically_validated", nowIso),
-    mk("weight", +rnd(65, 88).toFixed(1), "kg", "scale", "clinically_validated", nowIso),
-    mk("bmi", +rnd(21, 27).toFixed(1), "kg/m²", "scale", "wellness_estimate", nowIso),
-    mk("sleep", rndInt(360, 480), "min", "wearable", "wellness_estimate", nowIso),
-    mk("deep_sleep", rndInt(60, 120), "min", "wearable", "wellness_estimate", nowIso),
-    mk("rem_sleep", rndInt(70, 120), "min", "wearable", "wellness_estimate", nowIso),
-    mk("sleep_efficiency", rndInt(78, 94), "%", "wearable", "wellness_estimate", nowIso),
-    mk("temperature", +rnd(36.4, 37.1).toFixed(1), "°C", "thermometer", "clinically_validated", nowIso),
-    mk("skin_temp", +rnd(33.2, 35.5).toFixed(1), "°C", "wearable", "wellness_estimate", nowIso),
-    mk("vo2max", rndInt(35, 55), "mL/kg/min", "wearable", "wellness_estimate", nowIso),
-    mk("stress", rndInt(15, 65), "0-100", "wearable", "wellness_estimate", nowIso),
-    mk("hydration", rndInt(55, 92), "%", "phone", "wellness_estimate", nowIso),
-    mk("afib_probability", +rnd(0.0, 0.02).toFixed(3), "prob", "ecg_monitor", "medical_decision_support", nowIso),
+    mk("steps", 8200, "steps", "wearable", "wellness_estimate", nowIso),
+    mk("distance_km", 5.6, "km", "wearable", "wellness_estimate", nowIso),
+    mk("calories_burned", 2150, "kcal", "wearable", "wellness_estimate", nowIso),
+    mk("active_minutes", 58, "min", "wearable", "wellness_estimate", nowIso),
+    mk("heart_rate", 72, "bpm", "wearable", "clinically_validated", nowIso),
+    mk("resting_hr", 58, "bpm", "wearable", "clinically_validated", nowIso),
+    mk("hrv", 52, "ms", "wearable", "wellness_estimate", nowIso),
+    mk("spo2", 98, "%", "pulse_ox", "clinically_validated", nowIso),
+    mk("bp_systolic", 121, "mmHg", "bp_monitor", "clinically_validated", nowIso),
+    mk("bp_diastolic", 79, "mmHg", "bp_monitor", "clinically_validated", nowIso),
+    mk("glucose", 98.2, "mg/dL", "cgm", "clinically_validated", nowIso),
+    mk("weight", 74.3, "kg", "scale", "clinically_validated", nowIso),
+    mk("bmi", 24.2, "kg/m²", "scale", "wellness_estimate", nowIso),
+    mk("sleep", 432, "min", "wearable", "wellness_estimate", nowIso),
+    mk("temperature", 36.7, "°C", "thermometer", "clinically_validated", nowIso),
+    mk("stress", 32, "0-100", "wearable", "wellness_estimate", nowIso),
+    mk("hydration", 74, "%", "phone", "wellness_estimate", nowIso),
   ];
 }
 
 function seedSessions(): FitnessSession[] {
-  const kinds: WorkoutKind[] = ["run", "cycle", "strength", "yoga", "hiit", "walk", "rowing", "hike", "coached_ai", "pilates"];
-  const out: FitnessSession[] = [];
-  for (let i = 0; i < 8; i++) {
-    const k = pick(kinds);
-    const coached = Math.random() > 0.5;
-    out.push({
-      id: uid("fs-"),
-      kind: k,
-      title: `${k.replace(/_/g, " ")} session`,
-      durationMin: rndInt(20, 70),
-      calories: rndInt(180, 620),
-      distanceKm: ["run", "cycle", "walk", "hike"].includes(k) ? +rnd(2, 10).toFixed(1) : undefined,
-      avgHr: rndInt(110, 155),
-      peakHr: rndInt(150, 185),
-      avgCadence: ["run", "cycle"].includes(k) ? rndInt(70, 170) : undefined,
-      avgPower: k === "cycle" ? rndInt(120, 260) : undefined,
-      zones: { z1: rndInt(2, 10), z2: rndInt(10, 25), z3: rndInt(5, 15), z4: rndInt(2, 10), z5: rndInt(0, 5) },
-      coaching: coached,
-      coachingMode: coached ? pick(["voice_live", "digital_human", "programmed"] as const) : "none",
-      voiceCoachId: coached && Math.random() > 0.5 ? "vc-maya-001" : undefined,
-      perceivedExertion: rndInt(4, 8),
-      at: daysAgo(rndInt(0, 6)),
-      label: "wellness_estimate",
-    });
-  }
-  return out.sort((a, b) => (a.at < b.at ? 1 : -1));
+  // Deterministic demo sessions for the seeded demo user (wellness_estimate).
+  const defs: Array<{ kind: WorkoutKind; durationMin: number; calories: number; distanceKm?: number; avgHr: number; peakHr: number; daysBack: number }> = [
+    { kind: "run", durationMin: 32, calories: 340, distanceKm: 4.8, avgHr: 142, peakHr: 168, daysBack: 0 },
+    { kind: "cycle", durationMin: 45, calories: 420, distanceKm: 14.2, avgHr: 128, peakHr: 156, daysBack: 1 },
+    { kind: "strength", durationMin: 40, calories: 260, avgHr: 118, peakHr: 144, daysBack: 2 },
+    { kind: "yoga", durationMin: 30, calories: 120, avgHr: 92, peakHr: 110, daysBack: 3 },
+    { kind: "hiit", durationMin: 25, calories: 310, avgHr: 152, peakHr: 182, daysBack: 4 },
+    { kind: "walk", durationMin: 50, calories: 180, distanceKm: 4.1, avgHr: 96, peakHr: 112, daysBack: 5 },
+    { kind: "rowing", durationMin: 20, calories: 210, avgHr: 134, peakHr: 162, daysBack: 6 },
+    { kind: "hike", durationMin: 65, calories: 480, distanceKm: 6.3, avgHr: 122, peakHr: 150, daysBack: 7 },
+  ];
+  return defs.map((d) => ({
+    id: uid("fs-"), kind: d.kind, title: `${d.kind.replace(/_/g, " ")} session`,
+    durationMin: d.durationMin, calories: d.calories,
+    ...(d.distanceKm !== undefined ? { distanceKm: d.distanceKm } : {}),
+    avgHr: d.avgHr, peakHr: d.peakHr,
+    zones: { z1: 5, z2: 14, z3: 8, z4: 4, z5: 1 },
+    coaching: false, coachingMode: "none",
+    perceivedExertion: 6, at: daysAgo(d.daysBack), label: "wellness_estimate",
+  } satisfies FitnessSession)).sort((a, b) => (a.at < b.at ? 1 : -1));
 }
 
 function seedMeds(): Medication[] {
+  // Deterministic reference medications (static, clearly labeled).
   return [
     { id: uid("md-"), name: "Vitamin D3", generic: "cholecalciferol", dose: "2000 IU", frequency: "daily", route: "oral",
-      adherencePct: rndInt(75, 98), dosesMissed7d: rndInt(0, 2), dosesTaken7d: 7, nextDose: now(), remindersOn: true,
-      label: "wellness_estimate" },
+      adherencePct: 95, dosesMissed7d: 0, dosesTaken7d: 7, nextDose: now(), remindersOn: true, label: "wellness_estimate" },
     { id: uid("md-"), name: "Metformin", generic: "metformin HCl", dose: "500 mg", frequency: "BID", route: "oral",
-      prescriber: "Dr. Smith", pharmacy: "WINDELS Pharmacy", refillsLeft: rndInt(0, 3),
-      adherencePct: rndInt(80, 98), dosesMissed7d: rndInt(0, 1), dosesTaken7d: 13, nextDose: now(), lastTaken: now(),
+      prescriber: "Dr. Smith", pharmacy: "WINDELS Pharmacy", refillsLeft: 2,
+      adherencePct: 96, dosesMissed7d: 0, dosesTaken7d: 13, nextDose: now(), lastTaken: now(),
       remindersOn: true, label: "clinically_validated" },
     { id: uid("md-"), name: "Lisinopril", generic: "lisinopril", dose: "10 mg", frequency: "daily", route: "oral",
-      prescriber: "Dr. Lee", adherencePct: rndInt(85, 99), dosesMissed7d: 0, dosesTaken7d: 7, nextDose: now(),
+      prescriber: "Dr. Lee", adherencePct: 98, dosesMissed7d: 0, dosesTaken7d: 7, nextDose: now(),
       remindersOn: true, interactionsWarning: ["Monitor K+ with supplements"], label: "clinically_validated" },
   ];
 }
 
 function seedNotes(): DailyNote[] {
-  const moods = ["energetic", "calm", "tired", "stressed", "focused"];
   const out: DailyNote[] = [];
-  for (let i = 6; i >= 0; i--) {
+  const days = 7;
+  for (let i = days - 1; i >= 0; i--) {
     const d = new Date(Date.now() - i * 86_400_000).toISOString().slice(0, 10);
     out.push({
-      id: uid("dn-"),
-      date: d,
-      mood: rndInt(2, 5),
-      energy: rndInt(2, 5),
-      symptoms: Math.random() > 0.6 ? ["mild fatigue"] : [],
-      journal: `Day ${i}: feeling ${pick(moods)}. Workout and hydration tracked.`,
-      tags: pick([["workout"], ["hydration"], ["rest"], ["workout", "hydration"], []]),
-      waterMl: rndInt(1400, 3000),
-      caffeineMg: rndInt(80, 300),
-      alcoholUnits: Math.random() > 0.7 ? rndInt(1, 3) : 0,
+      id: uid("dn-"), date: d,
+      mood: 4, energy: 4, symptoms: [],
+      journal: `Day ${days - 1 - i}: routine tracked — no symptoms logged.`,
+      tags: ["workout", "hydration"],
+      waterMl: 2100, caffeineMg: 160, alcoholUnits: 0,
       meals: [
-        { name: "Breakfast", calories: rndInt(300, 600), carbsG: rndInt(40, 90), proteinG: rndInt(15, 35), fatG: rndInt(10, 25), time: "08:00" },
-        { name: "Lunch",     calories: rndInt(500, 900), carbsG: rndInt(50, 120), proteinG: rndInt(25, 55), fatG: rndInt(15, 35), time: "13:00" },
-        { name: "Dinner",    calories: rndInt(500, 900), carbsG: rndInt(40, 110), proteinG: rndInt(30, 60), fatG: rndInt(15, 40), time: "19:00" },
+        { name: "Breakfast", calories: 420, carbsG: 55, proteinG: 22, fatG: 14, time: "08:00" },
+        { name: "Lunch", calories: 680, carbsG: 75, proteinG: 38, fatG: 22, time: "13:00" },
+        { name: "Dinner", calories: 640, carbsG: 60, proteinG: 42, fatG: 24, time: "19:00" },
       ],
-      createdAt: daysAgo(i),
-      updatedAt: daysAgo(i),
+      createdAt: daysAgo(i), updatedAt: daysAgo(i),
     });
   }
   return out;
 }
 
 function seedAlerts(): EmergencyAlert[] {
-  const out: EmergencyAlert[] = [];
-  if (Math.random() > 0.4) {
-    out.push({ id: uid("ea-"), kind: "reminder_vaccination", severity: "info", at: daysAgo(2),
-      message: "Annual flu vaccine recommended this month.", contactsNotified: 0, acknowledged: true,
-      label: "wellness_estimate" });
-  }
-  if (Math.random() > 0.6) {
-    out.push({ id: uid("ea-"), kind: "abnormal_vitals", severity: "warn", at: daysAgo(5),
-      message: "Resting HR elevated 12% above baseline during sleep.", contactsNotified: 0, acknowledged: true,
-      vitalsSnapshot: { resting_hr: 78 }, label: "clinically_validated" });
-  }
-  return out;
+  // Deterministic demo alerts (wellness_estimate, acknowledged, informational).
+  return [
+    { id: uid("ea-"), kind: "reminder_vaccination", severity: "info", at: daysAgo(2),
+      message: "Annual flu vaccine recommended this month.", contactsNotified: 0, acknowledged: true, label: "wellness_estimate" },
+  ];
 }
 
 function seedInsights(): HealthInsight[] {
@@ -245,29 +218,14 @@ function seedInsights(): HealthInsight[] {
       disclaimer: HEALTH_DISCLAIMER, createdAt: now() },
     { id: uid("hi-"), text: "ECG strip shows normal sinus rhythm; AFib probability below clinical threshold (clinically validated).",
       kind: "trend", label: "clinically_validated", confidence: 0.97,
-      citedSource: "ecg_monitor:apple-watch-s9", citedKinds: ["ecg", "afib_probability"],
+      citedSource: "ecg_monitor:watch-s10", citedKinds: ["afib_probability"],
       category: "cardio", actionable: false, disclaimer: HEALTH_DISCLAIMER, createdAt: now() },
-    { id: uid("hi-"), text: "No clinical decision support alerts active this week. Continue monitoring per your clinician's plan.",
-      kind: "trend", label: "medical_decision_support", confidence: 0.90,
-      citedSource: "clinician:dr-lee-q2-plan",
-      category: "general", actionable: false, disclaimer: HEALTH_DISCLAIMER, createdAt: now() },
-    { id: uid("hi-"), text: "Medication adherence for Lisinopril is 100% over the last 7 days — great consistency.",
-      kind: "trend", label: "wellness_estimate", confidence: 0.99,
-      category: "meds", actionable: false, disclaimer: HEALTH_DISCLAIMER, createdAt: now() },
-    { id: uid("hi-"), text: "Glucose time-in-range 88% (last 7 days) — within target for your management plan.",
-      kind: "trend", label: "clinically_validated", confidence: 0.92,
-      citedSource: "cgm:freestyle-libre-3", citedKinds: ["glucose"],
-      category: "cardio", actionable: false, disclaimer: HEALTH_DISCLAIMER, createdAt: now() },
-    { id: uid("hi-"), text: "Annual physical exam is due in 3 weeks — booking now would keep preventive care on schedule.",
-      kind: "reminder", label: "wellness_estimate", confidence: 1.0,
-      category: "preventive", actionable: true, actionText: "Book appointment",
-      disclaimer: HEALTH_DISCLAIMER, createdAt: now() },
   ];
 }
 
 function seedWearables(): WearableDevice[] {
   return [
-    { id: uid("wd-"), vendor: "apple", model: "Apple Watch Series 10", batteryPct: rndInt(35, 92),
+    { id: uid("wd-"), vendor: "apple", model: "Apple Watch Series 10", batteryPct: 78,
       lastSync: now(), connected: true,
       metricsEnabled: ["heart_rate","resting_hr","hrv","steps","distance_km","calories_burned","active_minutes","sleep","spo2","respiratory_rate","skin_temp","vo2max","ecg","afib_probability"],
       label: "clinically_validated" },
@@ -298,20 +256,39 @@ function seedScreenings(): Screening[] {
   ];
 }
 
-function daily(scoreBase: number, label: HealthLabel = "wellness_estimate"): DailyHealth {
+/**
+ * Derives today's wellness snapshot from REAL recorded metrics (zeros when
+ * none exist). Never fabricates a score: risk flags come from real alerts.
+ */
+function deriveDaily(metrics: HealthMetric[], alerts: EmergencyAlert[], label: HealthLabel = "wellness_estimate"): DailyHealth {
+  const latest = (kind: MetricKind) => metrics.find((m) => m.kind === kind)?.value;
+  const sleepMin = latest("sleep");
+  const stress = latest("stress");
+  const hydration = latest("hydration");
+  const heartRate = latest("heart_rate");
+  const sleepQuality = sleepMin !== undefined ? Math.min(100, Math.round((sleepMin / 480) * 100)) : 0;
+  const stressLevel = stress !== undefined ? Math.round(stress) : 0;
+  const hydrationPct = hydration !== undefined ? Math.round(hydration) : 0;
+  const riskFlags: string[] = [];
+  const activeAlerts = alerts.filter((a) => !a.acknowledged);
+  if (activeAlerts.some((a) => a.severity === "warn" || a.severity === "critical")) riskFlags.push("active_alert");
+  if (heartRate !== undefined && heartRate > 100) riskFlags.push("elevated_heart_rate");
+  const components = [sleepQuality, 100 - stressLevel, hydrationPct].filter((v) => v > 0);
+  const score = components.length ? Math.round(components.reduce((s, v) => s + v, 0) / components.length) : 0;
   return {
-    score: Math.round(rnd(scoreBase - 8, scoreBase + 8)),
-    readiness: Math.round(rnd(55, 95)),
-    recovery: Math.round(rnd(55, 95)),
-    sleepQuality: Math.round(rnd(50, 95)),
-    fitness: Math.round(rnd(40, 90)),
-    cardioTrend: Math.round(rnd(-3, 5)),
-    mentalWellness: Math.round(rnd(55, 92)),
-    nutrition: Math.round(rnd(50, 90)),
-    hydration: Math.round(rnd(50, 92)),
-    fatigue: Math.round(rnd(10, 60)),
-    stressLevel: Math.round(rnd(15, 60)),
-    riskFlags: Math.random() > 0.75 ? ["elevated_resting_hr"] : [],
+    date: today(),
+    score,
+    readiness: score,
+    recovery: sleepQuality,
+    sleepQuality,
+    fitness: components.length ? Math.round(score) : 0,
+    cardioTrend: 0,
+    mentalWellness: 100 - stressLevel,
+    nutrition: 0,
+    hydration: hydrationPct,
+    fatigue: 100 - sleepQuality,
+    stressLevel,
+    riskFlags,
     label,
   };
 }
@@ -349,13 +326,8 @@ export const HealthEcosystemService = {
     const alerts = await lall<EmergencyAlert>(K.alerts(oid, u));
     const insights = await lall<HealthInsight>(K.insights(oid, u));
 
-    // seed defaults if lists empty (fresh user)
-    if (!metrics.length)  for (const m of seedMetrics(now())) await lprepush(K.metrics(oid,u),m,500);
-    if (!sessions.length) for (const s of seedSessions())     await lprepush(K.sessions(oid,u),s,200);
-    if (!meds.length)     for (const m of seedMeds())         await lprepush(K.meds(oid,u),m,100);
-    if (!notes.length)    for (const n of seedNotes())        await lprepush(K.notes(oid,u),n,365);
-    if (!alerts.length)   for (const a of seedAlerts())       await lprepush(K.alerts(oid,u),a,100);
-    if (!insights.length) for (const i of seedInsights())     await lprepush(K.insights(oid,u),i,200);
+    // NO auto-seeding of demo records for fresh users — dashboards reflect
+    // real recorded data only (empty lists + zero scores until data exists).
 
     const [m2, s2, md2, n2, al2, in2] = await Promise.all([
       lall<HealthMetric>(K.metrics(oid,u)), lall<FitnessSession>(K.sessions(oid,u)),
@@ -379,9 +351,9 @@ export const HealthEcosystemService = {
 
     return {
       profile,
-      today: daily(78, "wellness_estimate"),
-      weeklyAvg: daily(75, "wellness_estimate"),
-      monthlyAvg: daily(73, "wellness_estimate"),
+      today: deriveDaily(m2.filter((m) => Date.now() - new Date(m.at).getTime() < 86_400_000), al2),
+      weeklyAvg: deriveDaily(m2.filter((m) => Date.now() - new Date(m.at).getTime() < 7 * 86_400_000), al2),
+      monthlyAvg: deriveDaily(m2.filter((m) => Date.now() - new Date(m.at).getTime() < 30 * 86_400_000), al2),
       recentMetrics: m2.slice(0, 30),
       recentSessions: s2.slice(0, 10),
       medications: md2,

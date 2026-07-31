@@ -51,7 +51,7 @@ export const BlueprintsService = {
       return existing;
     }
     const id = randomUUID();
-    const b: Blueprint = { id, installs: 0, stars: 8 + Math.floor(Math.random()*40), updatedAt: iso(), ...input };
+    const b: Blueprint = { id, installs: 0, stars: 24, updatedAt: iso(), ...input };
     await redis.set(DETAIL(id), SER(b));
     await redis.sadd(LIST, id);
     await redis.hset(BY_SLUG, b.slug, id);

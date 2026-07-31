@@ -85,7 +85,7 @@ const INDICATOR_DEFS: TiIndicatorPlugin[] = [
   { id: "VWAP",       name: "Volume Weighted Avg Price",    category: "volume",            installed: true, version: "1.0.0", author: "windels" },
 ];
 
-function rand(min: number, max: number) { return min + Math.random() * (max - min); }
+function rand(min: number, max: number) { return (min + max) / 2; } // deterministic
 function rPct() { return rand(-3, 3); }
 function mkInstrument(
   id: string, symbol: string, name: string, marketClass: TiMarketClass, price: number,
@@ -94,7 +94,7 @@ function mkInstrument(
   const ch = rPct();
   return {
     id, symbol, name, marketClass, price, change24hPct: ch, volume24h: Math.floor(rand(1e6, 1e10)),
-    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : (Math.random() > 0.3 ? "open" : "closed"),
+    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : "open",
     sentiment: ch > 0.3 ? "bullish" : ch < -0.3 ? "bearish" : "neutral",
     signal: ch > 1 ? "buy" : ch < -1 ? "sell" : "hold",
     confidence: rand(0.55, 0.92),

@@ -77,14 +77,14 @@ export const ModelsService = {
     const v0: ModelVersionRec = {
       id: randomUUID(), version: "0.1.0", stage: "draft",
       artifactUri: `mlops://models/${input.slug}/0.1.0`,
-      sizeMb: 120 + Math.floor(Math.random()*800),
+      sizeMb: 420,
       hash: "sha256:" + randomUUID().replace(/-/g,""),
       metrics: [], createdAt: now,
     };
     const m: ModelArtifact = {
-      id, versions: [v0], stars: 8 + Math.floor(Math.random()*40), installs: 0,
-      currentStage: "draft", status: "active", avgLatencyMs: 240 + Math.floor(Math.random()*1800),
-      errorRatePct: Math.random()*0.8, updatedAt: now, ...input,
+      id, versions: [v0], stars: 22, installs: 0,
+      currentStage: "draft", status: "active", avgLatencyMs: 720,
+      errorRatePct: 0.3, updatedAt: now, ...input,
     };
     m.currentVersion = v0.id;
     await redis.set(MODEL(id), SER(m));
@@ -99,7 +99,7 @@ export const ModelsService = {
     const v: ModelVersionRec = {
       id: randomUUID(), version, stage,
       artifactUri: artifactUri ?? `mlops://models/${m.slug}/${version}`,
-      sizeMb: 120 + Math.floor(Math.random()*800),
+      sizeMb: 420,
       hash: "sha256:" + randomUUID().replace(/-/g,""),
       metrics, createdAt: iso(), notes,
     };
@@ -174,9 +174,9 @@ export const ModelsService = {
       status: "healthy", region: input.region ?? "na-east",
       replicas: input.replicas ?? 2, cpu: input.cpu ?? "2", memory: input.memory ?? "8Gi",
       gpu: input.gpu, endpoint: `https://inference.windels.ai/${input.environment}/${input.name}`,
-      trafficPct: input.trafficPct ?? 100, qps: Math.floor(50+Math.random()*2000),
-      p95Ms: 80+Math.floor(Math.random()*500), errorRatePct: Math.random()*0.5,
-      costPerHour: +(1.2 + Math.random()*8).toFixed(2),
+      trafficPct: input.trafficPct ?? 100, qps: 800,
+      p95Ms: 240, errorRatePct: 0.2,
+      costPerHour: 4.5,
       deployedAt: now, updatedAt: now, deployedBy: input.deployedBy ?? "admin",
     };
     await redis.set(DEP(id), SER(d));

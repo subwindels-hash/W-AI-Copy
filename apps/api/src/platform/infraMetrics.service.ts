@@ -31,10 +31,10 @@ export const InfraMetricsService = {
     await ClusterService.seed();
     const c = await ClusterService.probe();
     // Simulate traffic metrics
-    const rps = 500 + Math.random() * 1200 + c.cpuPercent * 5;
-    const p95 = 15 + Math.random() * 35 + (c.memoryPercent > 80 ? 40 : 0);
-    const errRate = Math.max(0, (c.cpuPercent > 85 ? 2 : 0.1) + (Math.random() - 0.6));
-    const readyPct = Math.max(80, 100 - Math.floor(Math.random() * 5));
+    const rps = 1100 + c.cpuPercent * 5;
+    const p95 = 32 + (c.memoryPercent > 80 ? 40 : 0);
+    const errRate = Math.max(0, (c.cpuPercent > 85 ? 2 : 0.1));
+    const readyPct = 100;
     const m: InfraMetric = {
       ts: now(), clusterCpuPercent: c.cpuPercent, clusterMemoryPercent: c.memoryPercent,
       clusterPodPercent: c.podPercent, requestRps: Math.round(rps), requestP95Ms: Math.round(p95),

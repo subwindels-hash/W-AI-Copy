@@ -38,7 +38,7 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
+function rand(min:number,max:number) { return (min+max)/2; } // deterministic
 function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
 
 const DATA_SOURCES_SEED: Array<{name:string;kind:DataSource["kind"]}> = [
@@ -130,7 +130,7 @@ export const FabricService = {
       const now = new Date().toISOString();
       const src: DataSource = {
         id, name: s.name, kind: s.kind,
-        status: Math.random() > 0.1 ? "healthy" : "degraded",
+        status: "healthy",
         latencyMs: randInt(8, 120), rowsPerSec: randInt(400, 9000), connectedAt: now,
       };
       await redis.hset(K.src(oid,id), "_doc", s2(src));
@@ -157,7 +157,7 @@ export const FabricService = {
         id, name: t.name, kind: t.kind,
         healthPct: +rand(72, 99).toFixed(1), simulationRuns: randInt(3, 240),
         lastSimulationAt: new Date(Date.now()-randInt(1,24)*3600000).toISOString(),
-        status: Math.random()>0.7?"simulating":"idle",
+        status: "idle",
         predictionAccuracyPct: +rand(82, 98).toFixed(1),
       };
       await redis.hset(K.twin(oid,id), "_doc", s2(twin)); await redis.sadd(K.twins(oid), id);

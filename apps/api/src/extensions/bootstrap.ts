@@ -97,7 +97,7 @@ export async function bootstrapExtensions() {
       description:b.tagline + " — " + b.features.join(", "), tagline:b.tagline,
       version:"1.0.0", visibility:"enterprise", category:b.cat, tags:["business",b.cat],
       icon:b.icon, color:b.color as any, license:"Enterprise", minPlatformVersion:"0.28.0",
-      permissions:["read:org","read:finance"], sizeKb:120 + Math.floor(Math.random()*80),
+      permissions:["read:org","read:finance"], sizeKb:150,
       certified:"official", sliceNumber:237,
       docsUrl:`https://docs.windels.ai/extensions/${b.slug}`,
     });
@@ -122,7 +122,7 @@ export async function bootstrapExtensions() {
       description:i.desc, tagline:i.desc.slice(0,60),
       version:"1.0.0", visibility:"enterprise", category:i.vertical as any, tags:["industry",i.vertical],
       icon:i.icon, color:i.color as any, license:"Enterprise", minPlatformVersion:"0.28.0",
-      permissions:["read:org"], sizeKb:180 + Math.floor(Math.random()*120),
+      permissions:["read:org"], sizeKb:230,
       certified:"enterprise", sliceNumber:238,
       docsUrl:`https://docs.windels.ai/extensions/${i.slug}`,
     });
@@ -146,7 +146,7 @@ export async function bootstrapExtensions() {
       description:s.desc, tagline:s.desc.slice(0,60),
       version:"1.0.0", visibility:"public", category:s.category as any, tags:["skill",s.category],
       icon:s.icon, color:s.color as any, license:"Apache-2.0", minPlatformVersion:"0.28.0",
-      permissions:["invoke:llm"], sizeKb:20 + Math.floor(Math.random()*30),
+      permissions:["invoke:llm"], sizeKb:35,
       certified:"official", sliceNumber:239,
       docsUrl:`https://docs.windels.ai/extensions/${s.slug}`,
     });
@@ -159,7 +159,7 @@ export async function bootstrapExtensions() {
     await SkillsService.register({
       slug:s.slug, name:s.name, category:s.category as any, description:s.desc,
       inputs:s.inp, outputs:s.out, modelRequirements:s.models,
-      avgLatencyMs:s.lat, accuracyPct:s.acc, uses:Math.floor(1000+Math.random()*8000),
+      avgLatencyMs:s.lat, accuracyPct:s.acc, uses:4000,
       assignableWorkforces:s.wf, extensionId:ext.id, version:"1.0.0", status:"published",
     });
   }
@@ -171,7 +171,7 @@ export async function bootstrapExtensions() {
       description:a.desc, tagline:a.desc.slice(0,60),
       version:"1.0.0", visibility:"public", category:a.dept as any, tags:["agent",a.dept],
       icon:a.icon, color:a.color as any, license:"MIT", minPlatformVersion:"0.28.0",
-      permissions:["invoke:llm","read:memory"], sizeKb:40 + Math.floor(Math.random()*20),
+      permissions:["invoke:llm","read:memory"], sizeKb:48,
       certified:"official", sliceNumber:240,
       docsUrl:`https://docs.windels.ai/extensions/${a.slug}`,
     });
@@ -197,7 +197,7 @@ export async function bootstrapExtensions() {
       description:w.desc, tagline:w.desc.slice(0,60),
       version:"1.0.0", visibility:"public", category:w.cat as any, tags:["workflow",w.cat],
       icon:w.icon, color:w.col as any, license:"MIT", minPlatformVersion:"0.28.0",
-      permissions:["workflow:run"], sizeKb:15 + Math.floor(Math.random()*15),
+      permissions:["workflow:run"], sizeKb:22,
       certified:"official", sliceNumber:241,
       docsUrl:`https://docs.windels.ai/extensions/${w.slug}`,
     });
@@ -210,7 +210,7 @@ export async function bootstrapExtensions() {
     await WorkflowExtService.register({
       slug:w.slug, name:w.name, category:w.cat as any, description:w.desc,
       inputs:w.in, outputs:w.out, integrations:w.ints,
-      invocations:Math.floor(500+Math.random()*5000), avgDurationMs:80+Math.floor(Math.random()*200), errorRatePct:Math.random()*1.5,
+      invocations:2500, avgDurationMs:150, errorRatePct:0.6,
       extensionId:ext.id, version:"1.0.0", status:"published",
     });
   }
@@ -234,7 +234,7 @@ export async function bootstrapExtensions() {
     await ExtensionRegistryService.transition(ext.id, "published", "bootstrap");
     await DashboardExtService.register({
       slug:d.slug, name:d.name, description:d.desc, widgets:d.widgets as any, dataSources:d.sources,
-      refreshRateSec:d.refresh, installations:Math.floor(40+Math.random()*400), author:d.author, roles:d.roles,
+      refreshRateSec:d.refresh, installations:180, author:d.author, roles:d.roles,
       extensionId:ext.id, version:"1.0.0", status:"published",
     });
   }
@@ -246,7 +246,7 @@ export async function bootstrapExtensions() {
       description:u.desc, tagline:u.desc.slice(0,60),
       version:"1.0.0", visibility:"public", category:u.cat as any, tags:["ui",u.cat],
       icon:u.icon, color:u.col as any, license:"MIT", minPlatformVersion:"0.28.0",
-      permissions:[], sizeKb:8 + Math.floor(Math.random()*20),
+      permissions:[], sizeKb:16,
       certified:"official", sliceNumber:243,
       docsUrl:`https://docs.windels.ai/extensions/${u.slug}`,
     });
@@ -259,8 +259,8 @@ export async function bootstrapExtensions() {
     await UIComponentsService.register({
       slug:u.slug, name:u.name, category:u.cat as any, description:u.desc,
       framework:u.fw as any, a11y:true, darkMode:true, responsive:true,
-      bundleKb:5+Math.floor(Math.random()*20), props:4+Math.floor(Math.random()*12),
-      variants:2+Math.floor(Math.random()*6), downloads:Math.floor(500+Math.random()*4000),
+      bundleKb:14, props:9,
+      variants:4, downloads:2200,
       extensionId:ext.id, version:"1.0.0", status:"published",
     });
   }

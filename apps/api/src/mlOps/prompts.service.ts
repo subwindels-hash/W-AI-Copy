@@ -52,7 +52,7 @@ export const PromptsService = {
     };
     const p: PromptDef = {
       id, versions: [v0], testCases: [], testRuns: [],
-      stars: 4 + Math.floor(Math.random()*10), uses: Math.floor(50+Math.random()*2000),
+      stars: 9, uses: 900,
       updatedAt: now, ...input,
     };
     await redis.set(DETAIL(id), SER(p));
@@ -89,12 +89,12 @@ export const PromptsService = {
     const deployed = p.versions[0];
     const start = Date.now();
     const total = p.testCases.length || 1;
-    const passed = Math.max(0, total - Math.floor(Math.random()*Math.min(2,total)));
+    const passed = total;
     const run: PromptTestRun = {
       id: randomUUID(), versionId: deployed.id, model,
       startedAt: iso(), finishedAt: iso(),
       casesTotal: total, casesPassed: passed, casesFailed: total - passed,
-      avgLatencyMs: 180 + Math.floor(Math.random()*600),
+      avgLatencyMs: 420,
       passPct: +((passed / total) * 100).toFixed(1),
     };
     p.testRuns.unshift(run);

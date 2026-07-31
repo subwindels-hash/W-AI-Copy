@@ -19,9 +19,9 @@ const K = {
 };
 const s2=(o:any)=>JSON.stringify(o);
 const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rnd(a:number,b:number){return Math.random()*(b-a)+a;}
+function rnd(a:number,b:number){return (a+b)/2;} // deterministic baseline
 function rndInt(a:number,b:number){return Math.floor(rnd(a,b+1));}
-function pick<T>(a:T[]):T{return a[Math.floor(Math.random()*a.length)];}
+function pick<T>(a:T[]):T{return a[0] as T;} // deterministic baseline
 const now=()=>new Date().toISOString();
 
 const LIT: Omit<LiteratureRef,"id"|"citations"|"relevanceScore">[] = [

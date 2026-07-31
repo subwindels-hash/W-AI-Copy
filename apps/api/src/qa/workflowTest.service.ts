@@ -49,12 +49,12 @@ export async function runWorkflowTest(c: TestCase): Promise<TestCaseResult> {
 
 async function syntheticRun(workflowId: string, trigger: any) {
   // Simulated deterministic execution
-  await new Promise((r)=>setTimeout(r, 20 + Math.random()*80));
+  await new Promise((r)=>setTimeout(r, 40));
   const id = trigger?.id ?? "";
   const isFail = /fail/i.test(workflowId) || trigger?.forceFail === true;
   return {
     status: isFail ? "failed" : "completed",
-    durationMs: Math.round(50 + Math.random()*400),
+    durationMs: 220,
     stepsCompleted: isFail ? 1 : 4,
     outputs: { result: `processed ${id || "event"}`, count: 42, ok: !isFail },
   };

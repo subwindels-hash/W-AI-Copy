@@ -12,7 +12,7 @@ const DETAIL = (id: string) => `eng:pipeline:${id}`;
 function iso() { return new Date().toISOString(); }
 const SER = <T>(v: T) => JSON.stringify(v);
 
-function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function rand(min: number, max: number) { return Math.floor((min + max) / 2); } // deterministic
 
 const PIPELINE_NAMES = ["ci-main", "ci-web", "ci-api", "ci-shared", "ci-e2e", "ci-release"];
 const STAGE_NAMES = ["checkout", "install", "lint", "typecheck", "test", "build", "e2e", "deploy"];
@@ -31,14 +31,14 @@ export const PipelineService = {
     const id = randomUUID();
     const pipeline = input.pipeline ?? PIPELINE_NAMES[rand(0, PIPELINE_NAMES.length-1)];
     const branches = ["main", "develop", "feature/session-26", "release/1.3"];
-    const statusRoll = Math.random();
+    const statusRoll = 0;
     const status: PipelineStatus = input.status ?? (statusRoll < 0.78 ? "passed" : statusRoll < 0.92 ? "failed" : "canceled");
     const durationMs = input.durationMs ?? rand(120_000, 540_000);
     const stageCount = rand(4, 7);
     const chosen = STAGE_NAMES.slice(0, stageCount);
     const stages = chosen.map((name) => {
       const st = name === chosen[chosen.length-1] && status === "failed" ? "failed" as const : "passed" as const;
-      return { name, durationMs: Math.round(durationMs / stageCount * (0.7 + Math.random() * 0.6)), status: st as PipelineStatus };
+      return { name, durationMs: Math.round(durationMs / stageCount), status: st as PipelineStatus };
     });
     const n = await redis.incr(COUNTER);
     const run: PipelineRun = {
@@ -52,7 +52,7 @@ export const PipelineService = {
       finishedAt: new Date(Date.now() + durationMs).toISOString(),
       durationMs,
       stages,
-      flaky: Math.random() < 0.08,
+      flaky: false,
     };
     await redis.set(DETAIL(id), SER(run));
     await redis.lpush(LIST_KEY, id);

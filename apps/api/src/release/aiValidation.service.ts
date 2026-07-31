@@ -9,7 +9,7 @@ import { PipelineService } from "./pipeline.service.js";
 const KEY = (rid: string) => `rel:validation:${rid}`;
 
 function iso() { return new Date().toISOString(); }
-function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function rand(min: number, max: number) { return Math.floor((min + max) / 2); } // deterministic
 
 async function runChecks(): Promise<ValidationCheck[]> {
   const checks: Omit<ValidationCheck, "id" | "durationMs">[] = [

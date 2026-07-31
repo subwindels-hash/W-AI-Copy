@@ -16,7 +16,7 @@ const K = {
   sk: (oid:string,id:string)=>`edu:sk:${oid}:${id}`, sks:(oid:string)=>`edu:sks:${oid}`,
 };
 const s2=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
+function rand(min:number,max:number){return (min+max)/2;} // deterministic
 function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
 
 const CONTENT_SEED: Array<{title:string;kind:LearningContent["kind"];diff:LearningContent["difficulty"];dur:number;tags:string[];mods?:number}> = [

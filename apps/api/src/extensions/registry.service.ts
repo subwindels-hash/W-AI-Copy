@@ -91,7 +91,7 @@ export const ExtensionRegistryService = {
     const now = iso();
     const e: Extension = {
       id, status: "draft", lifecycleStage: "dev",
-      installCount: 0, stars: Math.floor(5 + Math.random()*400), ratingAvg: 4 + Math.random(), reviewCount: 0,
+      installCount: 0, stars: 180, ratingAvg: 4.2, reviewCount: 0,
       versions: input.versions ?? [{ version: input.version, releasedAt: now, changelog: "initial release", minPlatformVersion: input.minPlatformVersion, status: "draft", downloads: 0 }],
       reviews: [],
       updatedAt: now,

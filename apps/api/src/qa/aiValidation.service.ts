@@ -39,7 +39,7 @@ function fakeCompletion(prompt: string): { text: string; latencyMs: number } {
   else text += "the answer is 42. If you need further assistance please ask.";
   // Make it a bit longer
   text += " This is a synthetic response for QA.";
-  return { text, latencyMs: Math.round(performance.now() - t0 + 20 + Math.random()*80) };
+  return { text, latencyMs: Math.round(performance.now() - t0 + 30) };
 }
 
 export async function runAiValidation(c: TestCase): Promise<TestCaseResult> {

@@ -10,7 +10,7 @@ const DETAIL = (id: string) => `eng:dev:${id}`;
 
 const SER = <T>(v: T) => JSON.stringify(v);
 
-function rand(min: number, max: number) { return Math.round(min + Math.random() * (max - min)); }
+function rand(min: number, max: number) { return Math.round((min + max) / 2); } // deterministic
 
 const DEV_SEED = [
   { id: "d-alice", name: "Alice Chen" },
@@ -76,8 +76,8 @@ export const ProductivityService = {
         prsOpened: rand(3, 12),
         prsMerged: rand(2, 10),
         prsReviewed: rand(4, 18),
-        avgReviewTimeHours: Math.round((2 + Math.random() * 18) * 10) / 10,
-        avgTimeToMergeHours: Math.round((4 + Math.random() * 30) * 10) / 10,
+        avgReviewTimeHours: 10,
+        avgTimeToMergeHours: 18,
         codeReviewsGiven: rand(3, 20),
         linesChanged: rand(200, 5000),
         focusScorePct: rand(55, 92),

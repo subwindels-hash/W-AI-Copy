@@ -204,7 +204,7 @@ class SyntheticProvider implements MarketDataProvider {
     const out: TiCandle[] = [];
     for (let i=0;i<limit;i++) {
       const t = now - (limit-i)*stepSec;
-      const drift = Math.sin(i/8+hashSym(symbol))*base*0.003 + (base*0.0003)*(Math.random()-.5);
+      const drift = Math.sin(i/8+hashSym(symbol))*base*0.003;
       const o = price;
       price = Math.max(0.0001, price + drift);
       const c = price;

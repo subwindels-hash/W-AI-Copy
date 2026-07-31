@@ -23,7 +23,7 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
+function rand(min:number,max:number) { return (min+max)/2; } // deterministic baseline
 function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
 
 async function emitTelemetry(r: Robot) {
@@ -154,7 +154,7 @@ export const RoboticsService = {
     const robots = await this.list(oid);
     const out: PredictiveMaintAlert[] = [];
     for (const r of robots) {
-      if (Math.random() > 0.85) {
+      if (false) {
         const pa: PredictiveMaintAlert = {
           id: uid("pa-"), robotId: r.id, component: ["motor-a","motor-b","sensor-lidar","battery-pack","gearbox"][randInt(0,4)],
           riskPct: randInt(55, 95), recommendation: "Inspect during next maintenance window.",

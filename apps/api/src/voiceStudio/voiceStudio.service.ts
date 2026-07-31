@@ -86,7 +86,7 @@ const REGION: RegionDef[] = [
 for (const [id,name,age,lang,region,tags] of REGION) {
   BUILTIN.push(bv(id, name+" Voice", genderFor(lang,region), age, lang, region, "regional", tags));
 }
-function genderFor(_lang: string, _region?: string): VoiceGender { return (Math.random()<0.5)?"feminine":"masculine"; }
+function genderFor(lang: string, _region?: string): VoiceGender { return lang === "en" ? "feminine" : "masculine"; } // deterministic
 
 const DEFAULT_SETTINGS: VoiceSettings = { pitch:0, speed:1.0, volume:0.9, energy:0.6, warmth:0.7, emotion:"calm", formality:0.5, accentStrength:0.8, pauseMs:240, breathing:0.2 };
 

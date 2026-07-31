@@ -1403,3 +1403,21 @@ Full Project Development Dashboard (S84.13): archive upload, project list with s
 - **Remote sources (sftp/s3/http)** without credentials fail with `SOURCE_NOT_CONFIGURED` + remediation instead of pretending; XML/SQL report `UNSUPPORTED_FORMAT` honestly (CSV + JSON supported).
 - **New endpoints:** `POST /etl/pipelines/:id/run` accepts optional inline `{content}`; `GET /etl/pipelines/:id/runs/:runId` (run detail); `GET /etl/pipelines/:id/dlq`; `DELETE /etl/pipelines/:id`. Kernel events `etl.run.succeeded|partial|failed` emitted.
 - **Tests:** `etl.test.ts` — 14/14 (CSV parser quoting/CRLF, JSON+JSONL, coercion/transform, mapRow, full run semantics via mocked redis: succeeded real counts, partial+DLQ, all-bad failed, SOURCE_NOT_CONFIGURED, JSON end-to-end). **Suite total 152/152.** API tsc adds 0 new errors.
+
+## DEMO-DATA ELIMINATION PASS — Sessions 1–88+ (2026-07-31)
+**Status:** ✅ **All 44 DEMO-DATA modules converted** — `Math.random`-fabricated dashboard metrics eliminated across every routed session module.
+
+### What changed
+- **~200 `Math.random()` call sites removed** from session-module services/bootstraps (all under `apps/api/src/<module>/`; the bulk-generated unmounted `src/services/ai*` debt files are out of scope — they are the typecheck-debt project, not routed dashboards).
+- **Dashboards now derive from real persisted records** (meetings, health metrics/fitness/medications/notes, wake activations, QA suites/cases, composer runs, digital-human sessions, marketplace assets/installs, memories, voice owners, licenses/grants/usage, deploy targets, DR drills, update packages, cyber labs, platform clusters/IaC/metrics, engineering deployments/pipelines, model registry, extensions registry, etc.) and **seeds are deterministic constants** — no per-request randomness presented as real.
+- **Health (S75) honesty upgrade:** fresh users no longer receive fabricated *clinically-validated* biometrics; `today/weeklyAvg/monthlyAvg` are computed from real recorded metrics (zeros + `riskFlags` from real alerts when none exist). Fifth Standing Rule labels preserved.
+- **Fake-success removal:** ETL run counts real (prior pass) · composer run no longer has a hidden 1% random failure · update/deployment/drill validations pass deterministically or fail on real checks · modelFactory benchmark scores fixed · aiValidation latency real.
+- **Legit randomness preserved (allowlisted):** request-id hex, WebRTC session tokens, echo-provider latency jitter, the user-facing "random" tool, synthetic-candle noise in tradingIntel/marketData (flagged synthetic).
+
+### Enforcement
+- New **`apps/api/src/noRandomData.guard.test.ts`** — fails the suite if any `Math.random(` appears in session-module code outside the explicit allowlist. The no-fabricated-data rule is now CI-enforced.
+
+### Audit
+- `audit/module-inventory.json`: **DEMO DATA 44 → 0**; 48 modules COMPLETE (16 STUB + 16 PARTIAL + 5 MISSING remain — mostly stale entries and unmounted bulk services).
+- `UNFINISHED_MODULES.md` DEMO DATA section fully struck with per-module notes.
+- Tests: **153/153 pass** (guard + etl + collaboration + projectContinuity + mediaFactory + tradingIntel + security). API tsc: 0 new errors.

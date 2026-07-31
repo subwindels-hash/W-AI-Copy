@@ -74,9 +74,9 @@ export async function bootstrapWakeIntelligence(logger?: any): Promise<void> {
       id: "act-seed-"+i, method: (["voice-wake-word","hotkey","clap","scheduled","api"] as const)[i%5],
       deviceId: devices[i%devices.length].id, deviceKind: devices[i%devices.length].kind,
       userId: "admin", timestamp: new Date(now - i*3600*1000).toISOString(),
-      confidence: 0.85 + Math.random()*0.12, outcome: "accepted",
+      confidence: 0.91, outcome: "accepted",
       mfaUsed: i%7===0?["device-presence"]:[], workforceId: i%4===0? binds[i%binds.length].wf : undefined,
-      emergency: false, offline: i%11===0, contextSnapshot: {}, policyPassed: true, latencyMs: 80+Math.floor(Math.random()*150),
+      emergency: false, offline: i%11===0, contextSnapshot: {}, policyPassed: true, latencyMs: 110,
     });
   }
   for (const a of seedActs) await redis.zadd("wi:events", Date.parse(a.timestamp), JSON.stringify(a));

@@ -38,14 +38,14 @@ export async function runDrTest(c: TestCase): Promise<TestCaseResult> {
     } else if (cfg.scenario === "backup-restore" || cfg.scenario === "db-failover" || cfg.scenario === "redis-restore") {
       // Simulate backup snapshot + restore (no actual data loss in MVP)
       const t1 = performance.now();
-      await sleep(50 + Math.random()*150); // simulate backup
-      const snapshotBytes = Math.floor(1_000_000 + Math.random()*50_000_000);
-      await sleep(30 + Math.random()*200);  // simulate restore
+      await sleep(80); // simulate backup
+      const snapshotBytes = 12_000_000;
+      await sleep(60);  // simulate restore
       rtoMs = performance.now() - t1; rpoMs = 200; // 200ms acceptable RPO for MVP
       res.logs.push(`restored snapshot (${(snapshotBytes/1024/1024).toFixed(1)} MiB) in ${Math.round(rtoMs)}ms`);
     } else if (cfg.scenario === "dns-failover" || cfg.scenario === "total-outage") {
       const t1 = performance.now();
-      await sleep(80 + Math.random()*300); // simulate DNS propagation / cold start
+      await sleep(150); // simulate DNS propagation / cold start
       // Verify health returns after recovery
       const h = await fetch(`${BASE}/health`);
       rtoMs = performance.now() - t1; rpoMs = 500; success = h.status === 200;

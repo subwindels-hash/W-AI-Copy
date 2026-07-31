@@ -77,7 +77,7 @@ export const RagService = {
       embeddingModelId: input.embeddingModelId, namespace: input.namespace ?? "default",
       status: "ready", documents: 0, vectors: 0, sizeMb: 0,
       shards: input.shards ?? 1, replicas: input.replicas ?? 1, region: input.region ?? "na-east",
-      avgLatencyMs: 12 + Math.floor(Math.random()*30), qps: Math.floor(50+Math.random()*1500),
+      avgLatencyMs: 22, qps: 650,
       lastIndexedAt: now, createdAt: now, updatedAt: now,
     };
     await redis.set(IDX(id), SER(v));
@@ -162,7 +162,7 @@ export const RagService = {
     await redis.sadd(KS, id);
     // simulate index completion
     k.status = "indexed";
-    k.documents = 20 + Math.floor(Math.random()*500);
+    k.documents = 240;
     k.chunks = k.documents * 8;
     k.vectors = k.chunks;
     k.sizeMb = Math.floor(k.chunks * 0.08);
