@@ -52,8 +52,8 @@ export const EnvironmentService = {
     e.status = "running";
     e.startedAt = iso();
     e.uptimeSec = 0;
-    e.cpuPct = Math.round(5 + Math.random() * 35);
-    e.memMb = Math.round(200 + Math.random() * 600);
+    e.cpuPct = 20;
+    e.memMb = 500;
     e.url = e.kind === "local"
       ? `http://localhost:${e.ports.find(p=>p.name==="web"||p.name==="https"||p.name==="emulator")?.port ?? 5173}`
       : `https://${e.kind}-${randomUUID().slice(0,8)}.windels.dev`;
@@ -86,7 +86,7 @@ export const EnvironmentService = {
           ? [`[${iso()}] ${spec.name} already running`, `[${iso()}] services healthy: ${spec.services.join(", ")}`]
           : [],
         uptimeSec: spec.kind === "local" ? 3800 : 0,
-        cpuPct: spec.kind === "local" ? Math.round(15 + Math.random()*25) : 0,
+        cpuPct: spec.kind === "local" ? 27 : 0,
         memMb: spec.kind === "local" ? 420 : 0,
         url: spec.kind === "local" ? "http://localhost:5173" : undefined,
         startedAt: spec.kind === "local" ? iso() : undefined,

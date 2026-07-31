@@ -41,7 +41,7 @@ export const SprintService = {
       capacityPoints: input.capacityPoints ?? 40,
       committedPoints: 0,
       completedPoints: input.completedPoints ?? 0,
-      velocityProjected: Math.round(30 + Math.random() * 15),
+      velocityProjected: 40,
       aiSuggestedGoal: input.aiSuggestedGoal ?? `Ship sprint ${n} scope with high confidence; focus on debt reduction and roadmap initiative alignment.`,
     };
     await redis.set(SPRINT_DETAIL(id), ser(s));
@@ -64,7 +64,7 @@ export const SprintService = {
   async createStory(input: Partial<Story>): Promise<Story> {
     const n = await redis.incr(STORY_COUNTER);
     const id = randomUUID();
-    const suggested = Math.round((input.points as number) ?? (3 + Math.random() * 8));
+    const suggested = Math.round((input.points as number) ?? 5);
     const story: Story = {
       id,
       sprintId: input.sprintId ?? null,
@@ -124,7 +124,7 @@ export const SprintService = {
     const arr: { date: string; remaining: number; ideal: number }[] = [];
     for (let i = 0; i <= days; i++) {
       const ideal = Math.max(0, Math.round(pts - (pts * i / days)));
-      const noise = (Math.random() - 0.3) * (pts * 0.12);
+      const noise = 0;
       const remaining = Math.max(0, Math.round(ideal + noise));
       arr.push({
         date: new Date(start + i * 86400_000).toISOString().slice(0, 10),

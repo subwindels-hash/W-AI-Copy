@@ -14,7 +14,7 @@ const CACHE_TTL = 60;
 function iso() { return new Date().toISOString(); }
 const SER = <T>(v: T) => JSON.stringify(v);
 
-function rand(min: number, max: number) { return Math.floor(Math.random() * (max - min + 1)) + min; }
+function rand(min: number, max: number) { return Math.floor((min + max) / 2); } // deterministic
 
 export const DeploymentService = {
   async list(limit = 50): Promise<DeploymentRecord[]> {
@@ -31,7 +31,7 @@ export const DeploymentService = {
     const n = await redis.incr(COUNTER);
     const startedAt = input.startedAt ?? iso();
     const durationMs = input.durationMs ?? rand(90_000, 900_000);
-    const status: DeploymentStatus = input.status ?? (Math.random() < 0.1 ? "failed" : "success");
+    const status: DeploymentStatus = input.status ?? "success";
     const rec: DeploymentRecord = {
       id,
       service: input.service ?? "platform",
@@ -42,7 +42,7 @@ export const DeploymentService = {
       startedAt,
       finishedAt: new Date(Date.now() + durationMs).toISOString(),
       durationMs,
-      leadTimeHours: Math.round((2 + Math.random() * 20) * 10) / 10,
+      leadTimeHours: 8.5,
       rollbackOf: input.rollbackOf,
     };
     await redis.set(DETAIL(id), SER(rec));

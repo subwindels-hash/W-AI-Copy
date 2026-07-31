@@ -24,8 +24,11 @@ import { AppError } from "../../utils/result.js";
 import {
   PLATFORM_ADAPTERS, PlatformPublishError, type FetchImpl, type MediaPayload, type PlatformAdapter,
 } from "./platforms.js";
-import { ensureFreshToken } from "./tokens.js";
-import type { PubJob, PubJobStatus, PubPlatformId, PubPublishInput, PubAuditEvent, PubAuditKind } from "@windels/shared";
+import { ensureFreshToken, ensureFreshOrgToken } from "./tokens.js";
+import type {
+  PubJob, PubJobStatus, PubPlatformId, PubPublishInput, PubAuditEvent, PubAuditKind,
+  PubPlatformCallbackUpdate, PubTokenScope,
+} from "@windels/shared";
 
 /* ── Minimal Redis surface (kept small so tests can inject a fake) ── */
 
@@ -142,6 +145,13 @@ export function createPublishEngine(deps: EngineDeps) {
     await kv.hset(K.job(job.orgId, job.id), "_doc", s(job));
   }
 
+  /** Appends to the per-job status history (capped at 50, newest last). */
+  function pushHistory(job: PubJob, status: PubJobStatus, by: string, detail?: string): void {
+    const h = job.statusHistory ?? [];
+    h.push({ status, at: new Date().toISOString(), by, detail });
+    job.statusHistory = h.slice(-50);
+  }
+
   function validateInput(platform: PubPlatformId, input: PubPublishInput): PubPublishInput {
     const c = adapterFor(platform).constraints;
     const title = input.title?.trim();
@@ -155,7 +165,7 @@ export function createPublishEngine(deps: EngineDeps) {
     return { ...input, title, description: input.description?.trim() || undefined, tags: input.tags?.slice(0, 30) };
   }
 
-  async function createJob(oid: string, ownerUserId: string, platform: PubPlatformId, rawInput: PubPublishInput): Promise<{ job: PubJob; deduplicated: boolean }> {
+  async function createJob(oid: string, ownerUserId: string, platform: PubPlatformId, rawInput: PubPublishInput, opts: { tokenScope?: PubTokenScope } = {}): Promise<{ job: PubJob; deduplicated: boolean }> {
     const input = validateInput(platform, rawInput);
     const t = now();
 
@@ -178,12 +188,14 @@ export function createPublishEngine(deps: EngineDeps) {
       platform,
       input,
       status: isFuture ? "scheduled" : "queued",
+      tokenScope: opts.tokenScope ?? "user",
       attempts: 0,
       maxAttempts,
       nextAttemptAt: isFuture ? scheduledMs! : t,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };
+    pushHistory(job, job.status, ownerUserId, isFuture ? `scheduled for ${input.scheduledAt}` : undefined);
     await kv.zadd(K.jobs(oid), t, job.id);
     await kv.hset(K.job(oid, job.id), "_doc", s(job));
     await kv.zadd(K.due(oid), job.nextAttemptAt, job.id);
@@ -220,6 +232,7 @@ export function createPublishEngine(deps: EngineDeps) {
     }
     job.status = "cancelled";
     await kv.zrem(K.due(oid), job.id);
+    pushHistory(job, "cancelled", actor);
     await save(job);
     await audit(oid, "job.cancelled", actor, { jobId: job.id, platform: job.platform });
     return job;
@@ -233,8 +246,60 @@ export function createPublishEngine(deps: EngineDeps) {
     job.error = undefined;
     job.nextAttemptAt = now();
     await kv.zadd(K.due(oid), job.nextAttemptAt, job.id);
+    pushHistory(job, "queued", actor, "manual retry");
     await save(job);
     await audit(oid, "job.retry", actor, { jobId: job.id, platform: job.platform, detail: "manual retry" });
+    return job;
+  }
+
+  /** Finds the most recent job whose platform result carries the given post/video id. */
+  async function findJobByPlatformRef(oid: string, platform: PubPlatformId, ref: string, limit = 100): Promise<PubJob | null> {
+    const ids = await kv.zrange(K.jobs(oid), 0, -1, "REV");
+    let scanned = 0;
+    for (const id of ids) {
+      if (++scanned > limit) break;
+      const job = await load(oid, id);
+      if (!job || job.platform !== platform) continue;
+      if (job.result?.postId && job.result.postId === ref) return job;
+    }
+    return null;
+  }
+
+  /**
+   * Applies an inbound platform webhook update (post accepted → processing /
+   * available, or rejected after upload) to a published job. Non-terminal
+   * updates only record `platformStatus` + history (the job stays published —
+   * the platform accepted it). Terminal updates (failed/rejected) flip the job
+   * to failed with the platform reason. Idempotent: a repeat of the same
+   * non-terminal status is a no-op.
+   */
+  async function applyPlatformWebhook(oid: string, jobId: string, update: PubPlatformCallbackUpdate): Promise<PubJob> {
+    const job = await getJob(oid, jobId);
+    const ref = update.postId ?? update.videoId;
+    if (ref && job.result?.postId && ref !== job.result.postId) {
+      throw AppError.badRequest(`Webhook postId ${ref} does not match job ${jobId} (${job.result.postId})`, { code: "REF_MISMATCH" });
+    }
+    const terminal = update.status === "failed" || update.status === "rejected";
+    if (!terminal && job.platformStatus === update.status) return job; // idempotent repeat
+
+    job.platformStatus = update.status;
+    if (update.status === "available" || update.status === "processed" || update.status === "uploaded") {
+      job.platformAvailableAt = update.availableAt ?? new Date().toISOString();
+    }
+    const detail = terminal
+      ? `${update.status}${update.reason ? `: ${update.reason}` : ""}`
+      : `platform reports ${update.status}`;
+    if (terminal) {
+      job.status = "failed";
+      job.error = { code: "PLATFORM_REJECTED", message: update.reason ?? `Platform rejected the post after upload (${update.status}).`, detail };
+      await kv.zrem(K.due(oid), job.id); // safety: never re-queued
+      pushHistory(job, "failed", "platform-webhook", detail);
+    } else {
+      pushHistory(job, job.status, "platform-webhook", detail);
+    }
+    await save(job);
+    await audit(oid, "webhook.synced", "platform-webhook", { jobId: job.id, platform: job.platform, detail });
+    await dispatch("media.publish.status", { jobId: job.id, platform: job.platform, postId: job.result?.postId, status: job.platformStatus, availableAt: job.platformAvailableAt });
     return job;
   }
 
@@ -284,12 +349,15 @@ export function createPublishEngine(deps: EngineDeps) {
     const oid = job.orgId;
     job.status = "uploading";
     job.attempts += 1;
+    pushHistory(job, "uploading", job.ownerUserId, `attempt ${job.attempts}/${job.maxAttempts}`);
     await save(job);
     await audit(oid, "job.attempt", job.ownerUserId, { jobId: job.id, platform: job.platform, detail: `attempt ${job.attempts}/${job.maxAttempts}` });
 
     try {
       const adapter = adapterFor(job.platform);
-      const accessToken = await ensureFreshToken(job.ownerUserId, job.platform, kv as any, deps.fetchImpl);
+      const accessToken = job.tokenScope === "org"
+        ? await ensureFreshOrgToken(job.orgId, job.platform, kv as any, deps.fetchImpl)
+        : await ensureFreshToken(job.ownerUserId, job.platform, kv as any, deps.fetchImpl);
       const media = await (deps.resolveMedia ?? resolveMediaDefault)(job.input, job.platform);
       const outcome = await adapter.publish({ accessToken, input: job.input, media, fetchImpl: deps.fetchImpl, pollBudgetMs: deps.pollBudgetMs });
       job.status = "published";
@@ -297,6 +365,7 @@ export function createPublishEngine(deps: EngineDeps) {
       job.error = undefined;
       job.publishedAt = new Date().toISOString();
       await kv.zrem(K.due(oid), job.id);
+      pushHistory(job, "published", job.ownerUserId, outcome.url ?? outcome.postId ?? "published");
       await save(job);
       await audit(oid, "job.published", job.ownerUserId, { jobId: job.id, platform: job.platform, detail: outcome.url ?? outcome.postId ?? "published" });
       await dispatch("media.publish.completed", { jobId: job.id, platform: job.platform, postId: outcome.postId });
@@ -309,6 +378,7 @@ export function createPublishEngine(deps: EngineDeps) {
       if (giveUp) {
         job.status = "failed";
         await kv.zrem(K.due(oid), job.id);
+        pushHistory(job, "failed", job.ownerUserId, `${err.code}: ${err.message}`);
         await save(job);
         await audit(oid, "job.failed", job.ownerUserId, { jobId: job.id, platform: job.platform, detail: `${err.code}: ${err.message}${job.attempts >= job.maxAttempts && !err.permanent ? ` (max attempts ${job.maxAttempts} reached)` : ""}` });
         await dispatch("media.publish.failed", { jobId: job.id, platform: job.platform, code: err.code, message: err.message });
@@ -317,6 +387,7 @@ export function createPublishEngine(deps: EngineDeps) {
         job.status = "queued";
         job.nextAttemptAt = now() + (retryAfterMs ?? backoffMs(job.attempts));
         await kv.zadd(K.due(oid), job.nextAttemptAt, job.id);
+        pushHistory(job, "queued", job.ownerUserId, `${err.code}: ${err.message}; retry at ${new Date(job.nextAttemptAt).toISOString()}`);
         await save(job);
         await audit(oid, "job.retry", job.ownerUserId, { jobId: job.id, platform: job.platform, detail: `${err.code}: ${err.message}; retry at ${new Date(job.nextAttemptAt).toISOString()}` });
       }
@@ -354,7 +425,7 @@ export function createPublishEngine(deps: EngineDeps) {
     return raw.map((r) => j<PubAuditEvent>(r));
   }
 
-  return { createJob, listJobs, getJob, cancelJob, retryJob, processDueJobs, listAudit, audit, oauthStateKey: K.oauthState };
+  return { createJob, listJobs, getJob, cancelJob, retryJob, processDueJobs, listAudit, audit, findJobByPlatformRef, applyPlatformWebhook, oauthStateKey: K.oauthState };
 }
 
 export type PublishEngine = ReturnType<typeof createPublishEngine>;

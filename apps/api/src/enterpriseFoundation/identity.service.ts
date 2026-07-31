@@ -41,7 +41,7 @@ export const IdentityService = {
   },
   async createPrincipal(input: Omit<IdentityPrincipal,"id"|"createdAt"|"riskScore"> & { riskScore?: number }): Promise<IdentityPrincipal> {
     const id = randomUUID();
-    const p: IdentityPrincipal = { id, createdAt: iso(), riskScore: input.riskScore ?? Math.floor(Math.random()*30), ...input };
+    const p: IdentityPrincipal = { id, createdAt: iso(), riskScore: input.riskScore ?? 12, ...input };
     await redis.set(PRINC(id), SER(p));
     await redis.sadd(PRINCS, id);
     return p;

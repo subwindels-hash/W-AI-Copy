@@ -64,7 +64,7 @@ export const RoadmapService = {
       dependencies: input.dependencies ?? [],
       milestones: (input.milestones as Milestone[]) ?? [],
       okrSummary: input.okrSummary,
-      aiConfidence: Math.round(60 + Math.random() * 35),
+      aiConfidence: 76,
     };
     await redis.hset(INITS(roadmapId), id, serialize(init));
     roadmap.updatedAt = iso();

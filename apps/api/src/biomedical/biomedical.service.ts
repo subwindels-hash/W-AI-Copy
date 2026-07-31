@@ -16,7 +16,7 @@ const K = {
   meta:(oid:string)=>`bm:meta:${oid}`,
 };
 const s2=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
+function rand(min:number,max:number){return (min+max)/2;} // deterministic
 function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
 const hash = ()=>"pt-"+randomUUID().slice(0,12);
 
@@ -40,10 +40,10 @@ export const BiomedicalService = {
       const s: ImagingStudy = {
         id, patientHash:hash(), modality: MODALITIES[randInt(0,MODALITIES.length-1)], bodyPart: BODY_PARTS[randInt(0,BODY_PARTS.length-1)],
         aiFindings:[{finding:fin.finding,confidence:+rand(0.72,0.98).toFixed(2),severity:fin.sev as any,priority:fin.pri}],
-        radiologistReviewed: Math.random()>0.4,
+        radiologistReviewed: false,
         status: (["queued","analyzing","review","signed_off","escalated"] as ImagingStudy["status"][])[randInt(0,4)],
         createdAt: new Date(Date.now()-randInt(1,72)*3600000).toISOString(),
-        completedAt: Math.random()>0.3 ? new Date().toISOString() : undefined,
+        completedAt: undefined,
       };
       await redis.hset(K.img(oid,id),"_doc",s2(s)); await redis.sadd(K.imgs(oid),id);
     }
@@ -65,7 +65,7 @@ export const BiomedicalService = {
       const t: TelemedicineSession = {
         id, providerId:"prov-"+randInt(100,999), patientHash:hash(),
         startedAt:new Date(Date.now()-randInt(1,24)*3600000).toISOString(),
-        endedAt: Math.random()>0.3?new Date().toISOString():undefined,
+        endedAt: undefined,
         modality:(["video","voice","async"] as TelemedicineSession["modality"][])[randInt(0,2)],
         language:["en","es","fr","zh"][randInt(0,3)], aiScribeActive:true, summaryGenerated:true,
       };

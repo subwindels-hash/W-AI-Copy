@@ -9,8 +9,8 @@ import { redisCmd as redis } from "../db/redis.js";
 import type { Logger } from "pino";
 import { CyberDashboard, CYBER_DOMAINS, CYBER_LEVELS, CyberCourse, CyberLab, CyberCertification, CyberRange, CloudSecurityFinding, CyberChallenge, CyberDomain } from "@windels/shared";
 const K={meta:(oid:string)=>`csec:meta:${oid}`};
-const rnd=(a:number,b:number)=>Math.random()*(b-a)+a, rndInt=(a:number,b:number)=>Math.floor(rnd(a,b+1));
-const pick=<T>(a:T[])=>a[Math.floor(Math.random()*a.length)];
+const rnd=(a:number,b:number)=>(a+b)/2, rndInt=(a:number,b:number)=>Math.floor((a+b)/2); // deterministic
+const pick=<T>(a:T[])=>a[0]; // deterministic
 const uid=(p:string)=>p+randomUUID().slice(0,8);
 const now=()=>new Date().toISOString();
 
@@ -84,7 +84,7 @@ export const CyberService = {
       {id:uid("rg-"),name:"Purple Team — ransomware sim",kind:"purple_team",cloudTargets:["aws","azure","gcp"],players:8,durationHours:8,status:"completed",startsAt:new Date(Date.now()-7*86400_000).toISOString(),score:rndInt(800,2800),rank:rndInt(1,15)},
       {id:uid("rg-"),name:"Public Bug Bounty — Wildcard *.windels.ai",kind:"bug_bounty",cloudTargets:["aws","cloudflare"],players:512,durationHours:720,status:"live",startsAt:new Date(Date.now()-15*86400_000).toISOString(),score:rndInt(0,500)},
     ];
-    const findings: CloudSecurityFinding[] = FINDING_SEEDS.map((f,i)=>({id:uid("f-"),resource:"res-"+Math.random().toString(36).slice(2,8),status:(i%3===0?"remediated":i%5===0?"accepted":"open"),...f}));
+    const findings: CloudSecurityFinding[] = FINDING_SEEDS.map((f,i)=>({id:uid("f-"),resource:"res-"+i,status:(i%3===0?"remediated":i%5===0?"accepted":"open"),...f}));
     const skillScores: any = {}; for (const d of [...CYBER_DOMAINS]) skillScores[d]=Math.round(rnd(10,95));
     return {
       learners: rndInt(800,12000), coursesAvailable: courses.length, coursesEnrolled: rndInt(2,16), labsActive: labs.filter(l=>l.status==="running").length,

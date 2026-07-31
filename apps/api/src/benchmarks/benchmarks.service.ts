@@ -20,16 +20,16 @@ const uid = (p: string) => p + randomUUID().slice(0, 8);
 
 function randomMetrics(area: BmArea): BmMetric[] {
   const base: BmMetric[] = [
-    { key: "p95_latency_ms", label: "p95 Latency", value: Math.round(40 + Math.random()*180), unit: "ms", higherIsBetter: false, baseline: 200, target: 100 },
-    { key: "success_pct", label: "Success Rate", value: Math.round((0.9 + Math.random()*0.09)*1000)/10, unit: "%", higherIsBetter: true, baseline: 85, target: 99 },
-    { key: "cost_per_1k_usd", label: "Cost / 1k", value: Math.round((0.05 + Math.random()*0.4)*1000)/1000, unit: "USD", higherIsBetter: false, baseline: 0.5, target: 0.1 },
+    { key: "p95_latency_ms", label: "p95 Latency", value: 110, unit: "ms", higherIsBetter: false, baseline: 200, target: 100 },
+    { key: "success_pct", label: "Success Rate", value: 94.5, unit: "%", higherIsBetter: true, baseline: 85, target: 99 },
+    { key: "cost_per_1k_usd", label: "Cost / 1k", value: 0.25, unit: "USD", higherIsBetter: false, baseline: 0.5, target: 0.1 },
   ];
-  if (area === "safety_metrics") base.push({ key: "policy_pass_rate", label: "Policy Pass", value: Math.round((0.95+Math.random()*0.049)*1000)/10, unit: "%", higherIsBetter: true, target: 99.5 });
-  if (area === "response_accuracy") base.push({ key: "factuality", label: "Factuality", value: Math.round((0.8+Math.random()*0.18)*100)/100, unit: "score", higherIsBetter: true, target: 0.95 });
-  if (area === "coding_performance") base.push({ key: "pass_at_1", label: "Pass@1", value: Math.round((0.4+Math.random()*0.4)*100)/100, unit: "score", higherIsBetter: true, target: 0.75 });
-  if (area === "voice_models") base.push({ key: "mos", label: "MOS", value: Math.round((3.6+Math.random()*0.9)*10)/10, unit: "/5", higherIsBetter: true, target: 4.5 });
-  if (area === "latency") base.push({ key: "ttft_ms", label: "TTFT", value: Math.round(80+Math.random()*220), unit: "ms", higherIsBetter: false, target: 150 });
-  if (area === "resource_consumption") base.push({ key: "gpu_util_pct", label: "GPU Utilization", value: Math.round(40+Math.random()*50), unit: "%", higherIsBetter: false, target: 70 });
+  if (area === "safety_metrics") base.push({ key: "policy_pass_rate", label: "Policy Pass", value: 97.0, unit: "%", higherIsBetter: true, target: 99.5 });
+  if (area === "response_accuracy") base.push({ key: "factuality", label: "Factuality", value: 0.89, unit: "score", higherIsBetter: true, target: 0.95 });
+  if (area === "coding_performance") base.push({ key: "pass_at_1", label: "Pass@1", value: 0.6, unit: "score", higherIsBetter: true, target: 0.75 });
+  if (area === "voice_models") base.push({ key: "mos", label: "MOS", value: 4.1, unit: "/5", higherIsBetter: true, target: 4.5 });
+  if (area === "latency") base.push({ key: "ttft_ms", label: "TTFT", value: 160, unit: "ms", higherIsBetter: false, target: 150 });
+  if (area === "resource_consumption") base.push({ key: "gpu_util_pct", label: "GPU Utilization", value: 62, unit: "%", higherIsBetter: false, target: 70 });
   return base;
 }
 
@@ -41,8 +41,8 @@ export const BenchmarksService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
     if (await redis.exists(K.runs(oid))) return;
     for (const area of BM_AREAS) {
-      const id = uid("br-"); const started = Date.now() - Math.floor(Math.random()*24*3600*1000); const dur = 800 + Math.floor(Math.random()*3200);
-      const metrics = randomMetrics(area); const score = Math.round(70 + Math.random()*28);
+      const id = uid("br-"); const started = Date.now() - 12*3600*1000; const dur = 1800;
+      const metrics = randomMetrics(area); const score = 82;
       const run: BmRun = { id, organizationId: oid, area, targetName: area.replace(/_/g," "), status: "completed", startedAt: new Date(started).toISOString(), completedAt: new Date(started+dur).toISOString(), durationMs: dur, metrics, overallScore: score, passed: score>=80 };
       await redis.hset(K.run(oid,id), "_doc", s2(run));
       await redis.zadd(K.runs(oid), started, id);

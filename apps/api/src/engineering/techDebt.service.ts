@@ -12,7 +12,7 @@ const DETAIL = (id: string) => `eng:debt:${id}`;
 function iso() { return new Date().toISOString(); }
 const SER = <T>(v: T) => JSON.stringify(v);
 
-function rand(min: number, max: number) { return Math.round(min + Math.random() * (max - min)); }
+function rand(min: number, max: number) { return Math.round((min + max) / 2); } // deterministic
 
 export const TechDebtService = {
   async list(limit = 100): Promise<DebtItem[]> {

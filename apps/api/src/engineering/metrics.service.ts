@@ -10,7 +10,7 @@ const DETAIL = (id: string) => `eng:svc:${id}`;
 const SER = <T>(v: T) => JSON.stringify(v);
 
 function synth(base: number, jitterPct = 0.2) {
-  return Math.max(0, Math.round(base * (1 + (Math.random() - 0.5) * jitterPct * 2)));
+  return Math.max(0, Math.round(base));
 }
 
 export const MetricsService = {
@@ -45,7 +45,7 @@ export const MetricsService = {
       case "saturation": base = svc?.saturationPct ?? 45; break;
     }
     for (let i = points - 1; i >= 0; i--) {
-      const noise = (Math.random() - 0.5) * (metric === "availability" ? 0.15 : base * 0.35);
+      const noise = 0;
       let v = base + noise;
       if (metric === "availability") v = Math.min(100, Math.max(95, v));
       if (metric === "error_rate") v = Math.max(0, v);
@@ -61,8 +61,8 @@ export const MetricsService = {
     m.p95LatencyMs = Math.round(m.p50LatencyMs * 2.2);
     m.p99LatencyMs = Math.round(m.p50LatencyMs * 3.5);
     m.rps = synth(m.rps, 0.25);
-    m.errorRatePct = Math.max(0, Math.round((m.errorRatePct + (Math.random() - 0.5) * 0.2) * 100) / 100);
-    m.saturationPct = Math.max(0, Math.min(100, Math.round(m.saturationPct + (Math.random() - 0.5) * 5)));
+    m.errorRatePct = Math.max(0, m.errorRatePct);
+    m.saturationPct = Math.max(0, Math.min(100, m.saturationPct));
     const budgetBurn = (m.p95LatencyMs > m.sloLatencyMs ? 0.5 : 0) + m.errorRatePct * 0.5;
     m.errorBudgetRemainingPct = Math.max(0, Math.round((m.errorBudgetRemainingPct - budgetBurn) * 10) / 10);
     await this.upsert(m);

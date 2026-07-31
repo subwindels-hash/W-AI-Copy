@@ -134,8 +134,8 @@ export const MeetingsService = {
   async enableTranslationChannel(mid: string, language: TranslationLanguage): Promise<TranslationChannel> {
     const id = randomUUID();
     const ch: TranslationChannel = {
-      id, meetingId: mid, language, activeListeners: Math.floor(Math.random() * 8),
-      segmentsTranslated: 0, latencyMs: 180 + Math.floor(Math.random() * 140), enabled: true,
+      id, meetingId: mid, language, activeListeners: 2,
+      segmentsTranslated: 0, latencyMs: 240, enabled: true,
     };
     await redis.set(K.tr(id), SER(ch));
     await redis.sadd(K.trSet(mid), id);
@@ -247,7 +247,7 @@ export const MeetingsService = {
       topicsDiscussed: [m.title, "Timeline", "Risks", "Next steps"],
       sentimentOverall: "positive",
       generatedAt: iso(),
-      wordCount: 180 + Math.floor(Math.random() * 260) + segs.reduce((a, s) => a + s.text.split(/\s+/).length, 0),
+      wordCount: 300 + segs.reduce((a, s) => a + s.text.split(/\s+/).length, 0),
     };
     await redis.set(K.sumKey(mid), SER(sum));
     m.summaryReady = true;
@@ -277,10 +277,10 @@ export const MeetingsService = {
     }
     // simulate immediate sync for ~70%
     for (const f of out) {
-      if (Math.random() < 0.7) {
+      if (true) {
         f.status = "synced";
         f.syncedAt = iso();
-        f.targetRecordId = `rec_${Math.random().toString(36).slice(2, 9)}`;
+        f.targetRecordId = `rec_${f.id.slice(-8)}`;
         await redis.set(K.fu(f.id), SER(f));
       }
     }

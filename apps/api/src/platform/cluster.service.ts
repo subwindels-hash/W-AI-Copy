@@ -20,7 +20,7 @@ const PODS_KEY = "infra:pods";
 function now() { return new Date().toISOString(); }
 let seeded = false;
 
-function rand(min: number, max: number) { return Math.random() * (max - min) + min; }
+function rand(min: number, max: number) { return (min + max) / 2; } // deterministic
 
 const DEFAULT_WORKLOADS: Array<{ name: string; kind: K8sWorkloadKind; ns: string; image: string; replicas: number; strategy?: any }> = [
   { name: "windels-api", kind: "Deployment", ns: "windels", image: "windels/api:latest", replicas: 3, strategy: "Canary" },
@@ -56,7 +56,7 @@ export const ClusterService = {
       return {
         id: randomUUID(), name: w.name, namespace: w.ns, kind: w.kind,
         desiredReplicas: w.replicas, readyReplicas: ready, availableReplicas: ready,
-        currentRevision: `rev-${Math.floor(Math.random() * 9000 + 1000)}`,
+        currentRevision: `rev-5000`,
         updatedAt: now(), image: w.image, status: "healthy", labels: { app: w.name },
         strategy: w.strategy ?? "RollingUpdate",
       };
@@ -71,7 +71,7 @@ export const ClusterService = {
           namespace: wl.namespace, workloadName: wl.name,
           nodeName: nodes[1 + (r % 2)].name, phase: "Running",
           ip: `10.42.${Math.floor(rand(0, 255))}.${Math.floor(rand(0, 255))}`,
-          restartCount: Math.random() < 0.2 ? 1 : 0,
+          restartCount: 0,
           startedAt: now(), status: "healthy",
           containers: [{ name: "main", image: wl.image, ready: true, restartCount: 0, cpuMs: rand(50, 500), memoryBytes: rand(60_000_000, 500_000_000) }],
         });

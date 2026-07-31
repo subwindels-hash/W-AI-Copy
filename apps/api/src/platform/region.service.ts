@@ -17,7 +17,7 @@ const REG_PREFIX = "infra:region:";
 const FAILOVER_KEY = "infra:active-failover";
 let seeded = false;
 function now(){return new Date().toISOString();}
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
+function rand(min:number,max:number){return (min+max)/2;} // deterministic
 
 const DEFAULT_REGIONS: Array<Omit<Region,"id"|"status"|"replicationLagMs"|"loadPercent"|"capacity"|"lastHealthCheckAt"|"replicationRole">> = [
   { name:"US East (N. Virginia)", cloud:"aws", tier:"primary", lat:39.02, lng:-77.44, endpoint:"https://api-na-east.windels.ai", failoverPriority:1 },
@@ -35,7 +35,7 @@ export const RegionService = {
       const id = r.name.toLowerCase().replace(/[^a-z]+/g,"-").replace(/(^-|-$)/g,"").replace("--","-");
       const region: Region = {
         id, ...r,
-        status: r.tier === "primary" ? "online" : (Math.random() < 0.9 ? "online" : "degraded") as RegionStatus,
+        status: (r.tier === "primary" ? "online" : "online") as RegionStatus,
         replicationRole: (r.tier === "primary" ? "primary" : r.tier === "dr" ? "standby" : "replica") as ReplicationRole,
         replicationLagMs: r.tier === "primary" ? 0 : Math.floor(rand(10, 250)),
         capacity: { requestsPerSec: Math.floor(rand(5000, 15000)), activeUsers: Math.floor(rand(2000, 20000)), pods: Math.floor(rand(10, 60)) },

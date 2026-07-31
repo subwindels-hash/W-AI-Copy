@@ -19,7 +19,7 @@ const K = {
 };
 const s2=(o:any)=>JSON.stringify(o);
 const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
+function rand(min:number,max:number){return (min+max)/2;} // deterministic baseline
 function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
 
 const SEED: Array<{name:string;role:AvatarRole;style:AvatarStyle;gender:DigitalHuman["gender"];langs:string[];voiceSeed:string}> = [

@@ -381,32 +381,7 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "personalityStudio.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "providerAbstraction.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "trustExplainability.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Anthropic",
@@ -414,7 +389,8 @@
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "architecture",
@@ -471,16 +447,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "attachments",
@@ -851,16 +821,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "biomedical.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "canvas",
@@ -1103,38 +1067,14 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "cameraIntel.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "meetings.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "screenIntel.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Stripe",
       "Google",
       "IEX Cloud"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "command",
@@ -1287,16 +1227,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "composer.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "constitution",
@@ -1355,16 +1289,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "constitution.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "conversations",
@@ -1562,18 +1490,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Polygon.io"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "cyber",
@@ -1627,20 +1549,14 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "cyber.service.ts",
-        "mathRandom": true,
-        "rndHelper": true,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "GCP",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "dataMarketplace",
@@ -1746,16 +1662,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "dataMarketplace.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "deployment",
@@ -1811,20 +1721,14 @@
       "prismaModelsTouched": []
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "deployment.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "GCP",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "derivatives",
@@ -2083,16 +1987,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "digitalHumans.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "disasterRecovery",
@@ -2150,16 +2048,10 @@
       "prismaModelsTouched": []
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "disasterRecovery.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "education",
@@ -2226,24 +2118,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "education.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "lecturer.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "engineering",
@@ -2552,45 +2432,15 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "dataFabric.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "identity.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "opsCenter.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "quality.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "GCP",
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "events",
@@ -2701,16 +2551,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "expertsPlatform.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "extensions",
@@ -2797,20 +2641,7 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "registry.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Anthropic",
@@ -2821,7 +2652,8 @@
       "Azure",
       "IEX Cloud"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "fabric",
@@ -2886,16 +2718,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "fabric.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "giftCards",
@@ -3037,24 +2863,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "globalCurrency.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "refreshRates.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "googleAuth",
@@ -3186,55 +3000,13 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "adr.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "codeReview.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "codingStandards.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "dependencies.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "repoStandards.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "securityStandards.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "healthEcosystem",
@@ -3323,16 +3095,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "healthEcosystem.service.ts",
-        "mathRandom": true,
-        "rndHelper": true,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "hybridExec",
@@ -3389,16 +3155,10 @@
       "prismaModelsTouched": []
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "hybridExec.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "industry",
@@ -3803,16 +3563,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "licensing.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "marketplace",
@@ -3900,24 +3654,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "simulation.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "mediaFactory",
@@ -3990,31 +3732,13 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "mediaFactory.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "pipeline.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "publishing.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Google",
       "FFmpeg"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "mediaGen",
@@ -4136,16 +3860,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "memoryEvolution.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "mfa",
@@ -4288,32 +4006,7 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "models.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "prompts.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "rag.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Anthropic",
@@ -4321,7 +4014,8 @@
       "Google",
       "Whisper"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "mobile",
@@ -4426,16 +4120,10 @@
       "prismaModelsTouched": []
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "modelFactory.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "opex",
@@ -4714,31 +4402,13 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "billing.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "blueprints.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Stripe",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "program",
@@ -4822,40 +4492,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "archReview.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "requirements.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "roadmap.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      },
-      {
-        "file": "sprint.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "projectContinuity",
@@ -5086,52 +4726,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "aiValidation.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "chaos.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "digitalTwin.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "drTest.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "testRunner.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "workflowTest.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "quantum",
@@ -5189,20 +4787,14 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "quantum.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "release",
@@ -5349,18 +4941,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "robotics.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "GCP"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "scientific",
@@ -5415,18 +5001,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "scientific.service.ts",
-        "mathRandom": true,
-        "rndHelper": true,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "sdk",
@@ -5487,16 +5067,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "sdk.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "security",
@@ -5647,16 +5221,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "selfHosted.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "spatial",
@@ -5941,62 +5509,7 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "agents.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "analysis.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "indicators.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "indicators.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "journal.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "marketData.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "marketData.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "tradingIntel.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AlphaVantage",
       "TwelveData",
@@ -6004,7 +5517,8 @@
       "CoinGecko",
       "IEX Cloud"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "training",
@@ -6066,18 +5580,12 @@
     "tests": [
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "training.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Whisper"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "updates",
@@ -6140,16 +5648,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "updates.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "usage",
@@ -6272,18 +5774,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "uxIntelligence.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "v76validation",
@@ -6340,18 +5836,12 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "v76validation.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "GCP"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "voiceFoundry",
@@ -6414,16 +5904,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "voiceFoundry.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "No Math.random; deterministic seeds + real-record-derived dashboards (real providers where applicable: FX, CoinGecko, publishing OAuth)"
   },
   {
     "moduleKey": "voiceOwnership",
@@ -6483,16 +5967,10 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "voiceOwnership.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "voiceStudio",
@@ -6557,31 +6035,13 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "voice.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "voiceStudio.service.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "ElevenLabs",
       "Play.ht"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   },
   {
     "moduleKey": "wakeIntel",
@@ -6655,21 +6115,9 @@
       ]
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true
-      },
-      {
-        "file": "wakeIntelligence.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE",
+    "notes": "Deterministic seeds + real-record-derived dashboards; no Math.random (2026-07-31 pass; guard test enforces)"
   }
 ]

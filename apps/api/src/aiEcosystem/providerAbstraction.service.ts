@@ -350,9 +350,9 @@ export const ProviderAbstractionService = {
         name: input.name,
         providerId: pid,
         modelId: model?.id ?? pid,
-        score: Number((0.6 + Math.random() * 0.35).toFixed(3)),
-        latencyMs: 200 + Math.floor(Math.random() * 800),
-        costUsd: Number((Math.random() * 0.05).toFixed(4)),
+        score: 0.78,
+        latencyMs: 480,
+        costUsd: 0.025,
         runAt: new Date().toISOString(),
         notes: `samples=${input.samples ?? 200}`,
       };

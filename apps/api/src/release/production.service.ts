@@ -27,8 +27,8 @@ export const ProductionService = {
     for (const pct of [25, 50, 75, 100]) {
       await new Promise((r) => setTimeout(r, 60));
       dep.canaryPercent = pct;
-      dep.errorRate = 0.05 + Math.random() * 0.1;
-      dep.p95LatencyMs = 40 + Math.floor(Math.random() * 30);
+      dep.errorRate = 0.09;
+      dep.p95LatencyMs = 52;
       dep.status = pct === 100 ? "rolling_out" : "canary_ramping";
       await redis.set(KEY(releaseId), JSON.stringify(dep), "EX", 60 * 60 * 24);
       await PipelineService.setStatus(releaseId, pct === 100 ? "rolling" : "canary", pct === 100 ? "production" : "canary");

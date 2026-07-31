@@ -3,10 +3,15 @@ import { z } from "zod";
 import path from "node:path";
 import { promises as fs } from "node:fs";
 import { validate } from "../middleware/validate.js";
+import { multipartSingle } from "../middleware/multipart.js";
 import { resolveUserContext } from "../../services/workspace.service.js";
 import { MediaFactoryService } from "../../mediaFactory/mediaFactory.service.js";
 import { MediaPipelineService } from "../../mediaFactory/pipeline.service.js";
 import { PublishingService } from "../../mediaFactory/publishing.service.js";
+import { isPubPlatform } from "../../mediaFactory/publishing/platforms.js";
+import { getWebhookConfig, verifySignature, resolveCallbackOrgId, toCallbackUpdate } from "../../mediaFactory/publishing/webhooks.js";
+import { publishEngine } from "../../mediaFactory/publishing/publishJobs.js";
+import type { PubPlatformCallbackUpdate } from "@windels/shared";
 
 const genBody = z.object({ type: z.enum(["image","audio","music","video","character","cartoon","lesson","quiz","marketing","podcast"]), channel: z.enum(["web","mobile","social","podcast","audiobook","training","marketing","presentation","navigation","meeting"]), prompt: z.string().min(1).max(5000) });
 const renderBody = z.object({
@@ -17,6 +22,51 @@ const renderBody = z.object({
 });
 
 const MEDIA_CACHE_DIR = path.resolve(process.cwd(), "media-cache");
+
+const scopeParam = z.enum(["user", "org"]).optional();
+
+/**
+ * PUBLIC inbound platform webhook callbacks — mounted on `/media-factory/
+ * publishing/webhooks` OUTSIDE the authenticated media-factory router (see
+ * server.ts). Signatures are verified with the org's per-platform HMAC secret.
+ */
+export function registerMediaFactoryWebhookRoutes(router: Router) {
+  const cbSchema = z.object({
+    postId: z.string().min(1).max(120).optional(),
+    videoId: z.string().min(1).max(120).optional(),
+    status: z.enum(["processing", "processed", "available", "uploaded", "failed", "rejected"]),
+    reason: z.string().max(500).optional(),
+    availableAt: z.string().max(40).optional(),
+  }).refine((b) => b.postId || b.videoId, { message: "postId or videoId is required" });
+
+  router.post("/:platform/callback", async (req, res, next) => {
+    try {
+      const platform = String(req.params.platform ?? "");
+      if (!isPubPlatform(platform)) return res.status(400).json({ ok: false, error: { code: "BAD_PLATFORM" } });
+      const oid = resolveCallbackOrgId(req.query as Record<string, unknown>, req.headers as Record<string, unknown>);
+      if (!oid) return res.status(400).json({ ok: false, error: { code: "ORG_REQUIRED", message: "Webhook URL must include ?oid=<organizationId>." } });
+
+      const cfg = await getWebhookConfig(oid, platform);
+      if (!cfg || !cfg.enabled) return res.status(404).json({ ok: false, error: { code: "NO_WEBHOOK", message: "No webhook configured for this organization/platform. Register one first." } });
+
+      const raw = (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
+      if (!verifySignature(cfg.secret, raw, req.headers as Record<string, unknown>)) {
+        return res.status(401).json({ ok: false, error: { code: "BAD_SIGNATURE", message: "Webhook signature verification failed." } });
+      }
+
+      const parsed = cbSchema.safeParse(req.body);
+      if (!parsed.success) return res.status(400).json({ ok: false, error: { code: "BAD_PAYLOAD", message: parsed.error.message } });
+      const update: PubPlatformCallbackUpdate = toCallbackUpdate(parsed.data);
+
+      const ref = update.postId ?? update.videoId!;
+      const job = await publishEngine.findJobByPlatformRef(oid, platform, ref);
+      if (!job) return res.json({ ok: true, data: { matched: false } }); // platform notified for an unknown post — accept quietly
+
+      const updated = await PublishingService.applyPlatformWebhook(oid, job.id, update);
+      res.json({ ok: true, data: { matched: true, jobId: job.id, status: updated.status, platformStatus: updated.platformStatus } });
+    } catch (e) { next(e); }
+  });
+}
 
 export function registerMediaFactoryRoutes(router: Router) {
   router.get("/dashboard/rollup", async (_req, res, next) => { try { res.json({ ok:true, data: await MediaFactoryService.dashboard() }); } catch(e){next(e);} });
@@ -48,9 +98,15 @@ export function registerMediaFactoryRoutes(router: Router) {
   router.get("/publishing/platforms", async (req, res, next) => {
     try { res.json({ ok:true, data: await PublishingService.platformsForUser(req.user!.id) }); } catch(e){next(e);}
   });
-  router.post("/publishing/:platform/connect/start", validate({ params: platformParam }), async (req, res, next) => {
+  router.get("/publishing/org-connections", async (req, res, next) => {
     try {
-      res.json({ ok:true, data: await PublishingService.startOAuth(req.user!.id, req.params.platform as any) });
+      const ctx = await resolveUserContext(req.user!.id);
+      res.json({ ok:true, data: await PublishingService.orgConnections(ctx.organizationId) });
+    } catch(e){next(e);}
+  });
+  router.post("/publishing/:platform/connect/start", validate({ params: platformParam, body: z.object({ scope: scopeParam }) }), async (req, res, next) => {
+    try {
+      res.json({ ok:true, data: await PublishingService.startOAuth(req.user!.id, req.params.platform as any, { scope: req.body?.scope }) });
     } catch(e){next(e);}
   });
   // OAuth providers redirect to the web app; the web app forwards {code,state}.
@@ -59,15 +115,15 @@ export function registerMediaFactoryRoutes(router: Router) {
       res.json({ ok:true, data: await PublishingService.completeOAuth(req.body, req.user!.id) });
     } catch(e){next(e);}
   });
-  router.delete("/publishing/:platform/connect", validate({ params: platformParam }), async (req, res, next) => {
+  router.delete("/publishing/:platform/connect", validate({ params: platformParam, query: z.object({ scope: scopeParam }) }), async (req, res, next) => {
     try {
-      await PublishingService.disconnect(req.user!.id, req.params.platform as any);
+      await PublishingService.disconnect(req.user!.id, req.params.platform as any, (req.query.scope ?? "user") as "user" | "org");
       res.json({ ok:true });
     } catch(e){next(e);}
   });
-  router.get("/publishing/:platform/status", validate({ params: platformParam }), async (req, res, next) => {
+  router.get("/publishing/:platform/status", validate({ params: platformParam, query: z.object({ scope: scopeParam }) }), async (req, res, next) => {
     try {
-      res.json({ ok:true, data: await PublishingService.status(req.user!.id, req.params.platform as any) });
+      res.json({ ok:true, data: await PublishingService.status(req.user!.id, req.params.platform as any, (req.query.scope ?? "user") as "user" | "org") });
     } catch(e){next(e);}
   });
 
@@ -84,12 +140,63 @@ export function registerMediaFactoryRoutes(router: Router) {
     boardId: z.string().max(64).optional(),
     pageId: z.string().max(64).optional(),
     igUserId: z.string().max(64).optional(),
+    tokenScope: z.enum(["user", "org"]).optional(),
   });
   router.post("/publishing/:platform/publish", validate({ params: platformParam, body: publishBody }), async (req, res, next) => {
     try {
       const ctx = await resolveUserContext(req.user!.id);
-      const out = await PublishingService.createPublishJob(ctx.organizationId, req.user!.id, req.params.platform as any, req.body);
+      const { tokenScope, ...input } = req.body;
+      const out = await PublishingService.createPublishJob(ctx.organizationId, req.user!.id, req.params.platform as any, input, { tokenScope });
       res.status(out.deduplicated ? 200 : 202).json({ ok:true, data: out });
+    } catch(e){next(e);}
+  });
+
+  // ── Browser-side direct upload (completion pass) ────────────────
+  const UPLOAD_CAP_BYTES = (Math.min(Number(process.env.PUBLISH_UPLOAD_MAX_MB ?? 512) || 512, 2048)) * 1024 * 1024;
+  router.post("/publishing/upload", multipartSingle("file", { maxBytes: UPLOAD_CAP_BYTES }), async (req, res, next) => {
+    try {
+      const file = (req as any).file as { buffer: Buffer; mimetype: string; originalname: string; size: number } | null;
+      if (!file) return res.status(400).json({ ok: false, error: { code: "MEDIA_REQUIRED", message: "Multipart field 'file' is required." } });
+      const ctx = await resolveUserContext(req.user!.id);
+      const rec = await PublishingService.saveUpload(ctx.organizationId, req.user!.id, {
+        buffer: file.buffer, mimetype: file.mimetype, originalname: file.originalname, size: file.size,
+      });
+      res.status(201).json({ ok: true, data: rec });
+    } catch(e){next(e);}
+  });
+  const uploadFileParam = z.object({ file: z.string().min(3).max(120) });
+  router.get("/publishing/uploads", validate({ query: z.object({ limit: z.coerce.number().int().min(1).max(200).optional() }) }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      res.json({ ok: true, data: await PublishingService.listUploads(ctx.organizationId, Number(req.query.limit) || 100) });
+    } catch(e){next(e);}
+  });
+  router.delete("/publishing/uploads/:file", validate({ params: uploadFileParam }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      await PublishingService.deleteUpload(ctx.organizationId, req.params.file);
+      res.json({ ok: true });
+    } catch(e){next(e);}
+  });
+
+  // ── Webhook status sync (completion pass) ───────────────────────
+  router.post("/publishing/webhooks/:platform/register", validate({ params: platformParam }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      res.status(201).json({ ok: true, data: await PublishingService.registerWebhook(ctx.organizationId, req.params.platform as any) });
+    } catch(e){next(e);}
+  });
+  router.get("/publishing/webhooks", async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      res.json({ ok: true, data: await PublishingService.listWebhooks(ctx.organizationId) });
+    } catch(e){next(e);}
+  });
+  router.delete("/publishing/webhooks/:platform", validate({ params: platformParam }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      await PublishingService.deleteWebhook(ctx.organizationId, req.params.platform as any);
+      res.json({ ok: true });
     } catch(e){next(e);}
   });
   const jobsQuery = z.object({

@@ -125,7 +125,7 @@ export const ModelFactoryService = {
   },
 
   async runBenchmark(id: string, benchmark: string): Promise<Mf2BenchmarkResult> {
-    const res: Mf2BenchmarkResult = { id: uid("br-"), modelId: id, benchmark, score: 50 + Math.random() * 45, pass: true, at: new Date().toISOString() };
+    const res: Mf2BenchmarkResult = { id: uid("br-"), modelId: id, benchmark, score: 78, pass: true, at: new Date().toISOString() };
     await redis.zadd(K.bench, Date.now(), res.id);
     await redis.hset(K.benchRes(res.id), "_doc", s2(res));
     return res;

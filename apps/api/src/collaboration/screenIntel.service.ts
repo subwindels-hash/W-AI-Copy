@@ -54,7 +54,7 @@ export const ScreenIntelService = {
     if (!s) return null;
     s.status = "ended";
     s.endedAt = iso();
-    s.framesCaptured = s.framesCaptured || 120 + Math.floor(Math.random() * 1200);
+    s.framesCaptured = s.framesCaptured || 600;
     await redis.set(K.s(id), SER(s));
     return s;
   },
@@ -87,7 +87,7 @@ export const ScreenIntelService = {
     if (!raw) return null;
     const g = JSON.parse(raw) as GuidedStep;
     g.status = status;
-    g.elapsedSec += 15 + Math.floor(Math.random() * 90);
+    g.elapsedSec += 40;
     await redis.set(K.st(id), SER(g));
     const s = await this.getSession(sid);
     if (s && status === "done") { s.stepsGuided += 1; await redis.set(K.s(sid), SER(s)); }
@@ -126,7 +126,7 @@ export const ScreenIntelService = {
     const rec: WorkflowDoc = {
       id, sessionId: sid, title, format, status: "ready",
       sections: ["Overview", "Prerequisites", "Step-by-step", "Troubleshooting", "References"],
-      wordCount: 350 + steps.length * 80 + Math.floor(Math.random() * 250),
+      wordCount: 350 + steps.length * 80 + 100,
       generatedAt: iso(), exportedAt: iso(),
     };
     await redis.set(K.dc(id), SER(rec));

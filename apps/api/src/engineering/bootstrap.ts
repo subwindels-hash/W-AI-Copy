@@ -61,11 +61,11 @@ export async function bootstrapEngineering() {
       p99LatencyMs: Math.round(s.p50 * 3.5),
       rps: s.rps,
       errorRatePct: s.err,
-      availabilityPct: s.sloAvail - Math.random() * 0.08,
+      availabilityPct: s.sloAvail - 0.03,
       saturationPct: s.sat,
       sloLatencyMs: s.sloLatency,
       sloAvailabilityPct: s.sloAvail,
-      errorBudgetRemainingPct: 70 + Math.random() * 30,
+      errorBudgetRemainingPct: 85,
     };
     await MetricsService.upsert(m);
   }
@@ -73,17 +73,17 @@ export async function bootstrapEngineering() {
   // Deployments — 40 in last 30d distributed across services with a few failures
   const svcIds = SEED_SERVICES.map(s => s.name.toLowerCase().replace(/\s+/g, "-"));
   for (let i = 0; i < 40; i++) {
-    const daysAgo = Math.floor(Math.random() * 30);
+    const daysAgo = 14;
     const svc = svcIds[i % svcIds.length];
     const env = i % 7 === 0 ? "canary" : "production";
     await DeploymentService.record({
       service: svc,
       version: `1.${Math.floor(i/5)}.${i}`,
       environment: env,
-      status: Math.random() < 0.1 ? "failed" : "success",
-      startedAt: new Date(Date.now() - daysAgo * 86400_000 - Math.random()*86400_000).toISOString(),
-      durationMs: 90_000 + Math.floor(Math.random() * 700_000),
-      leadTimeHours: Math.round((2 + Math.random() * 18) * 10) / 10,
+      status: "success",
+      startedAt: new Date(Date.now() - daysAgo * 86400_000 - 43200_000).toISOString(),
+      durationMs: 320_000,
+      leadTimeHours: 9.0,
       triggeredBy: ["ci","alice","bob","carol"][i%4],
     });
   }
@@ -99,7 +99,7 @@ export async function bootstrapEngineering() {
   // Pipeline runs — 50 over 7d
   for (let i = 0; i < 50; i++) {
     await PipelineService.record({
-      startedAt: new Date(Date.now() - Math.random() * 7 * 86400_000).toISOString(),
+      startedAt: new Date(Date.now() - 3 * 86400_000).toISOString(),
     });
   }
 

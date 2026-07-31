@@ -45,13 +45,13 @@ export async function bootstrapEnterpriseFoundation() {
   const connObjs = [];
   for (const c of connSeeds as unknown as any[]) {
     const co = await DataFabricService.registerConnector({
-      name:c.name, kind:c.kind, status: Math.random()<0.9?"connected":(Math.random()<0.5?"degraded":"syncing"),
+      name:c.name, kind:c.kind, status: "connected",
       region:c.region, host:c.host, database:c.database, owner:c.owner, tags:c.tags,
     });
     // set backfill metrics
-    co.datasets = 5 + Math.floor(Math.random()*80);
-    co.rowsProcessed24h = Math.floor(1_000_000 + Math.random()*500_000_000);
-    co.bytesProcessed24h = Math.floor(co.rowsProcessed24h * (0.4+Math.random()*1.5));
+    co.datasets = 28;
+    co.rowsProcessed24h = 120_000_000;
+    co.bytesProcessed24h = Math.floor(co.rowsProcessed24h * 0.9);
     const redis = (await import("../db/redis.js")).redisCmd;
     await redis.set(`ef:conn:${co.id}`, JSON.stringify(co));
     connObjs.push(co);
@@ -70,8 +70,8 @@ export async function bootstrapEnterpriseFoundation() {
       name:d.name, domain:d.domain, description:d.desc, owner:d.owner, sources:d.sources,
       schema:d.schema, freshnessMinutes:d.freshnessMinutes, certified:d.certified, sla:d.sla,
     });
-    dp.rows = Math.floor(10_000+Math.random()*10_000_000);
-    dp.consumers = Math.floor(3+Math.random()*120);
+    dp.rows = 4_000_000;
+    dp.consumers = 35;
     const redis = (await import("../db/redis.js")).redisCmd;
     await redis.set(`ef:dp:${dp.id}`, JSON.stringify(dp));
     dpObjs.push(dp);
@@ -85,7 +85,7 @@ export async function bootstrapEnterpriseFoundation() {
     [dpObjs[2].id,"model-training","serve","serve-training"],
     [connObjs[8].id,dpObjs[5].id,"ingest","eu-restricted-sync"],
   ] as const) {
-    await DataFabricService.addLineage({ from, to, type, job, rows: Math.floor(10_000+Math.random()*5_000_000) });
+    await DataFabricService.addLineage({ from, to, type, job, rows: 2_000_000 });
   }
 
   // ── Identity (272-274) ───────────────────────────────────────
@@ -100,7 +100,7 @@ export async function bootstrapEnterpriseFoundation() {
   for (const i of idpSeeds) {
     const idp = await IdentityService.registerIdp({ ...i, kind: i.kind as any, status: i.status as any });
     idp.usersSynced = i.usersSynced;
-    idp.lastSyncAt = new Date(Date.now()-Math.random()*3600_000).toISOString();
+    idp.lastSyncAt = new Date(Date.now()-900_000).toISOString();
     const redis = (await import("../db/redis.js")).redisCmd;
     await redis.set(`ef:idp:${idp.id}`, JSON.stringify(idp));
   }
@@ -110,12 +110,12 @@ export async function bootstrapEnterpriseFoundation() {
     await IdentityService.createPrincipal({
       principalId:`u_${1000+i}`, kind:"human", displayName:`Employee ${i+1}`, email:`emp${i+1}@windels.ai`,
       provider:(["google","microsoft","okta"] as const)[i%3] as any, tenantId:"windels", status:"active",
-      mfaEnabled: Math.random()<0.82, scopes:["read:org"], groups:[`team-${i%8}`],
-      lastLoginAt: new Date(Date.now()-Math.random()*86400_000*7).toISOString(),
+      mfaEnabled: true, scopes:["read:org"], groups:[`team-${i%8}`],
+      lastLoginAt: new Date(Date.now()-2*86400_000).toISOString(),
     });
   }
   for (let i=0;i<12;i++) {
-    await IdentityService.createPrincipal({ principalId:`sa_${i}`, kind:"service", displayName:`service-${i}`, provider:"local", tenantId:"windels", status:"active", mfaEnabled:false, scopes:[["read","write","admin"][i%3]], groups:[], lastRotatedAt: new Date(Date.now()-Math.random()*30*86400_000).toISOString() } as any);
+    await IdentityService.createPrincipal({ principalId:`sa_${i}`, kind:"service", displayName:`service-${i}`, provider:"local", tenantId:"windels", status:"active", mfaEnabled:false, scopes:[["read","write","admin"][i%3]], groups:[], lastRotatedAt: new Date(Date.now()-15*86400_000).toISOString() } as any);
   }
   for (let i=0;i<8;i++) {
     await IdentityService.createPrincipal({
@@ -187,27 +187,27 @@ export async function bootstrapEnterpriseFoundation() {
   ];
   for (const b of bcps) {
     const plan = await ResilienceService.addBcp({ ...b, status:b.status as any });
-    if (b.status === "ready") await ResilienceService.recordDrill(plan.id, Math.random()>0.2);
+    if (b.status === "ready") await ResilienceService.recordDrill(plan.id, true);
   }
 
   // ── AI Quality (281-282) ─────────────────────────────────────
   const models = ["claude-3.5-sonnet","gpt-4o","gemini-1.5-pro","mistral-large-2","llama-3.1-70b","windels-routing-llm","text-embedding-3-large"];
   for (const m of models) {
     const scores = {
-      accuracy: 80+Math.floor(Math.random()*18),
-      groundedness: 82+Math.floor(Math.random()*15),
-      relevance: 84+Math.floor(Math.random()*14),
-      safety: 90+Math.floor(Math.random()*9),
-      hallucination: 88+Math.floor(Math.random()*10),
-      latency: 70+Math.floor(Math.random()*28),
-      cost: 60+Math.floor(Math.random()*35),
-      bias: 85+Math.floor(Math.random()*12),
+      accuracy: 89,
+      groundedness: 89,
+      relevance: 91,
+      safety: 94,
+      hallucination: 93,
+      latency: 82,
+      cost: 76,
+      bias: 91,
     };
     const avg = Object.values(scores).reduce((a,b)=>a+b,0)/Object.values(scores).length;
     await QualityService.addScorecard({
       modelId:m, modelName:m, evaluator:"auto-red-team+llm-judge", dataset:"golden-set-v4",
-      samples: 500+Math.floor(Math.random()*2000), scores,
-      passPct: +avg.toFixed(1), regression: Math.random()<0.15, approved: avg>=85,
+      samples: 1200, scores,
+      passPct: +avg.toFixed(1), regression: false, approved: avg>=85,
     });
   }
   for (let i=0;i<6;i++) {

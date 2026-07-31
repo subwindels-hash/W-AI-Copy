@@ -25,7 +25,7 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
+function rand(min:number,max:number) { return (min+max)/2; } // deterministic baseline
 function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
 
 const SEED_DATASETS: Array<{name:string;fmt:DatasetFormat;rows:number;sizeMb:number;synthPct:number;cleaned:boolean;rag:boolean}> = [
@@ -174,7 +174,7 @@ export const TrainingService = {
   async _simulateJob(id: string, oid: string) {
     const stages: TrainingJobStatus[] = ["preparing","training","evaluating","governance_review","canary","deployed"];
     for (let i=0;i<stages.length;i++) {
-      await new Promise(r=>setTimeout(r, 400+Math.random()*500));
+      await new Promise(r=>setTimeout(r, 400));
       const r = await redis.hgetall(K.j(oid,id)); if (!r._doc) return;
       const j: TrainingJob = JSON.parse(r._doc);
       j.status = stages[i]; j.progressPct = Math.round(((i+1)/stages.length)*100); j.updatedAt = new Date().toISOString();

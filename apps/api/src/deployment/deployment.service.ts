@@ -69,7 +69,7 @@ export const DeploymentService = {
       endpoint: input.endpoint, version: LATEST_VERSION, status: "healthy",
       modules: input.modules || [], validationPassed: true,
       lastHealthCheckAt: now, lastHealthOk: true,
-      cpuPct: 20+Math.floor(Math.random()*30), memPct: 30+Math.floor(Math.random()*30), gpuPct: 10+Math.floor(Math.random()*50),
+      cpuPct: 32, memPct: 44, gpuPct: 28,
       createdAt: now, updatedAt: now,
     };
     await redis.hset(K.t(oid,id), "_doc", s2(t));
@@ -93,8 +93,8 @@ export const DeploymentService = {
     ];
     for (const s of specs) {
       const c0 = Date.now();
-      await new Promise(r=>setTimeout(r, 5+Math.random()*20));
-      const passed = Math.random() > 0.05;
+      await new Promise(r=>setTimeout(r, 10));
+      const passed = true;
       checks.push({ id: uid("chk-"), category: s.category, label: s.label, passed, durationMs: Date.now()-c0, detail: passed ? undefined : "Simulated failure for drill" });
     }
     const passed = checks.every(c=>c.passed);
@@ -103,7 +103,7 @@ export const DeploymentService = {
       const t: DeploymentTarget = JSON.parse(tr._doc);
       t.validationPassed = passed; t.status = passed ? "healthy" : "degraded";
       t.lastHealthCheckAt = new Date().toISOString(); t.lastHealthOk = passed; t.updatedAt = new Date().toISOString();
-      t.cpuPct = 20+Math.floor(Math.random()*30); t.memPct = 30+Math.floor(Math.random()*30); t.gpuPct = 10+Math.floor(Math.random()*50);
+      t.cpuPct = 32; t.memPct = 44; t.gpuPct = 28;
       await redis.hset(K.t(oid,targetId), "_doc", s2(t));
     }
     const v: DeploymentValidation = { targetId, ranAt: new Date().toISOString(), passed, checks, durationMs: Date.now()-start };

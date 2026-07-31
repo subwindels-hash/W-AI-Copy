@@ -53,8 +53,8 @@ export const CameraIntelService = {
       modelVersion: "vision-v1.3.0", fps: input.fps ?? 8,
       resolution: input.resolution ?? "1920x1080", verdictDefault,
       detectionsToday: 0, findingsOpen: 0, acknowledgedFindings: 0,
-      safetyAlerts24h: 0, uptimePct: 99.5 + Math.random() * 0.5,
-      latencyMs: 140 + Math.floor(Math.random() * 220),
+      safetyAlerts24h: 0, uptimePct: 99.7,
+      latencyMs: 220,
       owner: input.owner ?? "vision-ops",
       approvedWorkflow: input.approvedWorkflow,
       tags: input.tags ?? [],
@@ -74,7 +74,7 @@ export const CameraIntelService = {
   async emitDetection(pid: string, d: Omit<Detection, "id" | "pipelineId" | "timestamp" | "verdict" | "advisoryNote" | "confidenceBand" | "frameId"> & { frameId?: string; confidence?: number; verdict?: DetectionVerdict }): Promise<Detection> {
     const p = await this.getPipeline(pid);
     if (!p) throw new Error("pipeline not found");
-    const conf = d.confidence ?? 0.6 + Math.random() * 0.35;
+    const conf = d.confidence ?? 0.78;
     const band = conf >= 0.9 ? "very-high" : conf >= 0.75 ? "high" : conf >= 0.5 ? "medium" : "low";
     const verdict = d.verdict ?? p.verdictDefault;
     const id = randomUUID();

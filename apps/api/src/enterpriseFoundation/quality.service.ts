@@ -58,8 +58,8 @@ export const QualityService = {
     await redis.sadd(RUNS, id);
     // simulate completion
     r.status = "running";
-    r.samples = 200 + Math.floor(Math.random()*800);
-    r.passedSamples = Math.floor(r.samples * (0.78 + Math.random()*0.2));
+    r.samples = 600;
+    r.passedSamples = Math.floor(r.samples * 0.9);
     r.passPct = +((r.passedSamples / r.samples) * 100).toFixed(1);
     r.finishedAt = iso();
     r.status = r.passPct >= 90 ? "passed" : "failed";

@@ -89,7 +89,7 @@ export const ReleaseService = {
     await redisCmd.sadd(RELEASES_KEY, rel.id);
 
     // Simulate deploy finishing in-memory (instant for MVP).
-    rel.status = "deployed"; rel.deployedAt = now(); rel.durationMs = 30_000 + Math.floor(Math.random()*60_000); rel.healthGatePassed = true;
+    rel.status = "deployed"; rel.deployedAt = now(); rel.durationMs = 45_000; rel.healthGatePassed = true;
     await redisCmd.set(`${REL_PREFIX}${rel.id}`, JSON.stringify(rel));
 
     // Update B/G or canary state if applicable
