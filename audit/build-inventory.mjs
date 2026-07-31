@@ -195,7 +195,10 @@ const serviceDirs = ls(API_SERVICES).filter(n => {
 });
 
 // Gather route files
-const routeFiles = ls(API_ROUTES).filter(n => n.endsWith(".ts"));
+// Route modules only — a co-located `*.test.ts` beside a route file is a test,
+// not a module. Without this, adding routes/events.test.ts invented a phantom
+// module "events.test" with 0 routes and no service, reported as MISSING.
+const routeFiles = ls(API_ROUTES).filter(n => n.endsWith(".ts") && !/\.(test|spec)\.ts$/.test(n));
 
 // Map route file -> module key
 const routeByModule = new Map(); // moduleKey -> [{file, endpoints}]
@@ -506,9 +509,18 @@ function servicesFromRoutes(modKey) {
     if (!src) continue;
     for (const m of src.matchAll(/from\s+"((?:\.\.\/)+)([^"]+\.js)"/g)) {
       const rel = m[2].replace(/\.js$/, ".ts");
-      // Only count real service modules, not middleware/db/util plumbing.
-      if (!/\.service\.ts$|^services\//.test(rel)) continue;
-      if (/^(db|utils|config)\//.test(rel)) continue;
+      // Only count real implementation modules, not middleware/db/util
+      // plumbing. The `.service.ts` suffix is a convention, not a rule:
+      // `derivatives` is backed entirely by tradingIntel/derivatives.ts
+      // (Black-Scholes, IV solver, bond analytics — ~190 SLOC), which this
+      // filter rejected, so the module reported 0 SLOC and "no service
+      // directory" and was classified STUB. Accept a plain module in a
+      // sibling feature directory too.
+      const isService = /\.service\.ts$|^services\//.test(rel);
+      const isFeatureModule = /^[A-Za-z0-9_]+\/[A-Za-z0-9_]+\.ts$/.test(rel)
+        && !/\.(test|spec)\.ts$/.test(rel);
+      if (!isService && !isFeatureModule) continue;
+      if (/^(db|utils|config|http|middleware|observability)\//.test(rel)) continue;
       const abs = path.join(API_SERVICES, rel);
       if (fexists(abs)) out.add(rel);
     }

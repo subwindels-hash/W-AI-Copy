@@ -646,12 +646,14 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 327,
+      "serviceTotalSloc": 385,
       "serviceFiles": [
-        "services/auth.service.ts"
+        "services/auth.service.ts",
+        "security/passwords.ts"
       ],
       "importedServiceFiles": [
-        "services/auth.service.ts"
+        "services/auth.service.ts",
+        "security/passwords.ts"
       ],
       "bootstrapFile": null
     },
@@ -2236,10 +2238,20 @@
     "routePrefix": "/api/v1/derivatives",
     "backend": {
       "serviceDir": null,
-      "serviceFile": null,
-      "serviceTotalSloc": 0,
-      "serviceFiles": [],
-      "importedServiceFiles": [],
+      "serviceFile": {
+        "file": "derivatives.ts",
+        "path": "/home/user/WIN/apps/api/src/tradingIntel/derivatives.ts",
+        "sloc": 213,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 213,
+      "serviceFiles": [
+        "tradingIntel/derivatives.ts"
+      ],
+      "importedServiceFiles": [
+        "tradingIntel/derivatives.ts"
+      ],
       "bootstrapFile": null
     },
     "routes": [
@@ -2272,10 +2284,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "tradingIntel/derivatives.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "STUB"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "developers",
@@ -3121,7 +3135,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/events.ts",
-        "sloc": 198,
+        "sloc": 210,
         "counts": {
           "total": 2,
           "GET": 2,
@@ -6278,7 +6292,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1205,
+      "serviceTotalSloc": 1723,
       "serviceFiles": [
         "csrf.ts",
         "encryption.ts",
@@ -6292,10 +6306,22 @@
         "serviceToken.test.ts",
         "serviceToken.ts",
         "services/permissions.service.ts",
+        "security/encryption.ts",
+        "security/selfTest.ts",
+        "security/promptGuard.ts",
+        "security/passwords.ts",
+        "security/reliability.ts",
+        "security/rateLimit.ts",
         "security/governance.service.ts"
       ],
       "importedServiceFiles": [
         "services/permissions.service.ts",
+        "security/encryption.ts",
+        "security/selfTest.ts",
+        "security/promptGuard.ts",
+        "security/passwords.ts",
+        "security/reliability.ts",
+        "security/rateLimit.ts",
         "security/governance.service.ts"
       ],
       "bootstrapFile": null
@@ -6674,11 +6700,12 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 3492,
+      "serviceTotalSloc": 4924,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
         "bootstrap.ts",
+        "derivatives.test.ts",
         "derivatives.ts",
         "indicators.test.ts",
         "indicators.ts",
@@ -6688,10 +6715,18 @@
         "risk.test.ts",
         "risk.ts",
         "tradingIntel.service.ts",
-        "tradingIntel/tradingIntel.service.ts"
+        "tradingIntel/tradingIntel.service.ts",
+        "tradingIntel/analysis.ts",
+        "tradingIntel/marketData.ts",
+        "tradingIntel/agents.ts",
+        "tradingIntel/journal.ts"
       ],
       "importedServiceFiles": [
-        "tradingIntel/tradingIntel.service.ts"
+        "tradingIntel/tradingIntel.service.ts",
+        "tradingIntel/analysis.ts",
+        "tradingIntel/marketData.ts",
+        "tradingIntel/agents.ts",
+        "tradingIntel/journal.ts"
       ],
       "bootstrapFile": "apps/api/src/tradingIntel/bootstrap.ts"
     },
@@ -6752,6 +6787,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "tradingIntel/derivatives.test.ts",
       "tradingIntel/indicators.test.ts",
       "tradingIntel/marketData.test.ts",
       "tradingIntel/risk.test.ts",

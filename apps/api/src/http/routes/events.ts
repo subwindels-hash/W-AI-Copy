@@ -88,11 +88,23 @@ function broadcast(event: string, payload: any) {
   const data = JSON.stringify({ event, data: payload, timestamp: new Date().toISOString(), id: eventId });
 
   for (const [, client] of clients) {
-    // Organization scoping: only send events to clients in the same org
-    // If the event has no org, or the client has no org filter, broadcast to all
+    // Organization scoping.
+    //
+    // This previously read: skip only when the event has an org AND the client
+    // has an org AND they differ. Both null-checks were fail-open, and
+    // `organizationId` is `string | null` on the auth payload, so a client
+    // authenticated without an organization matched the `client.organizationId`
+    // guard and received *every* organization's events — message.created,
+    // conversation.updated, task.*, agent.* — across all tenants, over a
+    // long-lived stream. That is a cross-tenant leak, not a broadcast feature.
+    //
+    // Scoping is now fail-closed: an org-scoped event is delivered only to
+    // clients belonging to that same organization. Events with no org at all
+    // are treated as genuinely global (system/health notices) and still go to
+    // everyone, which is the only case the original comment described.
     const eventOrgId = payload?.organizationId ?? payload?.orgId ?? null;
-    if (eventOrgId && client.organizationId && eventOrgId !== client.organizationId) {
-      continue; // Skip — different organization
+    if (eventOrgId && eventOrgId !== client.organizationId) {
+      continue; // Skip — different organization, or client has no org scope.
     }
 
     try {
