@@ -4265,7 +4265,7 @@ function CollaborationTab() {
                   <div><div className="text-text-bright font-semibold">{p.findingsOpen}</div>open</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-text-muted">
-                  <div><div className="text-text-bright font-semibold">{p.uptimePct.toFixed(1)}%</div>uptime</div>
+                  <div><div className="text-text-bright font-semibold">{p.uptimePct != null ? `${p.uptimePct.toFixed(1)}%` : "—"}</div>uptime</div>
                   <div><div className="text-text-bright font-semibold">{p.latencyMs}ms</div>latency</div>
                   <div><div className="text-text-bright font-semibold">{p.safetyAlerts24h}</div>safety</div>
                 </div>

@@ -105,7 +105,7 @@ self-grading gate is gone** — deployment validation now runs real probes, DR
 drills and update preflight require a recorded outcome, and test/benchmark
 runners take measured results instead of inventing them. Synthetic seeding
 across the remaining bootstraps is opt-in via `WINDELS_DEMO_DATA` (default off).
-Roughly 142 `Math.random()` calls remain in descriptive dashboard telemetry —
+Roughly 91 `Math.random()` calls remain in descriptive dashboard telemetry (24 of them the scenario simulator's legitimate Monte-Carlo sampling) —
 tracked with a suggested work order in
 **[AUDIT-REPORT.md](./AUDIT-REPORT.md) §2.4**.
 

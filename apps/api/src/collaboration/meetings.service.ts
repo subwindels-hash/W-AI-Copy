@@ -134,8 +134,10 @@ export const MeetingsService = {
   async enableTranslationChannel(mid: string, language: TranslationLanguage): Promise<TranslationChannel> {
     const id = randomUUID();
     const ch: TranslationChannel = {
-      id, meetingId: mid, language, activeListeners: Math.floor(Math.random() * 8),
-      segmentsTranslated: 0, latencyMs: 180 + Math.floor(Math.random() * 140), enabled: true,
+      // A channel that was just enabled has no listeners and no measured
+      // latency; both were invented (0-7 listeners, 180-320ms).
+      id, meetingId: mid, language, activeListeners: 0,
+      segmentsTranslated: 0, enabled: true,
     };
     await redis.set(K.tr(id), SER(ch));
     await redis.sadd(K.trSet(mid), id);
@@ -247,7 +249,8 @@ export const MeetingsService = {
       topicsDiscussed: [m.title, "Timeline", "Risks", "Next steps"],
       sentimentOverall: "positive",
       generatedAt: iso(),
-      wordCount: 180 + Math.floor(Math.random() * 260) + segs.reduce((a, s) => a + s.text.split(/\s+/).length, 0),
+      // Count the words actually present rather than padding by a random 180-440.
+      wordCount: segs.reduce((a, s) => a + s.text.split(/\s+/).filter(Boolean).length, 0),
     };
     await redis.set(K.sumKey(mid), SER(sum));
     m.summaryReady = true;
@@ -275,15 +278,10 @@ export const MeetingsService = {
         out.push(fu);
       }
     }
-    // simulate immediate sync for ~70%
-    for (const f of out) {
-      if (Math.random() < 0.7) {
-        f.status = "synced";
-        f.syncedAt = iso();
-        f.targetRecordId = `rec_${Math.random().toString(36).slice(2, 9)}`;
-        await redis.set(K.fu(f.id), SER(f));
-      }
-    }
+    // Tasks stay queued until a connector actually syncs them. This previously
+    // marked ~70% of them "synced" with a fabricated targetRecordId, so the UI
+    // reported CRM/project/calendar records that were never created — and
+    // writeThroughPending under-counted the real backlog.
     const m = await this.getMeeting(mid);
     if (m) {
       const all = await this.listFollowUps(mid);

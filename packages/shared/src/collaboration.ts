@@ -66,7 +66,8 @@ export interface TranslationChannel {
   language: TranslationLanguage;
   activeListeners: number;
   segmentsTranslated: number;
-  latencyMs: number;
+  /** Observed translation latency. Undefined until segments are translated. */
+  latencyMs?: number;
   enabled: boolean;
 }
 
@@ -219,6 +220,9 @@ export interface GuidedStep {
   instruction: string;
   expectedOutcome: string;
   status: GuidedStepStatus;
+  /** Set when the step is first advanced away from pending, so elapsed time can
+   *  be measured rather than accumulated from random increments. */
+  startedAt?: string;
   elapsedSec: number;
   aiCoached: boolean;
 }
@@ -284,8 +288,9 @@ export interface CameraPipeline {
   findingsOpen: number;
   acknowledgedFindings: number;
   safetyAlerts24h: number;
-  uptimePct: number;
-  latencyMs: number;
+  /** Observed pipeline health. Undefined until the pipeline reports in. */
+  uptimePct?: number;
+  latencyMs?: number;
   owner: string;
   approvedWorkflow?: string;
   tags: string[];

@@ -54,7 +54,9 @@ export const ScreenIntelService = {
     if (!s) return null;
     s.status = "ended";
     s.endedAt = iso();
-    s.framesCaptured = s.framesCaptured || 120 + Math.floor(Math.random() * 1200);
+    // Frames captured is a real counter incremented by the capture loop; it was
+    // back-filled with a random 120-1320 when a session ended without one.
+    s.framesCaptured = s.framesCaptured || 0;
     await redis.set(K.s(id), SER(s));
     return s;
   },
@@ -86,8 +88,14 @@ export const ScreenIntelService = {
     const raw = await redis.get(K.st(id));
     if (!raw) return null;
     const g = JSON.parse(raw) as GuidedStep;
+    const wasPending = g.status === "pending";
     g.status = status;
-    g.elapsedSec += 15 + Math.floor(Math.random() * 90);
+    // Elapsed time is measured from when the step actually started, not
+    // incremented by a random 15-105s on each advance.
+    if (wasPending && !g.startedAt) g.startedAt = iso();
+    if (g.startedAt) {
+      g.elapsedSec = Math.max(0, Math.round((Date.now() - new Date(g.startedAt).getTime()) / 1000));
+    }
     await redis.set(K.st(id), SER(g));
     const s = await this.getSession(sid);
     if (s && status === "done") { s.stepsGuided += 1; await redis.set(K.s(sid), SER(s)); }
@@ -126,7 +134,8 @@ export const ScreenIntelService = {
     const rec: WorkflowDoc = {
       id, sessionId: sid, title, format, status: "ready",
       sections: ["Overview", "Prerequisites", "Step-by-step", "Troubleshooting", "References"],
-      wordCount: 350 + steps.length * 80 + Math.floor(Math.random() * 250),
+      // Derived from the real content length instead of padded randomly.
+      wordCount: steps.reduce((a, st) => a + String(st.instruction ?? "").split(/\s+/).filter(Boolean).length, 0),
       generatedAt: iso(), exportedAt: iso(),
     };
     await redis.set(K.dc(id), SER(rec));

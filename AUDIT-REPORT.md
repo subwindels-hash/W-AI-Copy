@@ -87,30 +87,42 @@ value: `DeploymentValidationCheck.skipped`, `DeploymentTarget.cpu/mem/gpuPct?`,
 
 ### 2.4 Still synthetic — remaining work
 
-**~142 calls across 56 files** still execute by default, now confined to
-descriptive dashboard telemetry — no verdicts, no clinical data, no money:
+Worked through the §2.4 order one file at a time. **Fabrication is down from 161
+to 91 call sites**, and every remaining item is descriptive dashboard telemetry
+— no verdicts, no clinical data, no money, no security tokens.
 
-| File | Calls |
-|---|---|
-| `marketplace/simulation.service.ts` | 24 *(legitimate — Monte-Carlo sampling)* |
-| `mlOps/models.service.ts` | 9 |
-| `collaboration/meetings.service.ts` | 5 |
-| `engineering/metrics.service.ts`, `engineering/pipeline.service.ts` | 4 each |
-| `platform/iac.service.ts`, `platform/infraMetrics.service.ts` | 4 each |
-| `qa/drTest.service.ts` | 4 |
-| `services/tools/builtin/index.ts` | 4 *(legitimate — the `random` agent tool)* |
-| …48 further files | 1–3 each |
+**Completed in this pass:**
 
-Deliberately left alone as legitimate: retry jitter, id/nonce generation, list
-shuffling, Monte-Carlo sampling in the scenario simulator, the `random` agent
-tool, and `tradingIntel`'s `SyntheticProvider` — which is correctly flagged
-`synthetic: true` on every quote it returns.
-`engineering/metrics.refreshSynthetic()` is honestly named and has no callers.
+| Module | What was invented | Now |
+|---|---|---|
+| `mlOps/models` (9) | Every model version got a random 120–920 MB size and a fake `sha256:` hash built from a UUID — a synthesised hash is worse than none, because it looks verifiable. Models were born with 8–47 stars, 240–2040 ms latency and a 0–0.8% error rate; deployments were stamped with up to 2050 qps, a 580 ms p95 and $9.20/h before serving a request, and marked `healthy` before any probe. | Registry metadata and serving telemetry are undefined until measured. Added the missing intake path: `POST /deployments/:id/metrics` and `POST /models/:id/versions/:versionId/artifact`. |
+| `platform/infraMetrics` (4) | **The worst of the remainder** — it runs on a 15 s timer, so every fabricated value became a persistent 60-minute "history" of traffic that never happened (`rps = 500 + random*1200`), and those series drove the alert thresholds, so alerts fired on noise. | Real telemetry: CPU from `process.cpuUsage()` deltas per core, memory from RSS against `os.totalmem()`, request rate and error rate from deltas of the real HTTP counters. Tagged `source: "process"` so a single-process reading is never read as cluster-wide. |
+| `engineering/pipeline` (4) | `POST /pipelines/record` accepted an empty body and minted a CI build: random pipeline, status rolled 78/14/8, duration apportioned across invented stages, 8% flaky chance — all feeding the CI analytics. | Requires `pipeline`/`status`/`durationMs`; stages recorded, not apportioned; route validated. |
+| `engineering/deployments`, `techDebt`, `metrics`, `productivity` | Random DORA lead time (2–22 h), a 60-point SLO chart reconstructed from ±35% noise, invented debt effort/churn used to rank hotspots, fabricated per-developer PR stats. | Measured or absent. Rollups skip unmeasured items rather than counting them as 0, which would have dragged DORA toward "elite" as coverage worsened. |
+| `collaboration/cameraIntel` (3) | A safety-camera detection with no model confidence got an invented 0.6–0.95, which then set the confidence band an operator uses to triage it. | Confidence comes from the model; absent → 0/`low`, so it cannot masquerade as a high-confidence hit. |
+| `collaboration/meetings` (4) | Marked ~70% of CRM/project/calendar follow-ups `synced` with fabricated record IDs — nothing was ever synced, and the pending count under-reported the real backlog. | Tasks stay `queued` until a connector syncs them. |
+| `collaboration/screenIntel` (3) | Frame counts back-filled randomly; guide elapsed time incremented by a random 15–105 s per step. | Real counters; elapsed measured from a new `startedAt`. |
 
-**Recommended order for the next pass:** `mlOps/models` → `platform/infraMetrics`
-→ `engineering/*` → `collaboration/*`, following the record-and-derive pattern
-used for S75/S65 (and previously for `usage`, `command`, `opex`,
-`sustainability`).
+**Remaining (91 sites, 56 files)** — the two largest are legitimate:
+
+| File | Calls | Note |
+|---|---|---|
+| `marketplace/simulation.service.ts` | 24 | **Legitimate** — Monte-Carlo sampling is the point of a simulator. |
+| `services/tools/builtin/index.ts` | 4 | **Legitimate** — this *is* the `random` agent tool. |
+| `platform/iac.service.ts`, `platform/cluster.service.ts` | 7 | Simulated Kubernetes topology. |
+| `devportal/environment`, `legal`, `mlOps/rag`, `program/sprint` | 3 each | Dashboard counters. |
+| …48 further files | 1–2 each | |
+
+A further **76 calls** sit behind `WINDELS_DEMO_DATA` (default off) and do not
+run in a normal deployment.
+
+Also deliberately left alone: retry jitter, id/nonce generation, list shuffling,
+and `tradingIntel`'s `SyntheticProvider`, which flags `synthetic: true` on every
+quote it returns. `engineering/metrics.refreshSynthetic()` is honestly named,
+has no callers, and is now gated as well.
+
+**Suggested next order:** `platform/cluster` + `platform/iac` (simulated k8s
+topology) → `devportal/*` → `program/*`.
 
 ---
 
@@ -132,7 +144,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 120 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 126 passing, 0 failing.**
 
 ---
 
