@@ -274,9 +274,10 @@ function seedInsights(): HealthInsight[] {
 }
 
 function seedWearables(): WearableDevice[] {
+  // Deterministic stable IDs; batteryPct fixed until a real wearable adapter reports it.
   return [
-    { id: uid("wd-"), vendor: "apple", model: "Apple Watch Series 10", batteryPct: rndInt(35, 92),
-      lastSync: now(), connected: true,
+    { id: "wd-apple-watch-s10", vendor: "apple", model: "Apple Watch Series 10", batteryPct: 78,
+      lastSync: "2026-07-31T14:00:00.000Z", connected: true,
       metricsEnabled: ["heart_rate","resting_hr","hrv","steps","distance_km","calories_burned","active_minutes","sleep","spo2","respiratory_rate","skin_temp","vo2max","ecg","afib_probability"],
       label: "clinically_validated" },
   ];
@@ -284,9 +285,9 @@ function seedWearables(): WearableDevice[] {
 
 function seedMedicalDevices(): MedicalDevice[] {
   return [
-    { id: uid("mdv-"), kind: "bp_monitor", vendor: "Omron", model: "BP7450", lastReading: now(), connected: true, calibrationStatus: "ok", label: "clinically_validated" },
-    { id: uid("mdv-"), kind: "scale",     vendor: "Withings", model: "Body Comp", lastReading: now(), connected: true, calibrationStatus: "ok", label: "clinically_validated" },
-    { id: uid("mdv-"), kind: "cgm",       vendor: "Abbott", model: "FreeStyle Libre 3", lastReading: now(), connected: true, calibrationStatus: "ok", label: "clinically_validated" },
+    { id: "mdv-omron-bp7450",    kind: "bp_monitor", vendor: "Omron",    model: "BP7450",              lastReading: "2026-07-31T14:00:00.000Z", connected: true, calibrationStatus: "ok", label: "clinically_validated" },
+    { id: "mdv-withings-scale",  kind: "scale",      vendor: "Withings", model: "Body Comp",           lastReading: "2026-07-31T14:00:00.000Z", connected: true, calibrationStatus: "ok", label: "clinically_validated" },
+    { id: "mdv-libre-3",         kind: "cgm",        vendor: "Abbott",   model: "FreeStyle Libre 3",   lastReading: "2026-07-31T14:00:00.000Z", connected: true, calibrationStatus: "ok", label: "clinically_validated" },
   ];
 }
 
@@ -307,19 +308,23 @@ function seedScreenings(): Screening[] {
 }
 
 function daily(scoreBase: number, label: HealthLabel = "wellness_estimate"): DailyHealth {
+  // Deterministic: same base + label → same numbers. Reads never drift.
+  // Real telemetry integration would replace this with computed metrics
+  // from the persisted HealthMetric stream (HRV, resting HR, sleep,
+  // activity minutes, etc.) rolled over the appropriate window.
   return {
-    score: Math.round(rnd(scoreBase - 8, scoreBase + 8)),
-    readiness: Math.round(rnd(55, 95)),
-    recovery: Math.round(rnd(55, 95)),
-    sleepQuality: Math.round(rnd(50, 95)),
-    fitness: Math.round(rnd(40, 90)),
-    cardioTrend: Math.round(rnd(-3, 5)),
-    mentalWellness: Math.round(rnd(55, 92)),
-    nutrition: Math.round(rnd(50, 90)),
-    hydration: Math.round(rnd(50, 92)),
-    fatigue: Math.round(rnd(10, 60)),
-    stressLevel: Math.round(rnd(15, 60)),
-    riskFlags: _rng.next() > 0.75 ? ["elevated_resting_hr"] : [],
+    score: scoreBase,
+    readiness: Math.max(40, Math.min(95, scoreBase - 5)),
+    recovery: Math.max(40, Math.min(95, scoreBase - 3)),
+    sleepQuality: Math.max(40, Math.min(95, scoreBase - 8)),
+    fitness: Math.max(30, Math.min(95, scoreBase - 10)),
+    cardioTrend: 0,
+    mentalWellness: Math.max(45, Math.min(95, scoreBase)),
+    nutrition: Math.max(40, Math.min(95, scoreBase - 6)),
+    hydration: Math.max(40, Math.min(95, scoreBase - 4)),
+    fatigue: Math.max(5, Math.min(70, 100 - scoreBase)),
+    stressLevel: Math.max(10, Math.min(70, 100 - scoreBase - 5)),
+    riskFlags: [],
     label,
   };
 }

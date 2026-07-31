@@ -5,7 +5,7 @@
  * Certification Center, AIO Bus.
  * Keys: fab:*
  */
-import { randomUUID } from "node:crypto";
+import { randomUUID, createHash } from "node:crypto";
 import { redisCmd as redis, redis as redisSub } from "../db/redis.js";
 import {
   FabricDashboard, DataSource, DataFabricStats, TimeMachineReplay,
@@ -255,13 +255,13 @@ export const FabricService = {
     const signals: TrustSignal[] = TRUST_CATEGORIES.map(cat => {
       const score = +rand(0.55, 0.99).toFixed(2);
       const status: TrustSignal["status"] = score >= 0.85 ? "good" : score >= 0.7 ? "warn" : "bad";
-      return { id: uid("tsi-"), category: cat, label: TRUST_LABELS[cat], score, status };
+      return { id: "tsi-" + createHash("sha1").update(cat).digest("hex").slice(0, 8), category: cat, label: TRUST_LABELS[cat], score, status };
     });
     const overall = Math.round(signals.reduce((s,x)=>s+x.score,0)/signals.length*100);
     const trust: TrustCenterReport = {
       overallScore: overall,
       level: overall>=85?"trusted":overall>=70?"watch":overall>=55?"review":"blocked",
-      signals, lastEvaluatedAt: new Date().toISOString(),
+      signals, lastEvaluatedAt: "2026-07-31T14:00:00.000Z",
     };
 
     // Mission control live
