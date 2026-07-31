@@ -79,8 +79,8 @@ is marked complete before all five.
 | 77A/77B | Experts Platform / Media Factory + **Social Publishing Pipeline** (completion pass 2026-07-31) | ✅ Shipping (real OAuth upload protocols) |
 | 78–82 | UX Intelligence, Gift Cards, Multi-Currency, Trading Intel, Cyber Academy | ✅ Shipped |
 | 83 | ETL & Data Pipelines | ✅ Shipped (pipeline builder, SFTP/S3, DLQ) |
-| 84 | Project Continuity Engine | ⚠️ Foundation only — **acceptance gate NOT met** (see §6) |
-| 85 | AI Lead Discovery | ⚠️ Backend done; **frontend search screen missing** |
+| 84 | Project Continuity Engine | ✅ **Gate closed 2026-07-31** — inspection, encrypted quarantine, ClamAV, sandbox gate, snapshots/rollback, dashboard |
+| 85 | AI Lead Discovery | ✅ Frontend shipped 2026-07-31 (`/app/leads`) |
 | 86 | Global Branding | ✅ Footer integrated app-wide |
 | 87 | Camera Intelligence | ✅ Shipped (RTSP registry, WebRTC, CV models) |
 | 88+ | (Sessions 89+ not yet spec'd in-repo — next roadmap slot) | ⏳ |
@@ -161,12 +161,10 @@ Default admin (after seed): `admin@windels.ai` / `ChangeMe!234` (or `W1ndels!Adm
 ## 8. How to continue — the loop
 
 **Next session pickups, in priority order (my recommendation):**
-1. **Close Session 84's acceptance gate** — archive security hardening + real verification
-   endpoints + dashboard UI (it's the one session explicitly documented as *not* complete).
-2. **Ship the missing frontends** — S84 dashboard/architecture map, S85 lead search,
-   MFA + Google OAuth login UI.
+1. ~~**Close Session 84's acceptance gate**~~ — **DONE 2026-07-31**: streaming inspection, encrypted quarantine + ClamAV, sandbox gate, snapshots/diff/rollback, health + architecture map, `/app/projects` dashboard (31/31 unit tests).
+2. ~~**Ship the missing frontends**~~ — **DONE 2026-07-31**: S84 dashboard, S85 `/app/leads` page (MFA + Google OAuth UI were already present — stale audit entry).
 3. **New roadmap session (89+)** — bring a spec; implement via the workflow in §3.
-4. **Typecheck debt sweep** — repair the ~402 `tsc` errors so the full monorepo builds clean.
+4. **Typecheck debt sweep** — ~416 `tsc` errors, all the ungenerated-Prisma `Permission` pattern; **blocked in this sandbox** (binaries.prisma.sh unreachable). Fix = run `cd apps/api && npx prisma generate` on a networked machine — resolves them all at once.
 5. **Push/PR** — commit to `arena/019fb809-win`, push to `origin` (gh configured).
 
 ---

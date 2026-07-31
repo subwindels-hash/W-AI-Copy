@@ -135,8 +135,8 @@ Legend — **Real** = real logic/persistence · **Demo** = seeded/Math.random fi
 | 81 | Unified Trading Intelligence | `uploads/session-81-trading-intelligence-platform.md` | `tradingIntel` (18 agents, 20 indicators, 13 markets, risk, sim) | `/trading-intel` | ✅ Demo (real CoinGecko + indicators tested) |
 | 82 | AI Cybersecurity Academy | `uploads/CLAUDE-session-82.md` | `cyber` | `/cyber` | ✅ Demo |
 | 83 | ETL & Data Pipeline Platform | `docs/SESSION_83_SPECIFICATION.md` | `etl` | `/etl` | ✅ (pipeline builder, DLQ) |
-| 84 | Project Continuity Engine | `docs/SESSIONS_84_86_ADDENDUM.md` | `projectContinuity` (intake, extract, inventory, verify) | `/projects` | ⚠️ **Foundation only — gate NOT met** |
-| 85 | AI Lead Discovery | `docs/SESSIONS_84_86_ADDENDUM.md` | `leadDiscovery` | `/leads /search /collections` | ⚠️ Backend only — **no frontend** |
+| 84 | Project Continuity Engine | `docs/SESSIONS_84_86_ADDENDUM.md` | `projectContinuity` (inspection, quarantine, clamav, sandbox, snapshots) | `/projects` (+quarantine, health, architecture, snapshots, diff, rollback) | ✅ **Gate closed 2026-07-31** — full dashboard `/app/projects` |
+| 85 | AI Lead Discovery | `docs/SESSIONS_84_86_ADDENDUM.md` | `leadDiscovery` (backend) + `/app/leads` (UI) | `/lead-discovery/*` | ✅ Frontend shipped 2026-07-31 |
 | 86 | Global Branding | `docs/SESSIONS_84_86_ADDENDUM.md` | `GlobalBrandingFooter.tsx` | (FE) | ✅ |
 | 87 | Enterprise Camera Intelligence | `docs/SESSION_87_SPECIFICATION.md` | `camera` (feeds, webrtc, CV models, alerts) | `/camera` | ✅ Demo |
 | 88 | — (no spec shipped in repo; docs reference "Sessions 1–88") | — | — | — | ⏳ **NEXT SLOT** |
@@ -259,11 +259,10 @@ bump the sidebar.
 
 ## 6. OPEN WORK & NEXT MOVES (88+)
 
-1. **Close Session 84 gate** — streaming archive inspection, per-format traversal/symlink
-   validation, malware scanner, encrypted quarantine, sandboxed build/test/type-check/
-   migration validation, snapshots/diffs/rollback, Project Development Dashboard.
-2. **Missing frontends** — S84 project dashboard + architecture map; S85 lead search UI;
-   MFA TOTP form + Google OAuth button on `LoginPage.tsx`.
+1. ~~**Close Session 84 gate**~~ — **DONE 2026-07-31** (31/31 unit tests; see PROGRESS.md).
+   Typecheck-debt fix is environment-blocked (needs `prisma generate` on a networked machine).
+2. ~~**Missing frontends**~~ — **DONE 2026-07-31**: S84 `/app/projects` dashboard, S85 `/app/leads`
+   page (MFA TOTP + Google OAuth UI were already present — stale audit entries).
 3. **Typecheck debt** — sweep ~402 errors in `apps/api/src/services/*` so the whole
    monorepo builds clean.
 4. **Real provider integrations** — market data (Polygon/TwelveData), voice TTS,

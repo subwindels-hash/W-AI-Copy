@@ -1348,3 +1348,30 @@ Bumped to **Sessions 38–75 · v0.89.0** (collapsed "v0.89").
 
 ### Follow-ups (unchanged)
 - Register real OAuth apps + set `*_CLIENT_ID/*_CLIENT_SECRET`, `PUBLISH_REDIRECT_URI`, `PUBLISH_WEBHOOK_BASE_URL`; TikTok/X app review; optional outbound org notification webhooks (status → URL) as a future pass.
+
+## Session 84 — Project Continuity Engine (completion pass, 2026-07-31)
+**Status:** ✅ **GATE CLOSED** — all controls required by `docs/SESSION_84_STATUS.md` are implemented, unit-tested (31 new tests), and wired to a full dashboard UI.
+
+### Backend (new modules under `apps/api/src/projectContinuity/`)
+- **Streaming archive inspection** (`inspection.service.ts`): native zip central-directory + tar header parsers read metadata ONLY — no extraction — enforcing entry-count (10k default) and uncompressed-size caps (512 MB total / 200 MB per entry, env `PC_MAX_*`) and flagging traversal/absolute/null/symlink entries. Verdicts: ok | bomb | unsafe | invalid | tool_missing (7z reported honestly). gzip inflation is bounded (`maxOutputLength`) so a gzip bomb cannot exhaust memory.
+- **Encrypted quarantine** (`quarantine.service.ts`): quarantined archives are re-encrypted with the Slice 112 AES-256-GCM envelope to `quarantine/<org>/<id>.enc`, the plaintext intake copy is removed, retention TTL (`PC_QUARANTINE_TTL_DAYS`, default 30) with an explicit sweep, delete + release + decrypt-for-review endpoints.
+- **ClamAV integration** (`clamav.service.ts`): INSTREAM protocol over TCP (`CLAMD_HOST`); when unset, scans report `not_configured` honestly. Infected archives are auto-quarantined at intake.
+- **Sandboxed build/typecheck/test gate** (`sandbox.service.ts`, S84.11): `PC_SANDBOX_MODE=none|local|docker` (default none). Docker mode runs `--network none` with memory/CPU caps; local mode is a bounded subprocess (timeout, capped output, stripped env, no shell) explicitly NOT a security boundary; none reports `not_configured` with remediation. Untrusted code is never executed in the API process by default.
+- **Change control** (`snapshots.service.ts`, S84.10): snapshots = workspace manifest (path/size/sha256) + byte copy of the intake archive; manifest diffs (added/removed/changed); rollback restores the snapshot archive and resets extraction state; append-only change log records every action.
+- **Health report** (`healthReport` in `projectIntake.service.ts`, S84.6): project status, completion (completed/partial/broken/incomplete/unknown), technical debt, build/typecheck/tests, DB presence, security (high findings + quarantine + clamav), deployment config, recommended build order.
+- **Inferred architecture map** (S84.3/84.4): frontend/backend/database/ai/queue/cli nodes + edges inferred deterministically from inventory manifests — always labeled `inferred_from_inventory`.
+
+### API endpoints (all under `/api/v1/projects`, authenticated)
+`GET /` · `GET /:id` · `POST /intake` · `POST /:id/extract|inventory|verify|sandbox-validate|snapshot|diff|rollback` · `GET /:id/snapshots|changelog|health|architecture` · `GET /quarantine` · `POST /quarantine/sweep|:id/release|:id/inspect` · `DELETE /quarantine/:id|/:id`
+
+### Frontend (`/app/projects`)
+Full Project Development Dashboard (S84.13): archive upload, project list with status/inspection badges, quarantine review (release/delete), pipeline actions (extract → inventory+verify → sandbox gate), tabs for Overview (health report + inspection), Architecture (inferred map), Verify (findings + sandbox stages + inventory), Snapshots (create/diff/rollback), Change Log. Sidebar entry + lazy route; admin PlatformPage S84 tab now compiles against the real client (legacy adapter exports).
+
+### Tests
+`inspection.test.ts` (13: zip/tar metadata parsing, traversal/absolute/symlink flags, entry-count and size bombs incl. declared-size and gzip bombs, invalid/truncated, 7z tool_missing) · `quarantine.test.ts` (3: encrypt round-trip, delete, retention sweep) · `snapshots.test.ts` (4: manifest+snapshot, diff added/removed/changed, rollback restore, change log) · `sandbox.test.ts` (6: command detection, none-mode honesty, local-mode execution with passed/failed stages) · `clamav.test.ts` (5: INSTREAM against an in-process clamd stub, clean/infected/error, not_configured). **S84 suite 31/31; total publishing+projectContinuity+trading+security regression 134/134.** Shared + web tsc clean; vite build clean (ProjectsPage 7.0 kB gz, LeadsPage 3.4 kB gz). API tsc: 0 new errors.
+
+## Session 85 — AI Lead Discovery (frontend pass, 2026-07-31)
+**Status:** ✅ Frontend shipped (backend was already live: Google Places textsearch behind `GOOGLE_PLACES_API_KEY`, Redis-persisted leads + collections + JSON/CSV export).
+- `/app/leads` page: natural-language search, results dashboard with per-lead select/save-to-collection, filters, collections manager, JSON/CSV export (CSV streams as a real download). All actions user-initiated — no automated outreach (scope lock). Missing API key → honest `SERVICE_UNAVAILABLE` banner.
+- Legacy admin PlatformPage S85 tab now compiles against the real client (adapter exports `LeadRecord`/`CollectionRecord`/`leadDiscoveryApi`).
+- Sidebar entries for Project Continuity + Lead Discovery; sidebar version bumped to **v0.90.0**.
