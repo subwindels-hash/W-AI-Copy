@@ -170,7 +170,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 295 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 390 passing, 0 failing.**
 
 ---
 
@@ -630,3 +630,94 @@ adoption counters and the burndown.
 
 **`DEMO DATA` 0 · `COMPLETE` 43 · gates: build 4/4 · typecheck 5/5 · 295 tests
 passing, 0 failing** (was 279).
+
+---
+
+## 10. Working the PARTIAL list (2026-07-31)
+
+With `DEMO DATA` at 0, "all remaining" means the 42 `PARTIAL` modules and 2
+`STUB`s. Before writing a line of test code I checked *why* each was PARTIAL —
+and, for the third time this session, the audit was measuring the wrong thing.
+
+### 10.1 The audit could not see its own test suite
+
+`findTestsFor()` scanned **only** `tests/e2e/*.spec.ts`. All **39 co-located
+unit tests** at `apps/api/src/<module>/<module>.test.ts` were invisible.
+`attachments`, `publicApi`, `promptTemplates` and `conversations` were reported
+`tests=0` while having real, passing suites — and `classifyStatus()` requires
+`hasTests` for `COMPLETE`, so they were pinned at `PARTIAL` by an audit looking
+in the one directory this repo does *not* put unit tests in. Fixing discovery
+moved 4 modules to `COMPLETE` without touching a line of product code.
+
+Three further discovery gaps surfaced as the work went on:
+
+| Gap | Effect |
+|---|---|
+| Modules under a grouping directory (`enterprise/agentComm/`) | tests never found |
+| Modules whose services live elsewhere (`infrastructure` → `platform/*`) | tests never found; fixed by reusing `servicesFromRoutes()`, and requiring the suite to actually import one of those services |
+| `servicesFromRoutes()` accepting only `*.service.ts` | `derivatives` reported 0 SLOC and "no service directory" although `tradingIntel/derivatives.ts` is its entire 213-SLOC implementation |
+| Route scanner globbing every `.ts` in `http/routes` | adding `events.test.ts` invented a phantom module `events.test`, reported `MISSING` |
+
+### 10.2 Six real defects found while reading the untested code
+
+| # | Where | Defect |
+|---|---|---|
+| 1 | `agentComm/commProtocol.verify()` | **Did not verify anything.** The shared type documents `signature` as "proves sender owns the key"; the code tested `/^[0-9a-f]{64}$/`, so **any** 64 hex characters passed and the envelope came out stamped `metadata.verified = true` — a *stronger* claim than an unsigned message, on no evidence. Forging one required 64 arbitrary hex chars. |
+| 2 | `agentComm/feedback` | `avgLatencyMs = (avg + new) / 2` — an EWMA labelled as an average. The first task recorded was **halved** (200 ms reported as 100 ms); one 10 s outlier after 1000 fast tasks drags the "average" to ~5 s. |
+| 3 | `agentComm/feedback.getMetrics` | `approvalRate: 0.5` for agents with **no feedback at all**, reading as "half this agent's work was approved". |
+| 4 | `platform/release` | `bgStage()` set `stagingHealthy = true` unconditionally (comment: *"simulate health gate"*) and `bgSwap()` never read it. The gate guarding a production cutover was decorative **in both directions**. |
+| 5 | `platform/region.failover()` | Ran the whole state machine inline — draining → switching → verifying → complete — in a handful of Redis writes and logged *"failover complete"*. Nothing drained, switched or was verified. A DR drill reading that record concludes the platform can fail over regionally when it never has. |
+| 6 | `disasterRecovery.triggerFailover()` | Set `healthy = true` on the component. Nothing in that method probes anything, and `healthy` feeds the dashboard's `allHealthy` roll-up — so a failover turned a known-unhealthy component green by assertion. Exactly backwards: a failover is when you are *least* sure of health. |
+| 7 | `http/routes/events` broadcast | **Cross-tenant leak.** `if (eventOrgId && client.organizationId && eventOrgId !== client.organizationId) continue;` — two fail-open null checks. `organizationId` is `string \| null`, so a client authenticated without an org was never skipped and received **every** organization's `message.created`, `conversation.updated`, `task.*` and `agent.*` events over a long-lived SSE stream. |
+
+**Deliberately not changed:** the `0.5` `performanceScore`/`reputationScore` on
+a new agent identity. That one is *correct* — `applyScore` is an EWMA with
+α=0.2, so a zero prior makes an agent's first upvote yield 0.20 while its first
+downvote yields 0.00, ranking a praised agent *below* a criticised one. The
+arithmetic was checked before leaving it, and a comment now records why, so the
+next sweep does not "fix" it. What must not happen is that prior leaking into
+reported *metrics* — hence defect 3.
+
+### 10.3 Testing approach
+
+`derivatives` is tested against **mathematical identities**, not snapshots: a
+snapshot locks in a wrong number, whereas put-call parity, delta bounds, gamma
+peaking at the money, monotonicity in vol/time, and round-tripping the IV solver
+against its own pricer only hold if the maths is right. Proven by flipping one
+sign in the put branch — parity and the textbook put value fail while
+everything else passes. That is the bug class code review misses.
+
+Every fix in this section was mutation-tested: reverting it must fail a test.
+
+### 10.4 Also fixed: two silent holes in `FakeKv`
+
+- `hset` implemented only `(key, field, value)`. ioredis also accepts
+  `hset(key, {…})`, which `release/pipeline.service.ts` uses to write a whole
+  record — so under test it stored **nothing**, and any release-pipeline test
+  would have failed for the wrong reason.
+- `multi()` exposed `set/del/hset/sadd/srem/zadd/lpush/ltrim` but **not
+  `rpush`**, though the class implements it. Services wrap `pipeline.exec()` in
+  `try/catch`, so a queued `rpush` threw inside the pipeline and the write was
+  dropped **with no error** — reasoning chains simply never persisted.
+
+Added the missing forms plus `incr`/`incrby`/`decr`/`expire`/`zremrangebyrank`.
+
+### 10.5 Status
+
+**`COMPLETE` 43 → 54 · `PARTIAL` 42 → 32 · `STUB` 2 → 1 · `DEMO DATA` 0 ·
+`MISSING` 0.**
+
+`events` remains `STUB` legitimately: it is a two-route module by design (a
+stream and a health probe), now with 7 tests.
+
+**Gates: build 4/4 · typecheck 5/5 · 390 tests passing, 0 failing** (was 295).
+
+### 10.6 What is left
+
+The 32 remaining `PARTIAL` modules are **not** blocked on fabricated data. They
+are: **21** without a `packages/shared` type module, **11** without a web
+client, and **10** with no tests (`benchmarks`, `cryptoIntelligence`,
+`devportal`, `engineering`, `googleAuth`, `leadDiscovery`, `mfa`, `mobile`,
+`qa`, `talk`). Those are completeness gaps against the repo's own conventions,
+not correctness problems — worth working through, but none of them is a claim
+the platform is making falsely.
