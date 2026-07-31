@@ -7710,11 +7710,20 @@ function BiomedicalTab() {
     </div>
     <Card><CardHeader><CardTitle className="text-sm">Recent Studies</CardTitle></CardHeader>
     <CardContent className="space-y-2 text-xs">
+      {!(data.recentStudies||[]).length && (
+        <div className="text-text-muted">
+          No imaging studies recorded. Submitting a study queues it for reading —
+          this platform performs no automated interpretation, so findings appear
+          only once a configured inference provider or a radiologist records them.
+        </div>
+      )}
       {(data.recentStudies||[]).slice(0,8).map((s:any)=>(<div key={s.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
         <Activity className="h-3 w-3 text-crimson"/><span className="font-semibold flex-1">{s.modality} · {s.bodyPart}</span>
-        <Badge variant="slate">{s.priority||"routine"}</Badge>
-        <Badge variant={s.status==="finalized"?"emerald":s.status==="flagged"?"crimson":"amber"}>{s.status}</Badge>
-        {s.aiFindingsCount!=null && <span className="text-text-muted">{s.aiFindingsCount} findings</span>}
+        {s.radiologistReviewed && <Badge variant="emerald">radiologist read</Badge>}
+        <Badge variant={s.status==="signed_off"?"emerald":s.status==="escalated"?"crimson":"amber"}>{s.status}</Badge>
+        <span className="text-text-muted">
+          {(s.aiFindings||[]).length ? `${s.aiFindings.length} finding${s.aiFindings.length===1?"":"s"}` : "awaiting read"}
+        </span>
       </div>))}
     </CardContent></Card>
   </div>);
@@ -8297,7 +8306,26 @@ function HealthEcosystemTab() {
   if (!data) return <div/>;
   const t=data.today, w=data.weeklyAvg, lb=data.labelBreakdown||{};
   const criticalAlerts = (data.emergencyAlerts30d||[]).filter((a:any)=>a.severity==="critical"||a.severity==="emergency");
+  // Honest empty state: this module records real health data and derives
+  // aggregates from it. With nothing recorded we say so rather than showing
+  // zeroed gauges that read like real measurements.
+  const noData = data.hasData === false;
   return (<div className="space-y-4">
+    {noData && (
+      <div className="p-3 rounded-md border border-azure/40 bg-azure/10 text-xs flex items-start gap-2">
+        <Activity className="h-4 w-4 mt-0.5 text-azure shrink-0"/>
+        <div className="flex-1">
+          <div className="font-semibold text-azure">No health data recorded yet</div>
+          <div className="opacity-90 mt-0.5">
+            This module reports only measurements you record or that a connected device submits —
+            it does not generate sample vitals. Add a metric, log a session, or connect a device
+            via <span className="font-mono">/health-ecosystem/metrics</span>,
+            <span className="font-mono"> /wearables</span> or <span className="font-mono">/medical-devices</span>.
+            All scores below stay at zero until real data exists.
+          </div>
+        </div>
+      </div>
+    )}
     {/* Crimson disclaimer banner — Fifth Standing Rule */}
     <div className="p-3 rounded-md border border-crimson/40 bg-crimson/10 text-crimson-100 text-xs flex items-start gap-2">
       <ShieldAlert className="h-4 w-4 mt-0.5 text-crimson shrink-0"/>

@@ -1,123 +1,236 @@
 /**
  * Session 65 — Biomedical & Healthcare Intelligence.
- * Imaging, CDSS, hospital ops, lab, patient workflow, compliance, pharmacy, telemed.
+ * Imaging registry, hospital ops, pharmacy alerts, telemedicine.
  * All data uses hashed patient identifiers; access gated behind compliance.
  * Keys: bm:*
+ *
+ * ── REGISTRY-ONLY SCOPE ──────────────────────────────────────────────
+ * This service is an **intake and tracking registry**. It records imaging
+ * studies and routes them for human reading. It does NOT interpret images.
+ *
+ * Previously `submitStudy` waited 1.5s and then attached a randomly chosen
+ * finding — "Fracture suspected — correlate clinically", "Pleural effusion
+ * left side" — with a fabricated confidence score, and the bootstrap seeded 18
+ * such studies against invented patient hashes. Presenting a random draw as an
+ * AI radiology finding is unsafe and unusable for any real clinical workflow,
+ * so all synthetic diagnostics have been removed.
+ *
+ * A submitted study now enters status `queued` with an empty `aiFindings`
+ * array and stays there until either:
+ *   - a real inference provider is configured and returns findings, or
+ *   - a radiologist records their read.
+ *
+ * `aiFindings` is only ever populated from a genuine model or clinician.
+ * Hospital-ops metrics, pharmacy alerts and telemedicine sessions are likewise
+ * reported from recorded entries only; nothing is simulated.
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
-import { BiomedicalDashboard, ImagingStudy, ClinicalDecision, HospitalOpsMetric, PharmacyAlert, TelemedicineSession, BIOMED_AREAS, BiomedArea } from "@windels/shared";
+import {
+  BiomedicalDashboard, ImagingStudy, HospitalOpsMetric, PharmacyAlert,
+  TelemedicineSession, BIOMED_AREAS,
+} from "@windels/shared";
 
 const K = {
-  img: (oid:string,id:string)=>`bm:img:${oid}:${id}`, imgs:(oid:string)=>`bm:imgs:${oid}`,
-  cd: (oid:string,id:string)=>`bm:cd:${oid}:${id}`, cds:(oid:string)=>`bm:cds:${oid}`,
-  ph: (oid:string,id:string)=>`bm:ph:${oid}:${id}`, phs:(oid:string)=>`bm:phs:${oid}`,
-  tl: (oid:string,id:string)=>`bm:tl:${oid}:${id}`, tls:(oid:string)=>`bm:tls:${oid}`,
-  meta:(oid:string)=>`bm:meta:${oid}`,
+  img: (oid: string, id: string) => `bm:img:${oid}:${id}`, imgs: (oid: string) => `bm:imgs:${oid}`,
+  ph:  (oid: string, id: string) => `bm:ph:${oid}:${id}`,  phs:  (oid: string) => `bm:phs:${oid}`,
+  tl:  (oid: string, id: string) => `bm:tl:${oid}:${id}`,  tls:  (oid: string) => `bm:tls:${oid}`,
+  ops: (oid: string) => `bm:ops:${oid}`,
+  meta: (oid: string) => `bm:meta:${oid}`,
 };
-const s2=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
-function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
-const hash = ()=>"pt-"+randomUUID().slice(0,12);
+const s2 = (o: any) => JSON.stringify(o);
+const uid = (p: string) => p + randomUUID().slice(0, 8);
 
-const MODALITIES: ImagingStudy["modality"][] = ["xray","ct","mri","ultrasound","pet","mammo","pathology"];
-const BODY_PARTS = ["chest","brain","abdomen","knee","spine","breast","pelvis","hip"];
-const FINDINGS_POOL = [
-  {finding:"No acute cardiopulmonary abnormality",sev:"low",pri:false},
-  {finding:"Small pulmonary nodule, follow-up recommended",sev:"moderate",pri:true},
-  {finding:"Pleural effusion left side",sev:"high",pri:true},
-  {finding:"Mild degenerative change",sev:"low",pri:false},
-  {finding:"Fracture suspected — correlate clinically",sev:"high",pri:true},
-];
+/** Patient identifiers are pseudonymous by construction — no PHI is stored. */
+const patientHash = () => "pt-" + randomUUID().slice(0, 12);
+
+async function readSet<T>(oid: string, setKey: string, docKey: (id: string) => string): Promise<T[]> {
+  const ids = await redis.smembers(setKey);
+  const out: T[] = [];
+  for (const id of ids) {
+    const r = await redis.hgetall(docKey(id));
+    if (r._doc) { try { out.push(JSON.parse(r._doc) as T); } catch { /* skip */ } }
+  }
+  return out;
+}
 
 export const BiomedicalService = {
-  async ensureBootstrapped(logger?:any, oid="org-windels", _uid?:string){
+  /**
+   * Marks the organization as initialised. Seeds **no** studies, alerts or
+   * sessions — a new organization starts empty and fills from real intake.
+   */
+  async ensureBootstrapped(logger?: any, oid = "org-windels", _uid?: string) {
     if (await redis.exists(K.meta(oid))) return;
-    const now=new Date().toISOString();
-    // seed studies
-    for (let i=0;i<18;i++){
-      const id=uid("img-"); const fin = FINDINGS_POOL[randInt(0,FINDINGS_POOL.length-1)];
-      const s: ImagingStudy = {
-        id, patientHash:hash(), modality: MODALITIES[randInt(0,MODALITIES.length-1)], bodyPart: BODY_PARTS[randInt(0,BODY_PARTS.length-1)],
-        aiFindings:[{finding:fin.finding,confidence:+rand(0.72,0.98).toFixed(2),severity:fin.sev as any,priority:fin.pri}],
-        radiologistReviewed: Math.random()>0.4,
-        status: (["queued","analyzing","review","signed_off","escalated"] as ImagingStudy["status"][])[randInt(0,4)],
-        createdAt: new Date(Date.now()-randInt(1,72)*3600000).toISOString(),
-        completedAt: Math.random()>0.3 ? new Date().toISOString() : undefined,
-      };
-      await redis.hset(K.img(oid,id),"_doc",s2(s)); await redis.sadd(K.imgs(oid),id);
-    }
-    // pharmacy alerts
-    for (let i=0;i<6;i++){
-      const id=uid("ph-");
-      const kinds: PharmacyAlert["kind"][] = ["interaction","duplicate","allergy","dose","contraindication"];
-      const a: PharmacyAlert = {
-        id, kind: kinds[randInt(0,kinds.length-1)],
-        severity:(["info","warn","critical"] as PharmacyAlert["severity"][])[randInt(0,2)],
-        message: ["Potential drug-drug interaction","Duplicate therapy detected","Allergy cross-reactivity","Dose above recommended","Contraindication flagged"][randInt(0,4)],
-        at: new Date(Date.now()-randInt(1,48)*3600000).toISOString(),
-      };
-      await redis.hset(K.ph(oid,id),"_doc",s2(a)); await redis.sadd(K.phs(oid),id);
-    }
-    // telemedicine
-    for (let i=0;i<4;i++){
-      const id=uid("tl-");
-      const t: TelemedicineSession = {
-        id, providerId:"prov-"+randInt(100,999), patientHash:hash(),
-        startedAt:new Date(Date.now()-randInt(1,24)*3600000).toISOString(),
-        endedAt: Math.random()>0.3?new Date().toISOString():undefined,
-        modality:(["video","voice","async"] as TelemedicineSession["modality"][])[randInt(0,2)],
-        language:["en","es","fr","zh"][randInt(0,3)], aiScribeActive:true, summaryGenerated:true,
-      };
-      await redis.hset(K.tl(oid,id),"_doc",s2(t)); await redis.sadd(K.tls(oid),id);
-    }
-    await redis.set(K.meta(oid),"1");
-    logger?.info?.("[biomedical] bootstrap complete");
+    await redis.set(K.meta(oid), "1");
+    logger?.info?.("[biomedical] initialized (registry-only; no synthetic studies or findings)");
   },
 
-  async dashboard(oid="org-windels"): Promise<BiomedicalDashboard>{
+  async dashboard(oid = "org-windels"): Promise<BiomedicalDashboard> {
     if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
-    const ids=await redis.smembers(K.imgs(oid));
-    const studies:ImagingStudy[]=[];
-    let reviewed=0, escalations=0;
-    for (const id of ids){const r=await redis.hgetall(K.img(oid,id)); if(r._doc){const s:ImagingStudy=JSON.parse(r._doc); studies.push(s); if(s.radiologistReviewed)reviewed++; if(s.status==="escalated")escalations++;}}
-    const last24=studies.filter(s=>Date.now()-new Date(s.createdAt).getTime()<86400000);
-    const ops: HospitalOpsMetric[] = [
-      {label:"ED Wait (min)",value:randInt(18,62),unit:"min",target:30,status:randInt(0,1)?"warn":"ok"},
-      {label:"ICU Beds",value:randInt(68,98),unit:"%",target:90,status:"ok"},
-      {label:"OR Utilization",value:+rand(62,96).toFixed(1),unit:"%",target:85,status:"ok"},
-      {label:"Discharges / hr",value:randInt(4,18),unit:"/hr",target:10,status:"ok"},
-      {label:"Readmission 30d",value:+rand(3.8,9.2).toFixed(1),unit:"%",target:7,status:"warn"},
-      {label:"Lab TAT",value:randInt(42,140),unit:"min",target:90,status:"ok"},
-    ];
-    const phIds=await redis.smembers(K.phs(oid)); const pharm:PharmacyAlert[]=[];
-    for (const id of phIds){const r=await redis.hgetall(K.ph(oid,id)); if(r._doc) pharm.push(JSON.parse(r._doc));}
-    const tlIds=await redis.smembers(K.tls(oid)); let tlActive=0;
-    for (const id of tlIds){const r=await redis.hgetall(K.tl(oid,id)); if(r._doc){const t:TelemedicineSession=JSON.parse(r._doc); if(!t.endedAt) tlActive++;}}
-    const areas: BiomedicalDashboard["areas"] = {} as any;
-    for (const a of BIOMED_AREAS) areas[a] = { enabled:true, models:randInt(1,6), reviewed24h:randInt(0,20), escalations24h:randInt(0,a==="clinical_decision"?3:1) };
-    const compliance: BiomedicalDashboard["complianceStatus"] = {
-      HIPAA:"compliant", HITECH:"compliant", "FDA-AI-AAP":"at_risk", "CE-MDR":"gap", "ISO-13485":"compliant", "21 CFR Part 11":"compliant", "GDPR-H":"compliant",
+
+    const [studies, pharm, telemed, ops] = await Promise.all([
+      readSet<ImagingStudy>(oid, K.imgs(oid), (id) => K.img(oid, id)),
+      readSet<PharmacyAlert>(oid, K.phs(oid), (id) => K.ph(oid, id)),
+      readSet<TelemedicineSession>(oid, K.tls(oid), (id) => K.tl(oid, id)),
+      redis.get(K.ops(oid)).then((r) => { try { return r ? JSON.parse(r) as HospitalOpsMetric[] : []; } catch { return []; } }),
+    ]);
+
+    const last24 = studies.filter((s) => Date.now() - new Date(s.createdAt).getTime() < 86_400_000);
+    const alerts24h = pharm.filter((a) => Date.now() - new Date(a.at).getTime() < 86_400_000).length;
+
+    // Turnaround is measured over studies that actually completed.
+    const completed = studies.filter((s) => s.completedAt);
+    const avgTurnaroundMin = completed.length
+      ? Math.round(
+          completed.reduce((acc, s) =>
+            acc + (new Date(s.completedAt!).getTime() - new Date(s.createdAt).getTime()) / 60_000, 0) / completed.length,
+        )
+      : 0;
+
+    // Per-area counters are derived from recorded studies, not invented.
+    const areas = {} as BiomedicalDashboard["areas"];
+    for (const a of BIOMED_AREAS) {
+      areas[a] = { enabled: true, models: 0, reviewed24h: 0, escalations24h: 0 };
+    }
+    areas.medical_imaging.reviewed24h = last24.filter((s) => s.radiologistReviewed).length;
+    areas.medical_imaging.escalations24h = last24.filter((s) => s.status === "escalated").length;
+    areas.pharmacy.escalations24h = pharm.filter(
+      (a) => a.severity === "critical" && Date.now() - new Date(a.at).getTime() < 86_400_000,
+    ).length;
+    areas.telemedicine.reviewed24h = telemed.filter(
+      (t) => Date.now() - new Date(t.startedAt).getTime() < 86_400_000,
+    ).length;
+
+    // Compliance posture is an attested control state, not a guess. Until a
+    // control has been formally assessed it is reported as a gap.
+    const complianceStatus: BiomedicalDashboard["complianceStatus"] = {
+      HIPAA: "gap", HITECH: "gap", "FDA-AI-AAP": "gap", "CE-MDR": "gap",
+      "ISO-13485": "gap", "21 CFR Part 11": "gap", "GDPR-H": "gap",
     };
+
     return {
       areas,
-      imaging:{studies24h:last24.length, aiAssisted:Math.round(last24.length*0.86), pendingReview:studies.filter(s=>s.status==="review").length, avgTurnaroundMin:randInt(22,90)},
-      ops, alerts24h: pharm.length, pharmacyAlerts:pharm, telemetryActive:tlActive,
-      complianceStatus:compliance,
-      recentStudies: studies.sort((a,b)=>b.createdAt.localeCompare(a.createdAt)).slice(0,8),
+      imaging: {
+        studies24h: last24.length,
+        // "AI assisted" counts studies that carry at least one real finding.
+        aiAssisted: last24.filter((s) => s.aiFindings.length > 0).length,
+        pendingReview: studies.filter((s) => s.status === "review" || s.status === "queued").length,
+        avgTurnaroundMin,
+      },
+      ops,
+      alerts24h,
+      pharmacyAlerts: pharm.sort((a, b) => b.at.localeCompare(a.at)).slice(0, 20),
+      telemetryActive: telemed.filter((t) => !t.endedAt).length,
+      complianceStatus,
+      recentStudies: studies.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8),
     };
   },
 
-  async submitStudy(input:{modality:ImagingStudy["modality"];bodyPart:string;organizationId?:string}): Promise<ImagingStudy>{
-    const oid=input.organizationId||"org-windels"; const id=uid("img-"); const now=new Date().toISOString();
-    const s: ImagingStudy={id,patientHash:hash(),modality:input.modality,bodyPart:input.bodyPart,aiFindings:[],radiologistReviewed:false,status:"analyzing",createdAt:now};
-    await redis.hset(K.img(oid,id),"_doc",s2(s)); await redis.sadd(K.imgs(oid),id);
-    setTimeout(async ()=>{
-      const fin = FINDINGS_POOL[randInt(0,FINDINGS_POOL.length-1)];
-      s.aiFindings=[{finding:fin.finding,confidence:+rand(0.72,0.98).toFixed(2),severity:fin.sev as any,priority:fin.pri}];
-      s.status=fin.pri?"escalated":"review"; s.completedAt=new Date().toISOString();
-      await redis.hset(K.img(oid,id),"_doc",s2(s));
-    },1500);
-    return s;
+  /**
+   * Register an imaging study for reading.
+   *
+   * The study is queued with no findings. This service performs no image
+   * interpretation: findings are attached only by `recordFindings`, from a
+   * configured inference provider or a radiologist's read.
+   */
+  async submitStudy(input: {
+    modality: ImagingStudy["modality"];
+    bodyPart: string;
+    organizationId?: string;
+  }): Promise<ImagingStudy> {
+    const oid = input.organizationId || "org-windels";
+    const id = uid("img-");
+    const study: ImagingStudy = {
+      id,
+      patientHash: patientHash(),
+      modality: input.modality,
+      bodyPart: input.bodyPart,
+      aiFindings: [],
+      radiologistReviewed: false,
+      status: "queued",
+      createdAt: new Date().toISOString(),
+    };
+    await redis.hset(K.img(oid, id), "_doc", s2(study));
+    await redis.sadd(K.imgs(oid), id);
+    return study;
+  },
+
+  async getStudy(oid: string, id: string): Promise<ImagingStudy | null> {
+    const r = await redis.hgetall(K.img(oid, id));
+    if (!r._doc) return null;
+    try { return JSON.parse(r._doc) as ImagingStudy; } catch { return null; }
+  },
+
+  async listStudies(oid: string, limit = 50): Promise<ImagingStudy[]> {
+    const all = await readSet<ImagingStudy>(oid, K.imgs(oid), (id) => K.img(oid, id));
+    return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
+  },
+
+  /**
+   * Attach findings from a real reader (model or clinician) and close the study.
+   * `reviewedByRadiologist` records that a human signed the read.
+   */
+  async recordFindings(
+    oid: string,
+    id: string,
+    findings: ImagingStudy["aiFindings"],
+    opts?: { reviewedByRadiologist?: boolean },
+  ): Promise<ImagingStudy | null> {
+    const study = await this.getStudy(oid, id);
+    if (!study) return null;
+    study.aiFindings = findings;
+    study.radiologistReviewed = opts?.reviewedByRadiologist ?? study.radiologistReviewed;
+    // Anything flagged priority is escalated; a signed human read finalises.
+    study.status = findings.some((f) => f.priority)
+      ? "escalated"
+      : study.radiologistReviewed ? "signed_off" : "review";
+    study.completedAt = new Date().toISOString();
+    await redis.hset(K.img(oid, id), "_doc", s2(study));
+    return study;
+  },
+
+  // ── pharmacy alerts (recorded by integrations / staff) ────────────
+  async addPharmacyAlert(oid: string, input: Omit<PharmacyAlert, "id" | "at"> & { at?: string }): Promise<PharmacyAlert> {
+    const id = uid("ph-");
+    const alert: PharmacyAlert = { ...input, id, at: input.at ?? new Date().toISOString() };
+    await redis.hset(K.ph(oid, id), "_doc", s2(alert));
+    await redis.sadd(K.phs(oid), id);
+    return alert;
+  },
+
+  // ── telemedicine sessions ─────────────────────────────────────────
+  async startTelemedSession(
+    oid: string,
+    input: { providerId: string; modality: TelemedicineSession["modality"]; language?: string; aiScribeActive?: boolean },
+  ): Promise<TelemedicineSession> {
+    const id = uid("tl-");
+    const session: TelemedicineSession = {
+      id,
+      providerId: input.providerId,
+      patientHash: patientHash(),
+      startedAt: new Date().toISOString(),
+      modality: input.modality,
+      language: input.language ?? "en",
+      aiScribeActive: input.aiScribeActive ?? false,
+      summaryGenerated: false,
+    };
+    await redis.hset(K.tl(oid, id), "_doc", s2(session));
+    await redis.sadd(K.tls(oid), id);
+    return session;
+  },
+
+  async endTelemedSession(oid: string, id: string): Promise<TelemedicineSession | null> {
+    const r = await redis.hgetall(K.tl(oid, id));
+    if (!r._doc) return null;
+    const session = JSON.parse(r._doc) as TelemedicineSession;
+    session.endedAt = new Date().toISOString();
+    await redis.hset(K.tl(oid, id), "_doc", s2(session));
+    return session;
+  },
+
+  /** Replace the recorded hospital-ops metric set (from a real ops feed). */
+  async setOpsMetrics(oid: string, metrics: HospitalOpsMetric[]): Promise<HospitalOpsMetric[]> {
+    await redis.set(K.ops(oid), s2(metrics));
+    return metrics;
   },
 };

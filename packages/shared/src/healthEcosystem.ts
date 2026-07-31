@@ -262,6 +262,9 @@ export interface HealthDashboard {
   screeningsDue: number;
   labelBreakdown: Record<HealthLabel, number>;
   disclaimer: string;
+  /** False when the user has no recorded health data yet, so the UI can render
+   *  an honest empty state instead of implying measurements exist. */
+  hasData: boolean;
   modules: Array<{
     id: string;
     name: string;
