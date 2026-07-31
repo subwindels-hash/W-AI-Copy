@@ -1,0 +1,117 @@
+# ── WINDELS AI OS — production docker-compose (single-node, Traefik+Let's Encrypt)
+# Usage:
+#   DOMAIN=windels.example.com ACME_EMAIL=ops@example.com \
+#   POSTGRES_PASSWORD=... REDIS_PASSWORD=... JWT_SECRET=... \
+#   docker compose -f docker-compose.yml -f infra/docker/docker-compose.prod.yml up -d
+#
+# The root docker-compose.yml defines postgres + redis (with dev ports exposed).
+# This override adds: api (from infra/docker/Dockerfile.api), web (nginx),
+# and optional traefik reverse-proxy with ACME TLS.
+version: "3.9"
+
+services:
+  traefik:
+    image: traefik:v3.1
+    container_name: windels-traefik
+    restart: unless-stopped
+    command:
+      - --api.insecure=false
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entryPoint.to=websecure
+      - --entrypoints.web.http.redirections.entryPoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.le.acme.httpchallenge=true
+      - --certificatesresolvers.le.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.le.acme.email=${ACME_EMAIL:-ops@windels.ai}
+      - --certificatesresolvers.le.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - windels_traefik_acme:/letsencrypt
+    networks: [windels-net]
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    image: windels-ai-api:${IMAGE_TAG:-latest}
+    container_name: windels-api
+    restart: unless-stopped
+    environment:
+      NODE_ENV: production
+      API_PORT: "4000"
+      API_HOST: "0.0.0.0"
+      API_CORS_ORIGIN: "https://${DOMAIN:-localhost}"
+      DATABASE_URL: postgresql://${POSTGRES_USER:-windels}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@postgres:5432/${POSTGRES_DB:-windels}
+      REDIS_URL: redis://:${REDIS_PASSWORD:-}@redis:6379
+      JWT_SECRET: ${JWT_SECRET:?JWT_SECRET required}
+      SESSION_COOKIE_SECURE: "true"
+      BOOTSTRAP_SUPERADMIN_EMAIL: ${BOOTSTRAP_SUPERADMIN_EMAIL:-admin@windels.ai}
+      BOOTSTRAP_SUPERADMIN_PASSWORD: ${BOOTSTRAP_SUPERADMIN_PASSWORD:?BOOTSTRAP_SUPERADMIN_PASSWORD required}
+      GIT_COMMIT: ${GIT_COMMIT:-}
+      SENTRY_DSN: ${SENTRY_DSN:-}
+      LOG_LEVEL: ${LOG_LEVEL:-info}
+    depends_on:
+      postgres: { condition: service_healthy }
+      redis: { condition: service_healthy }
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.windels-api.rule=Host(`${DOMAIN:-localhost}`) && PathPrefix(`/api`)
+      - traefik.http.routers.windels-api.entrypoints=websecure
+      - traefik.http.routers.windels-api.tls.certresolver=le
+      - traefik.http.services.windels-api.loadbalancer.server.port=4000
+    networks: [windels-net]
+    deploy:
+      resources:
+        limits: { cpus: "2", memory: 2048M }
+        reservations: { cpus: "0.25", memory: 256M }
+    # Run prisma migrations on startup before API
+    command: sh -c "cd /app/apps/api && node dist/index.js"
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    image: windels-ai-web:${IMAGE_TAG:-latest}
+    container_name: windels-web
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: http://api:4000
+    depends_on: [api]
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.windels-web.rule=Host(`${DOMAIN:-localhost}`)
+      - traefik.http.routers.windels-web.entrypoints=websecure
+      - traefik.http.routers.windels-web.tls.certresolver=le
+      - traefik.http.services.windels-web.loadbalancer.server.port=80
+    networks: [windels-net]
+    deploy:
+      resources:
+        limits: { cpus: "1", memory: 256M }
+
+  migrate:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+    image: windels-ai-api:${IMAGE_TAG:-latest}
+    container_name: windels-migrate
+    restart: "no"
+    environment:
+      DATABASE_URL: postgresql://${POSTGRES_USER:-windels}:${POSTGRES_PASSWORD:?POSTGRES_PASSWORD required}@postgres:5432/${POSTGRES_DB:-windels}
+      NODE_ENV: production
+    depends_on:
+      postgres: { condition: service_healthy }
+    networks: [windels-net]
+    command: sh -c "cd /app/apps/api && node dist/index.js --exit-after-migrate"
+    profiles: ["migrate"]
+
+volumes:
+  windels_traefik_acme:
+
+networks:
+  windels-net:
+    driver: bridge

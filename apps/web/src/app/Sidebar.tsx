@@ -1,0 +1,101 @@
+import { NavLink } from "react-router-dom";
+import {
+  LayoutDashboard,
+  Users,
+  MessagesSquare,
+  SquareDashedMousePointer,
+  MessageCircle,
+  GitBranch,
+  BarChart3,
+  Folder,
+  Settings,
+  Code2,
+  Building2,
+  Shield,
+  Globe2,
+  Lock,
+  Monitor,
+  TrendingUp,
+  Mic,
+  Film,
+  BookOpen,
+} from "lucide-react";
+import { cn } from "@/lib/cn";
+
+const navItems = [
+  { to: "/app", icon: LayoutDashboard, label: "Dashboard", end: true },
+  { to: "/app/trading", icon: TrendingUp, label: "Trading Intel" },
+  { to: "/app/voice", icon: Mic, label: "Voice Studio" },
+  { to: "/app/media", icon: Film, label: "Media Factory" },
+  { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
+  { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
+  { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
+  { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },
+  { to: "/app/talk", icon: MessageCircle, label: "Talk" },
+  { to: "/app/flow", icon: GitBranch, label: "Flow" },
+  { to: "/app/analytics", icon: BarChart3, label: "Analytics" },
+  { to: "/app/developers", icon: Code2, label: "Developers" },
+  { to: "/app/enterprise", icon: Building2, label: "Enterprise" },
+  { to: "/app/governance", icon: Shield, label: "Governance" },
+  { to: "/app/platform", icon: Globe2, label: "Platform" },
+  { to: "/app/security", icon: Lock, label: "Security" },
+  { to: "/app/files", icon: Folder, label: "Files" },
+  { to: "/app/settings", icon: Settings, label: "Settings" },
+  { to: "/d", icon: Monitor, label: "Desktop" },
+];
+
+export function Sidebar({ collapsed }: { collapsed: boolean }) {
+  return (
+    <aside
+      className={cn(
+        "shrink-0 h-full bg-bg-dark/80 border-r border-white/5 flex flex-col transition-all duration-200",
+        collapsed ? "w-16" : "w-60"
+      )}
+    >
+      {/* Logo */}
+      <div className="h-14 flex items-center gap-2 px-4 border-b border-white/5">
+        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-azure to-violet grid place-items-center text-white font-bold">
+          W
+        </div>
+        {!collapsed && (
+          <div className="flex flex-col leading-tight">
+            <span className="text-sm font-semibold text-text-bright tracking-tight">WINDELS</span>
+            <span className="text-[10px] uppercase tracking-widest text-text-muted">AI OS</span>
+          </div>
+        )}
+      </div>
+
+      <nav className="flex-1 p-2 space-y-0.5 overflow-y-auto">
+        {navItems.map((item) => (
+          <NavLink
+            key={item.to}
+            to={item.to}
+            end={item.end}
+            className={({ isActive }) =>
+              cn(
+                "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-colors",
+                "text-slate-300 hover:bg-white/5 hover:text-white",
+                isActive &&
+                  "bg-white/10 text-white border-l-2 border-azure rounded-l-none pl-[11px]"
+              )
+            }
+          >
+            <item.icon className="h-5 w-5 shrink-0" />
+            {!collapsed && <span className="truncate">{item.label}</span>}
+          </NavLink>
+        ))}
+      </nav>
+
+      <div className="p-2 border-t border-white/5">
+        <div
+          className={cn(
+            "rounded-lg p-2 text-[11px] text-text-muted",
+            !collapsed && "bg-white/5"
+          )}
+        >
+          {collapsed ? "v0.89" : "Sessions 38–75 · v0.89.0"}
+        </div>
+      </div>
+    </aside>
+  );
+}

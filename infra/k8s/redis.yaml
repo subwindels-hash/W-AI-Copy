@@ -1,0 +1,53 @@
+# ── Redis ───────────────────────────────────────────────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: windels-redis
+  namespace: windels
+  labels: { app: windels-redis }
+spec:
+  type: ClusterIP
+  ports: [{ port: 6379, targetPort: 6379, name: redis }]
+  selector: { app: windels-redis }
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windels-redis
+  namespace: windels
+  labels: { app: windels-redis }
+spec:
+  replicas: 1
+  selector: { matchLabels: { app: windels-redis } }
+  template:
+    metadata:
+      labels: { app: windels-redis }
+    spec:
+      containers:
+        - name: redis
+          image: redis:7-alpine
+          args: ["redis-server", "--appendonly", "yes", "--requirepass", "$(REDIS_PASSWORD)"]
+          ports: [{ containerPort: 6379 }]
+          envFrom:
+            - secretRef: { name: windels-db-credentials }
+          volumeMounts: [{ name: redisdata, mountPath: "/data" }]
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "500m", memory: "512Mi" }
+          readinessProbe:
+            exec: { command: ["redis-cli", "ping"] }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+      volumes:
+        - name: redisdata
+          persistentVolumeClaim:
+            claimName: windels-redis-pvc
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: windels-redis-pvc
+  namespace: windels
+spec:
+  accessModes: ["ReadWriteOnce"]
+  resources: { requests: { storage: 5Gi } }

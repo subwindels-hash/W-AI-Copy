@@ -1,0 +1,44 @@
+# ── Web (nginx static) Deployment + Service ────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: windels-web
+  namespace: windels
+  labels: { app: windels-web }
+spec:
+  replicas: 2
+  selector: { matchLabels: { app: windels-web } }
+  strategy:
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }
+  template:
+    metadata:
+      labels: { app: windels-web }
+    spec:
+      containers:
+        - name: web
+          image: ghcr.io/windels-ai/windels-web:latest
+          ports: [{ containerPort: 80, name: http }]
+          env:
+            - { name: API_UPSTREAM, value: "http://windels-api:4000" }
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 20
+          resources:
+            requests: { cpu: "50m", memory: "64Mi" }
+            limits: { cpu: "500m", memory: "256Mi" }
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: windels-web
+  namespace: windels
+  labels: { app: windels-web }
+spec:
+  type: ClusterIP
+  ports: [{ port: 80, targetPort: http, name: http }]
+  selector: { app: windels-web }

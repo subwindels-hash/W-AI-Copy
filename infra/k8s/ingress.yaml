@@ -1,0 +1,32 @@
+# ── NGINX Ingress (TLS via cert-manager + Let's Encrypt) ───────────────────
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: windels-ingress
+  namespace: windels
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt-prod
+    nginx.ingress.kubernetes.io/proxy-body-size: "64m"
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "300"
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "300"
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [windels.example.com]
+      secretName: windels-tls
+  rules:
+    - host: windels.example.com
+      http:
+        paths:
+          - path: /api
+            pathType: Prefix
+            backend:
+              service:
+                name: windels-api
+                port: { number: 4000 }
+          - path: /
+            pathType: Prefix
+            backend:
+              service:
+                name: windels-web
+                port: { number: 80 }

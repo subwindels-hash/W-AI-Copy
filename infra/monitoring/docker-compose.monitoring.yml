@@ -1,0 +1,74 @@
+# ── Local monitoring stack (Prometheus + Grafana + node-exporter) ─────────
+# Usage:
+#   docker compose -f infra/monitoring/docker-compose.monitoring.yml up -d
+# Then open http://localhost:3000 (admin/admin) and add Prometheus data source at http://prometheus:9090.
+version: "3.9"
+
+services:
+  prometheus:
+    image: prom/prometheus:v2.54
+    container_name: windels-prom
+    restart: unless-stopped
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./alerts.yml:/etc/prometheus/alerts.yml:ro
+      - windels_promdata:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+      - "--storage.tsdb.path=/prometheus"
+      - "--storage.tsdb.retention.time=30d"
+      - "--web.enable-lifecycle"
+    networks: [windels-net]
+
+  alertmanager:
+    image: prom/alertmanager:v0.27
+    container_name: windels-alertmgr
+    restart: unless-stopped
+    volumes:
+      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml:ro
+      - windels_alertdata:/alertmanager
+    ports: ["127.0.0.1:9093:9093"]
+    networks: [windels-net]
+
+  grafana:
+    image: grafana/grafana:11.1
+    container_name: windels-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - windels_grafanadata:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    ports: ["127.0.0.1:3000:3000"]
+    networks: [windels-net]
+    depends_on: [prometheus]
+
+  node-exporter:
+    image: prom/node-exporter:v1.8
+    container_name: windels-nodeexporter
+    restart: unless-stopped
+    pid: host
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    command:
+      - "--path.procfs=/host/proc"
+      - "--path.sysfs=/host/sys"
+      - "--path.rootfs=/rootfs"
+    ports: ["127.0.0.1:9100:9100"]
+    networks: [windels-net]
+
+volumes:
+  windels_promdata:
+  windels_grafanadata:
+  windels_alertdata:
+
+networks:
+  windels-net:
+    external: true
+    name: windels-net

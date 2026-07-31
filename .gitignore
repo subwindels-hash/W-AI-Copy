@@ -1,0 +1,46 @@
+node_modules
+dist
+build
+.next
+.turbo
+coverage
+.env
+.env.local
+*.log
+.DS_Store
+apps/api/prisma/migrations/dev.db*
+apps/api/uploads
+
+# Test artifacts
+tests/reports/
+playwright-report/
+test-results/
+playwright/.cache/
+blob-report/
+
+# Infra / Terraform
+infra/terraform/**/.terraform
+infra/terraform/**/.terraform.lock.hcl
+infra/terraform/**/*.tfstate
+infra/terraform/**/*.tfstate.backup
+infra/terraform/**/*.tfplan
+infra/terraform/**/crash.log
+infra/terraform/**/.terraformrc
+
+# Desktop build artifacts
+apps/desktop/release/
+apps/desktop/dist/
+
+# K8s kustomize edits (local dev only)
+infra/k8s/kustomization.yaml.bak
+
+# Misc
+*.tsbuildinfo
+.cache/
+.pnpm-store/
+
+# Exclude GitHub workflows due to API permissions
+.github/
+
+media-cache
+windels-ai-os-sessions-1-88.zip
