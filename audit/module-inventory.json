@@ -298,7 +298,8 @@
     "tests": [
       "extensions.spec.ts",
       "sessions41-76-80.spec.ts",
-      "agents/agents.test.ts"
+      "agents/agents.test.ts",
+      "services/ai/registry.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -1174,7 +1175,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "collaboration/canvasCollab.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -2334,7 +2337,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "smoke.spec.ts"
+      "smoke.spec.ts",
+      "publicApi/publicApi.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -4059,7 +4063,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1003,
+      "serviceTotalSloc": 1064,
       "serviceFiles": [
         "platform/cluster.service.ts",
         "platform/iac.service.ts",
@@ -4136,10 +4140,14 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "platform/cluster.test.ts",
+      "platform/deploymentGates.test.ts",
+      "platform/infraMetrics.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "kernel",
@@ -4229,7 +4237,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions37-40.spec.ts"
+      "sessions37-40.spec.ts",
+      "services/ai/registry.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -5210,10 +5219,11 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1490,
+      "serviceTotalSloc": 1753,
       "serviceFiles": [
         "cluster.service.ts",
         "cluster.test.ts",
+        "deploymentGates.test.ts",
         "iac.service.ts",
         "infraMetrics.service.ts",
         "infraMetrics.test.ts",
@@ -5292,6 +5302,7 @@
       "sessions42-47.spec.ts",
       "sessions54-60.spec.ts",
       "platform/cluster.test.ts",
+      "platform/deploymentGates.test.ts",
       "platform/infraMetrics.test.ts"
     ],
     "syntheticData": [],

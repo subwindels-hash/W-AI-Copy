@@ -262,6 +262,27 @@ function findTestsFor(modKey) {
     }
   }
 
+  // 2c. Follow the route's own service imports. `infrastructure` is backed by
+  //     platform/*.service.ts, so its tests live in platform/, not in a
+  //     directory named after the module. servicesFromRoutes() already knows
+  //     this mapping; reuse it rather than guessing from the module name.
+  for (const rel of servicesFromRoutes(modKey)) {
+    const dir = path.dirname(path.join(API_SERVICES, rel));
+    const relDir = path.dirname(rel);
+    if (relDir === modKey || relDir === ".") continue;
+    for (const f of ls(dir)) {
+      if (!f.endsWith(".test.ts")) continue;
+      // Only count a suite that actually exercises one of the imported
+      // services, not every test that happens to share the directory.
+      const src = read(path.join(dir, f));
+      const importsBacking = servicesFromRoutes(modKey).some((r) => {
+        const base = path.basename(r, ".ts");
+        return src.includes(`./${base}.js`) || src.includes(`${base}.js"`);
+      });
+      if (importsBacking) tests.push(`${relDir}/${f}`);
+    }
+  }
+
   // 3. Cross-cutting suites that exercise a module from elsewhere (a service
   //    moved onto the standard layout may still be tested from src/services,
   //    and config/*.test.ts pins behaviour across many modules).

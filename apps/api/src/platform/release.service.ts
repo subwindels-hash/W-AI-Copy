@@ -125,7 +125,23 @@ export const ReleaseService = {
     bg.stagingVersion = version;
     bg.stagingColor = bg.activeColor === "blue" ? "green" : "blue";
     bg.stagingReplicas = bg.activeReplicas;
-    bg.stagingHealthy = true; // simulate health gate
+    // Staging health decides whether a swap is safe, and this set it to `true`
+    // unconditionally with the comment "simulate health gate" — so the gate
+    // guarding a production cutover always reported green for an environment
+    // that had not been probed. Health is unknown until something reports it
+    // via `bgReportHealth()`.
+    bg.stagingHealthy = false;
+    await redisCmd.set(key, JSON.stringify(bg));
+    return bg;
+  },
+
+  /** Record a real health probe against the staged (idle) colour. */
+  async bgReportHealth(environment: string, service: string, healthy: boolean): Promise<BlueGreenState | null> {
+    const key = `${BG_PREFIX}${environment}:${service}`;
+    const raw = await redisCmd.get(key);
+    if (!raw) return null;
+    const bg = JSON.parse(raw) as BlueGreenState;
+    bg.stagingHealthy = healthy;
     await redisCmd.set(key, JSON.stringify(bg));
     return bg;
   },
@@ -135,6 +151,17 @@ export const ReleaseService = {
     const raw = await redisCmd.get(key); if (!raw) throw new Error("no bg state");
     const bg: BlueGreenState = JSON.parse(raw);
     if (!bg.stagingVersion) throw new Error("no staged version");
+    // The swap is the production cutover, and it never consulted the health
+    // gate it had just set. Combined with bgStage() hard-setting
+    // stagingHealthy = true, the "gate" was decorative in both directions:
+    // nothing measured it and nothing read it. Refuse to promote a colour that
+    // has not been confirmed healthy.
+    if (!bg.stagingHealthy) {
+      throw Object.assign(
+        new Error("staging environment is not confirmed healthy; report a probe via bgReportHealth() before swapping"),
+        { code: "BG_STAGING_UNHEALTHY" },
+      );
+    }
     const newActive = bg.stagingColor;
     bg.activeColor = newActive;
     bg.activeVersion = bg.stagingVersion;
