@@ -12,6 +12,14 @@ import { logger } from "../observability/logger.js";
 import type {
   Release, ReleaseStatus, DeploymentStrategy, BlueGreenState, BGColor, CanaryState, CanaryStatus,
 } from "@windels/shared/infrastructure";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('platform:release');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const RELEASES_KEY = "infra:releases";
 const REL_PREFIX = "infra:release:";
@@ -78,6 +86,7 @@ export const ReleaseService = {
   },
 
   async deploy(input: { environment: Release["environment"]; service: Release["service"]; version: string; strategy: DeploymentStrategy; author: string; commitSha?: string; changelog?: string }): Promise<Release> {
+    _rng.reseed(`deploy`);
     await this.seed();
     const previous = (await this.list({ environment: input.environment, service: input.service, status: "deployed" }))[0];
     const rel: Release = {
@@ -89,7 +98,7 @@ export const ReleaseService = {
     await redisCmd.sadd(RELEASES_KEY, rel.id);
 
     // Simulate deploy finishing in-memory (instant for MVP).
-    rel.status = "deployed"; rel.deployedAt = now(); rel.durationMs = 30_000 + Math.floor(Math.random()*60_000); rel.healthGatePassed = true;
+    rel.status = "deployed"; rel.deployedAt = now(); rel.durationMs = 30_000 + Math.floor(_rng.next()*60_000); rel.healthGatePassed = true;
     await redisCmd.set(`${REL_PREFIX}${rel.id}`, JSON.stringify(rel));
 
     // Update B/G or canary state if applicable

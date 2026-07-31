@@ -7,6 +7,14 @@ import type {
   Scenario, SimulationRun, KpiImpact, ScenarioKind, ScenarioStatus, ScenarioAssumption,
 } from "@windels/shared";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('marketplace:simulation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = { scenarios: "mk:scenarios", runs: "mk:sim-runs", runs24h: "mk:sim-runs24h" };
 
@@ -36,7 +44,7 @@ function simulate(kind: ScenarioKind, assumptions: ScenarioAssumption[]): { kpis
     const v = assumptions.find(x => x.id === k || x.label.toLowerCase().includes(k.toLowerCase()));
     return v ? (typeof v.value === "number" ? v.value : Number(v.value) || d) : d;
   };
-  const iterations = 200 + Math.floor(Math.random() * 800);
+  const iterations = 200 + Math.floor(_rng.next() * 800);
   const baseKpis: Record<string, { baseline: number; deltaPct: number; unit: string; positive: boolean }> = {
     revenue: { baseline: 120_000_000, deltaPct: 0, unit: "USD/yr", positive: true },
     ebitda: { baseline: 18_000_000, deltaPct: 0, unit: "USD/yr", positive: true },
@@ -48,46 +56,46 @@ function simulate(kind: ScenarioKind, assumptions: ScenarioAssumption[]): { kpis
   };
   switch (kind) {
     case "revenue-forecast":
-      baseKpis.revenue.deltaPct = 6 + Math.random() * 8; baseKpis.ebitda.deltaPct = 5 + Math.random() * 7;
-      baseKpis.customerSat.deltaPct = 1 + Math.random() * 3;
+      baseKpis.revenue.deltaPct = 6 + _rng.next() * 8; baseKpis.ebitda.deltaPct = 5 + _rng.next() * 7;
+      baseKpis.customerSat.deltaPct = 1 + _rng.next() * 3;
       break;
     case "budget-workforce":
     case "hiring-plan":
-      baseKpis.opex.deltaPct = -2 - Math.random() * 4; baseKpis.headcount.deltaPct = -1 - Math.random() * 3;
-      baseKpis.ebitda.deltaPct = 3 + Math.random() * 5;
+      baseKpis.opex.deltaPct = -2 - _rng.next() * 4; baseKpis.headcount.deltaPct = -1 - _rng.next() * 3;
+      baseKpis.ebitda.deltaPct = 3 + _rng.next() * 5;
       break;
     case "supply-disruption":
-      baseKpis.supplyDisruptionDays.deltaPct = 40 + Math.random() * 80;
-      baseKpis.revenue.deltaPct = -4 - Math.random() * 8;
-      baseKpis.riskScore.deltaPct = 15 + Math.random() * 20;
+      baseKpis.supplyDisruptionDays.deltaPct = 40 + _rng.next() * 80;
+      baseKpis.revenue.deltaPct = -4 - _rng.next() * 8;
+      baseKpis.riskScore.deltaPct = 15 + _rng.next() * 20;
       break;
     case "bcp":
     case "dr":
-      baseKpis.riskScore.deltaPct = -25 - Math.random() * 20;
-      baseKpis.ebitda.deltaPct = 1 + Math.random() * 3;
+      baseKpis.riskScore.deltaPct = -25 - _rng.next() * 20;
+      baseKpis.ebitda.deltaPct = 1 + _rng.next() * 3;
       break;
     case "cyber-ir":
-      baseKpis.riskScore.deltaPct = -15 - Math.random() * 20;
-      baseKpis.opex.deltaPct = -3 - Math.random() * 5;
+      baseKpis.riskScore.deltaPct = -15 - _rng.next() * 20;
+      baseKpis.opex.deltaPct = -3 - _rng.next() * 5;
       break;
     case "market-scenario":
     case "investment-analysis":
-      baseKpis.revenue.deltaPct = (Math.random() - 0.3) * 20;
-      baseKpis.ebitda.deltaPct = (Math.random() - 0.35) * 18;
-      baseKpis.riskScore.deltaPct = (Math.random() - 0.2) * 25;
+      baseKpis.revenue.deltaPct = (_rng.next() - 0.3) * 20;
+      baseKpis.ebitda.deltaPct = (_rng.next() - 0.35) * 18;
+      baseKpis.riskScore.deltaPct = (_rng.next() - 0.2) * 25;
       break;
     case "operational-optimization":
-      baseKpis.opex.deltaPct = -5 - Math.random() * 8;
-      baseKpis.ebitda.deltaPct = 4 + Math.random() * 6;
-      baseKpis.customerSat.deltaPct = 2 + Math.random() * 4;
+      baseKpis.opex.deltaPct = -5 - _rng.next() * 8;
+      baseKpis.ebitda.deltaPct = 4 + _rng.next() * 6;
+      baseKpis.customerSat.deltaPct = 2 + _rng.next() * 4;
       break;
     case "resource-allocation":
-      baseKpis.opex.deltaPct = -3 - Math.random() * 5;
-      baseKpis.customerSat.deltaPct = 1 + Math.random() * 3;
+      baseKpis.opex.deltaPct = -3 - _rng.next() * 5;
+      baseKpis.customerSat.deltaPct = 1 + _rng.next() * 3;
       break;
     case "project-scheduling":
-      baseKpis.opex.deltaPct = -2 - Math.random() * 4;
-      baseKpis.customerSat.deltaPct = 2 + Math.random() * 3;
+      baseKpis.opex.deltaPct = -2 - _rng.next() * 4;
+      baseKpis.customerSat.deltaPct = 2 + _rng.next() * 3;
       break;
   }
   const kpis: KpiImpact[] = Object.entries(baseKpis).map(([metric, v]) => {
@@ -134,7 +142,7 @@ function simulate(kind: ScenarioKind, assumptions: ScenarioAssumption[]): { kpis
   if (baseKpis.opex.deltaPct > 3) risks.push("opex growth above target");
   return {
     kpis, narrative: narratives[kind], actions: actionsBase[kind],
-    risks, confidence: Number((0.72 + Math.random() * 0.2).toFixed(2)), iterations,
+    risks, confidence: Number((0.72 + _rng.next() * 0.2).toFixed(2)), iterations,
   };
 }
 

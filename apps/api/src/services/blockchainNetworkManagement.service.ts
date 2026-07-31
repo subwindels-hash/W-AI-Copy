@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:blockchainNetworkManagement');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -533,10 +539,10 @@ export async function healthCheckNode(nodeId: string): Promise<{
   const startTime = Date.now();
   
   // Simulate RPC call: eth_blockNumber or equivalent
-  const simulatedLatency = Math.floor(Math.random() * 200) + 10;
-  const simulatedBlockHeight = node.blockHeight + Math.floor(Math.random() * 10) + 1;
-  const isHealthy = Math.random() > 0.05; // 95% healthy rate
-  const isSyncing = Math.random() < 0.02; // 2% syncing rate
+  const simulatedLatency = Math.floor(_rng.next() * 200) + 10;
+  const simulatedBlockHeight = node.blockHeight + Math.floor(_rng.next() * 10) + 1;
+  const isHealthy = _rng.next() > 0.05; // 95% healthy rate
+  const isSyncing = _rng.next() < 0.02; // 2% syncing rate
 
   const now = new Date().toISOString();
   let newStatus: NodeStatus;
@@ -769,7 +775,7 @@ export async function getBestRpcEndpoint(networkId: string): Promise<{
   switch (network.config.loadBalancing) {
     case "round-robin": {
       // Simple round-robin based on last used index
-      const index = Math.floor(Math.random() * healthyNodes.length);
+      const index = Math.floor(_rng.next() * healthyNodes.length);
       selectedNode = healthyNodes[index];
       break;
     }

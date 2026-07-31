@@ -8,6 +8,14 @@ import type {
   IdentityPrincipal, IdentityProviderRec, ServiceAccount,
   PrincipalKind, IdpProvider, IdentityStatus, AiAgentIdentityClass,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('enterpriseFoundation:identity');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const PRINCS = "ef:principals";
 const PRINC  = (id: string) => `ef:princ:${id}`;
@@ -40,8 +48,9 @@ export const IdentityService = {
     return raw ? (JSON.parse(raw) as IdentityPrincipal) : null;
   },
   async createPrincipal(input: Omit<IdentityPrincipal,"id"|"createdAt"|"riskScore"> & { riskScore?: number }): Promise<IdentityPrincipal> {
+    _rng.reseed(`createPrincipal:${input}`);
     const id = randomUUID();
-    const p: IdentityPrincipal = { id, createdAt: iso(), riskScore: input.riskScore ?? Math.floor(Math.random()*30), ...input };
+    const p: IdentityPrincipal = { id, createdAt: iso(), riskScore: input.riskScore ?? Math.floor(_rng.next()*30), ...input };
     await redis.set(PRINC(id), SER(p));
     await redis.sadd(PRINCS, id);
     return p;

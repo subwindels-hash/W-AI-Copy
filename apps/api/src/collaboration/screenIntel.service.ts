@@ -7,6 +7,14 @@ import type {
   ScreenShareSession, InterfaceExplanation, GuidedStep, CodeAssistance,
   ScreenIssue, WorkflowDoc, ScreenSessionStatus, ScreenShareLevel, CodeAssistanceKind, DocFormat,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('collaboration:screenIntel');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   sSet: "coll:s:sess", s: (id: string) => `coll:s:s:${id}`,
@@ -50,11 +58,12 @@ export const ScreenIntelService = {
     return s;
   },
   async endSession(id: string): Promise<ScreenShareSession | null> {
+    _rng.reseed(`endSession:${id}`);
     const s = await this.getSession(id);
     if (!s) return null;
     s.status = "ended";
     s.endedAt = iso();
-    s.framesCaptured = s.framesCaptured || 120 + Math.floor(Math.random() * 1200);
+    s.framesCaptured = s.framesCaptured || 120 + Math.floor(_rng.next() * 1200);
     await redis.set(K.s(id), SER(s));
     return s;
   },
@@ -83,11 +92,12 @@ export const ScreenIntelService = {
     return (await getAll<GuidedStep>(K.stSet(sid), K.st)).sort((a, b) => a.stepNumber - b.stepNumber);
   },
   async advanceStep(sid: string, id: string, status: GuidedStep["status"]): Promise<GuidedStep | null> {
+    _rng.reseed(`advanceStep:${sid}`);
     const raw = await redis.get(K.st(id));
     if (!raw) return null;
     const g = JSON.parse(raw) as GuidedStep;
     g.status = status;
-    g.elapsedSec += 15 + Math.floor(Math.random() * 90);
+    g.elapsedSec += 15 + Math.floor(_rng.next() * 90);
     await redis.set(K.st(id), SER(g));
     const s = await this.getSession(sid);
     if (s && status === "done") { s.stepsGuided += 1; await redis.set(K.s(sid), SER(s)); }
@@ -121,12 +131,13 @@ export const ScreenIntelService = {
   },
 
   async generateDoc(sid: string, title: string, format: DocFormat = "markdown"): Promise<WorkflowDoc> {
+    _rng.reseed(`generateDoc:${sid}`);
     const id = randomUUID();
     const steps = await this.listSteps(sid);
     const rec: WorkflowDoc = {
       id, sessionId: sid, title, format, status: "ready",
       sections: ["Overview", "Prerequisites", "Step-by-step", "Troubleshooting", "References"],
-      wordCount: 350 + steps.length * 80 + Math.floor(Math.random() * 250),
+      wordCount: 350 + steps.length * 80 + Math.floor(_rng.next() * 250),
       generatedAt: iso(), exportedAt: iso(),
     };
     await redis.set(K.dc(id), SER(rec));

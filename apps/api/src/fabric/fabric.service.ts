@@ -14,6 +14,14 @@ import {
   FabricTwinKind, InstalledPackage, PackageRepo, FabricCertification, BusEvent, BusStats,
   BusEventType, CertLevel, CertTargetKind,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('fabric');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   src: (oid: string, id: string) => `fab:src:${oid}:${id}`,
@@ -38,9 +46,6 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
-function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
-
 const DATA_SOURCES_SEED: Array<{name:string;kind:DataSource["kind"]}> = [
   {name:"WINDELS Primary Postgres", kind:"postgres"},
   {name:"Event Stream (Kafka)", kind:"kafka"},
@@ -121,6 +126,7 @@ async function publishEvent(type: BusEventType, source: string, payload: any, ta
 // ---------- Service ----------
 export const FabricService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.srcs(oid))) return;
     startBus(logger);
 
@@ -130,7 +136,7 @@ export const FabricService = {
       const now = new Date().toISOString();
       const src: DataSource = {
         id, name: s.name, kind: s.kind,
-        status: Math.random() > 0.1 ? "healthy" : "degraded",
+        status: _rng.next() > 0.1 ? "healthy" : "degraded",
         latencyMs: randInt(8, 120), rowsPerSec: randInt(400, 9000), connectedAt: now,
       };
       await redis.hset(K.src(oid,id), "_doc", s2(src));
@@ -157,7 +163,7 @@ export const FabricService = {
         id, name: t.name, kind: t.kind,
         healthPct: +rand(72, 99).toFixed(1), simulationRuns: randInt(3, 240),
         lastSimulationAt: new Date(Date.now()-randInt(1,24)*3600000).toISOString(),
-        status: Math.random()>0.7?"simulating":"idle",
+        status: _rng.next()>0.7?"simulating":"idle",
         predictionAccuracyPct: +rand(82, 98).toFixed(1),
       };
       await redis.hset(K.twin(oid,id), "_doc", s2(twin)); await redis.sadd(K.twins(oid), id);
@@ -213,6 +219,7 @@ export const FabricService = {
   },
 
   async _gatherAll(oid: string): Promise<FabricDashboard> {
+    _rng.reseed(`_gatherAll:${oid}`);
     const multi = async <T,>(ids: string[], keyFn:(id:string)=>string): Promise<T[]> => {
       const out: T[] = [];
       for (const id of ids) { const r = await redis.hgetall(keyFn(id)); if (r._doc) { try { out.push(JSON.parse(r._doc)); } catch {} } }
@@ -355,6 +362,7 @@ export const FabricService = {
   },
 
   async runSimulation(twinId: string, oid = "org-windels"): Promise<FabricTwin | null> {
+    _rng.reseed(`runSimulation:${twinId}`);
     const r = await redis.hgetall(K.twin(oid,twinId)); if (!r._doc) return null;
     const t: FabricTwin = JSON.parse(r._doc);
     t.status = "simulating"; t.simulationRuns += 1; t.lastSimulationAt = new Date().toISOString();

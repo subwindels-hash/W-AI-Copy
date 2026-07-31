@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiAutoMLPipeline');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -289,20 +295,20 @@ function sampleHyperparameters(config: ModelSearchConfig): Record<string, any> {
 
   for (const hp of config.hyperparameters) {
     if (hp.type === 'int') {
-      params[hp.name] = Math.floor(Math.random() * ((hp.max || 100) - (hp.min || 0) + 1)) + (hp.min || 0);
+      params[hp.name] = Math.floor(_rng.next() * ((hp.max || 100) - (hp.min || 0) + 1)) + (hp.min || 0);
     } else if (hp.type === 'float') {
       if (hp.log) {
         const logMin = Math.log(hp.min || 0.001);
         const logMax = Math.log(hp.max || 1);
-        params[hp.name] = Math.exp(Math.random() * (logMax - logMin) + logMin);
+        params[hp.name] = Math.exp(_rng.next() * (logMax - logMin) + logMin);
       } else {
-        params[hp.name] = Math.random() * ((hp.max || 1) - (hp.min || 0)) + (hp.min || 0);
+        params[hp.name] = _rng.next() * ((hp.max || 1) - (hp.min || 0)) + (hp.min || 0);
       }
     } else if (hp.type === 'categorical') {
       const values = hp.values || [];
-      params[hp.name] = values[Math.floor(Math.random() * values.length)];
+      params[hp.name] = values[Math.floor(_rng.next() * values.length)];
     } else if (hp.type === 'boolean') {
-      params[hp.name] = Math.random() > 0.5;
+      params[hp.name] = _rng.next() > 0.5;
     }
   }
 
@@ -406,7 +412,7 @@ function runPipelineSearch(pipeline: AutoMLPipeline): void {
   let noImprovementCount = 0;
 
   for (let i = 0; i < pipeline.configuration.maxTrials; i++) {
-    const model = enabledModels[Math.floor(Math.random() * enabledModels.length)];
+    const model = enabledModels[Math.floor(_rng.next() * enabledModels.length)];
     const hyperparameters = sampleHyperparameters(model);
 
     const trial: Trial = {
@@ -432,22 +438,22 @@ function runPipelineSearch(pipeline: AutoMLPipeline): void {
 
     // Simulate trial execution
     const startTime = Date.now();
-    const primaryMetric = Math.random() * 0.3 + 0.7; // 0.7-1.0
-    const trainScore = primaryMetric + Math.random() * 0.05;
-    const validationScore = primaryMetric - Math.random() * 0.05;
+    const primaryMetric = _rng.next() * 0.3 + 0.7; // 0.7-1.0
+    const trainScore = primaryMetric + _rng.next() * 0.05;
+    const validationScore = primaryMetric - _rng.next() * 0.05;
 
     trial.metrics = {
       primaryMetric,
       trainScore,
       validationScore,
       additionalMetrics: {
-        precision: Math.random() * 0.3 + 0.7,
-        recall: Math.random() * 0.3 + 0.7,
-        f1: Math.random() * 0.3 + 0.7,
+        precision: _rng.next() * 0.3 + 0.7,
+        recall: _rng.next() * 0.3 + 0.7,
+        f1: _rng.next() * 0.3 + 0.7,
       },
-      trainingTime: Math.random() * 60 + 10,
-      inferenceTime: Math.random() * 10 + 1,
-      modelSizeBytes: Math.floor(Math.random() * 10000000) + 1000000,
+      trainingTime: _rng.next() * 60 + 10,
+      inferenceTime: _rng.next() * 10 + 1,
+      modelSizeBytes: Math.floor(_rng.next() * 10000000) + 1000000,
     };
 
     trial.status = 'completed';

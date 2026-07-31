@@ -17,6 +17,12 @@ import { exec } from "child_process";
 import { promisify } from "util";
 import { existsSync, mkdirSync } from "fs";
 import { join } from "path";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:pointInTimeRecovery');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 const execAsync = promisify(exec);
 
@@ -103,7 +109,7 @@ export async function archiveWALSegment(input: {
   sizeBytes: number;
   checksum: string;
 }): Promise<WALSegment> {
-  const segmentId = `wal_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const segmentId = `wal_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
 
   const archiveDir = ensureWALArchiveDir();
   const archivePath = join(archiveDir, input.filename);
@@ -243,7 +249,7 @@ export async function performPointInTimeRecovery(input: {
   targetDatabase?: string;
   metadata?: Record<string, any>;
 }): Promise<PointInTimeRecovery> {
-  const recoveryId = `recovery_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const recoveryId = `recovery_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const recoveryStartTime = new Date();
 
   logger.info("Starting point-in-time recovery", {
@@ -513,7 +519,7 @@ export async function createRecoveryPolicy(input: {
   automaticRecovery?: boolean;
   notificationEmails?: string[];
 }): Promise<RecoveryPolicy> {
-  const policyId = `policy_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const policyId = `policy_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const now = new Date();
 
   const policy: RecoveryPolicy = {

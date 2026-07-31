@@ -12,6 +12,12 @@
  */
 import { prisma } from "../db/client.js";
 import { logger } from "../config/logger.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:rowLevelSecurity');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -231,7 +237,7 @@ export async function createTenantIsolationPolicy(
   await prisma.$executeRawUnsafe(policyQuery);
 
   const policy: RLSPolicy = {
-    id: `rls_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+    id: `rls_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`,
     tableName,
     policyName,
     command,

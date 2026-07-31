@@ -13,6 +13,14 @@ import type {
   CameraPipeline, Detection, CameraFinding, CameraPipelineKind,
   CameraStatus, DetectionVerdict, CameraFindingKind,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('collaboration:cameraIntel');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   pSet: "coll:c:pipes", p: (id: string) => `coll:c:p:${id}`,
@@ -45,6 +53,7 @@ export const CameraIntelService = {
     name: string; kind: CameraPipelineKind; site: string; cameraCount?: number;
     fps?: number; resolution?: string; owner?: string; approvedWorkflow?: string; tags?: string[];
   }): Promise<CameraPipeline> {
+    _rng.reseed(`registerPipeline`);
     const id = randomUUID();
     const verdictDefault: DetectionVerdict = input.approvedWorkflow ? "approved-workflow" : "advisory";
     const p: CameraPipeline = {
@@ -53,8 +62,8 @@ export const CameraIntelService = {
       modelVersion: "vision-v1.3.0", fps: input.fps ?? 8,
       resolution: input.resolution ?? "1920x1080", verdictDefault,
       detectionsToday: 0, findingsOpen: 0, acknowledgedFindings: 0,
-      safetyAlerts24h: 0, uptimePct: 99.5 + Math.random() * 0.5,
-      latencyMs: 140 + Math.floor(Math.random() * 220),
+      safetyAlerts24h: 0, uptimePct: 99.5 + _rng.next() * 0.5,
+      latencyMs: 140 + Math.floor(_rng.next() * 220),
       owner: input.owner ?? "vision-ops",
       approvedWorkflow: input.approvedWorkflow,
       tags: input.tags ?? [],
@@ -72,9 +81,10 @@ export const CameraIntelService = {
   },
 
   async emitDetection(pid: string, d: Omit<Detection, "id" | "pipelineId" | "timestamp" | "verdict" | "advisoryNote" | "confidenceBand" | "frameId"> & { frameId?: string; confidence?: number; verdict?: DetectionVerdict }): Promise<Detection> {
+    _rng.reseed(`emitDetection`);
     const p = await this.getPipeline(pid);
     if (!p) throw new Error("pipeline not found");
-    const conf = d.confidence ?? 0.6 + Math.random() * 0.35;
+    const conf = d.confidence ?? 0.6 + _rng.next() * 0.35;
     const band = conf >= 0.9 ? "very-high" : conf >= 0.75 ? "high" : conf >= 0.5 ? "medium" : "low";
     const verdict = d.verdict ?? p.verdictDefault;
     const id = randomUUID();

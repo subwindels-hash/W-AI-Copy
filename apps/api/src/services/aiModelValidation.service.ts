@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelValidation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -175,7 +181,7 @@ function runValidationTest(test: ValidationTest, modelId: string, modelVersion: 
   switch (test.type) {
     case 'accuracy':
       metrics = {
-        accuracy: 0.85 + Math.random() * 0.1,
+        accuracy: 0.85 + _rng.next() * 0.1,
         accuracyStd: 0.02,
       };
       passed = metrics.accuracy >= 0.8;
@@ -186,18 +192,18 @@ function runValidationTest(test: ValidationTest, modelId: string, modelVersion: 
 
     case 'precision_recall':
       metrics = {
-        precision: 0.82 + Math.random() * 0.1,
-        recall: 0.80 + Math.random() * 0.1,
-        f1Score: 0.81 + Math.random() * 0.1,
+        precision: 0.82 + _rng.next() * 0.1,
+        recall: 0.80 + _rng.next() * 0.1,
+        f1Score: 0.81 + _rng.next() * 0.1,
       };
       passed = metrics.precision >= 0.75 && metrics.recall >= 0.75;
       break;
 
     case 'bias_detection':
       metrics = {
-        biasScore: Math.random() * 0.2,
-        demographicParity: 0.9 + Math.random() * 0.1,
-        equalOpportunity: 0.88 + Math.random() * 0.1,
+        biasScore: _rng.next() * 0.2,
+        demographicParity: 0.9 + _rng.next() * 0.1,
+        equalOpportunity: 0.88 + _rng.next() * 0.1,
       };
       passed = metrics.biasScore <= 0.15;
       if (metrics.biasScore > 0.1) {
@@ -207,26 +213,26 @@ function runValidationTest(test: ValidationTest, modelId: string, modelVersion: 
 
     case 'fairness':
       metrics = {
-        fairnessScore: 0.85 + Math.random() * 0.1,
-        disparateImpact: 0.9 + Math.random() * 0.1,
+        fairnessScore: 0.85 + _rng.next() * 0.1,
+        disparateImpact: 0.9 + _rng.next() * 0.1,
       };
       passed = metrics.fairnessScore >= 0.8;
       break;
 
     case 'data_quality':
       metrics = {
-        completeness: 0.95 + Math.random() * 0.05,
-        consistency: 0.92 + Math.random() * 0.05,
-        accuracy: 0.90 + Math.random() * 0.05,
+        completeness: 0.95 + _rng.next() * 0.05,
+        consistency: 0.92 + _rng.next() * 0.05,
+        accuracy: 0.90 + _rng.next() * 0.05,
       };
       passed = metrics.completeness >= 0.9 && metrics.consistency >= 0.9;
       break;
 
     case 'performance':
       metrics = {
-        latency: 50 + Math.random() * 100,
-        throughput: 100 + Math.random() * 200,
-        memoryUsage: 500 + Math.random() * 500,
+        latency: 50 + _rng.next() * 100,
+        throughput: 100 + _rng.next() * 200,
+        memoryUsage: 500 + _rng.next() * 500,
       };
       passed = metrics.latency <= 200;
       if (metrics.latency > 150) {
@@ -236,14 +242,14 @@ function runValidationTest(test: ValidationTest, modelId: string, modelVersion: 
 
     case 'robustness':
       metrics = {
-        robustnessScore: 0.85 + Math.random() * 0.1,
-        adversarialRobustness: 0.80 + Math.random() * 0.1,
+        robustnessScore: 0.85 + _rng.next() * 0.1,
+        adversarialRobustness: 0.80 + _rng.next() * 0.1,
       };
       passed = metrics.robustnessScore >= 0.8;
       break;
 
     default:
-      metrics = { score: 0.85 + Math.random() * 0.1 };
+      metrics = { score: 0.85 + _rng.next() * 0.1 };
       passed = metrics.score >= 0.8;
   }
 

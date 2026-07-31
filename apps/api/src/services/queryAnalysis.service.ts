@@ -15,6 +15,12 @@ import { prisma } from "../db/client.js";
 import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { redisCmd } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:queryAnalysis');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -85,7 +91,7 @@ export async function recordSlowQuery(input: {
   organizationId?: string;
   metadata?: Record<string, any>;
 }): Promise<SlowQuery> {
-  const id = `sq_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const id = `sq_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
 
   const slowQuery: SlowQuery = {
     id,

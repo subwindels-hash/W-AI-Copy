@@ -18,6 +18,14 @@ import type {
   ProviderStatus,
 } from "@windels/shared";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('aiEcosystem:providerAbstraction');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const KEYS = {
   providers: "ae:providers",
@@ -339,6 +347,7 @@ export const ProviderAbstractionService = {
   },
 
   async runBenchmark(input: { name: string; kind?: string; providerIds: string[]; samples?: number; benchmarkId?: string; providerId?: string; modelId?: string }): Promise<BenchmarkRun[]> {
+    _rng.reseed(`runBenchmark:${input}`);
     const out: BenchmarkRun[] = [];
     const providerIds = input.providerIds && input.providerIds.length ? input.providerIds : input.providerId ? [input.providerId] : [];
     const models = await this.listModels();
@@ -350,9 +359,9 @@ export const ProviderAbstractionService = {
         name: input.name,
         providerId: pid,
         modelId: model?.id ?? pid,
-        score: Number((0.6 + Math.random() * 0.35).toFixed(3)),
-        latencyMs: 200 + Math.floor(Math.random() * 800),
-        costUsd: Number((Math.random() * 0.05).toFixed(4)),
+        score: Number((0.6 + _rng.next() * 0.35).toFixed(3)),
+        latencyMs: 200 + Math.floor(_rng.next() * 800),
+        costUsd: Number((_rng.next() * 0.05).toFixed(4)),
         runAt: new Date().toISOString(),
         notes: `samples=${input.samples ?? 200}`,
       };

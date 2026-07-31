@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:privacyPreservingAggregation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -578,7 +584,7 @@ async function collectLocalAggregations(job: PrivacyPreservingAggregationJob): P
       const participantStart = Date.now();
 
       // Simulate local aggregation
-      await new Promise(resolve => setTimeout(resolve, 300 + Math.random() * 700));
+      await new Promise(resolve => setTimeout(resolve, 300 + _rng.next() * 700));
 
       // Generate local aggregation
       const localAggregation = generateLocalAggregation(job.aggregationConfig, participant);
@@ -608,7 +614,7 @@ function generateLocalAggregation(
   config: AggregationConfig,
   participant: AggregationParticipant
 ): LocalAggregation {
-  const numRows = 1000 + Math.floor(Math.random() * 9000);
+  const numRows = 1000 + Math.floor(_rng.next() * 9000);
   const aggregations: Record<string, unknown> = {};
 
   for (const agg of config.aggregations) {
@@ -616,28 +622,28 @@ function generateLocalAggregation(
 
     switch (agg.function) {
       case "sum":
-        aggregations[alias] = numRows * (50 + Math.random() * 50);
+        aggregations[alias] = numRows * (50 + _rng.next() * 50);
         break;
       case "count":
         aggregations[alias] = numRows;
         break;
       case "avg":
-        aggregations[alias] = 50 + Math.random() * 50;
+        aggregations[alias] = 50 + _rng.next() * 50;
         break;
       case "min":
-        aggregations[alias] = Math.random() * 10;
+        aggregations[alias] = _rng.next() * 10;
         break;
       case "max":
-        aggregations[alias] = 90 + Math.random() * 10;
+        aggregations[alias] = 90 + _rng.next() * 10;
         break;
       case "histogram":
-        aggregations[alias] = Array.from({ length: 10 }, () => Math.floor(Math.random() * 100));
+        aggregations[alias] = Array.from({ length: 10 }, () => Math.floor(_rng.next() * 100));
         break;
       case "percentile":
         aggregations[alias] = {
-          p50: 50 + Math.random() * 10,
-          p90: 80 + Math.random() * 10,
-          p99: 95 + Math.random() * 5,
+          p50: 50 + _rng.next() * 10,
+          p90: 80 + _rng.next() * 10,
+          p99: 95 + _rng.next() * 5,
         };
         break;
       default:
@@ -774,12 +780,12 @@ function generateNoise(distribution: NoiseDistribution, sensitivity: number, eps
   switch (distribution) {
     case "laplace":
       const b = sensitivity / epsilon;
-      const u = Math.random() - 0.5;
+      const u = _rng.next() - 0.5;
       return -b * Math.sign(u) * Math.log(1 - 2 * Math.abs(u));
     case "gaussian":
       const sigma = (sensitivity * Math.sqrt(2 * Math.log(1.25 / 0.00001))) / epsilon;
-      const u1 = Math.random();
-      const u2 = Math.random();
+      const u1 = _rng.next();
+      const u2 = _rng.next();
       return sigma * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
     default:
       return 0;

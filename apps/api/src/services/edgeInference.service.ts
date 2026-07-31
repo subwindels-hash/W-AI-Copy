@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:edgeInference');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -308,9 +314,9 @@ export async function executeEdgeInference(params: {
       latencyMs: 0,
       throughputPerSecond: 0,
       memoryUsageMb: model.memoryUsageMb ?? 0,
-      cpuUsagePercent: 20 + Math.random() * 30,
-      gpuUsagePercent: model.format === "tensorrt" ? 40 + Math.random() * 40 : undefined,
-      queueDepth: Math.floor(Math.random() * 5),
+      cpuUsagePercent: 20 + _rng.next() * 30,
+      gpuUsagePercent: model.format === "tensorrt" ? 40 + _rng.next() * 40 : undefined,
+      queueDepth: Math.floor(_rng.next() * 5),
     },
     startedAt: now,
     metadata: params.metadata ?? {},
@@ -319,7 +325,7 @@ export async function executeEdgeInference(params: {
   inferenceJobs.set(job.id, job);
 
   // Simulate inference
-  const processingTimeMs = (model.inferenceLatencyMs ?? 50) + Math.random() * 20;
+  const processingTimeMs = (model.inferenceLatencyMs ?? 50) + _rng.next() * 20;
   const predictions = generatePredictions(params.input.type);
 
   job.status = "completed";
@@ -691,12 +697,12 @@ function generatePredictions(inputType: string): EdgeInferenceOutput["prediction
       {
         label: "object",
         class: 1,
-        confidence: 0.85 + Math.random() * 0.15,
+        confidence: 0.85 + _rng.next() * 0.15,
         boundingBox: {
-          x: 0.1 + Math.random() * 0.3,
-          y: 0.1 + Math.random() * 0.3,
-          width: 0.2 + Math.random() * 0.3,
-          height: 0.2 + Math.random() * 0.3,
+          x: 0.1 + _rng.next() * 0.3,
+          y: 0.1 + _rng.next() * 0.3,
+          width: 0.2 + _rng.next() * 0.3,
+          height: 0.2 + _rng.next() * 0.3,
         },
       },
     ];
@@ -706,7 +712,7 @@ function generatePredictions(inputType: string): EdgeInferenceOutput["prediction
       {
         label: "positive",
         class: 1,
-        confidence: 0.7 + Math.random() * 0.3,
+        confidence: 0.7 + _rng.next() * 0.3,
       },
     ];
   }
@@ -714,7 +720,7 @@ function generatePredictions(inputType: string): EdgeInferenceOutput["prediction
     {
       label: "prediction",
       class: 0,
-      confidence: 0.8 + Math.random() * 0.2,
+      confidence: 0.8 + _rng.next() * 0.2,
     },
   ];
 }

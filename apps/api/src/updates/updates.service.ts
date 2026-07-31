@@ -10,6 +10,14 @@ import {
   UpdatePackage, UpdateChannel, UpdateStrategy, UpdateCategory, UpdateStatus,
   UpdateCheck, UpdateValidation, UpdateRollout, UpdateDashboard, UPDATE_CATEGORIES, UPDATE_CHANNELS, UPDATE_STRATEGIES,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('updates:updates');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   p: (oid: string, id: string) => `upd:p:${oid}:${id}`,
@@ -109,6 +117,7 @@ export const UpdateService = {
   },
 
   async validate(id: string, oid = "org-windels"): Promise<UpdateValidation> {
+    _rng.reseed(`validate:${id}`);
     const p = await this.get(id, oid);
     const start = Date.now();
     const checks: UpdateCheck[] = [];
@@ -122,8 +131,8 @@ export const UpdateService = {
       { kind: "preflight_test", label: "Smoke tests against staging" },
     ];
     for (const s of specs) {
-      const t0 = Date.now(); await new Promise(r=>setTimeout(r, 3+Math.random()*12));
-      const passed = Math.random() > 0.06;
+      const t0 = Date.now(); await new Promise(r=>setTimeout(r, 3+_rng.next()*12));
+      const passed = _rng.next() > 0.06;
       checks.push({ id: uid("uc-"), packageId: id, kind: s.kind, label: s.label, passed, durationMs: Date.now()-t0, detail: passed ? undefined : "Simulated check failure" });
     }
     const passed = checks.every(c=>c.passed);
@@ -143,13 +152,14 @@ export const UpdateService = {
   },
 
   async deploy(id: string, oid = "org-windels"): Promise<UpdatePackage> {
+    _rng.reseed(`deploy:${id}`);
     const p = await this.get(id, oid); if (!p) throw Object.assign(new Error("not found"),{status:404});
     if (p.approvalsGiven.length < p.approvalsRequired) throw Object.assign(new Error("approvals required"),{status:400});
     p.status = "deploying"; p.updatedAt = new Date().toISOString(); p.progressPct = 10;
     await redis.hset(K.p(oid,id),"_doc",s2(p));
     // Simulate staged deploy
     for (let i = 25; i <= 100; i += 25) {
-      await new Promise(r=>setTimeout(r, 30+Math.random()*60));
+      await new Promise(r=>setTimeout(r, 30+_rng.next()*60));
       p.progressPct = i; await redis.hset(K.p(oid,id),"_doc",s2(p));
     }
     p.status = "deployed"; p.deployedAt = new Date().toISOString(); p.updatedAt = p.deployedAt;
@@ -160,7 +170,7 @@ export const UpdateService = {
       id: uid("roll-"), packageId: id, organizationId: oid, environment: "production",
       strategy: p.strategy, canaryPct: p.canaryPct||0, blueGreenSide: p.blueGreenActive||"blue",
       startedAt: new Date(Date.now()-2000).toISOString(), completedAt: p.deployedAt, status: "completed",
-      errorRate: Math.random()*0.004, p95LatencyMs: 180+Math.random()*120,
+      errorRate: _rng.next()*0.004, p95LatencyMs: 180+_rng.next()*120,
     };
     await redis.hset(K.r(oid,rollout.id), "_doc", s2(rollout));
     emitKernel("update.deployed", { packageId: id, version: p.version });

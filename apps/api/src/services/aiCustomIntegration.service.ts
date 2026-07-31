@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiCustomIntegration');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -332,7 +338,7 @@ export function triggerWebhook(
   if (!webhook.active) throw new Error(`Webhook ${webhookId} is not active`);
 
   // Simulate webhook trigger
-  const success = Math.random() > 0.1; // 90% success rate
+  const success = _rng.next() > 0.1; // 90% success rate
   const statusCode = success ? 200 : 500;
 
   webhook.lastTriggered = new Date().toISOString();
@@ -398,8 +404,8 @@ export function testIntegration(
 
   // Simulate test execution
   setTimeout(() => {
-    const success = Math.random() > 0.2; // 80% success rate
-    const latencyMs = 50 + Math.random() * 200;
+    const success = _rng.next() > 0.2; // 80% success rate
+    const latencyMs = 50 + _rng.next() * 200;
 
     test.status = success ? 'passed' : 'failed';
     test.durationMs = latencyMs;

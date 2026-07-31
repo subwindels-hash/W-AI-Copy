@@ -24,6 +24,14 @@ import {
   MedicalDevice, Vaccination, Screening, CoachingSession, HealthProfile,
   HEALTH_DISCLAIMER, HEALTH_MODULES, MetricKind, MetricSource, WorkoutKind, AlertKind,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('healthEcosystem:healthEcosystem');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   meta:     (o: string) => `hec:meta:${o}`,
@@ -36,9 +44,9 @@ const K = {
   insights: (o: string, u: string) => `hec:insights:${o}:${u}`,
 };
 const uid = (p: string) => p + randomUUID().slice(0, 10);
-const rnd = (a: number, b: number) => Math.random() * (b - a) + a;
+const rnd = (a: number, b: number) => _rng.next() * (b - a) + a;
 const rndInt = (a: number, b: number) => Math.floor(rnd(a, b + 1));
-const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(Math.random() * arr.length)];
+const pick = <T,>(arr: readonly T[]): T => arr[Math.floor(_rng.next() * arr.length)];
 const now = () => new Date().toISOString();
 const daysAgo = (n: number) => new Date(Date.now() - n * 86_400_000).toISOString();
 const today = () => new Date().toISOString().slice(0, 10);
@@ -91,7 +99,7 @@ function seedProfile(userId: string): HealthProfile {
     consentVersion: "v1.0-2026-07",
     wearableLinked: true,
     wearableVendor: pick(["apple", "samsung", "fitbit", "garmin"] as const),
-    ehrLinked: Math.random() > 0.5,
+    ehrLinked: _rng.next() > 0.5,
     ehrVendor: "epic",
     familyHistory: [],
     bloodType: pick(["O+", "A+", "B+", "AB+"] as const),
@@ -139,7 +147,7 @@ function seedSessions(): FitnessSession[] {
   const out: FitnessSession[] = [];
   for (let i = 0; i < 8; i++) {
     const k = pick(kinds);
-    const coached = Math.random() > 0.5;
+    const coached = _rng.next() > 0.5;
     out.push({
       id: uid("fs-"),
       kind: k,
@@ -154,7 +162,7 @@ function seedSessions(): FitnessSession[] {
       zones: { z1: rndInt(2, 10), z2: rndInt(10, 25), z3: rndInt(5, 15), z4: rndInt(2, 10), z5: rndInt(0, 5) },
       coaching: coached,
       coachingMode: coached ? pick(["voice_live", "digital_human", "programmed"] as const) : "none",
-      voiceCoachId: coached && Math.random() > 0.5 ? "vc-maya-001" : undefined,
+      voiceCoachId: coached && _rng.next() > 0.5 ? "vc-maya-001" : undefined,
       perceivedExertion: rndInt(4, 8),
       at: daysAgo(rndInt(0, 6)),
       label: "wellness_estimate",
@@ -188,12 +196,12 @@ function seedNotes(): DailyNote[] {
       date: d,
       mood: rndInt(2, 5),
       energy: rndInt(2, 5),
-      symptoms: Math.random() > 0.6 ? ["mild fatigue"] : [],
+      symptoms: _rng.next() > 0.6 ? ["mild fatigue"] : [],
       journal: `Day ${i}: feeling ${pick(moods)}. Workout and hydration tracked.`,
       tags: pick([["workout"], ["hydration"], ["rest"], ["workout", "hydration"], []]),
       waterMl: rndInt(1400, 3000),
       caffeineMg: rndInt(80, 300),
-      alcoholUnits: Math.random() > 0.7 ? rndInt(1, 3) : 0,
+      alcoholUnits: _rng.next() > 0.7 ? rndInt(1, 3) : 0,
       meals: [
         { name: "Breakfast", calories: rndInt(300, 600), carbsG: rndInt(40, 90), proteinG: rndInt(15, 35), fatG: rndInt(10, 25), time: "08:00" },
         { name: "Lunch",     calories: rndInt(500, 900), carbsG: rndInt(50, 120), proteinG: rndInt(25, 55), fatG: rndInt(15, 35), time: "13:00" },
@@ -208,12 +216,12 @@ function seedNotes(): DailyNote[] {
 
 function seedAlerts(): EmergencyAlert[] {
   const out: EmergencyAlert[] = [];
-  if (Math.random() > 0.4) {
+  if (_rng.next() > 0.4) {
     out.push({ id: uid("ea-"), kind: "reminder_vaccination", severity: "info", at: daysAgo(2),
       message: "Annual flu vaccine recommended this month.", contactsNotified: 0, acknowledged: true,
       label: "wellness_estimate" });
   }
-  if (Math.random() > 0.6) {
+  if (_rng.next() > 0.6) {
     out.push({ id: uid("ea-"), kind: "abnormal_vitals", severity: "warn", at: daysAgo(5),
       message: "Resting HR elevated 12% above baseline during sleep.", contactsNotified: 0, acknowledged: true,
       vitalsSnapshot: { resting_hr: 78 }, label: "clinically_validated" });
@@ -311,7 +319,7 @@ function daily(scoreBase: number, label: HealthLabel = "wellness_estimate"): Dai
     hydration: Math.round(rnd(50, 92)),
     fatigue: Math.round(rnd(10, 60)),
     stressLevel: Math.round(rnd(15, 60)),
-    riskFlags: Math.random() > 0.75 ? ["elevated_resting_hr"] : [],
+    riskFlags: _rng.next() > 0.75 ? ["elevated_resting_hr"] : [],
     label,
   };
 }

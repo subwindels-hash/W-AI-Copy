@@ -9,6 +9,12 @@
  */
 
 import { randomUUID, createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:speechRecognition');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -332,12 +338,12 @@ export async function sendAudioChunk(
   session.totalDurationMs = timestampMs;
 
   // Simulate voice activity detection
-  const isSpeech = Math.random() > 0.3; // 70% speech
+  const isSpeech = _rng.next() > 0.3; // 70% speech
   const vadSegment: VoiceActivitySegment = {
     startTimeMs: Math.max(0, timestampMs - 100),
     endTimeMs: timestampMs,
     isSpeech,
-    confidence: 0.85 + Math.random() * 0.15,
+    confidence: 0.85 + _rng.next() * 0.15,
   };
   session.voiceActivity.push(vadSegment);
 
@@ -354,9 +360,9 @@ export async function sendAudioChunk(
     "The meeting is scheduled for", "The meeting is scheduled for tomorrow",
     "Please review", "Please review the", "Please review the report",
   ];
-  const text = interimTexts[Math.floor(Math.random() * interimTexts.length)];
-  const isFinal = Math.random() > 0.7; // 30% chance of final
-  const confidence = 0.75 + Math.random() * 0.25;
+  const text = interimTexts[Math.floor(_rng.next() * interimTexts.length)];
+  const isFinal = _rng.next() > 0.7; // 30% chance of final
+  const confidence = 0.75 + _rng.next() * 0.25;
 
   const interimResult = { text, confidence, isFinal };
 
@@ -368,8 +374,8 @@ export async function sendAudioChunk(
   if (isFinal) {
     const utterance: Utterance = {
       id: `utt_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
-      speakerId: session.config.diarization ? `speaker_${Math.floor(Math.random() * 3)}` : undefined,
-      speakerLabel: session.config.diarization ? `Speaker ${Math.floor(Math.random() * 3) + 1}` : undefined,
+      speakerId: session.config.diarization ? `speaker_${Math.floor(_rng.next() * 3)}` : undefined,
+      speakerLabel: session.config.diarization ? `Speaker ${Math.floor(_rng.next() * 3) + 1}` : undefined,
       text,
       confidence,
       startTimeMs: Math.max(0, timestampMs - text.length * 80),
@@ -378,7 +384,7 @@ export async function sendAudioChunk(
         word,
         startTimeMs: Math.max(0, timestampMs - text.length * 80) + i * 80,
         endTimeMs: Math.max(0, timestampMs - text.length * 80) + (i + 1) * 80,
-        confidence: 0.8 + Math.random() * 0.2,
+        confidence: 0.8 + _rng.next() * 0.2,
       })),
     };
     session.finalResults.push(utterance);
@@ -552,7 +558,7 @@ async function processTranscriptionJob(jobId: string): Promise<void> {
   const startTime = Date.now();
 
   // Simulate STT processing
-  const processingTimeMs = Math.min(job.audioDurationMs * 0.3, 30000) + Math.floor(Math.random() * 5000);
+  const processingTimeMs = Math.min(job.audioDurationMs * 0.3, 30000) + Math.floor(_rng.next() * 5000);
   
   // Generate simulated transcription result
   const wordCount = Math.floor(job.audioDurationMs / 400); // ~150 words per minute
@@ -563,27 +569,27 @@ async function processTranscriptionJob(jobId: string): Promise<void> {
   const words: WordTimestamp[] = [];
   let currentTime = 0;
   for (const word of fullText.split(" ")) {
-    const duration = Math.max(100, word.length * 50 + Math.random() * 100);
+    const duration = Math.max(100, word.length * 50 + _rng.next() * 100);
     words.push({
       word,
       startTimeMs: currentTime,
       endTimeMs: currentTime + duration,
-      confidence: 0.85 + Math.random() * 0.15,
-      speakerId: job.config.diarization ? `speaker_${Math.floor(Math.random() * 3)}` : undefined,
+      confidence: 0.85 + _rng.next() * 0.15,
+      speakerId: job.config.diarization ? `speaker_${Math.floor(_rng.next() * 3)}` : undefined,
     });
     currentTime += duration + 50; // 50ms gap between words
   }
 
   // Generate utterances with speaker diarization
   const utterances: Utterance[] = [];
-  const speakerCount = job.config.diarization ? Math.floor(Math.random() * 3) + 2 : 1;
-  const wordsPerUtterance = Math.max(5, Math.floor(words.length / (5 + Math.floor(Math.random() * 10))));
+  const speakerCount = job.config.diarization ? Math.floor(_rng.next() * 3) + 2 : 1;
+  const wordsPerUtterance = Math.max(5, Math.floor(words.length / (5 + Math.floor(_rng.next() * 10))));
   
   for (let i = 0; i < words.length; i += wordsPerUtterance) {
     const uttWords = words.slice(i, i + wordsPerUtterance);
     if (uttWords.length === 0) continue;
     
-    const speakerIdx = job.config.diarization ? Math.floor(Math.random() * speakerCount) : 0;
+    const speakerIdx = job.config.diarization ? Math.floor(_rng.next() * speakerCount) : 0;
     utterances.push({
       id: `utt_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
       speakerId: job.config.diarization ? `speaker_${speakerIdx}` : undefined,
@@ -633,16 +639,16 @@ async function processTranscriptionJob(jobId: string): Promise<void> {
     speakers,
     words: job.config.wordTimestamps ? words : [],
     sentiment: {
-      overall: Math.random() > 0.5 ? "positive" : "neutral",
-      score: Math.round(Math.random() * 100) / 100,
+      overall: _rng.next() > 0.5 ? "positive" : "neutral",
+      score: Math.round(_rng.next() * 100) / 100,
     },
     metadata: {
       provider: job.provider,
       model: getProviderModel(job.provider),
       processingTimeMs,
       audioQuality: overallConfidence > 0.9 ? "excellent" : overallConfidence > 0.8 ? "good" : overallConfidence > 0.65 ? "fair" : "poor",
-      noiseLevel: Math.round(Math.random() * 30) / 100,
-      speechRatio: Math.round((0.6 + Math.random() * 0.3) * 100) / 100,
+      noiseLevel: Math.round(_rng.next() * 30) / 100,
+      speechRatio: Math.round((0.6 + _rng.next() * 0.3) * 100) / 100,
     },
   };
 
@@ -682,7 +688,7 @@ function generateSentences(wordCount: number): string[] {
   const sentences: string[] = [];
   let currentWords = 0;
   while (currentWords < wordCount) {
-    const sentence = sentenceTemplates[Math.floor(Math.random() * sentenceTemplates.length)];
+    const sentence = sentenceTemplates[Math.floor(_rng.next() * sentenceTemplates.length)];
     sentences.push(sentence);
     currentWords += sentence.split(" ").length;
   }

@@ -15,6 +15,12 @@ import { prisma } from "../db/client.js";
 import { redisCmd } from "../db/redis.js";
 import { logger } from "../config/logger.js";
 import { createHash, createCipheriv, createDecipheriv, randomBytes } from "crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:dataMasking');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -125,19 +131,19 @@ const FAKE_ADDRESSES = [
 function generateFakeData(type: string): string {
   switch (type) {
     case "name":
-      return FAKE_NAMES[Math.floor(Math.random() * FAKE_NAMES.length)];
+      return FAKE_NAMES[Math.floor(_rng.next() * FAKE_NAMES.length)];
     case "email":
-      return FAKE_EMAILS[Math.floor(Math.random() * FAKE_EMAILS.length)];
+      return FAKE_EMAILS[Math.floor(_rng.next() * FAKE_EMAILS.length)];
     case "phone":
-      return FAKE_PHONES[Math.floor(Math.random() * FAKE_PHONES.length)];
+      return FAKE_PHONES[Math.floor(_rng.next() * FAKE_PHONES.length)];
     case "address":
-      return FAKE_ADDRESSES[Math.floor(Math.random() * FAKE_ADDRESSES.length)];
+      return FAKE_ADDRESSES[Math.floor(_rng.next() * FAKE_ADDRESSES.length)];
     case "ssn":
-      return `***-**-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
+      return `***-**-${Math.floor(_rng.next() * 10000).toString().padStart(4, "0")}`;
     case "credit_card":
-      return `****-****-****-${Math.floor(Math.random() * 10000).toString().padStart(4, "0")}`;
+      return `****-****-****-${Math.floor(_rng.next() * 10000).toString().padStart(4, "0")}`;
     default:
-      return `MASKED_${Math.random().toString(36).slice(2, 10)}`;
+      return `MASKED_${_rng.next().toString(36).slice(2, 10)}`;
   }
 }
 
@@ -198,7 +204,7 @@ export function applyMasking(
 
 function applySubstitution(value: any, config: MaskingConfiguration): any {
   if (config.customValues && config.customValues.length > 0) {
-    return config.customValues[Math.floor(Math.random() * config.customValues.length)];
+    return config.customValues[Math.floor(_rng.next() * config.customValues.length)];
   }
 
   const type = config.substitutionType ?? "custom";
@@ -244,7 +250,7 @@ function applyFormatPreserving(value: any, config: MaskingConfiguration): string
       // Replace with digit
       result += valueIndex < str.length && /\d/.test(str[valueIndex])
         ? str[valueIndex]
-        : Math.floor(Math.random() * 10).toString();
+        : Math.floor(_rng.next() * 10).toString();
       valueIndex++;
     } else if (char === "X") {
       // Mask character
@@ -270,7 +276,7 @@ function applyPerturbation(value: any, config: MaskingConfiguration): number {
   if (isNaN(num)) return num;
 
   const range = config.perturbationRange ?? 10; // ±10%
-  const perturbation = (Math.random() * 2 - 1) * (range / 100);
+  const perturbation = (_rng.next() * 2 - 1) * (range / 100);
   return num * (1 + perturbation);
 }
 
@@ -452,7 +458,7 @@ export async function createMaskingPolicy(input: {
   scope: MaskingScope;
   rules: Omit<MaskingRule, "id">[];
 }): Promise<MaskingPolicy> {
-  const policyId = `policy_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const policyId = `policy_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const now = new Date().toISOString();
 
   const rules: MaskingRule[] = input.rules.map((r, i) => ({

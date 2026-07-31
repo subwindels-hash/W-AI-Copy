@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:dataAugmentation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -590,16 +596,16 @@ function generateQualityMetrics(job: DataAugmentationJob): AugmentationQualityMe
   const config = job.augmentationConfig;
 
   // Label preservation rate (higher if preserveLabels is true)
-  const labelPreservationRate = config.preserveLabels ? 0.95 + Math.random() * 0.05 : 0.7 + Math.random() * 0.2;
+  const labelPreservationRate = config.preserveLabels ? 0.95 + _rng.next() * 0.05 : 0.7 + _rng.next() * 0.2;
 
   // Distribution shift (lower is better)
-  const distributionShift = 0.1 + Math.random() * 0.2;
+  const distributionShift = 0.1 + _rng.next() * 0.2;
 
   // Diversity score (based on number of augmentations)
-  const diversityScore = Math.min(1, 0.5 + config.augmentations.length * 0.1 + Math.random() * 0.2);
+  const diversityScore = Math.min(1, 0.5 + config.augmentations.length * 0.1 + _rng.next() * 0.2);
 
   // Realism score (based on data type and augmentation types)
-  const realismScore = 0.7 + Math.random() * 0.25;
+  const realismScore = 0.7 + _rng.next() * 0.25;
 
   // Overall score (weighted average)
   const overallScore = labelPreservationRate * 0.3 + (1 - distributionShift) * 0.2 + diversityScore * 0.3 + realismScore * 0.2;
@@ -684,7 +690,7 @@ function generatePolicyOptimizationReport(job: DataAugmentationJob): PolicyOptim
   const config = job.augmentationConfig.policyOptimization!;
 
   const bestPolicy = job.augmentationConfig.augmentations;
-  const validationAccuracy = 0.85 + Math.random() * 0.1;
+  const validationAccuracy = 0.85 + _rng.next() * 0.1;
   const numTrials = config.maxTrials ?? 50;
   const searchTimeMs = numTrials * 100;
 
@@ -716,22 +722,22 @@ function generateSamplePreview(job: DataAugmentationJob): unknown[] {
       imageUrl: `https://storage.example.com/augmented/${randomUUID()}.jpg`,
       originalImageUrl: `https://storage.example.com/original/${randomUUID()}.jpg`,
       augmentationsApplied: ["rotation", "brightness"],
-      label: Math.floor(Math.random() * 10),
+      label: Math.floor(_rng.next() * 10),
     }));
   } else if (job.dataType === "text") {
     return Array.from({ length: numPreviewSamples }, () => ({
       text: "This is an augmented text sample with synonym replacement.",
       originalText: "This is the original text sample.",
       augmentationsApplied: ["synonym_replacement"],
-      label: Math.random() > 0.5 ? "positive" : "negative",
+      label: _rng.next() > 0.5 ? "positive" : "negative",
     }));
   } else if (job.dataType === "tabular") {
     return Array.from({ length: numPreviewSamples }, () => ({
-      feature1: Math.random() * 100,
-      feature2: Math.random() > 0.5 ? "A" : "B",
-      feature3: Math.floor(Math.random() * 100),
+      feature1: _rng.next() * 100,
+      feature2: _rng.next() > 0.5 ? "A" : "B",
+      feature3: Math.floor(_rng.next() * 100),
       augmentationsApplied: ["smote"],
-      label: Math.random() > 0.5 ? 1 : 0,
+      label: _rng.next() > 0.5 ? 1 : 0,
     }));
   }
 

@@ -15,6 +15,12 @@ import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { redisCmd } from "../db/redis.js";
 import { prisma } from "../db/client.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:edgeNodeManagement');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -124,7 +130,7 @@ export async function registerEdgeNode(input: {
   tags?: string[];
   config?: Record<string, any>;
 }): Promise<EdgeNode> {
-  const nodeId = `edge_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const nodeId = `edge_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
 
   const node: EdgeNode = {
@@ -383,7 +389,7 @@ export async function createEdgeNodeGroup(input: {
   nodeIds?: string[];
   tags?: string[];
 }): Promise<EdgeNodeGroup> {
-  const groupId = `edge_group_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const groupId = `edge_group_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
 
   const group: EdgeNodeGroup = {

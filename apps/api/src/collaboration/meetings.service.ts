@@ -9,6 +9,14 @@ import type {
   MeetingSummary, FollowUpTask, MeetingPlatform, MeetingStatus,
   TranslationLanguage, WriteThroughSystem,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('collaboration:meetings');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   connSet: "coll:m:conns", conn: (id: string) => `coll:m:conn:${id}`,
@@ -132,10 +140,11 @@ export const MeetingsService = {
     return getAll<TranslationChannel>(K.trSet(mid), K.tr);
   },
   async enableTranslationChannel(mid: string, language: TranslationLanguage): Promise<TranslationChannel> {
+    _rng.reseed(`enableTranslationChannel:${mid}`);
     const id = randomUUID();
     const ch: TranslationChannel = {
-      id, meetingId: mid, language, activeListeners: Math.floor(Math.random() * 8),
-      segmentsTranslated: 0, latencyMs: 180 + Math.floor(Math.random() * 140), enabled: true,
+      id, meetingId: mid, language, activeListeners: Math.floor(_rng.next() * 8),
+      segmentsTranslated: 0, latencyMs: 180 + Math.floor(_rng.next() * 140), enabled: true,
     };
     await redis.set(K.tr(id), SER(ch));
     await redis.sadd(K.trSet(mid), id);
@@ -233,6 +242,7 @@ export const MeetingsService = {
     return raw ? (JSON.parse(raw) as MeetingSummary) : null;
   },
   async generateSummary(mid: string): Promise<MeetingSummary | null> {
+    _rng.reseed(`generateSummary:${mid}`);
     const m = await this.getMeeting(mid);
     if (!m) return null;
     const segs = await this.listSegments(mid);
@@ -247,7 +257,7 @@ export const MeetingsService = {
       topicsDiscussed: [m.title, "Timeline", "Risks", "Next steps"],
       sentimentOverall: "positive",
       generatedAt: iso(),
-      wordCount: 180 + Math.floor(Math.random() * 260) + segs.reduce((a, s) => a + s.text.split(/\s+/).length, 0),
+      wordCount: 180 + Math.floor(_rng.next() * 260) + segs.reduce((a, s) => a + s.text.split(/\s+/).length, 0),
     };
     await redis.set(K.sumKey(mid), SER(sum));
     m.summaryReady = true;
@@ -258,6 +268,7 @@ export const MeetingsService = {
     return getAll<FollowUpTask>(K.fuSet(mid), K.fu);
   },
   async enqueueWriteThrough(mid: string): Promise<FollowUpTask[]> {
+    _rng.reseed(`enqueueWriteThrough:${mid}`);
     const targets: Array<{ sys: WriteThroughSystem; action: string; count: number }> = [
       { sys: "crm", action: "Sync attendees and next-step to CRM opportunity/contact records.", count: 2 },
       { sys: "project", action: "Create tickets for open action items in the project system.", count: 2 },
@@ -277,10 +288,10 @@ export const MeetingsService = {
     }
     // simulate immediate sync for ~70%
     for (const f of out) {
-      if (Math.random() < 0.7) {
+      if (_rng.next() < 0.7) {
         f.status = "synced";
         f.syncedAt = iso();
-        f.targetRecordId = `rec_${Math.random().toString(36).slice(2, 9)}`;
+        f.targetRecordId = `rec_${_rng.next().toString(36).slice(2, 9)}`;
         await redis.set(K.fu(f.id), SER(f));
       }
     }

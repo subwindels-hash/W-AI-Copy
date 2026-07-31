@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:continualLearning');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -493,7 +499,7 @@ export async function getReplaySamples(
   switch (strategy ?? buffer.strategy) {
     case "random":
       for (let i = 0; i < numSamples && availableSamples.length > 0; i++) {
-        const idx = Math.floor(Math.random() * availableSamples.length);
+        const idx = Math.floor(_rng.next() * availableSamples.length);
         selectedSamples.push(availableSamples.splice(idx, 1)[0]);
       }
       break;
@@ -636,9 +642,9 @@ async function startLearningPhase(jobId: string): Promise<void> {
     phaseType,
     status: "running",
     trainingDataConfig: {
-      numNewSamples: 10000 + Math.floor(Math.random() * 5000),
+      numNewSamples: 10000 + Math.floor(_rng.next() * 5000),
       numReplaySamples: job.config.replayConfig?.enabled
-        ? Math.floor((10000 + Math.random() * 5000) * (job.config.replayConfig?.replayRatio ?? 0.5))
+        ? Math.floor((10000 + _rng.next() * 5000) * (job.config.replayConfig?.replayRatio ?? 0.5))
         : undefined,
     },
     metrics: {
@@ -668,18 +674,18 @@ async function completeLearningPhase(jobId: string, phaseId: string): Promise<vo
 
   // Simulate training metrics
   const numBatches = 50;
-  const initialLoss = 0.8 + Math.random() * 0.2;
-  const finalLoss = 0.2 + Math.random() * 0.2;
+  const initialLoss = 0.8 + _rng.next() * 0.2;
+  const finalLoss = 0.2 + _rng.next() * 0.2;
 
   phase.metrics.trainingLoss = Array.from({ length: numBatches }, (_, i) =>
-    initialLoss - (initialLoss - finalLoss) * (i / numBatches) + (Math.random() - 0.5) * 0.05
+    initialLoss - (initialLoss - finalLoss) * (i / numBatches) + (_rng.next() - 0.5) * 0.05
   );
 
   if (job.config.validationConfig.enabled) {
     const valInitialLoss = initialLoss + 0.05;
     const valFinalLoss = finalLoss + 0.05;
     phase.metrics.validationLoss = Array.from({ length: numBatches }, (_, i) =>
-      valInitialLoss - (valInitialLoss - valFinalLoss) * (i / numBatches) + (Math.random() - 0.5) * 0.05
+      valInitialLoss - (valInitialLoss - valFinalLoss) * (i / numBatches) + (_rng.next() - 0.5) * 0.05
     );
   }
 
@@ -691,15 +697,15 @@ async function completeLearningPhase(jobId: string, phaseId: string): Promise<vo
 
   // Calculate forgetting score (simulated)
   if (job.strategy === "ewc" || job.strategy === "lwf" || job.strategy === "replay") {
-    phase.metrics.forgettingScore = 0.1 + Math.random() * 0.2; // Low forgetting
+    phase.metrics.forgettingScore = 0.1 + _rng.next() * 0.2; // Low forgetting
     phase.metrics.knowledgeRetention = 1 - phase.metrics.forgettingScore;
   } else {
-    phase.metrics.forgettingScore = 0.3 + Math.random() * 0.3; // Higher forgetting
+    phase.metrics.forgettingScore = 0.3 + _rng.next() * 0.3; // Higher forgetting
     phase.metrics.knowledgeRetention = 1 - phase.metrics.forgettingScore;
   }
 
-  phase.metrics.learningSpeed = phase.trainingDataConfig.numNewSamples / (10 + Math.random() * 5);
-  phase.metrics.totalTrainingTimeMs = 10000 + Math.random() * 20000;
+  phase.metrics.learningSpeed = phase.trainingDataConfig.numNewSamples / (10 + _rng.next() * 5);
+  phase.metrics.totalTrainingTimeMs = 10000 + _rng.next() * 20000;
 
   phase.status = "completed";
   phase.completedAt = new Date().toISOString();
@@ -768,7 +774,7 @@ function generateContinualLearningResult(job: ContinualLearningJob): ContinualLe
       validationAccuracy: phase.metrics.validationAccuracy?.[phase.metrics.validationAccuracy.length - 1] ?? 0,
       validationLoss: phase.metrics.validationLoss?.[phase.metrics.validationLoss.length - 1] ?? 0,
     },
-    sizeBytes: 50000000 + Math.floor(Math.random() * 10000000),
+    sizeBytes: 50000000 + Math.floor(_rng.next() * 10000000),
     downloadUrl: `https://models.example.com/continual/${job.id}/${phase.modelVersion}`,
     isRollbackVersion: false,
   }));
@@ -818,9 +824,9 @@ function generateForgettingAnalysis(job: ContinualLearningJob): ForgettingAnalys
 
   // Simulate task-specific forgetting
   const taskSpecificForgetting: Record<string, number> = {
-    task_1: overallForgettingScore * (0.8 + Math.random() * 0.4),
-    task_2: overallForgettingScore * (0.8 + Math.random() * 0.4),
-    task_3: overallForgettingScore * (0.8 + Math.random() * 0.4),
+    task_1: overallForgettingScore * (0.8 + _rng.next() * 0.4),
+    task_2: overallForgettingScore * (0.8 + _rng.next() * 0.4),
+    task_3: overallForgettingScore * (0.8 + _rng.next() * 0.4),
   };
 
   const mostForgottenTasks = Object.entries(taskSpecificForgetting)

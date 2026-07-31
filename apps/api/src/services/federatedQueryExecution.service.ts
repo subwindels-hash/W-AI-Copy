@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:federatedQueryExecution');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -538,7 +544,7 @@ async function executeQueryOnParticipants(job: FederatedQueryJob): Promise<void>
       const participantStart = Date.now();
 
       // Simulate query execution
-      await new Promise(resolve => setTimeout(resolve, 500 + Math.random() * 1000));
+      await new Promise(resolve => setTimeout(resolve, 500 + _rng.next() * 1000));
 
       // Generate partial result
       const partialResult = generatePartialResult(job.queryConfig, participant);
@@ -615,12 +621,12 @@ async function executeQueryOnParticipants(job: FederatedQueryJob): Promise<void>
 }
 
 function generatePartialResult(queryConfig: QueryConfig, participant: QueryParticipant): PartialQueryResult {
-  const numRows = 100 + Math.floor(Math.random() * 900);
+  const numRows = 100 + Math.floor(_rng.next() * 900);
   const columns = queryConfig.selectClause?.columns.map(c => c.alias ?? c.name) ?? ["column1", "column2"];
 
   const rows: unknown[][] = [];
   for (let i = 0; i < numRows; i++) {
-    const row = columns.map(() => Math.random() * 100);
+    const row = columns.map(() => _rng.next() * 100);
     rows.push(row);
   }
 

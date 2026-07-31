@@ -10,6 +10,14 @@ import type { Logger } from "pino";
 import {
   ScientificDashboard, Experiment, LiteratureRef, Hypothesis, RESEARCH_DOMAINS, ResearchDomain,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('scientific:scientific');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   exp:(oid:string,id:string)=>`sci:exp:${oid}:${id}`, exps:(oid:string)=>`sci:exps:${oid}`,
@@ -19,9 +27,9 @@ const K = {
 };
 const s2=(o:any)=>JSON.stringify(o);
 const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rnd(a:number,b:number){return Math.random()*(b-a)+a;}
+function rnd(a:number,b:number){return _rng.next()*(b-a)+a;}
 function rndInt(a:number,b:number){return Math.floor(rnd(a,b+1));}
-function pick<T>(a:T[]):T{return a[Math.floor(Math.random()*a.length)];}
+function pick<T>(a:T[]):T{return a[Math.floor(_rng.next()*a.length)];}
 const now=()=>new Date().toISOString();
 
 const LIT: Omit<LiteratureRef,"id"|"citations"|"relevanceScore">[] = [
@@ -50,6 +58,7 @@ const EXP_SEEDS: Array<Omit<Experiment,"id"|"status"|"progressPct"|"simulations"
 
 export const ScientificService = {
   async ensureBootstrapped(logger?:Logger, oid="org-windels") {
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.meta(oid))) return;
     for (const seed of EXP_SEEDS) {
       const id=uid("exp-"); const e: Experiment = {
@@ -86,6 +95,7 @@ export const ScientificService = {
   },
   _pk(key:string, oid:string, id:string) { return key.replace(/s$/,`:`).replace(`:${oid}`,`:`+oid+":"+id) as any; },
   async dashboard(oid:string): Promise<ScientificDashboard> {
+    _rng.reseed(`dashboard:${oid}`);
     if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
     const [eids,pids,hids] = [await redis.smembers(K.exps(oid)), await redis.smembers(K.paps(oid)), await redis.smembers(K.hyps(oid))];
     const exps:Experiment[] = []; for (const id of eids){ const r=await redis.hget(K.exp(oid,id),"_doc"); if(r) exps.push(JSON.parse(r)); }

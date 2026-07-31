@@ -11,6 +11,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelFormatConversion');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -271,7 +277,7 @@ function buildCompatibilityMatrix(sourceFormat: ModelFormat): FormatCompatibilit
       directConversion: direct,
       intermediateFormat: intermediate,
       qualityLoss,
-      estimatedTimeMinutes: direct ? 2 + Math.random() * 10 : 5 + Math.random() * 20,
+      estimatedTimeMinutes: direct ? 2 + _rng.next() * 10 : 5 + _rng.next() * 20,
     };
   });
   return { sourceFormat, targetFormats: targets };
@@ -416,7 +422,7 @@ export async function executeConversion(jobId: string): Promise<ConversionJob> {
   if (!job) throw new Error(`Conversion job ${jobId} not found`);
   if (job.status !== "converting") throw new Error(`Job is not converting: ${job.status}`);
   const now = new Date().toISOString();
-  const conversionTimeMs = 5000 + Math.random() * 30000;
+  const conversionTimeMs = 5000 + _rng.next() * 30000;
   // Optimization phase
   job.progress.stage = "optimization";
   job.progress.progressPercent = 40;
@@ -427,8 +433,8 @@ export async function executeConversion(jobId: string): Promise<ConversionJob> {
     return {
       optimization: opt,
       applied: true,
-      sizeReductionPercent: sizeReduction + Math.random() * 5,
-      latencyChangePercent: -(sizeReduction * 0.3 + Math.random() * 10),
+      sizeReductionPercent: sizeReduction + _rng.next() * 5,
+      latencyChangePercent: -(sizeReduction * 0.3 + _rng.next() * 10),
       accuracyImpact: opt === "int4" ? -0.02 : opt === "int8" ? -0.005 : opt === "fp16" ? -0.001 : 0,
       description: `Applied ${opt} optimization during conversion`,
     };
@@ -439,8 +445,8 @@ export async function executeConversion(jobId: string): Promise<ConversionJob> {
   const validationResults: ValidationResult[] = [];
   if (job.validation.level !== "none") {
     for (let i = 0; i < job.validation.testInputs; i++) {
-      const maxAbsErr = Math.random() * job.validation.numericalTolerance * 10;
-      const maxRelErr = maxAbsErr * (1 + Math.random());
+      const maxAbsErr = _rng.next() * job.validation.numericalTolerance * 10;
+      const maxRelErr = maxAbsErr * (1 + _rng.next());
       const meanAbsErr = maxAbsErr * 0.3;
       const cosineSim = 1 - maxAbsErr * 10;
       validationResults.push({
@@ -451,7 +457,7 @@ export async function executeConversion(jobId: string): Promise<ConversionJob> {
         meanAbsoluteError: meanAbsErr,
         cosineSimilarity: cosineSim,
         outputShape: job.sourceModel.outputSpecs[0]?.shape || [1, 128, 32000],
-        duration: 100 + Math.random() * 500,
+        duration: 100 + _rng.next() * 500,
         details: { inputSeed: i, tolerance: job.validation.numericalTolerance },
       });
     }
@@ -499,7 +505,7 @@ export async function executeConversion(jobId: string): Promise<ConversionJob> {
   if (job.optimizations.includes("fp16")) sizeMultiplier *= 0.5;
   if (job.optimizations.includes("int8")) sizeMultiplier *= 0.25;
   if (job.optimizations.includes("int4")) sizeMultiplier *= 0.125;
-  const outputSizeMB = job.sourceModel.modelSizeMB * sizeMultiplier * (0.9 + Math.random() * 0.2);
+  const outputSizeMB = job.sourceModel.modelSizeMB * sizeMultiplier * (0.9 + _rng.next() * 0.2);
   // Artifacts
   const artifacts: ConversionArtifact[] = [
     { name: `model.${job.targetFormat}`, type: "model", path: `/conversions/${job.id}/model.${job.targetFormat}`, sizeMB: outputSizeMB, checksum: `sha256:${randomUUID().replace(/-/g, "")}` },

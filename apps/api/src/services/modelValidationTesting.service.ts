@@ -10,6 +10,12 @@
 
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:modelValidationTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -405,17 +411,18 @@ export const ModelValidationTestingService = {
    * Run statistical significance test
    */
   async _runStatisticalTest(suite: ValidationSuite, test: ValidationTest): Promise<ValidationResult> {
+    _rng.reseed(`_runStatisticalTest:${suite}`);
     const config = test.config;
     const alpha = config.alpha ?? 0.05;
     const statisticalTest = config.statisticalTest ?? "t_test";
 
     // Simulate statistical test
-    const pValue = Math.random();
+    const pValue = _rng.next();
     const significant = pValue < alpha;
-    const effectSize = Math.random() * 0.5;
-    const meanDifference = (Math.random() - 0.5) * 0.2;
+    const effectSize = _rng.next() * 0.5;
+    const meanDifference = (_rng.next() - 0.5) * 0.2;
     const confidence = 1 - pValue;
-    const sampleSize = 100 + Math.floor(Math.random() * 900);
+    const sampleSize = 100 + Math.floor(_rng.next() * 900);
 
     const result: StatisticalSignificanceResult = {
       test: statisticalTest,
@@ -442,13 +449,14 @@ export const ModelValidationTestingService = {
    * Run performance regression test
    */
   async _runPerformanceRegression(suite: ValidationSuite, test: ValidationTest): Promise<ValidationResult> {
+    _rng.reseed(`_runPerformanceRegression:${suite}`);
     const config = test.config;
     const baselineMetric = config.baselineMetric ?? 0.85;
     const threshold = config.threshold ?? 0.05;
     const tolerance = config.tolerance ?? 0.02;
 
     // Simulate current metric
-    const currentMetric = baselineMetric + (Math.random() - 0.5) * 0.1;
+    const currentMetric = baselineMetric + (_rng.next() - 0.5) * 0.1;
     const difference = currentMetric - baselineMetric;
     const percentChange = (difference / baselineMetric) * 100;
     const withinTolerance = Math.abs(difference) <= tolerance;
@@ -476,6 +484,7 @@ export const ModelValidationTestingService = {
    * Run A/B test
    */
   async _runABTest(suite: ValidationSuite, test: ValidationTest): Promise<ValidationResult> {
+    _rng.reseed(`_runABTest:${suite}`);
     const config = test.config;
     const trafficSplit = config.trafficSplit ?? { control: 50, treatment: 50 };
     const minSampleSize = config.minSampleSize ?? 1000;
@@ -486,9 +495,9 @@ export const ModelValidationTestingService = {
       modelId: name === "control" ? (suite.baselineModelId ?? suite.modelId) : suite.modelId,
       modelVersion: name === "control" ? (suite.baselineModelVersion ?? suite.modelVersion) : suite.modelVersion,
       trafficPercent: percent,
-      samples: minSampleSize + Math.floor(Math.random() * 500),
-      metric: 0.7 + Math.random() * 0.2,
-      confidence: 0.8 + Math.random() * 0.2,
+      samples: minSampleSize + Math.floor(_rng.next() * 500),
+      metric: 0.7 + _rng.next() * 0.2,
+      confidence: 0.8 + _rng.next() * 0.2,
     }));
 
     // Determine winner
@@ -521,6 +530,7 @@ export const ModelValidationTestingService = {
    * Run fairness test
    */
   async _runFairnessTest(suite: ValidationSuite, test: ValidationTest): Promise<ValidationResult> {
+    _rng.reseed(`_runFairnessTest:${suite}`);
     const config = test.config;
     const protectedAttributes = config.protectedAttributes ?? ["gender", "race"];
     const fairnessMetrics = config.fairnessMetrics ?? ["demographic_parity", "equalized_odds"];
@@ -532,11 +542,11 @@ export const ModelValidationTestingService = {
       const metrics: FairnessMetricResult[] = [];
 
       for (const metric of fairnessMetrics) {
-        const value = 0.7 + Math.random() * 0.3;
+        const value = 0.7 + _rng.next() * 0.3;
         const passed = value >= threshold;
         const groups = {
-          group_a: 0.6 + Math.random() * 0.3,
-          group_b: 0.6 + Math.random() * 0.3,
+          group_a: 0.6 + _rng.next() * 0.3,
+          group_b: 0.6 + _rng.next() * 0.3,
         };
 
         metrics.push({
@@ -578,6 +588,7 @@ export const ModelValidationTestingService = {
    * Run bias test
    */
   async _runBiasTest(suite: ValidationSuite, test: ValidationTest): Promise<ValidationResult> {
+    _rng.reseed(`_runBiasTest:${suite}`);
     const config = test.config;
     const biasMetrics = config.biasMetrics ?? ["representation", "prediction"];
     const threshold = config.threshold ?? 0.1;
@@ -585,7 +596,7 @@ export const ModelValidationTestingService = {
     const biasResults: BiasResult[] = [];
 
     for (const biasType of biasMetrics) {
-      const score = Math.random();
+      const score = _rng.next();
       const severity = score < 0.1 ? "low" : score < 0.3 ? "medium" : score < 0.5 ? "high" : "critical";
       const affectedGroups = severity !== "low" ? ["group_a", "group_b"] : [];
 
@@ -616,6 +627,7 @@ export const ModelValidationTestingService = {
    * Run explainability test
    */
   async _runExplainabilityTest(suite: ValidationSuite, test: ValidationTest): Promise<ValidationResult> {
+    _rng.reseed(`_runExplainabilityTest:${suite}`);
     const config = test.config;
     const method = config.method ?? "shap";
     const topKFeatures = config.topKFeatures ?? 10;
@@ -629,13 +641,13 @@ export const ModelValidationTestingService = {
 
     const topFeatures = features.slice(0, topKFeatures).map(feature => ({
       feature,
-      importance: Math.random(),
-      direction: (Math.random() > 0.5 ? "positive" : "negative") as "positive" | "negative",
+      importance: _rng.next(),
+      direction: (_rng.next() > 0.5 ? "positive" : "negative") as "positive" | "negative",
     }));
 
     topFeatures.sort((a, b) => b.importance - a.importance);
 
-    const consistencyScore = 0.7 + Math.random() * 0.3;
+    const consistencyScore = 0.7 + _rng.next() * 0.3;
     const passed = consistencyScore >= consistencyThreshold;
 
     const result: ExplainabilityResult = {
@@ -661,9 +673,10 @@ export const ModelValidationTestingService = {
    * Run custom test
    */
   async _runCustomTest(suite: ValidationSuite, test: ValidationTest): Promise<ValidationResult> {
+    _rng.reseed(`_runCustomTest:${suite}`);
     // Simulate custom test
-    const passed = Math.random() > 0.3;
-    const score = passed ? 70 + Math.random() * 30 : Math.random() * 70;
+    const passed = _rng.next() > 0.3;
+    const score = passed ? 70 + _rng.next() * 30 : _rng.next() * 70;
 
     return {
       passed,

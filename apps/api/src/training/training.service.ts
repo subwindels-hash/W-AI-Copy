@@ -12,6 +12,14 @@ import {
   DATASET_FORMATS, DatasetFormat, TrainingJobStatus, JOB_STATUS,
   SafetyCheck, ContinuousLearningPipeline, TrainingDashboard,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('training');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   d: (oid: string, id: string) => `tr:d:${oid}:${id}`,
@@ -25,9 +33,6 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return Math.random()*(max-min)+min; }
-function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
-
 const SEED_DATASETS: Array<{name:string;fmt:DatasetFormat;rows:number;sizeMb:number;synthPct:number;cleaned:boolean;rag:boolean}> = [
   {name:"Support Tickets Gold", fmt:"jsonl", rows:48000, sizeMb:62, synthPct:12, cleaned:true, rag:true},
   {name:"Sales Conversations", fmt:"csv", rows:22000, sizeMb:28, synthPct:5, cleaned:true, rag:false},
@@ -40,6 +45,7 @@ const SAFETY_CATS: SafetyCheck["category"][] = ["toxicity","hallucination","bias
 
 export const TrainingService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.ds(oid))) return;
     const now = new Date().toISOString();
     // seed datasets
@@ -172,9 +178,10 @@ export const TrainingService = {
   },
 
   async _simulateJob(id: string, oid: string) {
+    _rng.reseed(`_simulateJob:${id}`);
     const stages: TrainingJobStatus[] = ["preparing","training","evaluating","governance_review","canary","deployed"];
     for (let i=0;i<stages.length;i++) {
-      await new Promise(r=>setTimeout(r, 400+Math.random()*500));
+      await new Promise(r=>setTimeout(r, 400+_rng.next()*500));
       const r = await redis.hgetall(K.j(oid,id)); if (!r._doc) return;
       const j: TrainingJob = JSON.parse(r._doc);
       j.status = stages[i]; j.progressPct = Math.round(((i+1)/stages.length)*100); j.updatedAt = new Date().toISOString();

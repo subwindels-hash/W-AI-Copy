@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiRecoveryOrchestration');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -480,11 +486,11 @@ export async function testRecoveryPlan(
   const testDate = new Date().toISOString();
 
   // Simulate test execution
-  const rtoAchieved = plan.rto.target * (0.9 + Math.random() * 0.2); // 90-110% of target
-  const rpoAchieved = plan.rpo.target * (0.9 + Math.random() * 0.2);
+  const rtoAchieved = plan.rto.target * (0.9 + _rng.next() * 0.2); // 90-110% of target
+  const rpoAchieved = plan.rpo.target * (0.9 + _rng.next() * 0.2);
 
   const proceduresExecuted = testType === 'full' ? plan.procedures.length : Math.ceil(plan.procedures.length * 0.5);
-  const proceduresSucceeded = Math.floor(proceduresExecuted * (0.8 + Math.random() * 0.2));
+  const proceduresSucceeded = Math.floor(proceduresExecuted * (0.8 + _rng.next() * 0.2));
   const proceduresFailed = proceduresExecuted - proceduresSucceeded;
 
   const issues: TestIssue[] = [];
@@ -492,7 +498,7 @@ export async function testRecoveryPlan(
     for (let i = 0; i < proceduresFailed; i++) {
       issues.push({
         id: `issue_${randomUUID()}`,
-        severity: Math.random() > 0.7 ? 'high' : 'medium',
+        severity: _rng.next() > 0.7 ? 'high' : 'medium',
         component: `Component ${i + 1}`,
         description: `Test issue ${i + 1}`,
         impact: 'Moderate impact on recovery time',

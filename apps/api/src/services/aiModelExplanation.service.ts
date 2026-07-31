@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelExplanation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -331,7 +337,7 @@ export async function generateSHAPExplanation(
   let totalShap = 0;
 
   for (const feature of features) {
-    const value = (Math.random() - 0.5) * 2;
+    const value = (_rng.next() - 0.5) * 2;
     shapValues[feature] = value;
     totalShap += value;
   }
@@ -346,7 +352,7 @@ export async function generateSHAPExplanation(
       importance: Math.abs(shapValues[feature]),
       rank: 0,
       direction: shapValues[feature] >= 0 ? 'positive' as const : 'negative' as const,
-      confidence: 0.8 + Math.random() * 0.2,
+      confidence: 0.8 + _rng.next() * 0.2,
     }))
     .sort((a, b) => b.importance - a.importance)
     .map((item, index) => ({ ...item, rank: index + 1 }));
@@ -427,8 +433,8 @@ export async function generateLIMEExplanation(
     .slice(0, numFeatures)
     .map((feature) => ({
       feature,
-      weight: (Math.random() - 0.5) * 2,
-      description: `${feature} ${Math.random() > 0.5 ? 'increases' : 'decreases'} prediction`,
+      weight: (_rng.next() - 0.5) * 2,
+      description: `${feature} ${_rng.next() > 0.5 ? 'increases' : 'decreases'} prediction`,
     }))
     .sort((a, b) => Math.abs(b.weight) - Math.abs(a.weight));
 
@@ -438,7 +444,7 @@ export async function generateLIMEExplanation(
       importance: Math.abs(item.weight),
       rank: index + 1,
       direction: item.weight >= 0 ? 'positive' as const : 'negative' as const,
-      confidence: 0.7 + Math.random() * 0.3,
+      confidence: 0.7 + _rng.next() * 0.3,
     }));
 
   const computationTimeMs = Date.now() - startTime;
@@ -460,11 +466,11 @@ export async function generateLIMEExplanation(
       featureImportance,
       limeExplanation: {
         instanceId: params.instanceId,
-        prediction: Math.random() > 0.5 ? 1 : 0,
+        prediction: _rng.next() > 0.5 ? 1 : 0,
         explanation,
         intercept: 0.5,
-        fidelity: 0.85 + Math.random() * 0.15,
-        localPrediction: Math.random() > 0.5 ? 1 : 0,
+        fidelity: 0.85 + _rng.next() * 0.15,
+        localPrediction: _rng.next() > 0.5 ? 1 : 0,
         surrogateModel: {
           type: 'linear',
           complexity: numFeatures,
@@ -517,7 +523,7 @@ export async function generateIntegratedGradientsExplanation(
   // Simulate integrated gradients
   const attributions: Record<string, number> = {};
   for (const feature of features) {
-    attributions[feature] = (params.input[feature] - baseline[feature]) * (Math.random() * 0.5 + 0.5);
+    attributions[feature] = (params.input[feature] - baseline[feature]) * (_rng.next() * 0.5 + 0.5);
   }
 
   const featureImportance: FeatureImportance[] = features
@@ -553,7 +559,7 @@ export async function generateIntegratedGradientsExplanation(
         attributions,
         targetClass: params.targetClass,
         steps,
-        convergenceDelta: 0.01 + Math.random() * 0.05,
+        convergenceDelta: 0.01 + _rng.next() * 0.05,
       },
     },
     quality: calculateExplanationQuality('integrated-gradients', featureImportance, computationTimeMs),
@@ -603,12 +609,12 @@ export async function generateCounterfactualExplanations(
   for (let i = 0; i < numCounterfactuals; i++) {
     const counterfactualInstance = { ...params.instanceData };
     const changes = [];
-    const numChanges = Math.floor(Math.random() * 3) + 1;
+    const numChanges = Math.floor(_rng.next() * 3) + 1;
 
     for (let j = 0; j < numChanges; j++) {
-      const feature = features[Math.floor(Math.random() * features.length)];
+      const feature = features[Math.floor(_rng.next() * features.length)];
       const originalValue = params.instanceData[feature];
-      const change = (Math.random() - 0.5) * 2;
+      const change = (_rng.next() - 0.5) * 2;
       const newValue = typeof originalValue === 'number' ? originalValue + change : !originalValue;
       
       counterfactualInstance[feature] = newValue;
@@ -625,12 +631,12 @@ export async function generateCounterfactualExplanations(
       originalInstance: params.instanceData,
       counterfactualInstance,
       changes,
-      originalPrediction: Math.random() > 0.5 ? 1 : 0,
+      originalPrediction: _rng.next() > 0.5 ? 1 : 0,
       counterfactualPrediction: params.desiredOutcome,
-      proximity: 0.7 + Math.random() * 0.3,
+      proximity: 0.7 + _rng.next() * 0.3,
       sparsity: 1 - (numChanges / features.length),
       validity: true,
-      diversity: i > 0 ? 0.5 + Math.random() * 0.5 : undefined,
+      diversity: i > 0 ? 0.5 + _rng.next() * 0.5 : undefined,
     });
   }
 
@@ -720,9 +726,9 @@ export async function compareExplanationMethods(
       const expl2 = explanationList.find(e => e.method === method2);
 
       if (expl1 && expl2) {
-        const similarity = 0.6 + Math.random() * 0.4;
-        const correlation = 0.5 + Math.random() * 0.5;
-        const agreement = 0.7 + Math.random() * 0.3;
+        const similarity = 0.6 + _rng.next() * 0.4;
+        const correlation = 0.5 + _rng.next() * 0.5;
+        const agreement = 0.7 + _rng.next() * 0.3;
 
         comparisons.push({
           method1,
@@ -883,10 +889,10 @@ function calculateExplanationQuality(
   featureImportance: FeatureImportance[],
   computationTimeMs: number
 ): ExplanationQuality {
-  const fidelity = 0.8 + Math.random() * 0.2;
-  const stability = 0.75 + Math.random() * 0.25;
-  const consistency = 0.8 + Math.random() * 0.2;
-  const completeness = featureImportance.length > 0 ? 0.85 + Math.random() * 0.15 : 0.5;
+  const fidelity = 0.8 + _rng.next() * 0.2;
+  const stability = 0.75 + _rng.next() * 0.25;
+  const consistency = 0.8 + _rng.next() * 0.2;
+  const completeness = featureImportance.length > 0 ? 0.85 + _rng.next() * 0.15 : 0.5;
   const overallScore = (fidelity + stability + consistency + completeness) / 4;
 
   const metrics: QualityMetric[] = [

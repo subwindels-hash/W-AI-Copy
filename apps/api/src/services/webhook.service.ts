@@ -4,6 +4,12 @@ import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
 import { EventBus } from "./eventBus.js";
 import { z } from "zod";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:webhook');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 export const CreateWebhookSchema = z.object({
   url: z.string().url(),
@@ -100,7 +106,7 @@ export async function dispatchEvent(organizationId: string, event: string, paylo
     where: { organizationId, active: true, OR: [{ events: { has: "*" } }, { events: { has: event } }] },
   });
   for (const wh of targets) {
-    const body = JSON.stringify({ id: `evt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`, event, data: payload, created: new Date().toISOString() });
+    const body = JSON.stringify({ id: `evt_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`, event, data: payload, created: new Date().toISOString() });
     const ts = Math.floor(Date.now() / 1000);
     const signature = signPayload(wh.secret, body, ts);
     const del = await prisma.webhookDelivery.create({

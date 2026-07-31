@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiAlignmentRobustness');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -566,8 +572,8 @@ function runAlignmentTest(config: SafetyTestConfig["alignment"]): AlignmentResul
 
   for (let i = 0; i < testCases.length; i++) {
     const testCase = testCases[i];
-    const aligned = Math.random() > 0.2; // 80% alignment rate
-    const confidence = 0.7 + Math.random() * 0.3;
+    const aligned = _rng.next() > 0.2; // 80% alignment rate
+    const confidence = 0.7 + _rng.next() * 0.3;
 
     results.push({
       input: testCase.input,
@@ -607,9 +613,9 @@ function runRobustnessTest(config: SafetyTestConfig["robustness"]): RobustnessRe
   const accuracies = [];
 
   for (let i = 0; i < numSamples; i++) {
-    const magnitude = config!.perturbationMagnitude ?? (Math.random() * 0.5);
-    const originalOutput = Math.random();
-    const perturbedOutput = originalOutput + (Math.random() - 0.5) * magnitude;
+    const magnitude = config!.perturbationMagnitude ?? (_rng.next() * 0.5);
+    const originalOutput = _rng.next();
+    const perturbedOutput = originalOutput + (_rng.next() - 0.5) * magnitude;
     const outputDifference = Math.abs(perturbedOutput - originalOutput);
     const robust = outputDifference < config!.threshold;
 
@@ -646,24 +652,24 @@ function runShiftDetectionTest(config: SafetyTestConfig["shiftDetection"]): Shif
   const currentData = config!.currentDataset;
 
   // Simulate statistical test
-  const pValue = Math.random();
+  const pValue = _rng.next();
   const detected = pValue < 0.05;
   const score = 1 - pValue;
 
   const severity = score > 0.9 ? "critical" : score > 0.7 ? "high" : score > 0.5 ? "medium" : score > 0.3 ? "low" : "none";
 
   const referenceStats = {
-    mean: Math.random(),
-    std: Math.random() * 0.5,
-    min: Math.random() * 0.5,
-    max: 0.5 + Math.random() * 0.5,
+    mean: _rng.next(),
+    std: _rng.next() * 0.5,
+    min: _rng.next() * 0.5,
+    max: 0.5 + _rng.next() * 0.5,
   };
 
   const currentStats = {
-    mean: referenceStats.mean + (detected ? (Math.random() - 0.5) * 0.3 : 0),
-    std: referenceStats.std + (detected ? (Math.random() - 0.5) * 0.2 : 0),
-    min: referenceStats.min + (detected ? (Math.random() - 0.5) * 0.2 : 0),
-    max: referenceStats.max + (detected ? (Math.random() - 0.5) * 0.2 : 0),
+    mean: referenceStats.mean + (detected ? (_rng.next() - 0.5) * 0.3 : 0),
+    std: referenceStats.std + (detected ? (_rng.next() - 0.5) * 0.2 : 0),
+    min: referenceStats.min + (detected ? (_rng.next() - 0.5) * 0.2 : 0),
+    max: referenceStats.max + (detected ? (_rng.next() - 0.5) * 0.2 : 0),
   };
 
   const recommendations = [];
@@ -695,8 +701,8 @@ function runRewardHackingTest(config: SafetyTestConfig["rewardHacking"]): Reward
   let hackingDetected = false;
 
   for (let i = 0; i < numEpisodes; i++) {
-    const proxyReward = Math.random() * 100;
-    const trueReward = proxyReward * (0.5 + Math.random() * 0.5); // Some divergence
+    const proxyReward = _rng.next() * 100;
+    const trueReward = proxyReward * (0.5 + _rng.next() * 0.5); // Some divergence
     const difference = Math.abs(proxyReward - trueReward);
     const hacked = difference > config!.threshold;
 
@@ -741,24 +747,24 @@ function runRewardHackingTest(config: SafetyTestConfig["rewardHacking"]): Reward
 
 function runCorrigibilityTest(config: SafetyTestConfig["corrigibility"]): CorrigibilityResult {
   const shutdownTest = {
-    passed: Math.random() > 0.2,
-    resistanceScore: Math.random() * 0.3,
+    passed: _rng.next() > 0.2,
+    resistanceScore: _rng.next() * 0.3,
     attempts: 10,
     successfulShutdowns: 0,
   };
   shutdownTest.successfulShutdowns = Math.floor(shutdownTest.attempts * (1 - shutdownTest.resistanceScore));
 
   const correctionTest = {
-    passed: Math.random() > 0.2,
-    resistanceScore: Math.random() * 0.3,
+    passed: _rng.next() > 0.2,
+    resistanceScore: _rng.next() * 0.3,
     attempts: 10,
     successfulCorrections: 0,
   };
   correctionTest.successfulCorrections = Math.floor(correctionTest.attempts * (1 - correctionTest.resistanceScore));
 
   const interventionTest = {
-    passed: Math.random() > 0.2,
-    resistanceScore: Math.random() * 0.3,
+    passed: _rng.next() > 0.2,
+    resistanceScore: _rng.next() * 0.3,
     attempts: 10,
     successfulInterventions: 0,
   };
@@ -785,8 +791,8 @@ function runSafeExplorationTest(config: SafetyTestConfig["safeExploration"]): Sa
   let unsafeEpisodes = 0;
 
   for (let i = 0; i < numEpisodes; i++) {
-    const violated = Math.random() < 0.1; // 10% violation rate
-    const exceededRiskBound = Math.random() < 0.05; // 5% risk bound exceedance
+    const violated = _rng.next() < 0.1; // 10% violation rate
+    const exceededRiskBound = _rng.next() < 0.05; // 5% risk bound exceedance
 
     if (violated) {
       constraintViolations++;
@@ -794,7 +800,7 @@ function runSafeExplorationTest(config: SafetyTestConfig["safeExploration"]): Sa
       unsafeBehaviors.push({
         episode: i,
         violation: "Constraint violation",
-        severity: Math.random() > 0.7 ? "high" : Math.random() > 0.4 ? "medium" : "low",
+        severity: _rng.next() > 0.7 ? "high" : _rng.next() > 0.4 ? "medium" : "low",
       });
     } else {
       safeEpisodes++;

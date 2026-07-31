@@ -9,6 +9,12 @@
  */
 
 import { randomUUID, createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:federatedLearning');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -455,7 +461,7 @@ export async function aggregateRoundUpdates(
     numClients: round.clientUpdates.length,
     totalSamples,
     globalLoss: weightedLoss,
-    globalAccuracy: 0.8 + Math.random() * 0.15,
+    globalAccuracy: 0.8 + _rng.next() * 0.15,
     improvement,
     downloadUrl: `https://models.example.com/federated/${randomUUID()}`,
     createdAt: new Date().toISOString(),
@@ -470,7 +476,7 @@ export async function aggregateRoundUpdates(
   round.metrics.averageTrainingTimeMs = round.clientUpdates.reduce((sum, u) => sum + u.trainingTimeMs, 0) / round.clientUpdates.length;
   round.metrics.averageUploadTimeMs = round.clientUpdates.reduce((sum, u) => sum + u.uploadTimeMs, 0) / round.clientUpdates.length;
   round.metrics.totalRoundTimeMs = new Date(round.completedAt).getTime() - new Date(round.startedAt).getTime();
-  round.metrics.aggregationTimeMs = 500 + Math.random() * 500;
+  round.metrics.aggregationTimeMs = 500 + _rng.next() * 500;
   round.metrics.globalLoss = weightedLoss;
   round.metrics.globalAccuracy = aggregatedModel.globalAccuracy;
   round.metrics.improvementFromPrevious = improvement;
@@ -692,7 +698,7 @@ function selectClients(job: FederatedLearningJob): string[] {
 function shuffleArray<T>(array: T[]): T[] {
   const shuffled = [...array];
   for (let i = shuffled.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
+    const j = Math.floor(_rng.next() * (i + 1));
     [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
   }
   return shuffled;
@@ -711,17 +717,17 @@ async function simulateRoundCompletion(jobId: string, roundId: string): Promise<
     if (!participant || participant.status !== "active") continue;
 
     // 90% participation rate
-    if (Math.random() < 0.9) {
+    if (_rng.next() < 0.9) {
       await submitClientUpdate(jobId, roundId, {
         clientId,
         clientName: participant.nodeName,
         modelWeightsHash: createHash("sha256").update(`${clientId}-${roundId}-${Date.now()}`).digest("hex"),
         modelSizeBytes: 5000000,
         numSamples: participant.dataSamples,
-        localLoss: 0.3 + Math.random() * 0.4,
-        localAccuracy: 0.7 + Math.random() * 0.25,
-        trainingTimeMs: 2000 + Math.random() * 3000,
-        uploadTimeMs: 500 + Math.random() * 1000,
+        localLoss: 0.3 + _rng.next() * 0.4,
+        localAccuracy: 0.7 + _rng.next() * 0.25,
+        trainingTimeMs: 2000 + _rng.next() * 3000,
+        uploadTimeMs: 500 + _rng.next() * 1000,
         metadata: {},
       });
     }

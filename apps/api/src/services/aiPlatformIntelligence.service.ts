@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiPlatformIntelligence');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -220,9 +226,9 @@ function generateModuleHealth(): ModuleHealthScore[] {
   ];
 
   return modules.map(m => {
-    const score = m.baseScore + (Math.random() * 10 - 5);
+    const score = m.baseScore + (_rng.next() * 10 - 5);
     const status = score >= 85 ? 'healthy' : score >= 70 ? 'warning' : 'critical';
-    const trend = Math.random() > 0.5 ? 'improving' : Math.random() > 0.5 ? 'stable' : 'declining';
+    const trend = _rng.next() > 0.5 ? 'improving' : _rng.next() > 0.5 ? 'stable' : 'declining';
 
     return {
       module: m.module,
@@ -231,14 +237,14 @@ function generateModuleHealth(): ModuleHealthScore[] {
       grade: calculateHealthGrade(score),
       status,
       keyMetrics: [
-        { name: 'Availability', value: 95 + Math.random() * 5, target: 99, unit: '%', status: 'good' as const },
-        { name: 'Performance', value: 80 + Math.random() * 15, target: 90, unit: '%', status: Math.random() > 0.5 ? 'good' : 'warning' as const },
+        { name: 'Availability', value: 95 + _rng.next() * 5, target: 99, unit: '%', status: 'good' as const },
+        { name: 'Performance', value: 80 + _rng.next() * 15, target: 90, unit: '%', status: _rng.next() > 0.5 ? 'good' : 'warning' as const },
       ],
       issues: status !== 'healthy' ? [{
         severity: status === 'warning' ? 'warning' : 'critical',
         title: `${m.name} requires attention`,
         description: `Score is ${Math.round(score)}%, below target of 85%`,
-        affectedModels: Math.floor(Math.random() * 5) + 1,
+        affectedModels: Math.floor(_rng.next() * 5) + 1,
         recommendation: `Review ${m.name} configuration and optimize`,
       }] : [],
       trend,
@@ -378,7 +384,7 @@ export function generateIntelligenceReport(organizationId: string): PlatformInte
       period: 'last_30_days',
       dataPoints: Array.from({ length: 30 }, (_, i) => ({
         date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
-        value: 80 + i * 0.2 + Math.random() * 2,
+        value: 80 + i * 0.2 + _rng.next() * 2,
       })),
     },
     {
@@ -388,7 +394,7 @@ export function generateIntelligenceReport(organizationId: string): PlatformInte
       period: 'last_30_days',
       dataPoints: Array.from({ length: 30 }, (_, i) => ({
         date: new Date(Date.now() - (29 - i) * 24 * 60 * 60 * 1000).toISOString(),
-        value: 150 - i * 1.5 + Math.random() * 10,
+        value: 150 - i * 1.5 + _rng.next() * 10,
       })),
     },
   ];

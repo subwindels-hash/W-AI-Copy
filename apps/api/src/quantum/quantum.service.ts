@@ -7,6 +7,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { QuantumDashboard, CryptoInventoryEntry, QuantumOptimizationJob, QuantumConnector, PQ_ALGORITHMS, QuantumReadiness } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('quantum');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   inv: (oid:string,id:string)=>`q:inv:${oid}:${id}`, invs:(oid:string)=>`q:invs:${oid}`,
@@ -14,9 +22,6 @@ const K = {
   con: (oid:string,id:string)=>`q:c:${oid}:${id}`, meta:(oid:string)=>`q:meta:${oid}`,
 };
 const s2=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
-function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
-
 const VENDORS: QuantumConnector["vendor"][] = ["ibm","aws_braket","azure_quantum","google_cirq","dwave","local_simulator"];
 const VULNERABLE = ["RSA-2048","RSA-4096","ECDSA-P256","ECDH-P256","ECDSA-P384"];
 const PQ_MAP: Record<string,typeof PQ_ALGORITHMS[number]> = {
@@ -32,6 +37,7 @@ const SYSTEMS = [
 
 export const QuantumService = {
   async ensureBootstrapped(logger?:any, oid="org-windels"){
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.meta(oid))) return;
     const now = new Date().toISOString();
     // inventory
@@ -81,6 +87,7 @@ export const QuantumService = {
     return out;
   },
   async connectors(oid="org-windels"):Promise<QuantumConnector[]>{
+    _rng.reseed(`connectors:${oid}`);
     // connectors aren't stored as a set to avoid adding a new key; scan meta? instead we just re-seed on demand by returning deterministic connectors
     return VENDORS.map((v,i)=>({
       id:"qc-"+i, vendor:v, status:(v==="local_simulator"?"simulating":v==="ibm"?"connected":"disconnected"),
@@ -93,6 +100,7 @@ export const QuantumService = {
     return out.sort((a,b)=>(b.completedAt||b.startedAt||"").localeCompare(a.completedAt||a.startedAt||""));
   },
   async submitJob(input:{kind:QuantumOptimizationJob["kind"];problem:QuantumOptimizationJob["problem"];vendor?:QuantumConnector["vendor"];organizationId?:string}):Promise<QuantumOptimizationJob>{
+    _rng.reseed(`submitJob:${input}`);
     const oid=input.organizationId||"org-windels"; const id=uid("qj-"); const now=new Date().toISOString();
     const j: QuantumOptimizationJob={
       id, kind:input.kind, problem:input.problem, status:"queued", qubits:randInt(20,200), startedAt:now,

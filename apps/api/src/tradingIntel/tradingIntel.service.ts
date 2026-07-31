@@ -22,6 +22,14 @@ import type {
   TiRiskProfile, TiPosition, TiSentimentReading, TiSimulationResult, TiSimScenario,
   TiEconomicEvent, TiLearningInsight,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('tradingIntel');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   agents: "ti:agents", agent: (k: string) => `ti:agent:${k}`,
@@ -84,8 +92,6 @@ const INDICATOR_DEFS: TiIndicatorPlugin[] = [
   { id: "OBV",        name: "On-Balance Volume",            category: "volume",            installed: true, version: "1.0.0", author: "windels" },
   { id: "VWAP",       name: "Volume Weighted Avg Price",    category: "volume",            installed: true, version: "1.0.0", author: "windels" },
 ];
-
-function rand(min: number, max: number) { return min + Math.random() * (max - min); }
 function rPct() { return rand(-3, 3); }
 function mkInstrument(
   id: string, symbol: string, name: string, marketClass: TiMarketClass, price: number,
@@ -94,7 +100,7 @@ function mkInstrument(
   const ch = rPct();
   return {
     id, symbol, name, marketClass, price, change24hPct: ch, volume24h: Math.floor(rand(1e6, 1e10)),
-    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : (Math.random() > 0.3 ? "open" : "closed"),
+    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : (_rng.next() > 0.3 ? "open" : "closed"),
     sentiment: ch > 0.3 ? "bullish" : ch < -0.3 ? "bearish" : "neutral",
     signal: ch > 1 ? "buy" : ch < -1 ? "sell" : "hold",
     confidence: rand(0.55, 0.92),
@@ -154,6 +160,7 @@ const SEED_INSTRUMENTS: Record<TiMarketClass, TiInstrument[]> = {
 
 export const TradingIntelService = {
   async ensureBootstrapped(logger?: any) {
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if ((await redis.get(K.enabled)) !== null) return;
     await redis.set(K.enabled, "1");
     // Agents
@@ -320,6 +327,7 @@ export const TradingIntelService = {
 
   // ── Sentiment
   async listSentiment(limit=40): Promise<TiSentimentReading[]> {
+    _rng.reseed(`listSentiment:${limit}`);
     // Generate on-the-fly synthetic readings (MVP); a later session wires real feeds.
     const inst = await this.listInstruments();
     const out: TiSentimentReading[] = [];
@@ -340,6 +348,7 @@ export const TradingIntelService = {
 
   // ── Simulation
   async runSimulation(input: { instrumentId: string; scenarios?: TiSimScenario[]; horizon?: string }): Promise<TiSimulationResult[]> {
+    _rng.reseed(`runSimulation:${input}`);
     const scenarios: TiSimScenario[] = input.scenarios ?? ["bull","bear","sideways","high-vol","flash-crash"];
     const horizon = input.horizon ?? "7d";
     const out: TiSimulationResult[] = [];

@@ -5,6 +5,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { FabricConnector, DataProduct, DataLineage, ConnectorStatus, FabricConnectorKind } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('enterpriseFoundation:dataFabric');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const CONNS = "ef:conns";
 const CONN  = (id: string) => `ef:conn:${id}`;
@@ -36,10 +44,11 @@ export const DataFabricService = {
     return raw ? (JSON.parse(raw) as FabricConnector) : null;
   },
   async registerConnector(input: Omit<FabricConnector, "id"|"datasets"|"rowsProcessed24h"|"bytesProcessed24h"|"latencyMs"|"errorRatePct"|"tags"|"encrypted"> & { tags?: string[] }): Promise<FabricConnector> {
+    _rng.reseed(`registerConnector`);
     const id = randomUUID();
     const c: FabricConnector = {
       id, datasets: 0, rowsProcessed24h: 0, bytesProcessed24h: 0,
-      latencyMs: 40 + Math.floor(Math.random()*200), errorRatePct: Math.random()*0.5,
+      latencyMs: 40 + Math.floor(_rng.next()*200), errorRatePct: _rng.next()*0.5,
       tags: input.tags ?? [], encrypted: true, ...input,
     };
     await redis.set(CONN(id), SER(c));

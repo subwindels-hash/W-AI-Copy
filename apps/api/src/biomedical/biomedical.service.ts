@@ -7,6 +7,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { BiomedicalDashboard, ImagingStudy, ClinicalDecision, HospitalOpsMetric, PharmacyAlert, TelemedicineSession, BIOMED_AREAS, BiomedArea } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('biomedical');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   img: (oid:string,id:string)=>`bm:img:${oid}:${id}`, imgs:(oid:string)=>`bm:imgs:${oid}`,
@@ -16,8 +24,6 @@ const K = {
   meta:(oid:string)=>`bm:meta:${oid}`,
 };
 const s2=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return Math.random()*(max-min)+min;}
-function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
 const hash = ()=>"pt-"+randomUUID().slice(0,12);
 
 const MODALITIES: ImagingStudy["modality"][] = ["xray","ct","mri","ultrasound","pet","mammo","pathology"];
@@ -32,6 +38,7 @@ const FINDINGS_POOL = [
 
 export const BiomedicalService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", _uid?:string){
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.meta(oid))) return;
     const now=new Date().toISOString();
     // seed studies
@@ -40,10 +47,10 @@ export const BiomedicalService = {
       const s: ImagingStudy = {
         id, patientHash:hash(), modality: MODALITIES[randInt(0,MODALITIES.length-1)], bodyPart: BODY_PARTS[randInt(0,BODY_PARTS.length-1)],
         aiFindings:[{finding:fin.finding,confidence:+rand(0.72,0.98).toFixed(2),severity:fin.sev as any,priority:fin.pri}],
-        radiologistReviewed: Math.random()>0.4,
+        radiologistReviewed: _rng.next()>0.4,
         status: (["queued","analyzing","review","signed_off","escalated"] as ImagingStudy["status"][])[randInt(0,4)],
         createdAt: new Date(Date.now()-randInt(1,72)*3600000).toISOString(),
-        completedAt: Math.random()>0.3 ? new Date().toISOString() : undefined,
+        completedAt: _rng.next()>0.3 ? new Date().toISOString() : undefined,
       };
       await redis.hset(K.img(oid,id),"_doc",s2(s)); await redis.sadd(K.imgs(oid),id);
     }
@@ -65,7 +72,7 @@ export const BiomedicalService = {
       const t: TelemedicineSession = {
         id, providerId:"prov-"+randInt(100,999), patientHash:hash(),
         startedAt:new Date(Date.now()-randInt(1,24)*3600000).toISOString(),
-        endedAt: Math.random()>0.3?new Date().toISOString():undefined,
+        endedAt: _rng.next()>0.3?new Date().toISOString():undefined,
         modality:(["video","voice","async"] as TelemedicineSession["modality"][])[randInt(0,2)],
         language:["en","es","fr","zh"][randInt(0,3)], aiScribeActive:true, summaryGenerated:true,
       };
@@ -76,6 +83,7 @@ export const BiomedicalService = {
   },
 
   async dashboard(oid="org-windels"): Promise<BiomedicalDashboard>{
+    _rng.reseed(`dashboard:${oid}`);
     if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids=await redis.smembers(K.imgs(oid));
     const studies:ImagingStudy[]=[];
@@ -109,6 +117,7 @@ export const BiomedicalService = {
   },
 
   async submitStudy(input:{modality:ImagingStudy["modality"];bodyPart:string;organizationId?:string}): Promise<ImagingStudy>{
+    _rng.reseed(`submitStudy:${input}`);
     const oid=input.organizationId||"org-windels"; const id=uid("img-"); const now=new Date().toISOString();
     const s: ImagingStudy={id,patientHash:hash(),modality:input.modality,bodyPart:input.bodyPart,aiFindings:[],radiologistReviewed:false,status:"analyzing",createdAt:now};
     await redis.hset(K.img(oid,id),"_doc",s2(s)); await redis.sadd(K.imgs(oid),id);

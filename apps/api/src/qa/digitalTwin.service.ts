@@ -10,6 +10,14 @@
 import { assertion } from "./testRunner.service.js";
 import { env } from "../config/env.js";
 import type { TestCase, TestCaseResult, DigitalTwinConfig } from "@windels/shared/qa";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('qa:digitalTwin');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const BASE = `http://127.0.0.1:${env.API_PORT}/api/v1`;
 
@@ -34,7 +42,7 @@ export async function runDigitalTwin(c: TestCase): Promise<TestCaseResult> {
           if (!r.ok) errors++;
         } catch { errors++; }
         requests++;
-        await sleep(10 + Math.random()*40);
+        await sleep(10 + _rng.next()*40);
       }
     }
     const workers: Promise<void>[] = []; for (let i=0;i<users;i++) workers.push(userLoop());
@@ -82,7 +90,7 @@ async function runAction(type: string, token: string): Promise<{ok:boolean}> {
 
 function sleep(ms:number){return new Promise(r=>setTimeout(r,ms));}
 function weightedPick<T extends {weight:number}>(items:T[],total:number):T{
-  let r = Math.random()*total; for(const i of items){ r -= i.weight; if(r<=0) return i; } return items[items.length-1];
+  let r = _rng.next()*total; for(const i of items){ r -= i.weight; if(r<=0) return i; } return items[items.length-1];
 }
 function percentile(xs:number[],p:number){ if(!xs.length) return 0; const s=[...xs].sort((a,b)=>a-b); const i=Math.floor(p*(s.length-1)); return s[i]; }
 async function adminToken(): Promise<string> {

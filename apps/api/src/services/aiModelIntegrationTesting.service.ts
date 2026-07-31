@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelIntegrationTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -474,7 +480,7 @@ function executeIntegrationTests(run: IntegrationTestRun, suite: IntegrationTest
       const stepStartTime = Date.now();
 
       // Simulate step execution
-      const stepPassed = Math.random() > 0.1; // 90% pass rate
+      const stepPassed = _rng.next() > 0.1; // 90% pass rate
       const actualOutput = stepPassed ? step.expectedOutput : { error: 'Step failed' };
 
       const currentStepDuration = (Date.now() - stepStartTime) / 1000;
@@ -694,7 +700,7 @@ export function validateContractTest(suiteId: string, contractTestId: string): C
   if (!contractTest) throw new Error(`Contract test ${contractTestId} not found`);
 
   // Simulate contract validation
-  const passed = Math.random() > 0.1; // 90% pass rate
+  const passed = _rng.next() > 0.1; // 90% pass rate
 
   contractTest.status = passed ? 'passed' : 'failed';
   contractTest.lastValidated = new Date().toISOString();

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiFeatureStore');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -639,7 +645,7 @@ export function runFeatureChecks(monitoringId: string): FeatureAlert[] {
 
   for (const check of monitoring.checks) {
     // Simulate check execution
-    const value = Math.random() * 100;
+    const value = _rng.next() * 100;
     const passed = value < check.threshold;
 
     check.lastValue = value;

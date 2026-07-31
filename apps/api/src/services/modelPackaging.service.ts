@@ -18,6 +18,12 @@ import { createHash } from "crypto";
 import { createReadStream, createWriteStream } from "fs";
 import { createGzip, createGunzip } from "zlib";
 import { pipeline } from "stream/promises";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:modelPackaging');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -114,7 +120,7 @@ export async function createModelPackage(input: {
   packageUrl?: string;
   packageSize?: number;
 }): Promise<ModelPackage> {
-  const packageId = `pkg_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const packageId = `pkg_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
 
   const pkg: ModelPackage = {

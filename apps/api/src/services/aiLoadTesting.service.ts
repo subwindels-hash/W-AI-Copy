@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiLoadTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -419,7 +425,7 @@ async function runLoadTest(testId: string): Promise<void> {
 
 function generateLoadTestSummary(test: LoadTest): LoadTestSummary {
   const totalRequests = Math.round(test.loadProfile.peakUsers * test.testConfig.totalDurationSeconds * 0.8);
-  const failedRequests = Math.round(totalRequests * (0.01 + Math.random() * 0.03));
+  const failedRequests = Math.round(totalRequests * (0.01 + _rng.next() * 0.03));
   const successfulRequests = totalRequests - failedRequests;
 
   return {
@@ -435,12 +441,12 @@ function generateLoadTestSummary(test: LoadTest): LoadTestSummary {
 }
 
 function generatePerformanceMetrics(test: LoadTest, summary: LoadTestSummary): PerformanceMetrics {
-  const baseLatency = 20 + Math.random() * 80;
+  const baseLatency = 20 + _rng.next() * 80;
   const loadFactor = test.loadProfile.peakUsers / 100;
 
   const latencies: number[] = [];
   for (let i = 0; i < 1000; i++) {
-    latencies.push(baseLatency * (0.5 + Math.random() * 1.5) * (1 + loadFactor * 0.5));
+    latencies.push(baseLatency * (0.5 + _rng.next() * 1.5) * (1 + loadFactor * 0.5));
   }
   latencies.sort((a, b) => a - b);
 
@@ -469,20 +475,20 @@ function generatePerformanceMetrics(test: LoadTest, summary: LoadTestSummary): P
   const throughput: ThroughputMetrics = {
     requestsPerSecond: summary.averageThroughput,
     peakRequestsPerSecond: summary.peakThroughput,
-    averageResponseSize: 1024 + Math.random() * 4096,
+    averageResponseSize: 1024 + _rng.next() * 4096,
     bandwidthMbps: Math.round((summary.averageThroughput * 2048 * 8) / 1024 / 1024 * 100) / 100,
   };
 
   const aiSpecific: AISpecificMetrics = {
-    tokensPerSecond: test.target.modelName.includes("text") || test.target.modelName.includes("llm") ? 50 + Math.random() * 150 : undefined,
+    tokensPerSecond: test.target.modelName.includes("text") || test.target.modelName.includes("llm") ? 50 + _rng.next() * 150 : undefined,
     inferenceLatencyMs: Math.round(mean * 0.8 * 100) / 100,
-    queueDepth: { mean: Math.round((2 + Math.random() * 8) * loadFactor * 100) / 100, max: Math.round((10 + Math.random() * 20) * loadFactor), p95: Math.round((5 + Math.random() * 10) * loadFactor * 100) / 100 },
-    batchSize: { mean: Math.round((4 + Math.random() * 12) * 100) / 100, max: Math.round(16 + Math.random() * 16) },
-    gpuUtilization: { mean: Math.round((50 + Math.random() * 30) * (1 + loadFactor * 0.3) * 100) / 100, peak: Math.round((80 + Math.random() * 15) * 100) / 100 },
-    memoryUsageMb: { mean: Math.round((2048 + Math.random() * 4096) * 100) / 100, peak: Math.round((4096 + Math.random() * 8192) * 100) / 100 },
-    modelLoadingTimeMs: 500 + Math.random() * 2000,
-    preprocessingTimeMs: 5 + Math.random() * 15,
-    postprocessingTimeMs: 2 + Math.random() * 8,
+    queueDepth: { mean: Math.round((2 + _rng.next() * 8) * loadFactor * 100) / 100, max: Math.round((10 + _rng.next() * 20) * loadFactor), p95: Math.round((5 + _rng.next() * 10) * loadFactor * 100) / 100 },
+    batchSize: { mean: Math.round((4 + _rng.next() * 12) * 100) / 100, max: Math.round(16 + _rng.next() * 16) },
+    gpuUtilization: { mean: Math.round((50 + _rng.next() * 30) * (1 + loadFactor * 0.3) * 100) / 100, peak: Math.round((80 + _rng.next() * 15) * 100) / 100 },
+    memoryUsageMb: { mean: Math.round((2048 + _rng.next() * 4096) * 100) / 100, peak: Math.round((4096 + _rng.next() * 8192) * 100) / 100 },
+    modelLoadingTimeMs: 500 + _rng.next() * 2000,
+    preprocessingTimeMs: 5 + _rng.next() * 15,
+    postprocessingTimeMs: 2 + _rng.next() * 8,
   };
 
   return { latency, throughput, aiSpecific };
@@ -528,11 +534,11 @@ function generateResourceUtilization(test: LoadTest): ResourceUtilization {
   const loadFactor = test.loadProfile.peakUsers / 100;
 
   return {
-    cpu: { mean: Math.round((40 + Math.random() * 30) * (1 + loadFactor * 0.3) * 100) / 100, peak: Math.round((70 + Math.random() * 25) * 100) / 100, cores: 8 },
-    memory: { meanMb: Math.round((4096 + Math.random() * 4096) * 100) / 100, peakMb: Math.round((8192 + Math.random() * 8192) * 100) / 100, totalMb: 32768 },
-    gpu: { mean: Math.round((50 + Math.random() * 30) * (1 + loadFactor * 0.3) * 100) / 100, peak: Math.round((80 + Math.random() * 15) * 100) / 100, memoryUsedMb: Math.round((4096 + Math.random() * 8192) * 100) / 100, memoryTotalMb: 16384, count: 2 },
-    network: { inboundMbps: Math.round((50 + Math.random() * 100) * 100) / 100, outboundMbps: Math.round((100 + Math.random() * 200) * 100) / 100 },
-    disk: { readIops: Math.round(1000 + Math.random() * 2000), writeIops: Math.round(500 + Math.random() * 1000), readMbps: Math.round((50 + Math.random() * 100) * 100) / 100, writeMbps: Math.round((20 + Math.random() * 50) * 100) / 100 },
+    cpu: { mean: Math.round((40 + _rng.next() * 30) * (1 + loadFactor * 0.3) * 100) / 100, peak: Math.round((70 + _rng.next() * 25) * 100) / 100, cores: 8 },
+    memory: { meanMb: Math.round((4096 + _rng.next() * 4096) * 100) / 100, peakMb: Math.round((8192 + _rng.next() * 8192) * 100) / 100, totalMb: 32768 },
+    gpu: { mean: Math.round((50 + _rng.next() * 30) * (1 + loadFactor * 0.3) * 100) / 100, peak: Math.round((80 + _rng.next() * 15) * 100) / 100, memoryUsedMb: Math.round((4096 + _rng.next() * 8192) * 100) / 100, memoryTotalMb: 16384, count: 2 },
+    network: { inboundMbps: Math.round((50 + _rng.next() * 100) * 100) / 100, outboundMbps: Math.round((100 + _rng.next() * 200) * 100) / 100 },
+    disk: { readIops: Math.round(1000 + _rng.next() * 2000), writeIops: Math.round(500 + _rng.next() * 1000), readMbps: Math.round((50 + _rng.next() * 100) * 100) / 100, writeMbps: Math.round((20 + _rng.next() * 50) * 100) / 100 },
   };
 }
 
@@ -670,7 +676,7 @@ function generateTimeSeriesData(test: LoadTest): TimeSeriesData {
     const timestamp = new Date(Date.now() + i * interval * 1000).toISOString();
     const progress = i / points;
     const users = progress < 0.2 ? test.loadProfile.peakUsers * (progress / 0.2) : progress > 0.8 ? test.loadProfile.peakUsers * (1 - (progress - 0.8) / 0.2) : test.loadProfile.peakUsers;
-    const baseLatency = 30 + Math.random() * 50;
+    const baseLatency = 30 + _rng.next() * 50;
     const loadFactor = users / test.loadProfile.peakUsers;
 
     latencyOverTime.push({ timestamp, p50: Math.round(baseLatency * 100) / 100, p95: Math.round(baseLatency * 1.5 * 100) / 100, p99: Math.round(baseLatency * 2 * 100) / 100 });

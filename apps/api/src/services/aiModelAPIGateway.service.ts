@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelAPIGateway');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -650,7 +656,7 @@ export function processRequest(
 
   // Process request (simulated)
   const startTime = Date.now();
-  const latency = Math.random() * 500 + 50; // 50-550ms
+  const latency = _rng.next() * 500 + 50; // 50-550ms
 
   const response: APIResponse = {
     requestId,

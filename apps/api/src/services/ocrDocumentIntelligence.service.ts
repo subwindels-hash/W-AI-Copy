@@ -9,6 +9,12 @@
  */
 
 import { randomUUID, createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:ocrDocumentIntelligence');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -600,23 +606,23 @@ async function processOCRJob(jobId: string): Promise<void> {
   const startTime = Date.now();
 
   // Simulate OCR processing
-  const processingTimeMs = 1000 + Math.floor(Math.random() * 3000);
+  const processingTimeMs = 1000 + Math.floor(_rng.next() * 3000);
 
   // Generate simulated results
   const result: OCRResult = {
     documentMetadata: {
       type: job.documentType ?? detectDocumentType(),
-      pageCount: 1 + Math.floor(Math.random() * 5),
-      orientation: job.config.detectOrientation ? (Math.random() > 0.9 ? 90 : 0) : 0,
+      pageCount: 1 + Math.floor(_rng.next() * 5),
+      orientation: job.config.detectOrientation ? (_rng.next() > 0.9 ? 90 : 0) : 0,
       language: job.config.language ?? "en",
       detectedLanguages: [
         { language: job.config.language ?? "en", confidence: 0.95 },
       ],
       quality: {
-        overall: 0.85 + Math.random() * 0.15,
-        textClarity: 0.9 + Math.random() * 0.1,
-        skew: Math.random() * 2,
-        noise: Math.random() * 0.1,
+        overall: 0.85 + _rng.next() * 0.15,
+        textClarity: 0.9 + _rng.next() * 0.1,
+        skew: _rng.next() * 2,
+        noise: _rng.next() * 0.1,
       },
     },
     fullText: generateFullText(),
@@ -639,9 +645,9 @@ async function processOCRJob(jobId: string): Promise<void> {
       provider: job.provider,
       model: getOCRProviderModel(job.provider),
       processingTimeMs,
-      wordCount: 150 + Math.floor(Math.random() * 500),
-      characterCount: 800 + Math.floor(Math.random() * 3000),
-      averageConfidence: 0.88 + Math.random() * 0.12,
+      wordCount: 150 + Math.floor(_rng.next() * 500),
+      characterCount: 800 + Math.floor(_rng.next() * 3000),
+      averageConfidence: 0.88 + _rng.next() * 0.12,
     },
   };
 
@@ -662,7 +668,7 @@ async function processOCRJob(jobId: string): Promise<void> {
 
 function detectDocumentType(): DocumentType {
   const types: DocumentType[] = ["invoice", "receipt", "letter", "report", "form", "mixed"];
-  return types[Math.floor(Math.random() * types.length)];
+  return types[Math.floor(_rng.next() * types.length)];
 }
 
 function generateFullText(): string {
@@ -681,7 +687,7 @@ function generatePageTexts(): PageText[] {
     {
       pageNumber: 1,
       text: generateFullText(),
-      wordCount: 150 + Math.floor(Math.random() * 100),
+      wordCount: 150 + Math.floor(_rng.next() * 100),
       confidence: 0.92,
     },
   ];
@@ -745,7 +751,7 @@ function generateTextWords(): TextWord[] {
     text: word,
     boundingBox: { x: 0.1 + i * 0.15, y: 0.2, width: 0.12, height: 0.02, normalized: true },
     pageNumber: 1,
-    confidence: 0.95 + Math.random() * 0.05,
+    confidence: 0.95 + _rng.next() * 0.05,
     isHandwritten: false,
   }));
 }

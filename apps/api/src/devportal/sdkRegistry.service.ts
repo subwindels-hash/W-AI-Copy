@@ -4,6 +4,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { SDKCategory, SDKLanguage, SDKPackage, SDKStatus } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('devportal:sdkRegistry');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST_KEY = "dev:sdks";
 const COUNTER = "dev:sdk:counter";
@@ -49,6 +57,7 @@ export const SDKRegistryService = {
     description: string; features: string[]; status?: SDKStatus; version?: string;
     sliceNumber: number; exampleSnippet?: string; bundleSizeKb?: number;
   }): Promise<SDKPackage> {
+    _rng.reseed(`register`);
     const id = randomUUID();
     const sdk: SDKPackage = {
       id,
@@ -61,8 +70,8 @@ export const SDKRegistryService = {
       installSnippet: mkInstall(input.slug, input.language),
       docsUrl: `https://docs.windels.ai/sdks/${input.slug}`,
       description: input.description,
-      weeklyDownloads: Math.floor(100 + Math.random() * 9000),
-      stars: Math.floor(10 + Math.random() * 900),
+      weeklyDownloads: Math.floor(100 + _rng.next() * 9000),
+      stars: Math.floor(10 + _rng.next() * 900),
       bundleSizeKb: input.bundleSizeKb,
       minPlatformVersion: "0.27.0",
       repoUrl: `https://github.com/windels-ai/windels/tree/main/sdks/${input.slug}`,

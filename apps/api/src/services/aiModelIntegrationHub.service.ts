@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelIntegrationHub');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -418,14 +424,14 @@ function deliverWebhook(
   event.status = 'retrying';
 
   // Simulate success/failure
-  const success = Math.random() > 0.1; // 90% success rate
+  const success = _rng.next() > 0.1; // 90% success rate
 
   if (success) {
     event.status = 'delivered';
     event.response = {
       statusCode: 200,
       body: '{"status": "ok"}',
-      latency: Math.random() * 500,
+      latency: _rng.next() * 500,
     };
     webhook.successCount++;
     webhook.lastTriggeredAt = event.lastAttemptAt;
@@ -434,7 +440,7 @@ function deliverWebhook(
     event.response = {
       statusCode: 500,
       body: '{"error": "Internal server error"}',
-      latency: Math.random() * 1000,
+      latency: _rng.next() * 1000,
     };
     webhook.failureCount++;
 
@@ -494,9 +500,9 @@ export function testIntegration(
 
   // Simulate test execution
   setTimeout(() => {
-    const success = Math.random() > 0.2; // 80% success rate
+    const success = _rng.next() > 0.2; // 80% success rate
     test.status = success ? 'passed' : 'failed';
-    test.duration = Math.random() * 1000;
+    test.duration = _rng.next() * 1000;
 
     if (success) {
       test.response = { status: 'ok', message: 'Test passed' };

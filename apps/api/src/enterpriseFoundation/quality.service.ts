@@ -4,6 +4,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { AiQualityScorecard, EvalRun, EvalDimension } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('enterpriseFoundation:quality');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const CARDS = "ef:cards";
 const CARD  = (id: string) => `ef:card:${id}`;
@@ -48,6 +56,7 @@ export const QualityService = {
     return out.sort((a,b)=>new Date(b.startedAt).getTime()-new Date(a.startedAt).getTime());
   },
   async startRun(input: { name: string; modelId: string; dataset: string; dimensions: EvalDimension[]; triggeredBy?: string }): Promise<EvalRun> {
+    _rng.reseed(`startRun:${input}`);
     const id = randomUUID();
     const r: EvalRun = {
       id, name: input.name, modelId: input.modelId, dataset: input.dataset,
@@ -58,8 +67,8 @@ export const QualityService = {
     await redis.sadd(RUNS, id);
     // simulate completion
     r.status = "running";
-    r.samples = 200 + Math.floor(Math.random()*800);
-    r.passedSamples = Math.floor(r.samples * (0.78 + Math.random()*0.2));
+    r.samples = 200 + Math.floor(_rng.next()*800);
+    r.passedSamples = Math.floor(r.samples * (0.78 + _rng.next()*0.2));
     r.passPct = +((r.passedSamples / r.samples) * 100).toFixed(1);
     r.finishedAt = iso();
     r.status = r.passPct >= 90 ? "passed" : "failed";

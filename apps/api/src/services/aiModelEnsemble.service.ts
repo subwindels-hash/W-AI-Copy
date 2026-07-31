@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelEnsemble');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -282,11 +288,11 @@ export function createEnsemble(params: {
     weight: m.weight || 1.0 / params.models.length,
     status: 'active',
     individualPerformance: {
-      accuracy: 0.85 + Math.random() * 0.1,
-      precision: 0.83 + Math.random() * 0.1,
-      recall: 0.84 + Math.random() * 0.1,
-      f1Score: 0.84 + Math.random() * 0.1,
-      inferenceTimeMs: 20 + Math.random() * 30,
+      accuracy: 0.85 + _rng.next() * 0.1,
+      precision: 0.83 + _rng.next() * 0.1,
+      recall: 0.84 + _rng.next() * 0.1,
+      f1Score: 0.84 + _rng.next() * 0.1,
+      inferenceTimeMs: 20 + _rng.next() * 30,
     },
     contribution: 0,
     diversity: 0,
@@ -375,11 +381,11 @@ export function addModelToEnsemble(
     weight: model.weight || 1.0 / (ensemble.models.length + 1),
     status: 'active',
     individualPerformance: {
-      accuracy: 0.85 + Math.random() * 0.1,
-      precision: 0.83 + Math.random() * 0.1,
-      recall: 0.84 + Math.random() * 0.1,
-      f1Score: 0.84 + Math.random() * 0.1,
-      inferenceTimeMs: 20 + Math.random() * 30,
+      accuracy: 0.85 + _rng.next() * 0.1,
+      precision: 0.83 + _rng.next() * 0.1,
+      recall: 0.84 + _rng.next() * 0.1,
+      f1Score: 0.84 + _rng.next() * 0.1,
+      inferenceTimeMs: 20 + _rng.next() * 30,
     },
     contribution: 0,
     diversity: 0,
@@ -536,7 +542,7 @@ export function optimizeEnsembleWeights(ensembleId: string): EnsembleOptimizatio
       let totalWeight = 0;
 
       ensemble.models.forEach(model => {
-        const w = Math.random();
+        const w = _rng.next();
         weights[model.modelId] = w;
         totalWeight += w;
       });
@@ -546,7 +552,7 @@ export function optimizeEnsembleWeights(ensembleId: string): EnsembleOptimizatio
         weights[k] /= totalWeight;
       });
 
-      const accuracy = ensemble.performance.accuracy + (Math.random() - 0.5) * 0.02;
+      const accuracy = ensemble.performance.accuracy + (_rng.next() - 0.5) * 0.02;
 
       iterations.push({
         iteration: i + 1,
@@ -580,7 +586,7 @@ export function calculateDiversityMetrics(ensembleId: string): DiversityMetrics 
 
   // Simulate predictions from each model
   const predictions: number[][] = ensemble.models.map(() =>
-    Array(100).fill(0).map(() => Math.random())
+    Array(100).fill(0).map(() => _rng.next())
   );
 
   return calculateDiversity(predictions);

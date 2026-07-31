@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:modelQuantization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -430,7 +436,7 @@ async function executeQuantizationJob(jobId: string): Promise<void> {
     quantizationJobs.set(jobId, job);
 
     // Simulate calibration
-    const calibrationTimeMs = job.calibrationDataset ? 5000 + Math.random() * 10000 : 0;
+    const calibrationTimeMs = job.calibrationDataset ? 5000 + _rng.next() * 10000 : 0;
     await new Promise(resolve => setTimeout(resolve, Math.min(calibrationTimeMs, 100)));
 
     job.status = "quantizing";
@@ -438,7 +444,7 @@ async function executeQuantizationJob(jobId: string): Promise<void> {
     quantizationJobs.set(jobId, job);
 
     // Simulate quantization
-    const quantizationTimeMs = 10000 + Math.random() * 20000;
+    const quantizationTimeMs = 10000 + _rng.next() * 20000;
     await new Promise(resolve => setTimeout(resolve, Math.min(quantizationTimeMs, 100)));
 
     job.status = "validating";
@@ -508,12 +514,12 @@ function generateQuantizationResult(job: QuantizationJob): QuantizationResult {
 
   // Generate original accuracy (simulated)
   const originalAccuracy: ModelAccuracy = {
-    overall: 0.92 + Math.random() * 0.05,
+    overall: 0.92 + _rng.next() * 0.05,
     metrics: {
-      accuracy: 0.92 + Math.random() * 0.05,
-      precision: 0.91 + Math.random() * 0.05,
-      recall: 0.90 + Math.random() * 0.05,
-      f1: 0.91 + Math.random() * 0.05,
+      accuracy: 0.92 + _rng.next() * 0.05,
+      precision: 0.91 + _rng.next() * 0.05,
+      recall: 0.90 + _rng.next() * 0.05,
+      f1: 0.91 + _rng.next() * 0.05,
     },
     dataset: "validation_set",
     evaluatedAt: new Date().toISOString(),
@@ -536,13 +542,13 @@ function generateQuantizationResult(job: QuantizationJob): QuantizationResult {
   const speedup = 1 / compressionRatio * 0.8; // Realistic speedup
   const performanceMetrics: PerformanceMetrics = {
     inferenceLatencyMs: {
-      original: 50 + Math.random() * 50,
-      quantized: (50 + Math.random() * 50) / speedup,
+      original: 50 + _rng.next() * 50,
+      quantized: (50 + _rng.next() * 50) / speedup,
       speedup,
     },
     throughputPerSecond: {
-      original: 20 + Math.random() * 20,
-      quantized: (20 + Math.random() * 20) * speedup,
+      original: 20 + _rng.next() * 20,
+      quantized: (20 + _rng.next() * 20) * speedup,
       improvement: speedup,
     },
     memoryUsageMb: {
@@ -553,7 +559,7 @@ function generateQuantizationResult(job: QuantizationJob): QuantizationResult {
   };
 
   // Generate quantization details
-  const numTotalLayers = 50 + Math.floor(Math.random() * 50);
+  const numTotalLayers = 50 + Math.floor(_rng.next() * 50);
   const numQuantizedLayers = Math.floor(numTotalLayers * 0.9); // 90% of layers quantized
   const quantizationDetails: QuantizationDetails = {
     method: config.method,
@@ -563,9 +569,9 @@ function generateQuantizationResult(job: QuantizationJob): QuantizationResult {
     numTotalLayers,
     quantizedLayerPercent: (numQuantizedLayers / numTotalLayers) * 100,
     calibrationSamplesUsed: job.calibrationDataset?.numSamples,
-    calibrationTimeMs: job.calibrationDataset ? 5000 + Math.random() * 10000 : undefined,
-    quantizationTimeMs: 10000 + Math.random() * 20000,
-    totalProcessingTimeMs: 20000 + Math.random() * 30000,
+    calibrationTimeMs: job.calibrationDataset ? 5000 + _rng.next() * 10000 : undefined,
+    quantizationTimeMs: 10000 + _rng.next() * 20000,
+    totalProcessingTimeMs: 20000 + _rng.next() * 30000,
   };
 
   // Generate output models

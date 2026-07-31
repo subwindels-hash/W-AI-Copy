@@ -6,6 +6,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { DevEnvironment, DevEnvKind, DevEnvStatus } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('devportal:environment');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST_KEY = "dev:envs";
 const DETAIL = (id: string) => `dev:env:${id}`;
@@ -43,6 +51,7 @@ export const EnvironmentService = {
     return raw ? (JSON.parse(raw) as DevEnvironment) : null;
   },
   async start(id: string): Promise<DevEnvironment | null> {
+    _rng.reseed(`start:${id}`);
     const e = await this.get(id);
     if (!e) return null;
     e.status = "starting";
@@ -52,8 +61,8 @@ export const EnvironmentService = {
     e.status = "running";
     e.startedAt = iso();
     e.uptimeSec = 0;
-    e.cpuPct = Math.round(5 + Math.random() * 35);
-    e.memMb = Math.round(200 + Math.random() * 600);
+    e.cpuPct = Math.round(5 + _rng.next() * 35);
+    e.memMb = Math.round(200 + _rng.next() * 600);
     e.url = e.kind === "local"
       ? `http://localhost:${e.ports.find(p=>p.name==="web"||p.name==="https"||p.name==="emulator")?.port ?? 5173}`
       : `https://${e.kind}-${randomUUID().slice(0,8)}.windels.dev`;
@@ -75,6 +84,7 @@ export const EnvironmentService = {
     return e;
   },
   async seed() {
+    _rng.reseed(`seed`);
     const existing = await redis.scard(LIST_KEY);
     if (existing > 0) return;
     for (const spec of SEED_ENVS) {
@@ -86,7 +96,7 @@ export const EnvironmentService = {
           ? [`[${iso()}] ${spec.name} already running`, `[${iso()}] services healthy: ${spec.services.join(", ")}`]
           : [],
         uptimeSec: spec.kind === "local" ? 3800 : 0,
-        cpuPct: spec.kind === "local" ? Math.round(15 + Math.random()*25) : 0,
+        cpuPct: spec.kind === "local" ? Math.round(15 + _rng.next()*25) : 0,
         memMb: spec.kind === "local" ? 420 : 0,
         url: spec.kind === "local" ? "http://localhost:5173" : undefined,
         startedAt: spec.kind === "local" ? iso() : undefined,

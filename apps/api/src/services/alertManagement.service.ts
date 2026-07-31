@@ -15,6 +15,12 @@ import { prisma } from "../db/client.js";
 import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { redisCmd } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:alertManagement');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -129,7 +135,7 @@ export async function createAlertRule(input: {
   annotations?: Record<string, string>;
   enabled?: boolean;
 }): Promise<AlertRule> {
-  const id = `rule_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const id = `rule_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const now = new Date().toISOString();
 
   const rule: AlertRule = {
@@ -405,7 +411,7 @@ async function getAlertByFingerprint(fingerprint: string): Promise<Alert | null>
  * Fire an alert
  */
 async function fireAlert(rule: AlertRule, fingerprint: string): Promise<Alert> {
-  const id = `alert_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const id = `alert_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const now = new Date().toISOString();
 
   const message = rule.annotations.summary || `${rule.name} is firing`;
@@ -537,7 +543,7 @@ async function sendAlertNotifications(
       });
 
       alert.notifications.push({
-        id: `notif_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`,
+        id: `notif_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`,
         alertId: alert.id,
         channel,
         sentAt: new Date().toISOString(),
@@ -565,7 +571,7 @@ async function sendNotification(
   alert: Alert,
   isResolution: boolean,
 ): Promise<AlertNotification> {
-  const notificationId = `notif_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const notificationId = `notif_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const sentAt = new Date().toISOString();
 
   let recipient = "unknown";

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelCompression');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -369,9 +375,9 @@ export function runCompressionBenchmark(params: {
   const id = randomUUID();
 
   const results: CompressionBenchmarkResult[] = params.compressionTypes.map(type => {
-    const sizeReduction = Math.random() * 0.5 + 0.3;
-    const accuracyDrop = Math.random() * 0.05;
-    const speedup = 1 + Math.random() * 2;
+    const sizeReduction = _rng.next() * 0.5 + 0.3;
+    const accuracyDrop = _rng.next() * 0.05;
+    const speedup = 1 + _rng.next() * 2;
     const overallScore = (sizeReduction * 0.4) + ((1 - accuracyDrop) * 0.4) + (speedup * 0.2);
 
     return {
@@ -461,7 +467,7 @@ export function validateCompressedModel(
   const job = compressionJobs.get(jobId);
   if (!job || !job.results) throw new Error(`Compression job ${jobId} not found or incomplete`);
 
-  const validationAccuracy = job.results.accuracyComparison.compressedAccuracy - Math.random() * 0.01;
+  const validationAccuracy = job.results.accuracyComparison.compressedAccuracy - _rng.next() * 0.01;
   const accuracyDrop = job.results.accuracyComparison.originalAccuracy - validationAccuracy;
 
   return {

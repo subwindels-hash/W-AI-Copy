@@ -17,6 +17,12 @@ import { pushEvent } from "../http/routes/events.js";
 import { canAcceptTasks } from "./agentLifecycle.service.js";
 import { agentHasSkill } from "./agentSkills.service.js";
 import { z } from "zod";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:agentOrchestration');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -146,7 +152,7 @@ export async function selectAgent(
         const agent = candidates[(idx - 1) % candidates.length];
         return { agentId: agent.id, agentName: agent.name, reason: `Round-robin selection (index ${(idx - 1) % candidates.length})` };
       } catch {
-        const agent = candidates[Math.floor(Math.random() * candidates.length)];
+        const agent = candidates[Math.floor(_rng.next() * candidates.length)];
         return { agentId: agent.id, agentName: agent.name, reason: "Random fallback (round-robin Redis failed)" };
       }
     }
@@ -192,7 +198,7 @@ export async function selectAgent(
 
     case "random":
     default: {
-      const agent = candidates[Math.floor(Math.random() * candidates.length)];
+      const agent = candidates[Math.floor(_rng.next() * candidates.length)];
       return { agentId: agent.id, agentName: agent.name, reason: "Random selection" };
     }
   }

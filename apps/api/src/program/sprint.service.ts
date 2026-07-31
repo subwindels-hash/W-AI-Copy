@@ -4,6 +4,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Sprint, SprintBurndown, Story } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('program:sprint');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const SPRINT_LIST = "pgm:sprints";
 const SPRINT_DETAIL = (id: string) => `pgm:sprint:${id}`;
@@ -26,6 +34,7 @@ export const SprintService = {
     return out.sort((a, b) => b.number - a.number);
   },
   async createSprint(input: Partial<Sprint>): Promise<Sprint> {
+    _rng.reseed(`createSprint:${input}`);
     const n = await redis.incr(COUNTER);
     const id = randomUUID();
     const start = input.startAt ?? new Date().toISOString();
@@ -41,7 +50,7 @@ export const SprintService = {
       capacityPoints: input.capacityPoints ?? 40,
       committedPoints: 0,
       completedPoints: input.completedPoints ?? 0,
-      velocityProjected: Math.round(30 + Math.random() * 15),
+      velocityProjected: Math.round(30 + _rng.next() * 15),
       aiSuggestedGoal: input.aiSuggestedGoal ?? `Ship sprint ${n} scope with high confidence; focus on debt reduction and roadmap initiative alignment.`,
     };
     await redis.set(SPRINT_DETAIL(id), ser(s));
@@ -62,9 +71,10 @@ export const SprintService = {
     return out.sort((a, b) => (a.sprintId ? -1 : 1) - (b.sprintId ? -1 : 1));
   },
   async createStory(input: Partial<Story>): Promise<Story> {
+    _rng.reseed(`createStory:${input}`);
     const n = await redis.incr(STORY_COUNTER);
     const id = randomUUID();
-    const suggested = Math.round((input.points as number) ?? (3 + Math.random() * 8));
+    const suggested = Math.round((input.points as number) ?? (3 + _rng.next() * 8));
     const story: Story = {
       id,
       sprintId: input.sprintId ?? null,
@@ -115,6 +125,7 @@ export const SprintService = {
     await redis.set(SPRINT_DETAIL(sprintId), ser(s));
   },
   async burndown(sprintId: string): Promise<SprintBurndown | null> {
+    _rng.reseed(`burndown:${sprintId}`);
     const s = await this.getSprint(sprintId);
     if (!s) return null;
     const start = new Date(s.startAt).getTime();
@@ -124,7 +135,7 @@ export const SprintService = {
     const arr: { date: string; remaining: number; ideal: number }[] = [];
     for (let i = 0; i <= days; i++) {
       const ideal = Math.max(0, Math.round(pts - (pts * i / days)));
-      const noise = (Math.random() - 0.3) * (pts * 0.12);
+      const noise = (_rng.next() - 0.3) * (pts * 0.12);
       const remaining = Math.max(0, Math.round(ideal + noise));
       arr.push({
         date: new Date(start + i * 86400_000).toISOString().slice(0, 10),

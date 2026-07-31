@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:hyperparameterOptimization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -505,8 +511,8 @@ function generateGeneticTrials(job: HPOJob, maxTrials: number): HPOTrial[] {
 
   // Generate offspring (simplified)
   for (let i = config.populationSize; i < maxTrials; i++) {
-    const parent1 = trials[Math.floor(Math.random() * Math.min(i, config.populationSize))];
-    const parent2 = trials[Math.floor(Math.random() * Math.min(i, config.populationSize))];
+    const parent1 = trials[Math.floor(_rng.next() * Math.min(i, config.populationSize))];
+    const parent2 = trials[Math.floor(_rng.next() * Math.min(i, config.populationSize))];
     const hyperparameters = crossover(parent1.hyperparameters, parent2.hyperparameters, config.crossoverRate);
     mutate(hyperparameters, job.searchSpace.parameters, config.mutationRate);
     trials.push(createTrial(job.id, i + 1, hyperparameters));
@@ -533,7 +539,7 @@ async function executeTrial(jobId: string, trial: HPOTrial): Promise<void> {
   try {
     // Simulate training
     const startTime = Date.now();
-    const duration = 5000 + Math.random() * 25000;
+    const duration = 5000 + _rng.next() * 25000;
     await new Promise(resolve => setTimeout(resolve, Math.min(duration, 100)));
 
     // Generate metrics
@@ -645,20 +651,20 @@ function sampleRandomHyperparameters(parameters: ParameterSpace[]): Record<strin
 function sampleParameterValue(param: ParameterSpace): unknown {
   if (param.type === "categorical") {
     const choices = param.choices ?? [];
-    return choices[Math.floor(Math.random() * choices.length)];
+    return choices[Math.floor(_rng.next() * choices.length)];
   }
 
   if (param.type === "int" && param.low !== undefined && param.high !== undefined) {
-    return Math.floor(Math.random() * (param.high - param.low + 1)) + param.low;
+    return Math.floor(_rng.next() * (param.high - param.low + 1)) + param.low;
   }
 
   if (param.type === "float" && param.low !== undefined && param.high !== undefined) {
     if (param.logScale) {
       const logLow = Math.log(param.low);
       const logHigh = Math.log(param.high);
-      return Math.exp(Math.random() * (logHigh - logLow) + logLow);
+      return Math.exp(_rng.next() * (logHigh - logLow) + logLow);
     }
-    return Math.random() * (param.high - param.low) + param.low;
+    return _rng.next() * (param.high - param.low) + param.low;
   }
 
   return param.defaultValue;
@@ -674,7 +680,7 @@ function crossover(parent1: Record<string, unknown>, parent2: Record<string, unk
   const child: Record<string, unknown> = {};
 
   for (const key of Object.keys(parent1)) {
-    if (Math.random() < rate) {
+    if (_rng.next() < rate) {
       child[key] = parent1[key];
     } else {
       child[key] = parent2[key];
@@ -686,7 +692,7 @@ function crossover(parent1: Record<string, unknown>, parent2: Record<string, unk
 
 function mutate(hyperparameters: Record<string, unknown>, parameters: ParameterSpace[], rate: number): void {
   for (const param of parameters) {
-    if (Math.random() < rate) {
+    if (_rng.next() < rate) {
       hyperparameters[param.name] = sampleParameterValue(param);
     }
   }
@@ -694,7 +700,7 @@ function mutate(hyperparameters: Record<string, unknown>, parameters: ParameterS
 
 function simulateTrialMetrics(hyperparameters: Record<string, unknown>, modelType: string): Record<string, number> {
   // Simulate metrics based on hyperparameters
-  const baseAccuracy = 0.7 + Math.random() * 0.25;
+  const baseAccuracy = 0.7 + _rng.next() * 0.25;
   const learningRate = (hyperparameters.learning_rate as number) ?? 0.01;
   const nEstimators = (hyperparameters.n_estimators as number) ?? 100;
 
@@ -706,12 +712,12 @@ function simulateTrialMetrics(hyperparameters: Record<string, unknown>, modelTyp
 
   return {
     accuracy,
-    precision: accuracy - 0.02 + Math.random() * 0.04,
-    recall: accuracy - 0.01 + Math.random() * 0.03,
-    f1: accuracy - 0.015 + Math.random() * 0.03,
-    auc_roc: Math.min(1, accuracy + 0.02 + Math.random() * 0.03),
-    training_time: 5000 + Math.random() * 25000,
-    model_size: 10 + Math.random() * 90,
+    precision: accuracy - 0.02 + _rng.next() * 0.04,
+    recall: accuracy - 0.01 + _rng.next() * 0.03,
+    f1: accuracy - 0.015 + _rng.next() * 0.03,
+    auc_roc: Math.min(1, accuracy + 0.02 + _rng.next() * 0.03),
+    training_time: 5000 + _rng.next() * 25000,
+    model_size: 10 + _rng.next() * 90,
   };
 }
 

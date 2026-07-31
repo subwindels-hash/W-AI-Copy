@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelCompatibilityTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -213,11 +219,11 @@ function runInputSchemaTests(
   if (config.includeEdgeCases) {
     tests.push({
       name: 'Empty input handling',
-      passed: Math.random() > 0.1,
-      score: Math.random() > 0.1 ? 100 : 0,
+      passed: _rng.next() > 0.1,
+      score: _rng.next() > 0.1 ? 100 : 0,
       expected: 'graceful handling',
-      actual: Math.random() > 0.1 ? 'graceful handling' : 'error',
-      message: Math.random() > 0.1 ? 'Both models handle empty inputs' : 'Candidate model fails on empty input',
+      actual: _rng.next() > 0.1 ? 'graceful handling' : 'error',
+      message: _rng.next() > 0.1 ? 'Both models handle empty inputs' : 'Candidate model fails on empty input',
     });
     
     tests.push({
@@ -259,7 +265,7 @@ function runOutputEquivalenceTests(
   });
   
   // Test output values
-  const valueDiff = Math.random() * config.toleranceThreshold * 2;
+  const valueDiff = _rng.next() * config.toleranceThreshold * 2;
   tests.push({
     name: 'Output value equivalence',
     passed: valueDiff <= config.toleranceThreshold,
@@ -300,8 +306,8 @@ function runPerformanceTests(
 ): TestCategoryResult {
   const tests: TestResult[] = [];
   
-  const baselineLatency = 100 + Math.random() * 20;
-  const candidateLatency = baselineLatency * (0.9 + Math.random() * 0.3);
+  const baselineLatency = 100 + _rng.next() * 20;
+  const candidateLatency = baselineLatency * (0.9 + _rng.next() * 0.3);
   const latencyChange = ((candidateLatency - baselineLatency) / baselineLatency) * 100;
   
   tests.push({
@@ -315,8 +321,8 @@ function runPerformanceTests(
     duration: candidateLatency,
   });
   
-  const baselineThroughput = 1000 + Math.random() * 200;
-  const candidateThroughput = baselineThroughput * (0.9 + Math.random() * 0.3);
+  const baselineThroughput = 1000 + _rng.next() * 200;
+  const candidateThroughput = baselineThroughput * (0.9 + _rng.next() * 0.3);
   const throughputChange = ((candidateThroughput - baselineThroughput) / baselineThroughput) * 100;
   
   tests.push({
@@ -592,7 +598,7 @@ export function validateAPIContract(
   const violations: string[] = [];
   
   // Simulate validation
-  if (Math.random() > 0.9) {
+  if (_rng.next() > 0.9) {
     violations.push('Input schema mismatch detected');
   }
   
