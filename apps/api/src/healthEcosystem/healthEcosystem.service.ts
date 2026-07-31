@@ -291,19 +291,22 @@ function seedMedicalDevices(): MedicalDevice[] {
   ];
 }
 
+// Seed catalogs use fixed ISO strings so repeated reads return byte-identical
+// output. A real EHR bridge writes actual `lastCompleted` / `nextDose` when
+// vaccinations or screenings are logged.
 function seedVaccines(): Vaccination[] {
   return [
-    { id: uid("vx-"), name: "COVID-19 (annual)", lastDose: daysAgo(200), nextDose: daysAgo(-80), dosesReceived: 5, dosesRequired: 5, status: "up_to_date" },
-    { id: uid("vx-"), name: "Influenza (seasonal)", lastDose: daysAgo(300), nextDose: daysAgo(-20), dosesReceived: 1, dosesRequired: 1, status: "due" },
-    { id: uid("vx-"), name: "Tdap", lastDose: daysAgo(400), nextDose: daysAgo(-700), dosesReceived: 1, dosesRequired: 1, status: "up_to_date" },
+    { id: "vx-covid19-annual",   name: "COVID-19 (annual)",     lastDose: "2026-01-12T00:00:00.000Z", nextDose: "2026-10-19T00:00:00.000Z", dosesReceived: 5, dosesRequired: 5, status: "up_to_date" },
+    { id: "vx-influenza-season", name: "Influenza (seasonal)",  lastDose: "2025-10-04T00:00:00.000Z", nextDose: "2026-08-20T00:00:00.000Z", dosesReceived: 1, dosesRequired: 1, status: "due" },
+    { id: "vx-tdap",             name: "Tdap",                  lastDose: "2025-06-26T00:00:00.000Z", nextDose: "2028-06-30T00:00:00.000Z", dosesReceived: 1, dosesRequired: 1, status: "up_to_date" },
   ];
 }
 
 function seedScreenings(): Screening[] {
   return [
-    { id: uid("sc-"), name: "Annual physical", frequency: "1y", lastCompleted: daysAgo(340), nextDue: daysAgo(-20), status: "due" },
-    { id: uid("sc-"), name: "Lipid panel", frequency: "1y", lastCompleted: daysAgo(200), nextDue: daysAgo(-165), status: "up_to_date" },
-    { id: uid("sc-"), name: "Dental cleaning", frequency: "6m", lastCompleted: daysAgo(150), nextDue: daysAgo(-30), status: "due" },
+    { id: "sc-annual-physical", name: "Annual physical",  frequency: "1y", lastCompleted: "2025-08-25T00:00:00.000Z", nextDue: "2026-08-20T00:00:00.000Z", status: "due" },
+    { id: "sc-lipid-panel",     name: "Lipid panel",      frequency: "1y", lastCompleted: "2026-01-12T00:00:00.000Z", nextDue: "2027-01-12T00:00:00.000Z", status: "up_to_date" },
+    { id: "sc-dental-cleaning", name: "Dental cleaning",  frequency: "6m", lastCompleted: "2026-03-03T00:00:00.000Z", nextDue: "2026-08-10T00:00:00.000Z", status: "due" },
   ];
 }
 
