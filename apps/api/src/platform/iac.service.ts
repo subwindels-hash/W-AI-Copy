@@ -39,7 +39,7 @@ export const IaCService = {
     for (const d of DEFAULT_STACKS) {
       const stack: IaCStack = {
         id: randomUUID(), ...d,
-        resources: Math.floor(20 + Math.random() * 80),
+        // Resource count comes from a real plan/apply; it was a random 20-100.
         // Drift is only true when a plan has actually reported it.
         status: "applied", driftDetected: false, updatedAt: now(),
       };
@@ -63,21 +63,60 @@ export const IaCService = {
     const stack = await this.get(stackId); if (!stack) throw new Error("stack not found");
     const id = randomUUID();
     const run: IaCRun = {
-      id, stackId, kind, triggeredBy, status: "succeeded",
-      summary: kind === "plan"
-        ? { add: Math.floor(Math.random()*3), change: Math.floor(Math.random()*5), destroy: Math.floor(Math.random()*2) }
-        : { add: 0, change: 0, destroy: 0 },
-      startedAt: now(), finishedAt: now(), logRef: `runs/${id}.log`,
+      // No terraform/pulumi/helm binary is invoked here, so the run is queued
+      // for an external executor rather than reporting "succeeded" with an
+      // invented diff (previously add 0-2 / change 0-4 / destroy 0-1 for a plan
+      // that never ran). recordRun() writes the real outcome.
+      id, stackId, kind, triggeredBy, status: "queued",
+      startedAt: now(), logRef: `runs/${id}.log`,
     };
     stack.lastPlanId = kind === "plan" ? id : stack.lastPlanId;
     stack.lastApplyId = kind === "apply" ? id : stack.lastApplyId;
-    stack.status = (kind === "apply" ? "applied" : "planned") as IaCStatus;
-    stack.driftDetected = false; stack.updatedAt = now();
+    // The stack state only advances once the executor reports back.
+    stack.updatedAt = now();
     const multi = redisCmd.multi();
     multi.set(sk(stackId), JSON.stringify(stack));
     multi.set(rk(id), JSON.stringify(run));
     multi.sadd(RUNS_KEY, id);
     await multi.exec();
+    return run;
+  },
+
+  /**
+   * Record the outcome of a run executed by a real IaC tool. This is the
+   * intake path that replaces the fabricated plan diff: the executor reports
+   * the actual add/change/destroy counts, the managed resource total, and
+   * whether the run succeeded.
+   */
+  async recordRun(
+    runId: string,
+    result: {
+      status: "succeeded" | "failed" | "cancelled";
+      summary?: { add: number; change: number; destroy: number };
+      resources?: number;
+      driftDetected?: boolean;
+    },
+  ): Promise<IaCRun | null> {
+    const raw = await redisCmd.get(rk(runId));
+    if (!raw) return null;
+    const run = JSON.parse(raw) as IaCRun;
+    run.status = result.status;
+    run.summary = result.summary;
+    run.finishedAt = now();
+    await redisCmd.set(rk(runId), JSON.stringify(run));
+
+    const stack = await this.get(run.stackId);
+    if (stack) {
+      if (result.status === "succeeded") {
+        stack.status = (run.kind === "apply" ? "applied" : "planned") as IaCStatus;
+      } else {
+        stack.status = "failed" as IaCStatus;
+      }
+      if (result.resources !== undefined) stack.resources = result.resources;
+      if (result.driftDetected !== undefined) stack.driftDetected = result.driftDetected;
+      stack.updatedAt = now();
+      await redisCmd.set(sk(run.stackId), JSON.stringify(stack));
+    }
     return run;
   },
 

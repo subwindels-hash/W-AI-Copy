@@ -94,7 +94,8 @@ export interface IaCStack {
   path: string;
   lastPlanId?: string;
   lastApplyId?: string;
-  resources: number;
+  /** Managed resource count, reported by a real plan/apply. Undefined until one runs. */
+  resources?: number;
   status: IaCStatus;
   driftDetected: boolean;
   updatedAt: string;
@@ -106,7 +107,9 @@ export interface IaCRun {
   kind: "plan" | "apply" | "destroy";
   triggeredBy: string;
   status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
-  summary: { add: number; change: number; destroy: number };
+  /** Plan/apply diff. Undefined until the tool reports one — a run that has not
+   *  executed has no diff, which is different from a diff of zero changes. */
+  summary?: { add: number; change: number; destroy: number };
   startedAt: string;
   finishedAt?: string;
   logRef?: string;

@@ -123,6 +123,24 @@ export function registerInfrastructureRoutes(router: Router) {
       res.json({ ok: true, data: s });
     } catch (e) { next(e); }
   });
+  // Intake for a run executed by the real IaC tool. `run` only queues; without
+  // this the run would sit queued rather than reporting a fabricated diff.
+  router.post("/iac/runs/:runId/result", validate({ body: z.object({
+    status: z.enum(["succeeded","failed","cancelled"]),
+    summary: z.object({
+      add: z.number().int().min(0),
+      change: z.number().int().min(0),
+      destroy: z.number().int().min(0),
+    }).optional(),
+    resources: z.number().int().min(0).optional(),
+    driftDetected: z.boolean().optional(),
+  }) }), async (req, res, next) => {
+    try {
+      const r = await IaCService.recordRun(req.params.runId, req.body);
+      if (!r) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Run not found" } });
+      res.json({ ok: true, data: r });
+    } catch (e) { next(e); }
+  });
   router.get("/iac/runs", async (req, res, next) => {
     try { res.json({ ok: true, data: { runs: await IaCService.listRuns(req.query.stackId as string) } }); } catch (e) { next(e); }
   });

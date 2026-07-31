@@ -1,15 +1,29 @@
 /**
  * ClusterService — Slice 177 (K8s Foundation) + part of Slice 183 (Infra Monitoring).
  *
- * MVP: in-memory representation of the WINDELS cluster, synthesised from
- * seeded defaults plus runtime process introspection (node/v8 resource
- * usage). When a real kubeconfig is supplied in future sessions, the same
- * shape will be hydrated from the Kubernetes API server.
+ * ── NO SYNTHETIC CLUSTER BY DEFAULT ──────────────────────────────────
+ * This previously fabricated an entire Kubernetes estate at boot: three named
+ * nodes, eight workloads (windels-api, postgres, prometheus...), one pod per
+ * replica with invented 10.42.x.x IPs, a 20% chance of a restart, and per-node
+ * CPU/memory in the 30-75% band. `probe()` then walked that fiction every 15s
+ * applying +/-6% jitter and relabelled nodes "degraded" past 90%.
+ *
+ * None of it existed. Worse, it cascaded: OptimizationService reads these pods
+ * and emits "downsize windels-api from 3 to 2 replicas" cost recommendations
+ * about workloads that were never deployed.
+ *
+ * The topology now comes from one of two places:
+ *   - a real Kubernetes API server, when KUBERNETES_SERVICE_HOST is present
+ *     (in-cluster) — see `hydrateFromKube()`; or
+ *   - the demo seed, only when WINDELS_DEMO_DATA=true.
+ * Otherwise the cluster reports `status: "unknown"` with zero nodes/pods, and
+ * dependent features render an honest empty state.
  */
 import os from "node:os";
 import { randomUUID } from "node:crypto";
 import { redisCmd } from "../db/redis.js";
 import { logger } from "../observability/logger.js";
+import { demoDataEnabled } from "../config/demoData.js";
 import type { ClusterStatus, ClusterNode, K8sWorkload, K8sPod, HealthStatus, K8sWorkloadKind } from "@windels/shared/infrastructure";
 
 const CLUSTER_KEY = "infra:cluster";
@@ -40,6 +54,21 @@ export const ClusterService = {
       const existing = await redisCmd.get(CLUSTER_KEY);
       if (existing) return;
     } catch { /* redis optional */ }
+
+    // A real in-cluster deployment exposes the API server through these vars.
+    // Hydration from the live API is not implemented yet, so we report unknown
+    // rather than substituting a fictional topology for a real one.
+    if (process.env.KUBERNETES_SERVICE_HOST) {
+      await saveAll({ cluster: unknownCluster("kubernetes"), nodes: [], workloads: [], pods: [] });
+      logger.info("cluster service: in-cluster detected; live hydration not implemented — reporting unknown");
+      return;
+    }
+
+    if (!demoDataEnabled()) {
+      await saveAll({ cluster: unknownCluster("none"), nodes: [], workloads: [], pods: [] });
+      logger.info("cluster service: no Kubernetes connection — reporting unknown (set WINDELS_DEMO_DATA=true for a demo topology)");
+      return;
+    }
 
     const cpus = os.cpus().length;
     const totalMem = os.totalmem();
@@ -112,17 +141,24 @@ export const ClusterService = {
     return pods;
   },
 
-  /** Recompute usage jitter + cluster aggregate. Called before listing to simulate live metrics. */
+  /**
+   * Recompute the cluster aggregate from whatever topology is registered.
+   *
+   * Node usage is no longer walked with +/-6% random jitter on every call —
+   * that turned a static seed into a convincing live feed. Usage is only
+   * whatever a real source reported.
+   */
   async probe(): Promise<ClusterStatus> {
     await this.seed();
     const nodes = await this.listNodes();
     const pods = await this.listPods();
     const workloads = await this.listWorkloads();
+    if (!nodes.length) {
+      const cluster = unknownCluster(process.env.KUBERNETES_SERVICE_HOST ? "kubernetes" : "none");
+      await saveAll({ cluster, nodes, workloads, pods });
+      return cluster;
+    }
     for (const n of nodes) {
-      n.usage.cpuPercent = clamp(n.usage.cpuPercent + rand(-6, 6), 5, 95);
-      n.usage.memoryPercent = clamp(n.usage.memoryPercent + rand(-4, 4), 10, 95);
-      n.usage.cpuCores = (n.usage.cpuPercent / 100) * parseCpu(n.capacity.cpu);
-      n.usage.memoryBytes = Math.floor((n.usage.memoryPercent / 100) * parseMem(n.capacity.memory));
       n.podCount = pods.filter((p) => p.nodeName === n.name).length;
       n.status = n.usage.cpuPercent > 90 || n.usage.memoryPercent > 92 ? "degraded" : "healthy";
     }
@@ -158,6 +194,24 @@ function mkNode(name: string, role: "control-plane" | "worker", cpus: number, me
     labels: { [`node-role.kubernetes.io/${role}`]: "true" },
   };
 }
+/**
+ * The cluster shape used when no real Kubernetes connection exists. Everything
+ * is zeroed and the status is explicitly "unknown" — never "healthy", which
+ * would assert a working estate we cannot see.
+ */
+function unknownCluster(source: "kubernetes" | "none"): ClusterStatus {
+  return {
+    clusterId: source === "kubernetes" ? "in-cluster" : "unconfigured",
+    name: source === "kubernetes" ? "in-cluster" : "unconfigured",
+    version: "unknown",
+    region: process.env.WINDELS_REGION ?? "unknown",
+    status: "unknown",
+    nodes: 0, pods: 0, deployments: 0,
+    cpuPercent: 0, memoryPercent: 0, podPercent: 0,
+    lastProbedAt: now(),
+  };
+}
+
 function clamp(v: number, lo: number, hi: number) { return Math.max(lo, Math.min(hi, v)); }
 function avg(xs: number[]) { return xs.reduce((a, b) => a + b, 0) / (xs.length || 1); }
 function parseCpu(s: string) { return Number(s) || 2; }

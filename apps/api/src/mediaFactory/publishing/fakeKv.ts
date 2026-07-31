@@ -153,4 +153,46 @@ export class FakeKv {
     const end = stop === -1 ? l.length : stop + 1;
     return l.slice(start, end);
   }
+
+  async rpush(key: string, value: string): Promise<number> {
+    const l = this.lists.get(key) ?? [];
+    l.push(value);
+    this.lists.set(key, l);
+    return l.length;
+  }
+
+  async zremrangebyscore(key: string, min: number | string, max: number | string): Promise<number> {
+    const lo = min === "-inf" ? Number.NEGATIVE_INFINITY : Number(min);
+    const hi = max === "+inf" ? Number.POSITIVE_INFINITY : Number(max);
+    const z = this.zsets.get(key);
+    if (!z) return 0;
+    let removed = 0;
+    for (const [m, sc] of [...z.entries()]) if (sc >= lo && sc <= hi) { z.delete(m); removed++; }
+    return removed;
+  }
+
+  /**
+   * Minimal ioredis pipeline. Commands are queued and applied in order on
+   * exec(); this fake is single-threaded so no real atomicity is required.
+   */
+  multi() {
+    const ops: Array<() => Promise<unknown>> = [];
+    const self = this;
+    const chain = {
+      set(key: string, value: string, ...args: any[]) { ops.push(() => self.set(key, value, ...args)); return chain; },
+      del(key: string) { ops.push(() => self.del(key)); return chain; },
+      hset(key: string, field: string, value: string) { ops.push(() => self.hset(key, field, value)); return chain; },
+      sadd(key: string, ...members: string[]) { ops.push(() => self.sadd(key, ...members)); return chain; },
+      srem(key: string, ...members: string[]) { ops.push(() => self.srem(key, ...members)); return chain; },
+      zadd(key: string, score: number, member: string) { ops.push(() => self.zadd(key, score, member)); return chain; },
+      lpush(key: string, value: string) { ops.push(() => self.lpush(key, value)); return chain; },
+      ltrim(key: string, start: number, stop: number) { ops.push(() => self.ltrim(key, start, stop)); return chain; },
+      async exec() {
+        const out: Array<[null, unknown]> = [];
+        for (const op of ops) out.push([null, await op()]);
+        return out;
+      },
+    };
+    return chain;
+  }
 }

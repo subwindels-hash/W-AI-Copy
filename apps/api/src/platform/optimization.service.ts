@@ -24,13 +24,16 @@ export const OptimizationService = {
   async seed() {
     if (seeded) return; seeded = true;
     try { if (await redisCmd.exists(COST_KEY)) return; } catch {}
+    // Cloud spend must come from a real billing export. This was a hardcoded
+    // $14,820/month split across services, regions and resource types, with a
+    // $15,200 forecast — figures indistinguishable from a real invoice once
+    // rendered on the FinOps dashboard. Zeroed until a billing source reports.
     const cost: CostBreakdown = {
       month: new Date().toISOString().slice(0,7),
-      totalUsd: 14820,
-      byService: { api: 5200, web: 1800, worker: 2600, data: 3200, observability: 1200, misc: 820 },
-      byRegion: { "na-east-1": 7800, "na-west-2": 2600, "eu-west-1": 2300, "ap-south-1": 1500, "eu-central-1-dr": 620 },
-      byResource: { compute: 8100, storage: 2800, network: 2300, managed: 1620 },
-      forecastUsd: 15200,
+      totalUsd: 0,
+      byService: {}, byRegion: {},
+      byResource: { compute: 0, storage: 0, network: 0, managed: 0 },
+      forecastUsd: 0,
     };
     await redisCmd.set(COST_KEY, JSON.stringify(cost));
   },
@@ -62,13 +65,12 @@ export const OptimizationService = {
           "Use node affinities to rebalance memory-heavy workers.", 60, "low", {}));
       }
     }
-    // One synthetic orphaned resource
-    newRecs.push(mk("orphan-resource","medium",{kind:"storage",name:"windels-old-pvc-2026-01"},"Orphaned PVC 'windels-old-pvc-2026-01' not mounted by any workload.",
-      "Delete the PVC after confirming no workload requires the snapshot.", 90, "low", {}));
-    newRecs.push(mk("spot-migration","high",{kind:"node",name:"windels-worker-2"},"worker-2 runs exclusively on-demand.",
-      "Migrate stateless workloads to spot instances for ~60% compute savings.", 1250, "medium", { target: "spot-pool" }));
-    newRecs.push(mk("storage-class","low",{kind:"storage",name:"gp3-migration"},"Several PVCs still use gp2 storage class.",
-      "Migrate to gp3 for ~20% lower cost and higher baseline IOPS.", 140, "low", { targetClass: "gp3" }));
+    // Three recommendations used to be appended unconditionally, naming
+    // resources that do not exist — an orphaned PVC "windels-old-pvc-2026-01",
+    // a node "windels-worker-2", and a gp2->gp3 migration — each with a
+    // confident monthly saving ($90/$1250/$140). Acting on any of them would
+    // have meant hunting for infrastructure that was never provisioned.
+    // Recommendations are now derived solely from observed workloads above.
 
     for (const r of newRecs) {
       await redisCmd.set(REC_PREFIX+r.id, JSON.stringify(r));
@@ -79,8 +81,8 @@ export const OptimizationService = {
 
   async list(filter?: { status?: RecommendationStatus; severity?: RecommendationSeverity; kind?: RecommendationKind }): Promise<OptimizationRecommendation[]> {
     await this.seed();
-    const ids = await redisCmd.smembers(REC_KEY);
-    if (ids.length === 0) await this.generate();
+    // Reading the list no longer triggers generation — that is how the
+    // fabricated recommendations appeared simply by opening the dashboard.
     const all = await Promise.all((await redisCmd.smembers(REC_KEY)).map(async (id) => {
       const r = await redisCmd.get(REC_PREFIX+id); return r?JSON.parse(r) as OptimizationRecommendation:null;
     }));
