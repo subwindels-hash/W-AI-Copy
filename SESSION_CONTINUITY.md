@@ -78,7 +78,7 @@ is marked complete before all five.
 | 37–76 | Self-hosted AI, Voice, Media, Kernel, Memory, Model Factory, Marketplace, Crypto, Robotics, Quantum, Bio, Legal, Education, Health… | ✅ MVP (many = seeded demo data) |
 | 77A/77B | Experts Platform / Media Factory + **Social Publishing Pipeline** (completion pass 2026-07-31) | ✅ Shipping (real OAuth upload protocols) |
 | 78–82 | UX Intelligence, Gift Cards, Multi-Currency, Trading Intel, Cyber Academy | ✅ Shipped |
-| 83 | ETL & Data Pipelines | ✅ Shipped (pipeline builder, SFTP/S3, DLQ) |
+| 83 | ETL & Data Pipelines | ✅ **Real execution engine 2026-07-31** (CSV/JSON parsing, mapping, DLQ, honest verdicts) |
 | 84 | Project Continuity Engine | ✅ **Gate closed 2026-07-31** — inspection, encrypted quarantine, ClamAV, sandbox gate, snapshots/rollback, dashboard |
 | 85 | AI Lead Discovery | ✅ Frontend shipped 2026-07-31 (`/app/leads`) |
 | 86 | Global Branding | ✅ Footer integrated app-wide |

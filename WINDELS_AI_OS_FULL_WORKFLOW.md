@@ -134,7 +134,7 @@ Legend — **Real** = real logic/persistence · **Demo** = seeded/Math.random fi
 | 80 | Global Multi-Currency & Localization | `uploads/79 and 80.md` | `globalCurrency` | `/global-currency` | ✅ Demo |
 | 81 | Unified Trading Intelligence | `uploads/session-81-trading-intelligence-platform.md` | `tradingIntel` (18 agents, 20 indicators, 13 markets, risk, sim) | `/trading-intel` | ✅ Demo (real CoinGecko + indicators tested) |
 | 82 | AI Cybersecurity Academy | `uploads/CLAUDE-session-82.md` | `cyber` | `/cyber` | ✅ Demo |
-| 83 | ETL & Data Pipeline Platform | `docs/SESSION_83_SPECIFICATION.md` | `etl` | `/etl` | ✅ (pipeline builder, DLQ) |
+| 83 | ETL & Data Pipeline Platform | `docs/SESSION_83_SPECIFICATION.md` | `etl` | `/etl` | ✅ **Real execution engine 2026-07-31** (CSV/JSON, mapping, DLQ, honest verdicts) |
 | 84 | Project Continuity Engine | `docs/SESSIONS_84_86_ADDENDUM.md` | `projectContinuity` (inspection, quarantine, clamav, sandbox, snapshots) | `/projects` (+quarantine, health, architecture, snapshots, diff, rollback) | ✅ **Gate closed 2026-07-31** — full dashboard `/app/projects` |
 | 85 | AI Lead Discovery | `docs/SESSIONS_84_86_ADDENDUM.md` | `leadDiscovery` (backend) + `/app/leads` (UI) | `/lead-discovery/*` | ✅ Frontend shipped 2026-07-31 |
 | 86 | Global Branding | `docs/SESSIONS_84_86_ADDENDUM.md` | `GlobalBrandingFooter.tsx` | (FE) | ✅ |
