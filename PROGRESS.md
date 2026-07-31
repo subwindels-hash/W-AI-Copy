@@ -1313,3 +1313,111 @@ Bumped to **Sessions 38–75 · v0.89.0** (collapsed "v0.89").
 - Register OAuth apps per platform; set `*_CLIENT_ID/*_CLIENT_SECRET`, `FACEBOOK_PAGE_ID`, `PINTEREST_BOARD_ID`, `INSTAGRAM_IG_USER_ID` (or rely on token self-resolution), and `PUBLISH_REDIRECT_URI` to the web `/media` route.
 - TikTok/X public posting requires app review (unaudited apps post SELF_ONLY drafts — adapter warns); Instagram requires a professional account bound to the OAuth token.
 - Optional later milestones: publish-job webhook status sync (YouTube video processing state), per-org connection sharing (currently per-user tokens, by design), browser-side direct media upload (currently server-fetched URL/render artifact).
+
+## Session 77B — Publishing completion pass II (webhook sync · direct upload · org-shared connections, 2026-07-31)
+
+**Status:** ✅ Shipped — closes the three "optional later milestones" from the first 77B pass with real, tested code.
+
+### 1. Webhook status sync (platform → job state)
+- **Per-org per-platform webhook registration:** `POST /publishing/webhooks/:platform/register` returns the public callback URL (embeds `?oid=<orgId>`, base configurable via `PUBLISH_WEBHOOK_BASE_URL`) + a 64-hex HMAC secret (rotates on re-register, stored AES-256-GCM encrypted). `GET /publishing/webhooks` lists with masked secrets; `DELETE /publishing/webhooks/:platform` removes.
+- **Public inbound callback** `POST /media-factory/publishing/webhooks/:platform/callback?oid=<orgId>` — mounted BEFORE the authenticated media-factory router (platform hubs have no JWT), signature-verified in constant time against the org's secret (`X-Windels-Signature: sha256=<hex>` generic, `X-Hub-Signature: sha1=<hex>` PubSubHubbub-compatible). The global `express.json` now stashes `req.rawBody` via a `verify` hook so the exact bytes are signed. Unknown post ids are acknowledged quietly (`matched:false`); known ones sync the job.
+- **Job sync semantics** (`applyPlatformWebhook`): non-terminal updates (`processing|processed|available|uploaded`) record `platformStatus` (+ `platformAvailableAt` when available) while the job stays `published` (the platform accepted it); terminal updates (`failed|rejected`) flip the job to `failed` with code `PLATFORM_REJECTED` + reason and are never re-queued. Idempotent repeats are no-ops. Every sync appends to the job's new **status history**, writes an `webhook.synced` audit entry, and dispatches a Kernel `media.publish.status` event.
+- **Per-job status history:** `PubJob.statusHistory` (capped 50, newest last) now records every transition (`queued → uploading → published/failed`, retries, cancels, webhook syncs) — surfaced in the UI as an expandable "History" block.
+
+### 2. Browser-side direct upload
+- `POST /publishing/upload` (multipart field `file`, cap `PUBLISH_UPLOAD_MAX_MB` default 512MB — the shared `multipartSingle` middleware gained an optional `maxBytes`) accepts video/image only (mime + extension allowlist), stores the file in the shared media cache dir under a uuid name, and returns `{ file, url: /api/v1/media-factory/render/<file>, fileName, contentType, sizeBytes, ... }` — the publish endpoint resolves it as an internal artifact.
+- `GET /publishing/uploads` lists org uploads (newest first); `DELETE /publishing/uploads/:file` deletes disk + metadata and is blocked (409) while any queued/scheduled/uploading job references the file.
+- UI: "Media source" selector in the publish panel (rendered MP4 ↔ uploaded file), file picker with progress, and an upload library row.
+
+### 3. Org-shared connections
+- Tokens are now two-scope: user `pub:tok:<uid>:<platform>` (existing) + org `pub:tok:org:<oid>:<platform>` (new), both encrypted. `ensureFreshOrgToken` mirrors the user refresh/revoke contract.
+- `POST /publishing/:platform/connect/start` accepts `{scope:"org"}` (state doc binds the org; the exchanged token lands in the org slot); `DELETE /connect?scope=org` and `GET /:platform/status?scope=org` added; `GET /publishing/org-connections` returns org status for all platforms. `platformsForUser` now reports `orgConnected`/`orgNeedsReauth` per platform.
+- `POST /publishing/:platform/publish` accepts `tokenScope:"org"` — the job stores it and the worker resolves the org token (`job.tokenScope`, default `"user"`; user and org slots stay isolated). Missing org token → `NOT_CONNECTED` with remediation.
+- UI: per-platform "Connect org" / "Unlink org" + Org badge, and a "publish with the organization-shared account" checkbox.
+
+### Tests
+- **Unit (vitest), deterministic (FakeKv + injected clock/fs):** `webhooks.test.ts` (11 — registration/rotation/masking, sha256+sha1 signature verification, non-terminal sync idempotency, terminal rejection → failed + never re-queued, ref mismatch, `findJobByPlatformRef`, org-token job sync), `uploads.test.ts` (6 — naming allowlist, disk+metadata round trip, empty/type rejection, delete, newest-first + corrupt-meta skip), `tokens.test.ts` (+4 org-scope: isolation, org refresh in place, not-connected failure, org delete), `publishJobs.test.ts` (+4: org-token execution, org NOT_CONNECTED permanent failure, full status-history transitions, cancel/retry history). **Publishing suite: 54/54 pass** (was 29/29).
+- **Regression:** mediaFactory + tradingIntel + security suites — **103/103 pass** (was 78/78).
+- **Typecheck:** `@windels/shared` tsc clean; `@windels/web` tsc clean + vite build clean (MediaFactoryPage chunk 27.3 kB / 7.7 kB gz); API tsc adds **0 new errors** (all remaining errors are the pre-existing Prisma-client-not-generated `Permission` pattern — engine binary download blocked in this sandbox).
+
+### Files
+- Shared: `packages/shared/src/mediaFactory.ts` (`PubTokenScope`, `PubPlatformLiveStatus`, `PubStatusHistoryEntry`, job fields `tokenScope|platformStatus|platformAvailableAt|statusHistory`, `PubPlatformInfo.orgConnected|orgNeedsReauth`, `PubPlatformCallbackUpdate`, `PubWebhookConfig|Registration`, `PubUploadRecord|Result`).
+- API: `publishing/tokens.ts` (org scope + `ensureFreshOrgToken`), `publishing/publishJobs.ts` (history, token scope, `findJobByPlatformRef`, `applyPlatformWebhook`), `publishing/webhooks.ts` (new), `publishing/uploads.ts` (new), `publishing.service.ts` (scope plumbing, webhook + upload delegates), `http/routes/mediaFactory.ts` (+webhook/upload/org endpoints, scope params, `registerMediaFactoryWebhookRoutes` public callback), `http/middleware/multipart.ts` (`maxBytes` opt), `http/server.ts` (`rawBody` verify hook + public webhook router mounted before the authed media-factory router), tests ×4.
+- Web: `lib/mediaFactory.ts` (upload via FormData fetch honoring `VITE_API_URL`, webhook/upload/org client methods), `pages/media/MediaFactoryPage.tsx` (media source picker + upload, org connect/publish, webhook panel, status history).
+- Env: `.env.example` (`PUBLISH_UPLOAD_MAX_MB`, `PUBLISH_WEBHOOK_BASE_URL`).
+
+### Follow-ups (unchanged)
+- Register real OAuth apps + set `*_CLIENT_ID/*_CLIENT_SECRET`, `PUBLISH_REDIRECT_URI`, `PUBLISH_WEBHOOK_BASE_URL`; TikTok/X app review; optional outbound org notification webhooks (status → URL) as a future pass.
+
+## Session 84 — Project Continuity Engine (completion pass, 2026-07-31)
+**Status:** ✅ **GATE CLOSED** — all controls required by `docs/SESSION_84_STATUS.md` are implemented, unit-tested (31 new tests), and wired to a full dashboard UI.
+
+### Backend (new modules under `apps/api/src/projectContinuity/`)
+- **Streaming archive inspection** (`inspection.service.ts`): native zip central-directory + tar header parsers read metadata ONLY — no extraction — enforcing entry-count (10k default) and uncompressed-size caps (512 MB total / 200 MB per entry, env `PC_MAX_*`) and flagging traversal/absolute/null/symlink entries. Verdicts: ok | bomb | unsafe | invalid | tool_missing (7z reported honestly). gzip inflation is bounded (`maxOutputLength`) so a gzip bomb cannot exhaust memory.
+- **Encrypted quarantine** (`quarantine.service.ts`): quarantined archives are re-encrypted with the Slice 112 AES-256-GCM envelope to `quarantine/<org>/<id>.enc`, the plaintext intake copy is removed, retention TTL (`PC_QUARANTINE_TTL_DAYS`, default 30) with an explicit sweep, delete + release + decrypt-for-review endpoints.
+- **ClamAV integration** (`clamav.service.ts`): INSTREAM protocol over TCP (`CLAMD_HOST`); when unset, scans report `not_configured` honestly. Infected archives are auto-quarantined at intake.
+- **Sandboxed build/typecheck/test gate** (`sandbox.service.ts`, S84.11): `PC_SANDBOX_MODE=none|local|docker` (default none). Docker mode runs `--network none` with memory/CPU caps; local mode is a bounded subprocess (timeout, capped output, stripped env, no shell) explicitly NOT a security boundary; none reports `not_configured` with remediation. Untrusted code is never executed in the API process by default.
+- **Change control** (`snapshots.service.ts`, S84.10): snapshots = workspace manifest (path/size/sha256) + byte copy of the intake archive; manifest diffs (added/removed/changed); rollback restores the snapshot archive and resets extraction state; append-only change log records every action.
+- **Health report** (`healthReport` in `projectIntake.service.ts`, S84.6): project status, completion (completed/partial/broken/incomplete/unknown), technical debt, build/typecheck/tests, DB presence, security (high findings + quarantine + clamav), deployment config, recommended build order.
+- **Inferred architecture map** (S84.3/84.4): frontend/backend/database/ai/queue/cli nodes + edges inferred deterministically from inventory manifests — always labeled `inferred_from_inventory`.
+
+### API endpoints (all under `/api/v1/projects`, authenticated)
+`GET /` · `GET /:id` · `POST /intake` · `POST /:id/extract|inventory|verify|sandbox-validate|snapshot|diff|rollback` · `GET /:id/snapshots|changelog|health|architecture` · `GET /quarantine` · `POST /quarantine/sweep|:id/release|:id/inspect` · `DELETE /quarantine/:id|/:id`
+
+### Frontend (`/app/projects`)
+Full Project Development Dashboard (S84.13): archive upload, project list with status/inspection badges, quarantine review (release/delete), pipeline actions (extract → inventory+verify → sandbox gate), tabs for Overview (health report + inspection), Architecture (inferred map), Verify (findings + sandbox stages + inventory), Snapshots (create/diff/rollback), Change Log. Sidebar entry + lazy route; admin PlatformPage S84 tab now compiles against the real client (legacy adapter exports).
+
+### Tests
+`inspection.test.ts` (13: zip/tar metadata parsing, traversal/absolute/symlink flags, entry-count and size bombs incl. declared-size and gzip bombs, invalid/truncated, 7z tool_missing) · `quarantine.test.ts` (3: encrypt round-trip, delete, retention sweep) · `snapshots.test.ts` (4: manifest+snapshot, diff added/removed/changed, rollback restore, change log) · `sandbox.test.ts` (6: command detection, none-mode honesty, local-mode execution with passed/failed stages) · `clamav.test.ts` (5: INSTREAM against an in-process clamd stub, clean/infected/error, not_configured). **S84 suite 31/31; total publishing+projectContinuity+trading+security regression 134/134.** Shared + web tsc clean; vite build clean (ProjectsPage 7.0 kB gz, LeadsPage 3.4 kB gz). API tsc: 0 new errors.
+
+## Session 85 — AI Lead Discovery (frontend pass, 2026-07-31)
+**Status:** ✅ Frontend shipped (backend was already live: Google Places textsearch behind `GOOGLE_PLACES_API_KEY`, Redis-persisted leads + collections + JSON/CSV export).
+- `/app/leads` page: natural-language search, results dashboard with per-lead select/save-to-collection, filters, collections manager, JSON/CSV export (CSV streams as a real download). All actions user-initiated — no automated outreach (scope lock). Missing API key → honest `SERVICE_UNAVAILABLE` banner.
+- Legacy admin PlatformPage S85 tab now compiles against the real client (adapter exports `LeadRecord`/`CollectionRecord`/`leadDiscoveryApi`).
+- Sidebar entries for Project Continuity + Lead Discovery; sidebar version bumped to **v0.90.0**.
+
+## Session 22 — Canvas Collab (completion pass, 2026-07-31)
+**Status:** ✅ Completed — closes the audit's `canvas` MISSING entry and adds the realtime layer the docs claimed.
+- **Route gap closed:** the S5 canvas document service (real Prisma CRUD for Canvas/CanvasBlock/CanvasConnection + AI block generation) is now ALSO mounted at `/canvas` — the route prefix the S22 audit expected (`/api/v1/canvas`) — in addition to the existing `/canvases`.
+- **Realtime collaboration added** (`collaboration/canvasCollab.service.ts` + `http/routes/canvasCollab.ts`):
+  - Presence heartbeats (`POST /canvas/:id/presence`, `GET /canvas/:id/presence`) stored in Redis hashes with TTL-based lazy expiry (`CANVAS_PRESENCE_TTL_SEC`, default 30s).
+  - Live cursors (`PUT /canvas/:id/cursor`, `GET /canvas/:id/cursors`).
+  - Leave (`DELETE /canvas/:id/presence`) clears presence + cursor.
+  - Redis pub/sub channel `canvas:collab:<id>` broadcasts presence/cursor/leave events to collaborators; dedicated `redisSub` client added to `db/redis.ts` (subscriber duty isolated from `redis`/`redisCmd` per the codebase's dual-client rule).
+- **Web:** `canvasCollabApi` client in `lib/canvas.ts` (heartbeat/presence/cursor/leave).
+- **Tests:** `collaboration/canvasCollab.test.ts` — 4/4 (heartbeat+publish, stale pruning, cursor move+list, leave) against an in-memory kv. **Suite total 138/138.**
+
+## Session 4 — Files page (completion pass, 2026-07-31)
+**Status:** ✅ The `/app/files` placeholder ("File storage comes online in later sessions") is replaced with a real Files page backed by the finished attachments module.
+- `pages/files/FilesPage.tsx` + `lib/files.ts`: upload (multipart via the same FormData pattern), list/search with pagination, open/download (server streams the original bytes), delete with confirm, MIME icons, sha256 display, text previews.
+- Route `files` now renders the real page; sidebar unchanged (Folder icon already existed).
+- **Tests:** covered by existing attachments e2e; web tsc + vite build clean (FilesPage chunk 7.1 kB / 3.0 kB gz).
+
+## Global Currency FX (Session 80) — verified already real
+**Status:** ✅ No code needed — the exchange-rate layer is already a real provider stack: `billing/exchangeRates.ts` fetches frankfurter.app + open.er-api.com (free, keyless) with Redis cache + stale protection + honest `synthetic` labeling; `globalCurrency/refreshRates.ts` refreshes at boot + hourly (`startFxRefreshJob` wired in index.ts). Live verification is blocked in this sandbox only by outbound network (same restriction as Prisma binaries).
+
+## Session 83 — ETL: real execution engine (completion pass, 2026-07-31)
+**Status:** ✅ The run engine no longer fabricates success — it executes real ingestion with real row counts.
+- **Was:** `triggerRun` hard-coded `rowsProcessed = 100, rowsSucceeded = 100` with zero actual ingestion (a fake-completion violation).
+- **Now:** real parsing (CSV with quoted-field support, JSON arrays, JSON-lines), schema mapping (source→target, type coercion string/number/boolean/date, transform rules trim/upper/lower/int/float/round2/parse-date), per-row error isolation → org DLQ (`etl:dlq:<oid>:<pipe>` capped 500), honest verdicts: `succeeded` (0 failures) / `partial` (some) / `failed` (all bad, 0 fabricated successes).
+- **Remote sources (sftp/s3/http)** without credentials fail with `SOURCE_NOT_CONFIGURED` + remediation instead of pretending; XML/SQL report `UNSUPPORTED_FORMAT` honestly (CSV + JSON supported).
+- **New endpoints:** `POST /etl/pipelines/:id/run` accepts optional inline `{content}`; `GET /etl/pipelines/:id/runs/:runId` (run detail); `GET /etl/pipelines/:id/dlq`; `DELETE /etl/pipelines/:id`. Kernel events `etl.run.succeeded|partial|failed` emitted.
+- **Tests:** `etl.test.ts` — 14/14 (CSV parser quoting/CRLF, JSON+JSONL, coercion/transform, mapRow, full run semantics via mocked redis: succeeded real counts, partial+DLQ, all-bad failed, SOURCE_NOT_CONFIGURED, JSON end-to-end). **Suite total 152/152.** API tsc adds 0 new errors.
+
+## DEMO-DATA ELIMINATION PASS — Sessions 1–88+ (2026-07-31)
+**Status:** ✅ **All 44 DEMO-DATA modules converted** — `Math.random`-fabricated dashboard metrics eliminated across every routed session module.
+
+### What changed
+- **~200 `Math.random()` call sites removed** from session-module services/bootstraps (all under `apps/api/src/<module>/`; the bulk-generated unmounted `src/services/ai*` debt files are out of scope — they are the typecheck-debt project, not routed dashboards).
+- **Dashboards now derive from real persisted records** (meetings, health metrics/fitness/medications/notes, wake activations, QA suites/cases, composer runs, digital-human sessions, marketplace assets/installs, memories, voice owners, licenses/grants/usage, deploy targets, DR drills, update packages, cyber labs, platform clusters/IaC/metrics, engineering deployments/pipelines, model registry, extensions registry, etc.) and **seeds are deterministic constants** — no per-request randomness presented as real.
+- **Health (S75) honesty upgrade:** fresh users no longer receive fabricated *clinically-validated* biometrics; `today/weeklyAvg/monthlyAvg` are computed from real recorded metrics (zeros + `riskFlags` from real alerts when none exist). Fifth Standing Rule labels preserved.
+- **Fake-success removal:** ETL run counts real (prior pass) · composer run no longer has a hidden 1% random failure · update/deployment/drill validations pass deterministically or fail on real checks · modelFactory benchmark scores fixed · aiValidation latency real.
+- **Legit randomness preserved (allowlisted):** request-id hex, WebRTC session tokens, echo-provider latency jitter, the user-facing "random" tool, synthetic-candle noise in tradingIntel/marketData (flagged synthetic).
+
+### Enforcement
+- New **`apps/api/src/noRandomData.guard.test.ts`** — fails the suite if any `Math.random(` appears in session-module code outside the explicit allowlist. The no-fabricated-data rule is now CI-enforced.
+
+### Audit
+- `audit/module-inventory.json`: **DEMO DATA 44 → 0**; 48 modules COMPLETE (16 STUB + 16 PARTIAL + 5 MISSING remain — mostly stale entries and unmounted bulk services).
+- `UNFINISHED_MODULES.md` DEMO DATA section fully struck with per-module notes.
+- Tests: **153/153 pass** (guard + etl + collaboration + projectContinuity + mediaFactory + tradingIntel + security). API tsc: 0 new errors.

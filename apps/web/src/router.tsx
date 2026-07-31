@@ -22,6 +22,9 @@ const TradingIntelPage = lazy(() => import("./pages/trading/TradingIntelPage").t
 const VoiceStudioPage = lazy(() => import("./pages/voice/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
 const MediaFactoryPage = lazy(() => import("./pages/media/MediaFactoryPage").then((m) => ({ default: m.MediaFactoryPage })));
 const LearnPage = lazy(() => import("./pages/learn/LearnPage").then((m) => ({ default: m.LearnPage })));
+const ProjectsPage = lazy(() => import("./pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
+const LeadsPage = lazy(() => import("./pages/leads/LeadsPage").then((m) => ({ default: m.LeadsPage })));
+const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ default: m.FilesPage })));
 const EnterprisePage = lazy(() => import("./pages/admin/EnterprisePage"));
 const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
@@ -220,8 +223,10 @@ export const router = createBrowserRouter([
       { path: "voice", element: withSuspense(<VoiceStudioPage />) },
       { path: "media", element: withSuspense(<MediaFactoryPage />) },
       { path: "learn", element: withSuspense(<LearnPage />) },
+      { path: "projects", element: withSuspense(<ProjectsPage />) },
+      { path: "leads", element: withSuspense(<LeadsPage />) },
       { path: "developers", element: withSuspense(<DeveloperPage />) },
-      { path: "files", element: placeholder("Files", "File storage comes online in later sessions.") },
+      { path: "files", element: withSuspense(<FilesPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
       { path: "enterprise", element: withSuspense(<EnterprisePage />) },
       { path: "governance", element: withSuspense(<GovernancePage />) },

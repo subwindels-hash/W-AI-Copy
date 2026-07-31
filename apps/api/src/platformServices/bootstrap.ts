@@ -204,10 +204,10 @@ export async function bootstrapPlatformServices() {
   for (const [name, kind, producer, p95, err] of capSeeds) {
     await CapabilitiesService.register({
       name, kind: kind as any, version: "1.0.0", producer,
-      consumers: [], health: Math.random() < 0.92 ? "healthy" : "degraded",
+      consumers: [], health: "healthy",
       slaMs: kind === "queue" ? 100 : kind === "model" ? 2000 : 500,
       p95Ms: p95, errorRatePct: err,
-      requestsPerMin: Math.floor(50 + Math.random()*5000),
+      requestsPerMin: 900,
       deprecated: false,
     });
   }

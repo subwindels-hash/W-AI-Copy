@@ -32,8 +32,8 @@ export async function bootstrapCryptoIntelligence(logger?: any): Promise<void> {
   for (const c of chains as any) {
     const cm = {
       id: "chain-" + c.chain.toLowerCase(), chain: c.chain, status: "online",
-      blockHeight: 800000 + Math.floor(Math.random()*200000), tps: c.tps, gasToken: c.gasToken,
-      gasPriceGwei: c.chain === "Ethereum" ? 20 + Math.random()*30 : Math.random()*2,
+      blockHeight: 850000, tps: c.tps, gasToken: c.gasToken,
+      gasPriceGwei: c.chain === "Ethereum" ? 28 : 1,
       validators: c.validators, stakedPct: c.staked,
       lastBlockAt: new Date().toISOString(),
     };
@@ -97,7 +97,7 @@ export async function bootstrapCryptoIntelligence(logger?: any): Promise<void> {
   }
   // Demo security alert
   await redis.zadd(K.alerts, Date.now(), JSON.stringify({
-    id: "sa-" + Math.random().toString(36).slice(2,8), severity: "medium",
+    id: "sa-demo-1", severity: "medium",
     category: "wallet-risk", title: "Unusual outflow pattern from trading hot wallet (demo)",
     detail: "Demo alert; module disabled.", detectedAt: new Date().toISOString(),
   }));

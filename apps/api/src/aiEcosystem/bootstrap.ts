@@ -422,7 +422,7 @@ export async function bootstrapAiEcosystem(logger?: any): Promise<void> {
   await redis.set("ae:metrics:fallback24h", "10");
   await redis.set("ae:metrics:errors24h", "8");
   for (let i = 0; i < 50; i++) {
-    await redis.lpush("ae:metrics:latencies", String(220 + Math.floor(Math.random() * 600)));
+    await redis.lpush("ae:metrics:latencies", String(420));
   }
 
   logger.info("[aiEcosystem] bootstrap complete", {

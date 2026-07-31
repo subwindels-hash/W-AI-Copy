@@ -28,6 +28,19 @@ export const redisCmd: Redis = new Redis(env.REDIS_URL, {
 redisCmd.on("error", () => { /* swallow */ });
 redisCmd.connect().catch(() => { /* best effort; retry on first command */ });
 
+/**
+ * Dedicated Redis connection for SUBSCRIBE duty (canvas collab channels,
+ * AIO bus, etc.). ioredis rejects regular commands on a subscribed
+ * connection, so this stays isolated from `redis` and `redisCmd`.
+ */
+export const redisSub: Redis = new Redis(env.REDIS_URL, {
+  lazyConnect: true,
+  maxRetriesPerRequest: 3,
+  retryStrategy: (times) => Math.min(times * 200, 5000),
+});
+redisSub.on("error", () => { /* swallow */ });
+redisSub.connect().catch(() => { /* best effort */ });
+
 // Simple metrics for common operations via select wrapping.
 // We avoid monkey-patching sendCommand because ioredis uses it for internal
 // connection handshakes — a buggy wrap can deadlock connect(). Instead,

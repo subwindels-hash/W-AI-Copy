@@ -51,3 +51,7 @@ windels-ai-os-sessions-1-88.zip
 .local/redis/
 .local/logs/
 .local/run/
+
+# Session 84 project intake / Session 77B media cache (runtime dirs)
+project-intake/
+media-cache/
