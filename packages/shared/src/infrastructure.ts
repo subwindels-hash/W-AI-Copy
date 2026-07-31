@@ -202,8 +202,13 @@ export interface InfraMetric {
   requestRps: number;
   requestP95Ms: number;
   errorRatePercent: number;
-  deploymentReadyPercent: number;
+  /** Undefined unless an orchestrator actually reports deployment readiness. */
+  deploymentReadyPercent?: number;
   region: string;
+  /** What produced this sample. `process` = real telemetry from this API
+   *  process (CPU/RSS + observed HTTP counters). `cluster` = reported by a real
+   *  orchestrator. Consumers must not read a process sample as cluster-wide. */
+  source: "process" | "cluster";
 }
 
 export interface AlertFiring {

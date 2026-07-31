@@ -48,8 +48,11 @@ export interface ModelVersionRec {
   version: string;
   stage: ModelStage;
   artifactUri: string;
-  sizeMb: number;
-  hash: string;
+  /** Undefined until the artifact has actually been measured/uploaded. */
+  sizeMb?: number;
+  /** Content hash of the real artifact. Undefined until one exists — a
+   *  synthesised hash is worse than none, since it looks verifiable. */
+  hash?: string;
   metrics: ModelMetric[];
   createdAt: string;
   promotedAt?: string;
@@ -77,8 +80,9 @@ export interface ModelArtifact {
   versions: ModelVersionRec[];
   stars: number;
   installs: number;
-  avgLatencyMs: number;
-  errorRatePct: number;
+  /** Observed serving telemetry. Undefined until inference traffic is measured. */
+  avgLatencyMs?: number;
+  errorRatePct?: number;
   costPer1kTokens?: number;
   color: "azure"|"violet"|"teal"|"fuchsia"|"amber"|"emerald"|"crimson"|"slate";
   certified: "official"|"partner"|"community";
@@ -106,10 +110,12 @@ export interface ModelDeployment {
   gpu?: string;
   endpoint: string;
   trafficPct: number;
-  qps: number;
-  p95Ms: number;
-  errorRatePct: number;
-  costPerHour: number;
+  /** Runtime metrics reported by the serving layer. Undefined until observed —
+   *  these were previously invented at deploy time. */
+  qps?: number;
+  p95Ms?: number;
+  errorRatePct?: number;
+  costPerHour?: number;
   canaryParentId?: string;
   deployedAt: string;
   updatedAt: string;

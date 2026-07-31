@@ -3328,10 +3328,13 @@ function MlOpsTab() {
                 <CardDescription className="text-xs">{d.region} · {d.endpoint} · {d.trafficPct}% traffic · {d.replicas} replicas ({d.cpu}/{d.memory}{d.gpu?` · ${d.gpu}`:""}) · by {d.deployedBy}</CardDescription>
               </CardHeader>
               <CardContent className="text-xs pt-0 grid grid-cols-4 gap-2 text-text-muted">
-                <div><div className="text-text-bright font-semibold">{d.qps.toLocaleString()}</div>QPS</div>
-                <div><div className="text-text-bright font-semibold">{d.p95Ms}ms</div>p95</div>
-                <div><div className="text-text-bright font-semibold">{d.errorRatePct.toFixed(2)}%</div>errors</div>
-                <div><div className="text-text-bright font-semibold">${d.costPerHour}/h</div>cost</div>
+                {/* Serving telemetry is undefined until the serving layer reports
+                    it. Show an em dash rather than 0, which would read as a real
+                    measurement of an idle deployment. */}
+                <div><div className="text-text-bright font-semibold">{d.qps != null ? d.qps.toLocaleString() : "—"}</div>QPS</div>
+                <div><div className="text-text-bright font-semibold">{d.p95Ms != null ? `${d.p95Ms}ms` : "—"}</div>p95</div>
+                <div><div className="text-text-bright font-semibold">{d.errorRatePct != null ? `${d.errorRatePct.toFixed(2)}%` : "—"}</div>errors</div>
+                <div><div className="text-text-bright font-semibold">{d.costPerHour != null ? `$${d.costPerHour}/h` : "—"}</div>cost</div>
               </CardContent>
             </Card>
           ))}
