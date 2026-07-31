@@ -88,8 +88,11 @@ export const ReleaseService = {
     await redisCmd.set(`${REL_PREFIX}${rel.id}`, JSON.stringify(rel));
     await redisCmd.sadd(RELEASES_KEY, rel.id);
 
-    // Simulate deploy finishing in-memory (instant for MVP).
-    rel.status = "deployed"; rel.deployedAt = now(); rel.durationMs = 30_000 + Math.floor(Math.random()*60_000); rel.healthGatePassed = true;
+    // The control-plane record completes immediately; there is no artifact
+    // transfer to time here. Previously this invented a 30-90s duration and
+    // asserted healthGatePassed=true for a gate that never ran — durationMs and
+    // healthGatePassed are now left undefined until something measures them.
+    rel.status = "deployed"; rel.deployedAt = now();
     await redisCmd.set(`${REL_PREFIX}${rel.id}`, JSON.stringify(rel));
 
     // Update B/G or canary state if applicable

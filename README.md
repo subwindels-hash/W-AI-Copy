@@ -98,15 +98,19 @@ values. The architecture to plug in real providers is in place (ProviderRegistry
 consent gates, governance pipeline, Kernel event routing) but the actual provider
 integrations for those sessions are the next major milestone, not a finished state.
 
-As of 2026-07-31 the clinical and payment paths have been de-faked: Session 75
-(health) and Session 65 (biomedical) are record-only and invent nothing, gift-card
-codes and camera session tokens use the CSPRNG, and synthetic seeding across the
-remaining bootstraps is opt-in via `WINDELS_DEMO_DATA` (default off). Roughly 184
-`Math.random()` calls remain in operational dashboards — tracked with a suggested
-work order in **[AUDIT-REPORT.md](./AUDIT-REPORT.md) §2.3**.
+As of 2026-07-31 the clinical, payment and gating paths have been de-faked:
+Session 75 (health) and Session 65 (biomedical) are record-only and invent
+nothing; gift-card codes and camera session tokens use the CSPRNG; **every
+self-grading gate is gone** — deployment validation now runs real probes, DR
+drills and update preflight require a recorded outcome, and test/benchmark
+runners take measured results instead of inventing them. Synthetic seeding
+across the remaining bootstraps is opt-in via `WINDELS_DEMO_DATA` (default off).
+Roughly 142 `Math.random()` calls remain in descriptive dashboard telemetry —
+tracked with a suggested work order in
+**[AUDIT-REPORT.md](./AUDIT-REPORT.md) §2.4**.
 
 Do not deploy into production environments handling real patient data, real money,
-or real user content until the remaining gaps in AUDIT-REPORT.md §2.3 are closed.
+or real user content until the remaining gaps in AUDIT-REPORT.md §2.4 are closed.
 
 ## Tests
 

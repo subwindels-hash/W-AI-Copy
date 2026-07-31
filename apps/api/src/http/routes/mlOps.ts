@@ -270,9 +270,9 @@ export function registerMlOpsRoutes(router: Router) {
       res.json({ ok:true, data:p });
     } catch(e){next(e);}
   });
-  router.post("/prompts/:id/run-tests", validate({ body: z.object({ model: z.string().default("claude-3.5-sonnet") }) }), async (req, res, next) => {
+  router.post("/prompts/:id/run-tests", validate({ body: z.object({ model: z.string().default("claude-3.5-sonnet"), result: z.object({ casesPassed: z.number().int().min(0), avgLatencyMs: z.number().int().min(0).optional() }).optional() }) }), async (req, res, next) => {
     try {
-      const r = await PromptsService.runTests(req.params.id, req.body.model);
+      const r = await PromptsService.runTests(req.params.id, req.body.model, req.body.result);
       if (!r.prompt) return res.status(404).json({ ok:false, error:{code:"NOT_FOUND"} });
       res.json({ ok:true, data: r });
     } catch(e){next(e);}

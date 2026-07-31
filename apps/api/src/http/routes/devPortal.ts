@@ -12,11 +12,26 @@ import { ToolkitService } from "../../devportal/toolkit.service.js";
 const testBody = z.object({
   suite: z.string().min(2).max(100).default("platform-smoke"),
   target: z.string().min(2).max(100).default("local"),
+  // Measured results from the runner. Omitted -> the run is recorded as
+  // `queued` with zeroed counters, never as a synthetic pass.
+  result: z.object({
+    passed: z.number().int().min(0),
+    failed: z.number().int().min(0),
+    skipped: z.number().int().min(0).optional(),
+    durationMs: z.number().int().min(0).optional(),
+    coveragePct: z.number().min(0).max(100).optional(),
+  }).optional(),
 });
 const deployBody = z.object({
   target: z.enum(["dev","staging","canary","production"]),
   service: z.string().min(2).max(60),
   version: z.string().min(2).max(40),
+  result: z.object({
+    ok: z.boolean(),
+    durationMs: z.number().int().min(0).optional(),
+    logs: z.array(z.string().max(2000)).max(500).optional(),
+    url: z.string().url().optional(),
+  }).optional(),
 });
 const envStartBody = z.object({}).optional();
 
@@ -78,14 +93,14 @@ export function registerDevPortalRoutes(router: Router) {
 
   // ─── Toolkit (234-235) ───────────────────────────────
   router.post("/toolkit/test", validate({ body: testBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await ToolkitService.runTests(req.body.suite, req.body.target) }); } catch (e) { next(e); }
+    try { res.json({ ok: true, data: await ToolkitService.runTests(req.body.suite, req.body.target, req.body.result) }); } catch (e) { next(e); }
   });
   router.get("/toolkit/test/runs", async (_req, res, next) => {
     try { res.json({ ok: true, data: await ToolkitService.recentTestRuns() }); } catch (e) { next(e); }
   });
   router.post("/toolkit/deploy", validate({ body: deployBody }), async (req, res, next) => {
     try {
-      res.json({ ok: true, data: await ToolkitService.deploy(req.body.target, req.body.service, req.body.version) });
+      res.json({ ok: true, data: await ToolkitService.deploy(req.body.target, req.body.service, req.body.version, req.body.result) });
     } catch (e) { next(e); }
   });
   router.get("/toolkit/deploy/runs", async (_req, res, next) => {

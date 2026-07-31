@@ -338,7 +338,7 @@ export const ProviderAbstractionService = {
     return raw.map((s) => JSON.parse(s)).sort((a, b) => b.runAt.localeCompare(a.runAt));
   },
 
-  async runBenchmark(input: { name: string; kind?: string; providerIds: string[]; samples?: number; benchmarkId?: string; providerId?: string; modelId?: string }): Promise<BenchmarkRun[]> {
+  async runBenchmark(input: { name: string; kind?: string; providerIds: string[]; samples?: number; benchmarkId?: string; providerId?: string; modelId?: string; results?: Record<string, { score: number; latencyMs: number; costUsd: number }> }): Promise<BenchmarkRun[]> {
     const out: BenchmarkRun[] = [];
     const providerIds = input.providerIds && input.providerIds.length ? input.providerIds : input.providerId ? [input.providerId] : [];
     const models = await this.listModels();
@@ -350,11 +350,16 @@ export const ProviderAbstractionService = {
         name: input.name,
         providerId: pid,
         modelId: model?.id ?? pid,
-        score: Number((0.6 + Math.random() * 0.35).toFixed(3)),
-        latencyMs: 200 + Math.floor(Math.random() * 800),
-        costUsd: Number((Math.random() * 0.05).toFixed(4)),
+        // Measured values only. This previously invented a 0.6-0.95 score, a
+        // 200-1000ms latency and a per-run cost for a benchmark that never
+        // executed, then persisted them as provider comparison data.
+        score: input.results?.[pid]?.score ?? 0,
+        latencyMs: input.results?.[pid]?.latencyMs ?? 0,
+        costUsd: input.results?.[pid]?.costUsd ?? 0,
         runAt: new Date().toISOString(),
-        notes: `samples=${input.samples ?? 200}`,
+        notes: input.results?.[pid]
+          ? `samples=${input.samples ?? 0}`
+          : `samples=${input.samples ?? 0}; no measured result supplied`,
       };
       await redis.zadd(KEYS.benchmarks, Date.now(), JSON.stringify(run));
       out.push(run);

@@ -147,7 +147,8 @@ export interface ArchReview {
   status: ArchReviewStatus;
   findings: ArchFinding[];
   adrsConsulted: string[];
-  aiScore: number;
+  /** Undefined until a real review has scored it. */
+  aiScore?: number;
   createdAt: string;
 }
 

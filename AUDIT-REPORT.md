@@ -61,29 +61,54 @@ These are now **off by default** behind `WINDELS_DEMO_DATA` (see
 `"false"`, so a typo such as `=1` fails startup loudly rather than silently
 enabling fake data.
 
-### 2.3 Still synthetic — remaining work
+### 2.3 Self-grading gates — all eliminated
 
-**~184 calls across 66 files** still execute by default. They are concentrated in
-operational dashboards rather than clinical or financial paths:
+The most dangerous class was code that **decided its own pass/fail verdict by
+coin flip**, producing an audit trail of checks that never ran. All 17 sites are
+resolved:
+
+| Gate | Was | Now |
+|---|---|---|
+| `deployment.validate` (S53) | `passed = Math.random() > 0.05` | Real probes: Redis `PING`, Postgres `SELECT 1`, uploads-dir write+unlink, kernel dispatch, model-registry population. Unverifiable checks (remote endpoint, TLS) are `skipped`, **never** counted as passes; an all-skipped run cannot report `passed`. |
+| `disasterRecovery.runDrill` (S53) | `passed = Math.random() > 0.1`, random 8–38 s RTO | Drill moves to `running` and stops. New `recordDrillResult()` takes the measured verdict/RTO/RPO and records *who* submitted it (`POST /drills/:id/result`). |
+| `updates.validate` (S54) | `passed = Math.random() > 0.06` | Governance approvals and disk headroom (`statfs`) genuinely checked; signature/dependency/compatibility/backup/staging marked `skipped`. |
+| `modelFactory.runBenchmark` (S46) | invented 50–95 score, `pass: true` hard-coded | Requires a measured score + verdict. |
+| `toolkit.runTests` / `.deploy` (S27) | invented 20–80 cases, 10% failure chance, 65–95% coverage, and a fake log transcript | Results supplied by the real runner; unsupplied → `queued` with zeroed counters. |
+| `quality.startRun` | completed in-line with 200–1000 invented samples at 78–98% pass | Queued; `completeRun()` records the real result. |
+| `prompts.runTests` | passed every case bar a random 0–1, without executing any | Unsupplied → zero passes, not near-perfect. |
+| `archReview.runAiReview` (S25) | 5 boilerplate findings + random 70–95 `aiScore`, no analysis | Findings and score come from the actual reviewer. |
+| `providerAbstraction.runBenchmark` | invented score/latency/cost per provider | Measured results only. |
+| Also | `engineering` deployment records, `fabric` source health, IaC drift, region status, `identity` risk score, `release` health gate | All derived or left explicitly unknown. |
+
+Types now model "not measured" honestly rather than defaulting to a flattering
+value: `DeploymentValidationCheck.skipped`, `DeploymentTarget.cpu/mem/gpuPct?`,
+`DrStatus.replicationLagMs?`, `UpdateRollout.errorRate/p95LatencyMs?`,
+`ArchReview.aiScore?`, and `DataSource.status` gains `"unknown"`.
+
+### 2.4 Still synthetic — remaining work
+
+**~142 calls across 56 files** still execute by default, now confined to
+descriptive dashboard telemetry — no verdicts, no clinical data, no money:
 
 | File | Calls |
 |---|---|
+| `marketplace/simulation.service.ts` | 24 *(legitimate — Monte-Carlo sampling)* |
 | `mlOps/models.service.ts` | 9 |
-| `deployment/deployment.service.ts` | 8 |
-| `disasterRecovery/disasterRecovery.service.ts` | 6 |
 | `collaboration/meetings.service.ts` | 5 |
-| `platform/iac.service.ts` | 5 |
-| `updates/updates.service.ts` | 5 |
-| `devportal/toolkit.service.ts`, `engineering/{metrics,pipeline}`, `mlOps/prompts`, `platform/infraMetrics`, `qa/drTest` | 4 each |
-| …60 further files | 1–3 each |
+| `engineering/metrics.service.ts`, `engineering/pipeline.service.ts` | 4 each |
+| `platform/iac.service.ts`, `platform/infraMetrics.service.ts` | 4 each |
+| `qa/drTest.service.ts` | 4 |
+| `services/tools/builtin/index.ts` | 4 *(legitimate — the `random` agent tool)* |
+| …48 further files | 1–3 each |
 
-Not all are defects. Legitimate uses remain and were deliberately left alone:
-retry jitter, id/nonce generation, list shuffling, and Monte-Carlo sampling
-inside the scenario simulator. `engineering/metrics.refreshSynthetic()` is
-honestly named, has no callers, and is wired into no dashboard.
+Deliberately left alone as legitimate: retry jitter, id/nonce generation, list
+shuffling, Monte-Carlo sampling in the scenario simulator, the `random` agent
+tool, and `tradingIntel`'s `SyntheticProvider` — which is correctly flagged
+`synthetic: true` on every quote it returns.
+`engineering/metrics.refreshSynthetic()` is honestly named and has no callers.
 
-**Recommended order for the next pass:** `mlOps` → `deployment` →
-`disasterRecovery` → `platform/*`, following the same record-and-derive pattern
+**Recommended order for the next pass:** `mlOps/models` → `platform/infraMetrics`
+→ `engineering/*` → `collaboration/*`, following the record-and-derive pattern
 used for S75/S65 (and previously for `usage`, `command`, `opex`,
 `sustainability`).
 
@@ -102,8 +127,12 @@ infrastructure):
   read, compliance reported as `gap` until assessed.
 - `demoData.test.ts` (6) — the seed gate defaults off and fails loudly on an
   ambiguous value.
+- `verdicts.test.ts` (8) — a new target is not born healthy; unverifiable checks
+  are `skipped` not passed; **two consecutive validations agree** (a coin flip
+  would not); DR bootstrap seeds no drills and leaves components unverified;
+  failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 112 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 120 passing, 0 failing.**
 
 ---
 

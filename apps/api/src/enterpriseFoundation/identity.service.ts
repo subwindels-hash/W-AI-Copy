@@ -41,7 +41,9 @@ export const IdentityService = {
   },
   async createPrincipal(input: Omit<IdentityPrincipal,"id"|"createdAt"|"riskScore"> & { riskScore?: number }): Promise<IdentityPrincipal> {
     const id = randomUUID();
-    const p: IdentityPrincipal = { id, createdAt: iso(), riskScore: input.riskScore ?? Math.floor(Math.random()*30), ...input };
+    // riskScore stays 0 until a real risk assessment scores the principal; it
+    // was previously seeded with a random 0-29.
+    const p: IdentityPrincipal = { id, createdAt: iso(), riskScore: input.riskScore ?? 0, ...input };
     await redis.set(PRINC(id), SER(p));
     await redis.sadd(PRINCS, id);
     return p;

@@ -12,23 +12,33 @@ function iso() { return new Date().toISOString(); }
 function rand(min:number,max:number){return Math.floor(min+Math.random()*(max-min+1));}
 
 export const ToolkitService = {
-  async runTests(suite: string, target: string): Promise<TestSuiteRun> {
+  /**
+   * Record a test-suite run.
+   *
+   * This previously invented the entire result — 20-80 cases, a 10% chance of
+   * 1-5 failures, a random 8-45s duration and 65-95% coverage — without
+   * executing anything, then persisted it as a real run. Results must now be
+   * supplied by whatever actually ran the suite; with nothing supplied the run
+   * is recorded as `pending` with zeroed counters rather than a fake pass.
+   */
+  async runTests(
+    suite: string,
+    target: string,
+    result?: { passed: number; failed: number; skipped?: number; durationMs?: number; coveragePct?: number },
+  ): Promise<TestSuiteRun> {
     const id = randomUUID();
     const start = iso();
     const startMs = Date.now();
-    // Simulate test run
-    const total = rand(20, 80);
-    const failed = Math.random() < 0.1 ? rand(1, 5) : 0;
-    const skipped = rand(0, 3);
-    const passed = total - failed - skipped;
-    const duration = rand(8000, 45_000);
-    await new Promise(r => setTimeout(r, Math.min(600, duration/20)));
+    const passed = result?.passed ?? 0;
+    const failed = result?.failed ?? 0;
+    const skipped = result?.skipped ?? 0;
+    const duration = result?.durationMs ?? 0;
     const run: TestSuiteRun = {
       id, name: suite, target,
-      status: failed > 0 ? "failed" : "passed",
+      status: !result ? "queued" : failed > 0 ? "failed" : "passed",
       durationMs: duration,
       passed, failed, skipped,
-      coveragePct: Math.round((65 + Math.random() * 30) * 10) / 10,
+      coveragePct: result?.coveragePct,
       startedAt: start,
       finishedAt: new Date(startMs + duration).toISOString(),
     };
@@ -40,24 +50,31 @@ export const ToolkitService = {
     const raw = await redis.lrange(TEST_RUNS_KEY, 0, limit - 1);
     return raw.map(s => JSON.parse(s) as TestSuiteRun);
   },
-  async deploy(target: "dev"|"staging"|"canary"|"production", service: string, version: string): Promise<DeploymentKitRun> {
+  /**
+   * Record a deployment-kit run.
+   *
+   * Previously fabricated the outcome (`ok = Math.random() > 0.05`) plus a
+   * random 15-120s duration, and synthesised a plausible log transcript
+   * ("running tests: passed", "healthy: svc on prod") for a deploy that never
+   * happened. The caller now supplies the real result.
+   */
+  async deploy(
+    target: "dev"|"staging"|"canary"|"production",
+    service: string,
+    version: string,
+    result?: { ok: boolean; durationMs?: number; logs?: string[]; url?: string },
+  ): Promise<DeploymentKitRun> {
     const id = randomUUID();
     const start = iso();
     const startMs = Date.now();
-    const duration = rand(15_000, 120_000);
-    await new Promise(r => setTimeout(r, Math.min(700, duration/20)));
-    const ok = Math.random() > 0.05;
+    const duration = result?.durationMs ?? 0;
     const run: DeploymentKitRun = {
       id, target, service, version,
-      status: ok ? "passed" : "failed",
+      status: !result ? "queued" : result.ok ? "passed" : "failed",
       durationMs: duration,
-      url: ok ? `https://${service}.${target === "production" ? "windels.ai" : target + ".windels.ai"}` : undefined,
-      logs: [
-        `[${iso()}] building ${service}@${version}`,
-        `[${iso()}] running tests: ${ok ? "passed" : "failed"}`,
-        ok ? `[${iso()}] deploying to ${target}` : `[${iso()}] deploy failed, rolling back`,
-        ok ? `[${iso()}] healthy: ${service} on ${target}` : undefined,
-      ].filter(Boolean) as string[],
+      url: result?.url,
+      // Logs come from the real deploy; nothing is invented.
+      logs: result?.logs ?? [],
       startedAt: start,
       finishedAt: new Date(startMs + duration).toISOString(),
     };
