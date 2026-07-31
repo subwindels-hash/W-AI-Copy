@@ -81,6 +81,12 @@ export interface ValidationCheck {
   name: string;
   category: "security" | "tests" | "dependencies" | "performance" | "schema" | "compliance";
   passed: boolean;
+  /**
+   * Whether a runner actually executed this check. `passed: false` alone is
+   * ambiguous — it could mean "failed" or "never ran" — and these checks used
+   * to ship hardcoded as `passed: true`, so the distinction is load-bearing.
+   */
+  evaluated?: boolean;
   severity: ValidationSeverity;
   message: string;
   durationMs: number;
@@ -93,7 +99,8 @@ export interface AiValidationResult {
   overallPassed: boolean;
   score: number;
   startedAt: string;
-  finishedAt: string;
+  /** Set only once every check has reported. An in-flight validation has none. */
+  finishedAt?: string;
   durationMs: number;
 }
 

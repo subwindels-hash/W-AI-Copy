@@ -384,7 +384,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2293,
+      "serviceTotalSloc": 2357,
       "serviceFiles": [
         "bootstrap.ts",
         "personalityStudio.service.ts",
@@ -1266,7 +1266,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2215,
+      "serviceTotalSloc": 2231,
       "serviceFiles": [
         "bootstrap.ts",
         "cameraIntel.service.ts",
@@ -2346,7 +2346,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 849,
+      "serviceTotalSloc": 845,
       "serviceFiles": [
         "bootstrap.ts",
         "cli.service.ts",
@@ -2666,7 +2666,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1097,
+      "serviceTotalSloc": 1116,
       "serviceFiles": [
         "bootstrap.ts",
         "deployments.service.ts",
@@ -2883,11 +2883,11 @@
       "serviceFile": {
         "file": "dataFabric.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterpriseFoundation/dataFabric.service.ts",
-        "sloc": 110,
+        "sloc": 111,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1539,
+      "serviceTotalSloc": 1689,
       "serviceFiles": [
         "bootstrap.ts",
         "dataFabric.service.ts",
@@ -3226,7 +3226,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1326,
+      "serviceTotalSloc": 1322,
       "serviceFiles": [
         "agents.service.ts",
         "bootstrap.ts",
@@ -3966,11 +3966,11 @@
       "serviceFile": {
         "file": "industry.service.ts",
         "path": "/home/user/WIN/apps/api/src/industry/industry.service.ts",
-        "sloc": 77,
+        "sloc": 74,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 157,
+      "serviceTotalSloc": 151,
       "serviceFiles": [
         "bootstrap.ts",
         "industry.service.ts",
@@ -4039,7 +4039,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 974,
+      "serviceTotalSloc": 1003,
       "serviceFiles": [
         "platform/cluster.service.ts",
         "platform/iac.service.ts",
@@ -4857,7 +4857,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1689,
+      "serviceTotalSloc": 1733,
       "serviceFiles": [
         "bootstrap.ts",
         "models.service.ts",
@@ -5181,7 +5181,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1461,
+      "serviceTotalSloc": 1490,
       "serviceFiles": [
         "cluster.service.ts",
         "cluster.test.ts",
@@ -5285,7 +5285,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2174,
+      "serviceTotalSloc": 2166,
       "serviceFiles": [
         "billing.service.ts",
         "blueprints.service.ts",
@@ -5426,7 +5426,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1398,
+      "serviceTotalSloc": 1440,
       "serviceFiles": [
         "archReview.service.ts",
         "bootstrap.ts",
@@ -5895,11 +5895,11 @@
       "serviceFile": {
         "file": "aiValidation.service.ts",
         "path": "/home/user/WIN/apps/api/src/release/aiValidation.service.ts",
-        "sloc": 63,
+        "sloc": 122,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1157,
+      "serviceTotalSloc": 1275,
       "serviceFiles": [
         "aiValidation.service.ts",
         "approval.service.ts",
@@ -5946,7 +5946,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/release.ts (165 LOC)",
+    "sharedTypes": "packages/shared/src/release.ts (172 LOC)",
     "web": {
       "client": "apps/web/src/lib/release.ts (60 LOC)",
       "pages": []
@@ -6290,11 +6290,11 @@
       "serviceFile": {
         "file": "selfHosted.service.ts",
         "path": "/home/user/WIN/apps/api/src/selfHosted/selfHosted.service.ts",
-        "sloc": 145,
+        "sloc": 151,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 336,
+      "serviceTotalSloc": 348,
       "serviceFiles": [
         "bootstrap.ts",
         "selfHosted.service.ts",
@@ -7246,7 +7246,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 904,
+      "serviceTotalSloc": 934,
       "serviceFiles": [
         "bootstrap.ts",
         "voice.service.ts",

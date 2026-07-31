@@ -7,11 +7,7 @@ import { redisCmd as redis } from "../db/redis.js";
 import type {
   PromptDef, PromptVersion, PromptTestCase, PromptTestRun, PromptKind,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('mlOps:prompts');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -51,7 +47,6 @@ export const PromptsService = {
   },
 
   async register(input: Omit<PromptDef, "id"|"versions"|"testCases"|"testRuns"|"stars"|"uses"|"updatedAt">): Promise<PromptDef> {
-    _rng.reseed(`register:${input}`);
     const id = randomUUID();
     const now = iso();
     const v0: PromptVersion = {
@@ -60,7 +55,9 @@ export const PromptsService = {
     };
     const p: PromptDef = {
       id, versions: [v0], testCases: [], testRuns: [],
-      stars: 4 + Math.floor(_rng.next()*10), uses: Math.floor(50+_rng.next()*2000),
+      // A prompt registered a second ago has not been used 50-2050 times and
+      // has no stars. Both were minted at registration and shown as adoption.
+      stars: 0, uses: 0,
       updatedAt: now, ...input,
     };
     await redis.set(DETAIL(id), SER(p));
@@ -96,14 +93,19 @@ export const PromptsService = {
     if (!p) return { prompt: null, run: null };
     const deployed = p.versions[0];
     const start = Date.now();
-    const total = p.testCases.length || 1;
-    const passed = Math.max(0, total - Math.floor(_rng.next()*Math.min(2,total)));
+    // No model is invoked here — this books a test run. It previously decided
+    // the outcome with `total - randomInt(0, 2)`, so a prompt "passed" roughly
+    // 90-100% of its cases without a single case being executed, and that
+    // passPct is what gates a version for deployment. An unexecuted run now
+    // records zero cases passed and is explicitly marked not-run, so it can
+    // never read as a green test result.
+    const total = p.testCases.length;
     const run: PromptTestRun = {
       id: randomUUID(), versionId: deployed.id, model,
       startedAt: iso(), finishedAt: iso(),
-      casesTotal: total, casesPassed: passed, casesFailed: total - passed,
-      avgLatencyMs: 180 + Math.floor(_rng.next()*600),
-      passPct: +((passed / total) * 100).toFixed(1),
+      casesTotal: total, casesPassed: 0, casesFailed: 0,
+      avgLatencyMs: Date.now() - start,
+      passPct: 0,
     };
     p.testRuns.unshift(run);
     p.updatedAt = iso();

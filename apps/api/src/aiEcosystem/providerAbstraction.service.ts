@@ -18,11 +18,7 @@ import type {
   ProviderStatus,
 } from "@windels/shared";
 import { redisCmd as redis } from "../db/redis.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('aiEcosystem:providerAbstraction');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -346,28 +342,64 @@ export const ProviderAbstractionService = {
   },
 
   async runBenchmark(input: { name: string; kind?: string; providerIds: string[]; samples?: number; benchmarkId?: string; providerId?: string; modelId?: string }): Promise<BenchmarkRun[]> {
-    _rng.reseed(`runBenchmark:${input}`);
     const out: BenchmarkRun[] = [];
     const providerIds = input.providerIds && input.providerIds.length ? input.providerIds : input.providerId ? [input.providerId] : [];
     const models = await this.listModels();
     for (const pid of providerIds) {
       const model = models.find((m) => m.providerId === pid) ?? models[0];
+      // This method does not call any provider — it records a benchmark entry.
+      // It nonetheless awarded every provider a 0.60-0.95 score, a 200-1000 ms
+      // latency and a per-call cost, so "running" a benchmark produced a full
+      // comparison table ranking models that were never queried. A leaderboard
+      // is exactly the kind of output people act on, so an unmeasured run now
+      // records zeros and says so, rather than inventing a winner.
       const run: BenchmarkRun = {
         id: "bm-" + randomUUID().slice(0, 8),
         benchmarkId: input.benchmarkId ?? ("bench-" + (input.kind ?? "latency")),
         name: input.name,
         providerId: pid,
         modelId: model?.id ?? pid,
-        score: Number((0.6 + _rng.next() * 0.35).toFixed(3)),
-        latencyMs: 200 + Math.floor(_rng.next() * 800),
-        costUsd: Number((_rng.next() * 0.05).toFixed(4)),
+        score: 0,
+        latencyMs: 0,
+        costUsd: 0,
         runAt: new Date().toISOString(),
-        notes: `samples=${input.samples ?? 200}`,
+        notes: `queued (samples=${input.samples ?? 200}); no provider was invoked — report results via recordBenchmarkResult()`,
       };
       await redis.zadd(KEYS.benchmarks, Date.now(), JSON.stringify(run));
       out.push(run);
     }
     return out;
+  },
+
+  /**
+   * Record the outcome of a benchmark that actually ran.
+   *
+   * `runBenchmark` only queues an entry; whatever harness invokes the provider
+   * reports the measurement back here. Without this there was no way to supply
+   * a real score, which is why the values were invented in the first place.
+   */
+  async recordBenchmarkResult(
+    runId: string,
+    result: { score?: number; latencyMs?: number; costUsd?: number; notes?: string },
+  ): Promise<BenchmarkRun | null> {
+    const raw = await redis.zrange(KEYS.benchmarks, 0, -1);
+    for (const entry of raw) {
+      let run: BenchmarkRun;
+      try { run = JSON.parse(entry) as BenchmarkRun; } catch { continue; }
+      if (run.id !== runId) continue;
+      const updated: BenchmarkRun = {
+        ...run,
+        score: result.score ?? run.score,
+        latencyMs: result.latencyMs ?? run.latencyMs,
+        costUsd: result.costUsd ?? run.costUsd,
+        runAt: new Date().toISOString(),
+        notes: result.notes ?? "measured",
+      };
+      await redis.zrem(KEYS.benchmarks, entry);
+      await redis.zadd(KEYS.benchmarks, Date.now(), JSON.stringify(updated));
+      return updated;
+    }
+    return null;
   },
 
   async recordHealth(ev: Omit<ProviderHealthEvent, "id" | "recordedAt">): Promise<ProviderHealthEvent> {

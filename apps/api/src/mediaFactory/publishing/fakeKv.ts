@@ -18,6 +18,15 @@ export class FakeKv {
 
   async get(key: string): Promise<string | null> { return this.fresh(key)?.value ?? null; }
 
+  /** INCR / INCRBY / DECR — used by id counters (sprint numbers, story keys). */
+  async incrby(key: string, by: number): Promise<number> {
+    const next = Number(this.fresh(key)?.value ?? 0) + by;
+    this.strings.set(key, { value: String(next) });
+    return next;
+  }
+  async incr(key: string): Promise<number> { return this.incrby(key, 1); }
+  async decr(key: string): Promise<number> { return this.incrby(key, -1); }
+
   async set(key: string, value: string, ...args: any[]): Promise<"OK" | null> {
     const strArgs = args.map(String);
     const nx = strArgs.includes("NX");
@@ -62,11 +71,28 @@ export class FakeKv {
 
   async scard(key: string): Promise<number> { return this.sets.get(key)?.size ?? 0; }
 
-  async hset(key: string, field: string, value: string): Promise<number> {
+  /**
+   * HSET in all three shapes ioredis accepts:
+   *   hset(key, field, value)
+   *   hset(key, field, value, field2, value2, ...)
+   *   hset(key, { field: value, ... })
+   * Only the first was supported, so services that write a whole record in one
+   * call (release/pipeline.service.ts) silently stored nothing under test.
+   */
+  async hset(key: string, ...rest: any[]): Promise<number> {
     const h = this.hashes.get(key) ?? {};
-    h[field] = value;
+    let written = 0;
+    if (rest.length === 1 && rest[0] && typeof rest[0] === "object") {
+      for (const [f, v] of Object.entries(rest[0] as Record<string, unknown>)) {
+        h[f] = String(v); written++;
+      }
+    } else {
+      for (let i = 0; i + 1 < rest.length; i += 2) {
+        h[String(rest[i])] = String(rest[i + 1]); written++;
+      }
+    }
     this.hashes.set(key, h);
-    return 1;
+    return written;
   }
 
   async hgetall(key: string): Promise<Record<string, string>> { return this.hashes.get(key) ?? {}; }
@@ -181,7 +207,7 @@ export class FakeKv {
     const chain = {
       set(key: string, value: string, ...args: any[]) { ops.push(() => self.set(key, value, ...args)); return chain; },
       del(key: string) { ops.push(() => self.del(key)); return chain; },
-      hset(key: string, field: string, value: string) { ops.push(() => self.hset(key, field, value)); return chain; },
+      hset(key: string, ...rest: any[]) { ops.push(() => self.hset(key, ...rest)); return chain; },
       sadd(key: string, ...members: string[]) { ops.push(() => self.sadd(key, ...members)); return chain; },
       srem(key: string, ...members: string[]) { ops.push(() => self.srem(key, ...members)); return chain; },
       zadd(key: string, score: number, member: string) { ops.push(() => self.zadd(key, score, member)); return chain; },

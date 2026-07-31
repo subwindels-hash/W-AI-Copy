@@ -317,12 +317,53 @@ function auditSynthetic(modKey) {
       return /\b(?:rand|randInt|rnd|rndInt)\s*\(|_rng\.(?!reseed)/.test(body)
         && /redis\.(?:hset|set|sadd|zadd|rpush|lpush)/.test(body);
     })();
+    // Fabrication on a LIVE path - the blind spot `seedsUngated` cannot see.
+    // A seed runs once and can be gated; a write path runs on every call and no
+    // gate applies to it. opsCenter.globalStatus() returned a literal 12,480
+    // rps / $554,000 monthly run rate on every request; dataFabric stamped an
+    // invented latency onto each new connector; providerAbstraction awarded
+    // scores for benchmarks it never ran. None were seeds, so none were caught.
+    //
+    // Signal: RNG called outside ensureBootstrapped, anywhere in the file.
+    const rngOutsideSeed = (() => {
+      const m = codeOnly.match(/async\s+ensureBootstrapped\s*\([^)]*\)\s*\{/);
+      let outside = codeOnly;
+      if (m) {
+        let i = m.index + m[0].length - 1, depth = 0, end = -1;
+        for (; i < codeOnly.length; i++) {
+          if (codeOnly[i] === "{") depth++;
+          else if (codeOnly[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
+        }
+        if (end > 0) outside = codeOnly.slice(0, m.index) + codeOnly.slice(end + 1);
+      }
+      // Ignore the helper declarations themselves; count only call sites.
+      const calls = outside.replace(/function\s+(?:rand|randInt|rnd|rndInt)\s*\([^)]*\)\s*\{[^\n]*/g, "");
+      return /\b(?:rand|randInt|rnd|rndInt)\s*\(|_rng\.(?!reseed)/.test(calls);
+    })();
+    // Randomness that is the feature, not a fake measurement. Each is either
+    // named for what it is or already covered by the source-level guard in
+    // apps/api/src/noRandomData.guard.test.ts. Leaving them permanently red
+    // would train readers to ignore this list.
+    //   marketplace/simulation   Monte-Carlo sampling IS the simulator
+    //   qa/digitalTwin, qa/drTest  QA harnesses, explicitly named synthetic
+    //   mediaGen                 a labelled simulator's bounded wait jitter
+    //   projectIntake            the demo-data scanner's own detection regex
+    const LEGITIMATE_RNG = new Set([
+      "marketplace/simulation.service.ts",
+      "qa/digitalTwin.service.ts",
+      "qa/drTest.service.ts",
+      "mediaGen/mediaGen.service.ts",
+      "projectContinuity/projectIntake.service.ts",
+    ]);
+    if (LEGITIMATE_RNG.has(`${modKey}/${f}`)) continue;
     // `demoGated` covers hasRandom/hasRnd too: randomness that can only run
     // when an operator opts in is not live demo data.
-    if (((hasRandom || hasRnd) && !demoGated) || hasFakeData || seedsUngated) {
+    if (((hasRandom || hasRnd) && !demoGated) || hasFakeData || seedsUngated
+        || (rngOutsideSeed && !demoGated)) {
       findings.push({
         file: f, mathRandom: hasRandom, rndHelper: hasRnd,
-        seedKeywords: hasFakeData, ungatedSeed: seedsUngated, externalHttp: hasExternal,
+        seedKeywords: hasFakeData, ungatedSeed: seedsUngated,
+        liveRng: rngOutsideSeed && !demoGated, externalHttp: hasExternal,
       });
     }
   }

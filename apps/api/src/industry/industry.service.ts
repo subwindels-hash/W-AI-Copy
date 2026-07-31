@@ -6,11 +6,8 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Logger } from "pino";
 import { IndustryDashboard, INDUSTRY_SUITES, IndustryPack, IndMaturityScore } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-const _rng = makeRng("industry:industry");
 const K={meta:(oid:string)=>`ind:meta:${oid}`};
 const uid=(p:string)=>p+randomUUID().slice(0,8);
-const rnd=(a:number,b:number)=>_rng.rand(a,b), rndInt=(a:number,b:number)=>_rng.randInt(a,b);
 
 /**
  * Maturity is an assessment, not a measurement we can take. Until one is

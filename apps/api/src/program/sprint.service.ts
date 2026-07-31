@@ -4,11 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Sprint, SprintBurndown, Story } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('program:sprint');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -33,7 +29,6 @@ export const SprintService = {
     return out.sort((a, b) => b.number - a.number);
   },
   async createSprint(input: Partial<Sprint>): Promise<Sprint> {
-    _rng.reseed(`createSprint:${input}`);
     const n = await redis.incr(COUNTER);
     const id = randomUUID();
     const start = input.startAt ?? new Date().toISOString();
@@ -49,7 +44,9 @@ export const SprintService = {
       capacityPoints: input.capacityPoints ?? 40,
       committedPoints: 0,
       completedPoints: input.completedPoints ?? 0,
-      velocityProjected: Math.round(30 + _rng.next() * 15),
+      // A brand-new sprint has no velocity history to project from. This was
+      // a random 30-45 that capacity planning then treated as a forecast.
+      velocityProjected: 0,
       aiSuggestedGoal: input.aiSuggestedGoal ?? `Ship sprint ${n} scope with high confidence; focus on debt reduction and roadmap initiative alignment.`,
     };
     await redis.set(SPRINT_DETAIL(id), ser(s));
@@ -70,10 +67,12 @@ export const SprintService = {
     return out.sort((a, b) => (a.sprintId ? -1 : 1) - (b.sprintId ? -1 : 1));
   },
   async createStory(input: Partial<Story>): Promise<Story> {
-    _rng.reseed(`createStory:${input}`);
     const n = await redis.incr(STORY_COUNTER);
     const id = randomUUID();
-    const suggested = Math.round((input.points as number) ?? (3 + _rng.next() * 8));
+    // `suggestSource: "ai_historical"` claims this came from historical
+    // analysis; it was a random 3-11 points. Unpointed stories now carry no
+    // suggestion rather than a fabricated one that feeds capacity planning.
+    const suggested = (input.points as number) ?? 0;
     const story: Story = {
       id,
       sprintId: input.sprintId ?? null,
@@ -82,7 +81,9 @@ export const SprintService = {
       epic: input.epic,
       points: input.points ?? 0,
       suggestedPoints: suggested,
-      suggestSource: "ai_historical",
+      // Only claim a provenance when there is actually a suggestion. Labelling
+      // an absent estimate "ai_historical" asserts an analysis that never ran.
+      suggestSource: suggested > 0 ? "ai_historical" : undefined,
       status: input.status ?? "backlog",
       assignee: input.assignee,
       tags: input.tags ?? [],
@@ -123,22 +124,44 @@ export const SprintService = {
     s.completedPoints = inSprint.filter((st) => st.status === "done").reduce((acc, st) => acc + (st.points || 0), 0);
     await redis.set(SPRINT_DETAIL(sprintId), ser(s));
   },
+  /**
+   * Sprint burndown.
+   *
+   * The `remaining` series was the ideal line plus ±12% noise, so the chart a
+   * team reads to judge whether it is ahead or behind was drawn from a random
+   * number generator — and it always tracked the ideal, because that is what it
+   * was derived from. A sprint in trouble looked exactly like one on track.
+   *
+   * The ideal line is computable from committed points and sprint length, so it
+   * is still returned. `remaining` is only known from real story completion; it
+   * reflects points still open today and is otherwise left at the committed
+   * total for future dates rather than being invented per day.
+   */
   async burndown(sprintId: string): Promise<SprintBurndown | null> {
-    _rng.reseed(`burndown:${sprintId}`);
     const s = await this.getSprint(sprintId);
     if (!s) return null;
     const start = new Date(s.startAt).getTime();
     const end = new Date(s.endAt).getTime();
     const days = Math.max(5, Math.round((end - start) / 86400_000));
-    const pts = s.committedPoints || 40;
+    const pts = s.committedPoints || 0;
+
+    // Points actually completed, from the stories themselves.
+    const stories = (await this.listBacklog()).filter((st: Story) => st.sprintId === sprintId);
+    const donePoints = stories
+      .filter((st: Story) => st.status === "done")
+      .reduce((a: number, st: Story) => a + (st.points ?? 0), 0);
+    const remainingToday = Math.max(0, pts - donePoints);
+
+    const today = Date.now();
     const arr: { date: string; remaining: number; ideal: number }[] = [];
     for (let i = 0; i <= days; i++) {
-      const ideal = Math.max(0, Math.round(pts - (pts * i / days)));
-      const noise = (_rng.next() - 0.3) * (pts * 0.12);
-      const remaining = Math.max(0, Math.round(ideal + noise));
+      const at = start + i * 86400_000;
+      const ideal = days > 0 ? Math.max(0, Math.round(pts - (pts * i / days))) : 0;
       arr.push({
-        date: new Date(start + i * 86400_000).toISOString().slice(0, 10),
-        remaining,
+        date: new Date(at).toISOString().slice(0, 10),
+        // Only today's figure is measured. Past days would need a daily
+        // snapshot the platform does not record, and future days are unknown.
+        remaining: at <= today ? remainingToday : pts,
         ideal,
       });
     }

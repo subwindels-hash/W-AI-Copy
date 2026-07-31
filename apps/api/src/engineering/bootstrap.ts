@@ -8,8 +8,7 @@ import { TechDebtService } from "./techDebt.service.js";
 import { PipelineService } from "./pipeline.service.js";
 import { ProductivityService } from "./productivity.service.js";
 import type { SLOTier, ServiceMetric } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-const _rng = makeRng("engineering:bootstrap");
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const SEED_SERVICES: Array<{ id: string; name: string; tier: SLOTier; owner: string; p50: number; rps: number; err: number; sat: number; sloLatency: number; sloAvail: number }> = [
   { id: "svc-api", name: "API", tier: "tier1", owner: "platform-team", p50: 40, rps: 850, err: 0.3, sat: 62, sloLatency: 200, sloAvail: 99.95 },
@@ -51,6 +50,12 @@ export async function bootstrapEngineering() {
     });
     return;
   }
+
+  // Everything below invents an engineering organisation: SLO metrics for six
+  // named services, a month of deployments, a tech-debt register, CI runs
+  // attributed to named authors, and per-developer productivity stats. All of
+  // it renders as measured delivery performance, so it is opt-in.
+  if (!demoDataEnabled()) return skipDemoSeed("engineering", logger);
 
   for (const s of SEED_SERVICES) {
     const m: ServiceMetric = {
@@ -108,7 +113,7 @@ export async function bootstrapEngineering() {
       author: ["alice","bob","carol","dave","super-admin"][i % 5]!,
       status: i % 7 === 0 ? "failed" : "passed",
       durationMs: 120_000 + (i % 7) * 60_000,
-      startedAt: new Date(Date.now() - _rng.next() * 7 * 86400_000).toISOString(),
+      startedAt: new Date(Date.now() - (i % 7) * 86400_000).toISOString(),
       flaky: i % 13 === 0,
     });
   }

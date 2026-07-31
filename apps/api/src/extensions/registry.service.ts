@@ -9,11 +9,7 @@ import type {
   Extension, ExtensionKind, ExtensionStatus, ExtensionReview,
   ExtensionVersion, LifecycleStage,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('extensions:registry');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -94,12 +90,14 @@ export const ExtensionRegistryService = {
   },
 
   async register(input: Omit<Extension, "id"|"installCount"|"stars"|"ratingAvg"|"reviewCount"|"versions"|"reviews"|"status"|"lifecycleStage"|"updatedAt"> & { versions?: ExtensionVersion[] }): Promise<Extension> {
-    _rng.reseed(`register`);
     const id = randomUUID();
     const now = iso();
     const e: Extension = {
       id, status: "draft", lifecycleStage: "dev",
-      installCount: 0, stars: Math.floor(5 + _rng.next()*400), ratingAvg: 4 + _rng.next(), reviewCount: 0,
+      // A newly registered extension has no adoption yet. Minting 5-405 stars
+      // and a 4.0-5.0 rating at registration put fake social proof on the
+      // marketplace listing, next to an honest installCount/reviewCount of 0.
+      installCount: 0, stars: 0, ratingAvg: 0, reviewCount: 0,
       versions: input.versions ?? [{ version: input.version, releasedAt: now, changelog: "initial release", minPlatformVersion: input.minPlatformVersion, status: "draft", downloads: 0 }],
       reviews: [],
       updatedAt: now,

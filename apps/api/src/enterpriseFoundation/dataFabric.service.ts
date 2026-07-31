@@ -5,11 +5,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { FabricConnector, DataProduct, DataLineage, ConnectorStatus, FabricConnectorKind } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('enterpriseFoundation:dataFabric');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -43,11 +39,16 @@ export const DataFabricService = {
     return raw ? (JSON.parse(raw) as FabricConnector) : null;
   },
   async registerConnector(input: Omit<FabricConnector, "id"|"datasets"|"rowsProcessed24h"|"bytesProcessed24h"|"latencyMs"|"errorRatePct"|"tags"|"encrypted"> & { tags?: string[] }): Promise<FabricConnector> {
-    _rng.reseed(`registerConnector`);
     const id = randomUUID();
+    // A connector that has not yet moved a byte has no latency and no error
+    // rate. These were invented at registration (40-240 ms, 0-0.5%), so a
+    // connector displayed health metrics for traffic it had never carried —
+    // and the numbers never changed afterwards, because nothing recomputes
+    // them. Zero here means "not yet measured", consistent with the counters
+    // beside it, which correctly start at 0.
     const c: FabricConnector = {
       id, datasets: 0, rowsProcessed24h: 0, bytesProcessed24h: 0,
-      latencyMs: 40 + Math.floor(_rng.next()*200), errorRatePct: _rng.next()*0.5,
+      latencyMs: 0, errorRatePct: 0,
       tags: input.tags ?? [], encrypted: true, ...input,
     };
     await redis.set(CONN(id), SER(c));

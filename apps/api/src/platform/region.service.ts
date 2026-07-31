@@ -12,6 +12,7 @@ import { redisCmd } from "../db/redis.js";
 import { logger } from "../observability/logger.js";
 import type { Region, FailoverStatus, RegionStatus, ReplicationRole, RegionTier } from "@windels/shared/infrastructure";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('platform');
@@ -35,9 +36,14 @@ const DEFAULT_REGIONS: Array<Omit<Region,"id"|"status"|"replicationLagMs"|"loadP
 
 export const RegionService = {
   async seed() {
-    _rng.reseed(`seed`);
     if (seeded) return; seeded = true;
     try { if (await redisCmd.exists(REG_KEY)) return; } catch {}
+    // Five regions across NA/EU/AP with invented replication lag, capacity
+    // (5-15k rps, 2-20k active users, 10-60 pods) and 30-75% load — and a 10%
+    // chance each non-primary shows "degraded". ClusterService's fabricated
+    // Kubernetes estate was gated for exactly this reason; this is the same
+    // fiction one layer up, and failover drills read from it.
+    if (!demoDataEnabled()) return skipDemoSeed("platform-regions", logger);
     for (const r of DEFAULT_REGIONS) {
       const id = r.name.toLowerCase().replace(/[^a-z]+/g,"-").replace(/(^-|-$)/g,"").replace("--","-");
       const region: Region = {
@@ -71,18 +77,41 @@ export const RegionService = {
     return r;
   },
 
+  /**
+   * Refresh region health from reported telemetry.
+   *
+   * This used to walk every region applying ±8% load jitter, ±20 ms of
+   * replication lag and ±500 rps of capacity drift, then *derive* the region's
+   * status from the number it had just invented (`loadPercent > 92 → degraded`).
+   * Polling it produced a convincing live feed of a multi-region estate, and
+   * because it also set `lastHealthCheckAt`, every region looked freshly probed.
+   *
+   * A region's health can only come from that region. Until something reports,
+   * this records that no check has happened rather than manufacturing one.
+   */
   async refreshHealth() {
-    _rng.reseed(`refreshHealth`);
     await this.seed();
-    const regions = await this.list();
-    for (const r of regions) {
-      r.loadPercent = Math.max(5, Math.min(99, r.loadPercent + rand(-8, 8)));
-      r.replicationLagMs = r.tier === "primary" ? 0 : Math.max(5, Math.floor((r.replicationLagMs ?? 50) + rand(-20, 20)));
-      r.capacity.requestsPerSec += Math.floor(rand(-500, 500));
-      r.status = r.loadPercent > 92 ? "degraded" : "online";
-      r.lastHealthCheckAt = now();
-      await redisCmd.set(REG_PREFIX+r.id, JSON.stringify(r));
-    }
+  },
+
+  /**
+   * Record a health report for one region, from whatever actually probed it.
+   */
+  async recordHealth(
+    regionId: string,
+    report: { loadPercent?: number; replicationLagMs?: number; requestsPerSec?: number; status?: RegionStatus },
+  ): Promise<Region | null> {
+    const r = await this.get(regionId);
+    if (!r) return null;
+    if (report.loadPercent !== undefined) r.loadPercent = report.loadPercent;
+    if (report.replicationLagMs !== undefined) r.replicationLagMs = report.replicationLagMs;
+    if (report.requestsPerSec !== undefined) r.capacity.requestsPerSec = report.requestsPerSec;
+    // Prefer an explicitly reported status; otherwise derive it from a load
+    // figure that was actually measured.
+    r.status = report.status
+      ?? (report.loadPercent !== undefined ? (report.loadPercent > 92 ? "degraded" : "online") : r.status);
+    r.lastHealthCheckAt = now();
+    await redisCmd.set(REG_PREFIX + r.id, JSON.stringify(r));
+    return r;
   },
 
   async failover(fromId: string, toId: string, reason: string, triggeredBy = "system"): Promise<FailoverStatus> {

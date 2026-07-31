@@ -170,7 +170,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 279 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 295 passing, 0 failing.**
 
 ---
 
@@ -517,3 +517,116 @@ gates failed 3 tests, and reverting the `NaN` guard failed with
 `expected NaN to be +0`, confirming the bug was real and the tests detect it.
 
 **Gates: build 4/4 · typecheck 5/5 · 279 tests passing, 0 failing** (was 264).
+
+---
+
+## 9. Fabrication on live paths — the class the seed gate could not reach (2026-07-31)
+
+§8 gated ten bootstraps and the inventory went to `DEMO DATA 0`. That zero was
+misleading, because the detector could only see one shape of fabrication: a
+**seed**. A seed runs once and can be gated. The other shape runs on **every
+call**, so `WINDELS_DEMO_DATA` never applied to it — there is no seed to skip.
+
+Fifteen more sites were found and fixed. Every one survived `WINDELS_DEMO_DATA=false`.
+
+### 9.1 First, a genuine false alarm
+
+`services/` (138 files defining `rand`/`randInt`) looked alarming, and the
+`noRandomData` guard allowlists the whole tree as "bulk-generated, unmounted".
+Checked rather than trusted: 34 of those files *are* reachable from mounted
+routes. But of the 138 with RNG helpers, exactly **one** is routed
+(`webhook.service`), and it only *declares* the helpers — its single `_rng` use
+is event-id generation. The other 137 are in `tsconfig.orphans.json`. The
+allowlist's claim is accurate.
+
+### 9.2 The worst of it: a release gate that could not fail
+
+`release/aiValidation.service.ts` defined ten checks — **"Secrets scan",
+"Auth/Z regression", "Schema migrations", "Dependency audit"** — every one
+hardcoded `passed: true` with a confident message ("No hardcoded secrets
+detected"). `runChecks()` returned that literal list. `run()` then counted zero
+failures, computed **score 100**, and set the release to `awaiting_approval`.
+
+Nothing was ever executed. Every release that called this passed its security
+and migration gates without a single check running. A gate that cannot fail is
+worse than no gate, because it is *documented* as having passed.
+
+Checks now start `evaluated: false, passed: false`, `run()` scores 0 and leaves
+the release in `validating`, and a real runner reports each outcome via
+`recordCheckResult()`. Only when every check has reported does the release
+advance — to `awaiting_approval` or `rejected` on the real result.
+
+### 9.3 The executive dashboard
+
+`enterpriseFoundation/opsCenter.globalStatus()` `return`ed a literal: 48 services
+(45 healthy), five named regions with per-region latency and traffic split,
+**12,480 rps, 0.32% error rate, 218 ms p95, 24,891 active users, $18,420 spent
+today, $554,000 monthly run rate**.
+
+It touched neither Redis nor the metrics registry, so it was not a seed and the
+gate never applied. `GET /enterprise/global-status` served it on a default
+install and `/dashboard/rollup` spread it into the executive rollup. The shape
+was static, so a real outage would not have moved a single figure.
+
+Now derived from the same telemetry registry that backs `infraMetrics`: request
+rate and error rate from real HTTP counters, incidents from the resilience
+register, alerts from the infra sampler. Regions report `[]` — a single process
+cannot observe other regions. Cost needs a billing export. `p95Ms` stays 0
+because the registry keeps count/sum/min/max but no quantiles, and reporting the
+mean under a field named `p95` would understate exactly the tail it exists to
+reveal.
+
+### 9.4 The rest
+
+| Module | Invented on a live path | Now |
+|---|---|---|
+| `mlOps/rag.addSource` | Marked the source `indexed` immediately with 20–520 invented documents **and set `piiScanned = true`** — a source could be approved for retrieval on the strength of a scan that never ran. | Stays `indexing`; `recordIndexResult()` is the only way to set `piiScanned`. |
+| `mlOps/prompts.runTests` | Decided the outcome with `total - randomInt(0,2)`, so a prompt "passed" ~90–100% of its cases without one executing — and `passPct` gates deployment. | Records 0 cases passed, marked not-run. |
+| `platform/region.refreshHealth` | Walked every region applying ±8% load jitter and ±20 ms lag, then *derived* status from the number it had just invented, stamping `lastHealthCheckAt` so all five looked freshly probed. | `recordHealth()` takes a real report; the 5-region estate seed is gated. |
+| `aiEcosystem.runBenchmark` | Awarded every provider a 0.60–0.95 score, 200–1000 ms latency and a cost — without calling any provider. A leaderboard is acted on. | Queues as unmeasured; `recordBenchmarkResult()` added. |
+| `engineering/productivity` | Per-developer PRs, review turnaround, lines changed, a **"focus score" 55–92%** and on-call counts — attributed telemetry about *named people*. | Gated. |
+| `program/sprint.burndown` | `remaining = ideal + noise`, so the chart always tracked the ideal and a struggling sprint looked identical to a healthy one. | Ideal line computed; remaining from real story completion. |
+| `program/sprint` | Random 30–45 `velocityProjected` on a sprint with no history; a random 3–11 story points labelled **`suggestSource: "ai_historical"`**. | 0 / absent; the provenance label is only set when a suggestion exists. |
+| `devportal`, `extensions`, `platformServices`, `mlOps/prompts` | Registries minting stars, weekly downloads and install counts at registration — fake social proof beside an honest `installs: 0`. | 0 until real. |
+| `dataFabric.registerConnector` | Latency and error rate stamped on a connector that had not moved a byte, never recomputed after. | 0 = not yet measured. |
+| `selfHosted.runInference` | Invented 80–480 ms latency pushed onto the ring buffer the dashboard averages. | Measured elapsed; caller may pass observed duration. |
+| `collaboration/screenIntel` | Back-filled 120–1320 frames on close; elapsed time grew by a random 15–105 s **per call**, so duration measured endpoint calls, not time. | Real counters; elapsed from `startedAt` (the shared type already had the field). |
+| `voiceStudio` | Built-in voice **gender** assigned by coin flip at module load — a catalogue attribute users filter by, and unstable across processes. | Derived deterministically from the voice id. |
+| `engineering/bootstrap` | Seeded SLO metrics, deployments, tech debt and CI runs ungated. | Gated. |
+
+### 9.5 A pre-existing bug in the test helper
+
+`FakeKv.hset` only implemented `hset(key, field, value)`. Real ioredis also
+accepts `hset(key, {…})`, which `release/pipeline.service.ts` uses to write a
+whole record — so under test it silently stored **nothing**, and any test
+touching the release pipeline would have failed for the wrong reason. Added the
+object and varargs forms, plus the missing `incr`/`incrby`/`decr`.
+
+### 9.6 The detector, extended
+
+New signal `liveRng`: RNG called **outside** `ensureBootstrapped`, anywhere in
+the file. This is what `seedsUngated` structurally could not see.
+
+Five files are now explicitly allowlisted rather than left permanently red,
+since each is randomness-as-a-feature: `marketplace/simulation` (Monte-Carlo
+*is* the simulator), `qa/digitalTwin` and `qa/drTest` (harnesses named
+synthetic), `mediaGen` (a labelled simulator's wait jitter) and
+`projectIntake` (the demo-data scanner's own detection regex).
+
+### 9.7 Verification
+
+Mutation-tested again, since a detector reporting zero is indistinguishable from
+a broken one:
+
+| Mutation | Result |
+|---|---|
+| Restore invented latency/qps on `mlOps/rag` (a live path, no seed) | `mlOps → DEMO DATA (liveRng)` ✅ |
+| Restore `passed: true` + score 100 in `aiValidation` | 3 tests fail ✅ |
+| Restore the fake "indexed + piiScanned" block | `expected 'indexed' to be 'indexing'` ✅ |
+
+All restored. `config/liveFabrication.test.ts` (**16 tests**) pins the release
+gate, the PII scan, the ops dashboard's stability across reads, registry
+adoption counters and the burndown.
+
+**`DEMO DATA` 0 · `COMPLETE` 43 · gates: build 4/4 · typecheck 5/5 · 295 tests
+passing, 0 failing** (was 279).

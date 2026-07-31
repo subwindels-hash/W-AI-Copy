@@ -6,11 +6,8 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { DevEnvironment, DevEnvKind, DevEnvStatus } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('devportal:environment');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -50,7 +47,6 @@ export const EnvironmentService = {
     return raw ? (JSON.parse(raw) as DevEnvironment) : null;
   },
   async start(id: string): Promise<DevEnvironment | null> {
-    _rng.reseed(`start:${id}`);
     const e = await this.get(id);
     if (!e) return null;
     e.status = "starting";
@@ -60,8 +56,10 @@ export const EnvironmentService = {
     e.status = "running";
     e.startedAt = iso();
     e.uptimeSec = 0;
-    e.cpuPct = Math.round(5 + _rng.next() * 35);
-    e.memMb = Math.round(200 + _rng.next() * 600);
+    // An environment reports 5-40% CPU and 200-800 MB the instant it starts,
+    // before it has run anything. Undefined until the environment reports.
+    e.cpuPct = 0;
+    e.memMb = 0;
     e.url = e.kind === "local"
       ? `http://localhost:${e.ports.find(p=>p.name==="web"||p.name==="https"||p.name==="emulator")?.port ?? 5173}`
       : `https://${e.kind}-${randomUUID().slice(0,8)}.windels.dev`;
@@ -83,9 +81,11 @@ export const EnvironmentService = {
     return e;
   },
   async seed() {
-    _rng.reseed(`seed`);
     const existing = await redis.scard(LIST_KEY);
     if (existing > 0) return;
+    // Seeds developer environments as already-running, with uptime, CPU and
+    // memory for workloads that were never started.
+    if (!demoDataEnabled()) return skipDemoSeed("devportal-environments");
     for (const spec of SEED_ENVS) {
       const id = randomUUID();
       const env: DevEnvironment = {
@@ -95,7 +95,7 @@ export const EnvironmentService = {
           ? [`[${iso()}] ${spec.name} already running`, `[${iso()}] services healthy: ${spec.services.join(", ")}`]
           : [],
         uptimeSec: spec.kind === "local" ? 3800 : 0,
-        cpuPct: spec.kind === "local" ? Math.round(15 + _rng.next()*25) : 0,
+        cpuPct: 0,
         memMb: spec.kind === "local" ? 420 : 0,
         url: spec.kind === "local" ? "http://localhost:5173" : undefined,
         startedAt: spec.kind === "local" ? iso() : undefined,
