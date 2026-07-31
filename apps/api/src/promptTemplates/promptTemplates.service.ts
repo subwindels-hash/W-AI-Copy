@@ -1,5 +1,5 @@
 import { prisma } from "../db/client.js";
-import { resolveUserContext } from "./workspace.service.js";
+import { resolveUserContext } from "../services/workspace.service.js";
 import { z } from "zod";
 import { AppError } from "../utils/result.js";
 

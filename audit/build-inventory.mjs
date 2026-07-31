@@ -251,11 +251,21 @@ function auditSynthetic(modKey) {
   const svcPath = path.join(API_SERVICES, modKey);
   for (const f of ls(svcPath)) {
     if (!f.endsWith(".ts")) continue;
+    // Test files legitimately contain vi.mock(), fixtures and the word
+    // "placeholder"; they are not product synthetic data.
+    if (/\.(test|spec)\.tsx?$/.test(f)) continue;
     const p = path.join(svcPath, f);
     const src = read(p);
     const hasRandom = /Math\.random\s*\(/.test(src);
     const hasRnd = /\brnd\s*\(|\brndInt\s*\(/.test(src);    // common helper wrappers
-    const hasFakeData = /fake|seed|demo|sample|synthetic|placeholder/i.test(src);
+    // A bare mention of "seed"/"demo" is not evidence of synthetic data: it
+    // matches comments, legitimate seedBuiltInTemplates(), and this repo's own
+    // "no demo data" notes. Require a word that actually implies fabrication,
+    // and ignore matches that only occur inside comments.
+    const codeOnly = src
+      .replace(/\/\*[\s\S]*?\*\//g, "")   // block comments
+      .replace(/^\s*\/\/.*$/gm, "");        // line comments
+    const hasFakeData = /\b(fake|mock|dummy|synthetic|placeholder|lorem)\b/i.test(codeOnly);
     const hasExternal = /https?:\/\/(?!localhost|127\.0\.0\.1)/.test(src);
     if (hasRandom || hasRnd || hasFakeData) {
       findings.push({ file: f, mathRandom: hasRandom, rndHelper: hasRnd, seedKeywords: hasFakeData, externalHttp: hasExternal });

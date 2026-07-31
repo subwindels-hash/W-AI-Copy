@@ -2,7 +2,7 @@ import { createHash } from "node:crypto";
 import { mkdir, writeFile, readFile, unlink } from "node:fs/promises";
 import path from "node:path";
 import { prisma } from "../db/client.js";
-import { resolveUserContext } from "./workspace.service.js";
+import { resolveUserContext } from "../services/workspace.service.js";
 import { AppError } from "../utils/result.js";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");

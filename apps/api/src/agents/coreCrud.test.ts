@@ -18,11 +18,11 @@ import { FakePrisma, cuid } from "../testUtils/fakePrisma.js";
 const db = new FakePrisma();
 vi.mock("../db/client.js", () => ({ prisma: db.client() }));
 
-const agents = await import("./agent.service.js");
-const conversations = await import("./conversation.service.js");
-const attachments = await import("./attachment.service.js");
-const templates = await import("./promptTemplate.service.js");
-const apikeys = await import("./apikey.service.js");
+const agents = await import("./agents.service.js");
+const conversations = await import("../conversations/conversations.service.js");
+const attachments = await import("../attachments/attachments.service.js");
+const templates = await import("../promptTemplates/promptTemplates.service.js");
+const apikeys = await import("../publicApi/publicApi.service.js");
 
 const ORG_A = "org-alpha";
 const ORG_B = "org-beta";

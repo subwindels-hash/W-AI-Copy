@@ -1,6 +1,6 @@
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
-import { resolveUserContext } from "./workspace.service.js";
+import { resolveUserContext } from "../services/workspace.service.js";
 import { z } from "zod";
 import { PaginationQuery } from "@windels/shared/api";
 import type { PaginationMeta } from "@windels/shared/api";

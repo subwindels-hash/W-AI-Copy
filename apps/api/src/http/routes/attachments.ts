@@ -3,7 +3,7 @@ import { authenticate } from "../middleware/auth.js";
 import { multipartSingle } from "../middleware/multipart.js";
 import { validate } from "../middleware/validate.js";
 import { z } from "zod";
-import { deleteAttachment, getAttachmentBytes, listAttachments, uploadAttachment } from "../../services/attachment.service.js";
+import { deleteAttachment, getAttachmentBytes, listAttachments, uploadAttachment } from "../../attachments/attachments.service.js";
 import type { ApiEnvelope } from "@windels/shared/api";
 
 const AttachmentId = z.object({ id: z.string().cuid() });

@@ -219,23 +219,25 @@
     "tier": "core",
     "routePrefix": "/api/v1/agents",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/agents",
       "serviceFile": {
-        "file": "agent.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/agent.service.ts",
+        "file": "agents.service.ts",
+        "path": "/home/user/WIN/apps/api/src/agents/agents.service.ts",
         "sloc": 216,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1636,
+      "serviceTotalSloc": 2085,
       "serviceFiles": [
-        "services/agent.service.ts",
+        "agents.service.ts",
+        "coreCrud.test.ts",
+        "agents/agents.service.ts",
         "services/ai/registry.ts",
         "services/agentSkills.service.ts",
         "services/agentLifecycle.service.ts"
       ],
       "importedServiceFiles": [
-        "services/agent.service.ts",
+        "agents/agents.service.ts",
         "services/ai/registry.ts",
         "services/agentSkills.service.ts",
         "services/agentLifecycle.service.ts"
@@ -280,7 +282,16 @@
     "db": {
       "prismaModels": [
         "User",
-        "Agent"
+        "Organization",
+        "Workspace",
+        "Membership",
+        "Agent",
+        "Activity",
+        "Conversation",
+        "Message",
+        "PromptTemplate",
+        "AgentEvent",
+        "ApiKey"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -290,7 +301,9 @@
       "sessions41-76-80.spec.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
+    "externalIntegrations": [
+      "Azure"
+    ],
     "status": "PARTIAL"
   },
   {
@@ -462,27 +475,6 @@
     ],
     "syntheticData": [
       {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "personalityStudio.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "providerAbstraction.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
         "file": "trustExplainability.service.ts",
         "mathRandom": false,
         "rndHelper": false,
@@ -590,20 +582,21 @@
     "tier": "support",
     "routePrefix": "/api/v1/attachments",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/attachments",
       "serviceFile": {
-        "file": "attachment.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/attachment.service.ts",
+        "file": "attachments.service.ts",
+        "path": "/home/user/WIN/apps/api/src/attachments/attachments.service.ts",
         "sloc": 130,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 130,
+      "serviceTotalSloc": 260,
       "serviceFiles": [
-        "services/attachment.service.ts"
+        "attachments.service.ts",
+        "attachments/attachments.service.ts"
       ],
       "importedServiceFiles": [
-        "services/attachment.service.ts"
+        "attachments/attachments.service.ts"
       ],
       "bootstrapFile": null
     },
@@ -630,7 +623,11 @@
     "db": {
       "prismaModels": [
         "User",
-        "Message"
+        "Workspace",
+        "Conversation",
+        "Message",
+        "MessageAttachment",
+        "TalkMessage"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -1066,13 +1063,6 @@
         "rndHelper": false,
         "seedKeywords": true,
         "externalHttp": false
-      },
-      {
-        "file": "biomedical.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
       }
     ],
     "externalIntegrations": [],
@@ -1469,41 +1459,12 @@
     "tests": [
       "collaboration.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "cameraIntel.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "canvasCollab.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "screenIntel.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Stripe",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "command",
@@ -1684,17 +1645,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "composer.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "constitution",
@@ -1760,17 +1713,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "constitution.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "conversations",
@@ -1783,21 +1728,22 @@
     "tier": "core",
     "routePrefix": "/api/v1/conversations",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/conversations",
       "serviceFile": {
-        "file": "conversation.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/conversation.service.ts",
+        "file": "conversations.service.ts",
+        "path": "/home/user/WIN/apps/api/src/conversations/conversations.service.ts",
         "sloc": 146,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 400,
+      "serviceTotalSloc": 546,
       "serviceFiles": [
-        "services/conversation.service.ts",
+        "conversations.service.ts",
+        "conversations/conversations.service.ts",
         "services/message.service.ts"
       ],
       "importedServiceFiles": [
-        "services/conversation.service.ts",
+        "conversations/conversations.service.ts",
         "services/message.service.ts"
       ],
       "bootstrapFile": null
@@ -1841,8 +1787,11 @@
     "db": {
       "prismaModels": [
         "User",
+        "Workspace",
+        "Agent",
         "Conversation",
-        "Message"
+        "Message",
+        "ConversationParticipant"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -2011,19 +1960,11 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Polygon.io"
     ],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "cyber",
@@ -2093,21 +2034,13 @@
     "tests": [
       "sessions61-72-82.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "cyber.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "GCP",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "dataMarketplace",
@@ -2318,28 +2251,13 @@
     "tests": [
       "mlOps.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "deployment.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "verdicts.test.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "GCP",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "derivatives",
@@ -2399,19 +2317,19 @@
     "backend": {
       "serviceDir": null,
       "serviceFile": {
-        "file": "apikey.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/apikey.service.ts",
+        "file": "publicApi.service.ts",
+        "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
         "sloc": 89,
         "mathRandom": false,
         "externalFetch": false
       },
       "serviceTotalSloc": 262,
       "serviceFiles": [
-        "services/apikey.service.ts",
+        "publicApi/publicApi.service.ts",
         "services/webhook.service.ts"
       ],
       "importedServiceFiles": [
-        "services/apikey.service.ts",
+        "publicApi/publicApi.service.ts",
         "services/webhook.service.ts"
       ],
       "bootstrapFile": null
@@ -2448,8 +2366,7 @@
     },
     "db": {
       "prismaModels": [
-        "User",
-        "ApiKey"
+        "User"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -2544,45 +2461,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "cli.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "environment.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "sdkRegistry.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "toolkit.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "SIMULATED"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "digitalHumans",
@@ -2655,17 +2536,9 @@
     "tests": [
       "sessions61-72-82.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "digitalHumans.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "disasterRecovery",
@@ -2827,33 +2700,11 @@
     "tests": [
       "sessions61-72-82.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "education.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "lecturer.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "lecturer.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "engineering",
@@ -2938,38 +2789,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "metrics.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "productivity.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "techDebt.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "enterprise",
@@ -3225,50 +3047,14 @@
     "tests": [
       "enterpriseFoundation.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "dataFabric.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "identity.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "opsCenter.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "quality.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "GCP",
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "etl",
@@ -3333,17 +3119,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "etl.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "events",
@@ -3611,22 +3389,7 @@
     "tests": [
       "extensions.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "registry.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Anthropic",
@@ -3636,7 +3399,7 @@
       "GCP",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "fabric",
@@ -3715,17 +3478,9 @@
     "tests": [
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "fabric.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "giftCards",
@@ -3802,19 +3557,11 @@
     "tests": [
       "sessions41-76-80.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "giftCards.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS"
     ],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "globalCurrency",
@@ -3898,13 +3645,6 @@
       "sessions41-76-80.spec.ts"
     ],
     "syntheticData": [
-      {
-        "file": "globalCurrency.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
       {
         "file": "refreshRates.ts",
         "mathRandom": false,
@@ -4092,62 +3832,12 @@
       "enterprise.spec.ts",
       "sessions42-47.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "adr.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "codeReview.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "codingStandards.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "dependencies.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "repoStandards.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "securityStandards.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "healthEcosystem",
@@ -4263,13 +3953,6 @@
         "rndHelper": false,
         "seedKeywords": true,
         "externalHttp": false
-      },
-      {
-        "file": "healthEcosystem.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
       }
     ],
     "externalIntegrations": [],
@@ -4347,17 +4030,9 @@
     "tests": [
       "sessions42-47.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "hybridExec.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "industry",
@@ -4625,15 +4300,7 @@
     "tests": [
       "sessions37-40.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
     "status": "COMPLETE"
   },
@@ -4770,17 +4437,9 @@
       "sessions61-72-82.spec.ts",
       "smoke.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "legal.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "licensing",
@@ -4848,17 +4507,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "licensing.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "marketplace",
@@ -4961,19 +4612,11 @@
     "tests": [
       "marketplace.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "mediaFactory",
@@ -5075,33 +4718,11 @@
       "mediaPublishing.spec.ts",
       "sessions41-76-80.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "mediaFactory.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "pipeline.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "publishing.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "FFmpeg"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "mediaGen",
@@ -5172,17 +4793,9 @@
     "tests": [
       "sessions42-47.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "mediaGen.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "memoryEvolution",
@@ -5250,17 +4863,9 @@
     "tests": [
       "sessions42-47.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "memoryEvolution.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "mfa",
@@ -5432,29 +5037,7 @@
     "tests": [
       "mlOps.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "prompts.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "rag.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Anthropic",
@@ -5462,7 +5045,7 @@
       "Google",
       "Whisper"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "mobile",
@@ -5598,17 +5181,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "modelFactory.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "opex",
@@ -5775,64 +5350,7 @@
       "sessions42-47.spec.ts",
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "cluster.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "cluster.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "iac.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "infraMetrics.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "infraMetrics.test.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "optimization.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "region.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "release.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "GCP"
@@ -5971,34 +5489,12 @@
     "tests": [
       "platformServices.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "billing.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "blueprints.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Stripe",
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "program",
@@ -6099,38 +5595,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "requirements.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "roadmap.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "sprint.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "projectContinuity",
@@ -6199,35 +5666,7 @@
     "tests": [],
     "syntheticData": [
       {
-        "file": "clamav.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "inspection.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
         "file": "projectIntake.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "sandbox.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "snapshots.test.ts",
         "mathRandom": false,
         "rndHelper": false,
         "seedKeywords": true,
@@ -6246,22 +5685,24 @@
     "tier": "support",
     "routePrefix": "/api/v1/promptTemplates",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/promptTemplates",
       "serviceFile": {
-        "file": "promptTemplate.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/promptTemplate.service.ts",
+        "file": "promptTemplates.service.ts",
+        "path": "/home/user/WIN/apps/api/src/promptTemplates/promptTemplates.service.ts",
         "sloc": 95,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 95,
+      "serviceTotalSloc": 212,
       "serviceFiles": [
-        "services/promptTemplate.service.ts"
+        "bootstrap.ts",
+        "promptTemplates.service.ts",
+        "promptTemplates/promptTemplates.service.ts"
       ],
       "importedServiceFiles": [
-        "services/promptTemplate.service.ts"
+        "promptTemplates/promptTemplates.service.ts"
       ],
-      "bootstrapFile": null
+      "bootstrapFile": "apps/api/src/promptTemplates/bootstrap.ts"
     },
     "routes": [
       {
@@ -6286,6 +5727,10 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
+        "Workspace",
+        "Conversation",
+        "Message",
         "PromptTemplate"
       ],
       "migrations": [],
@@ -6303,16 +5748,17 @@
     "tier": "platform",
     "routePrefix": "/api/v1/publicApi",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/publicApi",
       "serviceFile": {
-        "file": "workflow.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/workflow.service.ts",
-        "sloc": 690,
+        "file": "publicApi.service.ts",
+        "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
+        "sloc": 89,
         "mathRandom": false,
-        "externalFetch": true
+        "externalFetch": false
       },
-      "serviceTotalSloc": 863,
+      "serviceTotalSloc": 952,
       "serviceFiles": [
+        "publicApi.service.ts",
         "services/workflow.service.ts",
         "services/webhook.service.ts"
       ],
@@ -6351,12 +5797,15 @@
     },
     "db": {
       "prismaModels": [
+        "User",
         "Organization",
+        "Workspace",
         "Agent",
         "Message",
         "TalkChannel",
         "TalkMessage",
-        "Workflow"
+        "Workflow",
+        "ApiKey"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -6458,41 +5907,6 @@
         "rndHelper": false,
         "seedKeywords": true,
         "externalHttp": false
-      },
-      {
-        "file": "chaos.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "digitalTwin.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "drTest.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "testRunner.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "workflowTest.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
       }
     ],
     "externalIntegrations": [],
@@ -6568,21 +5982,13 @@
     "tests": [
       "sessions61-72-82.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "quantum.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "release",
@@ -6660,31 +6066,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "approval.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "production.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "robotics",
@@ -6753,19 +6137,11 @@
     "tests": [
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "robotics.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "GCP"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "scientific",
@@ -6840,7 +6216,7 @@
         "file": "scientific.service.ts",
         "mathRandom": false,
         "rndHelper": true,
-        "seedKeywords": true,
+        "seedKeywords": false,
         "externalHttp": false
       }
     ],
@@ -6922,17 +6298,9 @@
     "tests": [
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "sdk.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "security",
@@ -7018,24 +6386,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "piiRedact.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "serviceToken.test.ts",
-        "mathRandom": true,
-        "rndHelper": false,
-        "seedKeywords": false,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "selfHosted",
@@ -7112,17 +6465,9 @@
     "tests": [
       "sessions37-40.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "selfHosted.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "spatial",
@@ -7189,17 +6534,9 @@
     "tests": [
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "spatial.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "SIMULATED"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "sustainability",
@@ -7467,35 +6804,7 @@
         "externalHttp": false
       },
       {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "indicators.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "indicators.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
         "file": "journal.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "marketData.test.ts",
         "mathRandom": false,
         "rndHelper": false,
         "seedKeywords": true,
@@ -7507,13 +6816,6 @@
         "rndHelper": false,
         "seedKeywords": true,
         "externalHttp": true
-      },
-      {
-        "file": "tradingIntel.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
       }
     ],
     "externalIntegrations": [
@@ -7604,13 +6906,6 @@
         "rndHelper": false,
         "seedKeywords": true,
         "externalHttp": false
-      },
-      {
-        "file": "training.test.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
       }
     ],
     "externalIntegrations": [
@@ -7688,17 +6983,9 @@
     "tests": [
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "updates.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "usage",
@@ -7848,19 +7135,11 @@
     "tests": [
       "sessions41-76-80.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "uxIntelligence.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Azure"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "v76validation",
@@ -7931,19 +7210,11 @@
     "tests": [
       "sessions41-76-80.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "v76validation.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "GCP"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "voiceFoundry",
@@ -8021,17 +7292,9 @@
     "tests": [
       "sessions41-76-80.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "voiceFoundry.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "voiceOwnership",
@@ -8106,17 +7369,9 @@
     "tests": [
       "sessions42-47.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "voiceOwnership.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "voiceStudio",
@@ -8197,34 +7452,12 @@
     "tests": [
       "sessions37-40.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "voice.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      },
-      {
-        "file": "voiceStudio.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "ElevenLabs",
       "PlayHT"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "wakeIntel",
@@ -8313,23 +7546,8 @@
     "tests": [
       "marketplace.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "wakeIntelligence.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   }
 ]

@@ -1,9 +1,9 @@
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
-import { resolveUserContext } from "./workspace.service.js";
+import { resolveUserContext } from "../services/workspace.service.js";
 import { z } from "zod";
 import type { PaginationQuery } from "@windels/shared/api";
-import { aiRegistry } from "./ai/registry.js";
+import { aiRegistry } from "../services/ai/registry.js";
 
 export const CreateAgentSchema = z.object({
   name: z.string().min(1).max(64),

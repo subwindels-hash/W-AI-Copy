@@ -3,7 +3,7 @@ import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { z } from "zod";
 import { PaginationQuery } from "@windels/shared/api";
-import { CreateAgentSchema, UpdateAgentSchema, listAgents, getAgent, createAgent, updateAgent, deleteAgent, listAgentEvents } from "../../services/agent.service.js";
+import { CreateAgentSchema, UpdateAgentSchema, listAgents, getAgent, createAgent, updateAgent, deleteAgent, listAgentEvents } from "../../agents/agents.service.js";
 import { aiRegistry } from "../../services/ai/registry.js";
 import { CreateSkillSchema, UpdateSkillSchema, createSkill, deleteSkill, getSkill, listAgentSkills, updateSkill } from "../../services/agentSkills.service.js";
 import { getLifecycleHistory, getLifecycleState, TransitionSchema, transitionAgent } from "../../services/agentLifecycle.service.js";

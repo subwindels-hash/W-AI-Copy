@@ -3,7 +3,7 @@ import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
 import { logger } from "../config/logger.js";
 import { z } from "zod";
-import { claimTalkAttachments } from "./attachment.service.js";
+import { claimTalkAttachments } from "../attachments/attachments.service.js";
 import type { PaginationQuery } from "@windels/shared/api";
 import {
   TalkChannelType,

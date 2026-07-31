@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from "node:crypto";
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
-import { resolveUserContext } from "./workspace.service.js";
+import { resolveUserContext } from "../services/workspace.service.js";
 import { z } from "zod";
 import { ApiKeyScope } from "@prisma/client";
 
