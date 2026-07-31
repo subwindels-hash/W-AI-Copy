@@ -28,6 +28,7 @@ import { registerAgentMemoryRoutes } from "./routes/agentMemories.js";
 import { registerAgentKnowledgeRoutes } from "./routes/agentKnowledge.js";
 import { registerAgentCommRoutes } from "./routes/agentComm.js";
 import { registerCanvasRoutes } from "./routes/canvases.js";
+import { registerCanvasCollabRoutes } from "./routes/canvasCollab.js";
 import { registerTalkRoutes } from "./routes/talk.js";
 import { registerWorkflowRoutes } from "./routes/workflows.js";
 import { registerDeveloperRoutes } from "./routes/developers.js";
@@ -197,6 +198,13 @@ export function createApp() {
   const canvasesRouter = express.Router();
   v1.use("/canvases", canvasesRouter);
   registerCanvasRoutes(canvasesRouter);
+
+  // Session 22 — Canvas Collab: same document service exposed at /canvas
+  // (the S22 route prefix) + realtime presence/cursor endpoints on both paths.
+  const canvasCollabRouter = express.Router();
+  v1.use("/canvas", canvasCollabRouter);
+  registerCanvasCollabRoutes(canvasCollabRouter);
+  registerCanvasCollabRoutes(canvasesRouter);
 
   // /talk (Windels Talk — channels, DMs, messages, meetings, action items)
   const talkRouter = express.Router();

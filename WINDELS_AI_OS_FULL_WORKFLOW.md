@@ -72,7 +72,7 @@ Legend — **Real** = real logic/persistence · **Demo** = seeded/Math.random fi
 | 19 | Enterprise Data Platform | CLAUDE S19 | `dataPlatform` | `/data-platform` | ✅ MVP |
 | 20 | AI Workforce Communication | CLAUDE S20 | `enterprise/agentComm` | `/agentComm` | ✅ MVP |
 | 21 | Enterprise Infrastructure | CLAUDE S21 | `infrastructure` | `/infrastructure` | ✅ MVP |
-| 22 | Enterprise QA Platform | CLAUDE S22 | `qa` | `/qa` | ✅ MVP |
+| 22 | Enterprise QA Platform + **Canvas Collab** | CLAUDE S22 | `qa` + `collaboration/canvasCollab` (presence/cursors, `/canvas` route) | `/qa` · `/canvas` | ✅ Completed 2026-07-31 |
 | 23 | Engineering Governance | CLAUDE S23 | `governance` (eng) | `/governance` | ✅ MVP |
 | 24 | Release Management | CLAUDE S24 | `release/*` (pipeline, approvals, aiValidation, staging, production, improvement) | `/releases` (17 endpoints, Redis `rel:*`) | ✅ Real-ish (simulated deploys) |
 | 25 | AI Program Management | CLAUDE S25 | `program` | `/program` | ✅ MVP |

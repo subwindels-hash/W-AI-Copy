@@ -70,3 +70,32 @@ export const canvasApi = {
   generateBlock: (canvasId: string, blockId: string, input: { prompt: string; modelId?: string }) =>
     api.post<{ result: string }>(`/canvases/${canvasId}/blocks/${blockId}/generate`, input),
 };
+
+/* ── Session 22 — Canvas Collab (realtime presence + cursors) ── */
+
+export interface CollabPresence {
+  userId: string;
+  displayName: string;
+  avatarColor: string;
+  joinedAt: string;
+  lastSeenAt: string;
+}
+
+export interface CollabCursor {
+  userId: string;
+  displayName: string;
+  x: number;
+  y: number;
+  at: string;
+}
+
+export const canvasCollabApi = {
+  /** Presence heartbeat (call every ~15s while the canvas is open). */
+  heartbeat: (canvasId: string, displayName: string, avatarColor?: string) =>
+    api.post<CollabPresence>(`/canvas/${canvasId}/presence`, { displayName, avatarColor }),
+  presence: (canvasId: string) => api.get<CollabPresence[]>(`/canvas/${canvasId}/presence`),
+  moveCursor: (canvasId: string, displayName: string, x: number, y: number) =>
+    api.put<CollabCursor>(`/canvas/${canvasId}/cursor`, { displayName, x, y }),
+  cursors: (canvasId: string) => api.get<CollabCursor[]>(`/canvas/${canvasId}/cursors`),
+  leave: (canvasId: string) => api.del<{}>(`/canvas/${canvasId}/presence`),
+};

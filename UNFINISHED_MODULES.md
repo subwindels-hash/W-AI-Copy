@@ -5,7 +5,7 @@ Generated from `audit/module-inventory.json` in the supplied archive. Status ref
 ## MISSING (5)
 - ~~Admin Utilities (`admin`)~~ — **completed in this workspace**: scoped operational stats/user search, suspension controls, super-admin role changes, validation, RBAC, and audit records.
 - ~~Message Attachments (`attachments`, S4)~~ — **completed in this workspace**: authenticated upload, download, list/search, safe deletion, organization-scoped access, and chat-message linking. Needs runtime/integration testing after dependencies are installed.
-- Canvas Collab (`canvas`, S22) — `/api/v1/canvas`
+- ~~Canvas Collab (`canvas`, S22)~~ — **completed in this workspace (2026-07-31)**: document service mounted at `/canvas` + realtime presence/cursor sync over Redis pub/sub, unit-tested (4/4).
 - ~~Mobile PWA (`mobile`, S21)~~ — **already complete in the supplied codebase**: installable manifest, service worker, offline app shell and queue, push, biometrics, safe areas, mobile route shell, and native-style mobile pages. Audit entry was stale.
 - ~~Prompt Template Library (`promptTemplates`, S23)~~ — **completed in this workspace**: organization-scoped template CRUD, built-ins, safe rendering/use tracking, validation, and repaired agent-runtime renderer.
 

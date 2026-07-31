@@ -1375,3 +1375,23 @@ Full Project Development Dashboard (S84.13): archive upload, project list with s
 - `/app/leads` page: natural-language search, results dashboard with per-lead select/save-to-collection, filters, collections manager, JSON/CSV export (CSV streams as a real download). All actions user-initiated — no automated outreach (scope lock). Missing API key → honest `SERVICE_UNAVAILABLE` banner.
 - Legacy admin PlatformPage S85 tab now compiles against the real client (adapter exports `LeadRecord`/`CollectionRecord`/`leadDiscoveryApi`).
 - Sidebar entries for Project Continuity + Lead Discovery; sidebar version bumped to **v0.90.0**.
+
+## Session 22 — Canvas Collab (completion pass, 2026-07-31)
+**Status:** ✅ Completed — closes the audit's `canvas` MISSING entry and adds the realtime layer the docs claimed.
+- **Route gap closed:** the S5 canvas document service (real Prisma CRUD for Canvas/CanvasBlock/CanvasConnection + AI block generation) is now ALSO mounted at `/canvas` — the route prefix the S22 audit expected (`/api/v1/canvas`) — in addition to the existing `/canvases`.
+- **Realtime collaboration added** (`collaboration/canvasCollab.service.ts` + `http/routes/canvasCollab.ts`):
+  - Presence heartbeats (`POST /canvas/:id/presence`, `GET /canvas/:id/presence`) stored in Redis hashes with TTL-based lazy expiry (`CANVAS_PRESENCE_TTL_SEC`, default 30s).
+  - Live cursors (`PUT /canvas/:id/cursor`, `GET /canvas/:id/cursors`).
+  - Leave (`DELETE /canvas/:id/presence`) clears presence + cursor.
+  - Redis pub/sub channel `canvas:collab:<id>` broadcasts presence/cursor/leave events to collaborators; dedicated `redisSub` client added to `db/redis.ts` (subscriber duty isolated from `redis`/`redisCmd` per the codebase's dual-client rule).
+- **Web:** `canvasCollabApi` client in `lib/canvas.ts` (heartbeat/presence/cursor/leave).
+- **Tests:** `collaboration/canvasCollab.test.ts` — 4/4 (heartbeat+publish, stale pruning, cursor move+list, leave) against an in-memory kv. **Suite total 138/138.**
+
+## Session 4 — Files page (completion pass, 2026-07-31)
+**Status:** ✅ The `/app/files` placeholder ("File storage comes online in later sessions") is replaced with a real Files page backed by the finished attachments module.
+- `pages/files/FilesPage.tsx` + `lib/files.ts`: upload (multipart via the same FormData pattern), list/search with pagination, open/download (server streams the original bytes), delete with confirm, MIME icons, sha256 display, text previews.
+- Route `files` now renders the real page; sidebar unchanged (Folder icon already existed).
+- **Tests:** covered by existing attachments e2e; web tsc + vite build clean (FilesPage chunk 7.1 kB / 3.0 kB gz).
+
+## Global Currency FX (Session 80) — verified already real
+**Status:** ✅ No code needed — the exchange-rate layer is already a real provider stack: `billing/exchangeRates.ts` fetches frankfurter.app + open.er-api.com (free, keyless) with Redis cache + stale protection + honest `synthetic` labeling; `globalCurrency/refreshRates.ts` refreshes at boot + hourly (`startFxRefreshJob` wired in index.ts). Live verification is blocked in this sandbox only by outbound network (same restriction as Prisma binaries).
