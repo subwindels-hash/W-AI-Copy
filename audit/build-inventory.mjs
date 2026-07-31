@@ -6,9 +6,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 
-const ROOT = "/home/user/windels";
+// Pre-existing bug: this was hardcoded to "/home/user/windels", a path that
+// does not exist in this checkout, so the generator crashed before writing.
+// Derive the repo root from this file's own location instead.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const API_ROUTES = path.join(ROOT, "apps/api/src/http/routes");
 const API_SERVICES = path.join(ROOT, "apps/api/src");
 const SHARED = path.join(ROOT, "packages/shared/src");
@@ -21,7 +25,10 @@ const MIGRATIONS_DIR = path.join(ROOT, "apps/api/prisma/migrations");
 // Service directory name ↔ human module
 // We treat each subdirectory under apps/api/src that is NOT infra
 // (db,http,utils,services,config,observability,security) as a "module".
-const INFRA_DIRS = new Set(["db","http","utils","services","config","observability","security"]);
+// Directories that are infrastructure, not product modules. `testUtils` holds
+// shared test helpers (FakePrisma, live-API probe) and must not be reported as
+// an unimplemented module.
+const INFRA_DIRS = new Set(["db","http","utils","services","config","observability","security","testUtils","kernel","enterprise","platform"]);
 
 // Map route files that don't follow [module].ts naming
 const ROUTE_OVERRIDES = {
@@ -152,11 +159,13 @@ function sloc(p) {
 }
 function countRoutes(routeFile) {
   const src = read(routeFile);
-  const gets = (src.match(/router\s*\.\s*get\s*\(/g) || []).length;
-  const posts = (src.match(/router\s*\.\s*post\s*\(/g) || []).length;
-  const puts = (src.match(/router\s*\.\s*put\s*\(/g) || []).length;
-  const patches = (src.match(/router\s*\.\s*patch\s*\(/g) || []).length;
-  const dels = (src.match(/router\s*\.\s*delete\s*\(/g) || []).length;
+  // Route files use several router aliases (`router.get`, `r.get`, `rel.post`,
+  // `v1.use`). Matching only `router.` under-counted whole modules to zero and
+  // pushed them to MISSING/STUB. Match any identifier receiving an HTTP verb.
+  const verb = (v) =>
+    (src.match(new RegExp(String.raw`\b\w+\s*\.\s*${v}\s*\(\s*["'\`]`, "g")) || []).length;
+  const gets = verb("get"), posts = verb("post"), puts = verb("put");
+  const patches = verb("patch"), dels = verb("delete");
   return { total: gets+posts+puts+patches+dels, GET: gets, POST: posts, PUT: puts, PATCH: patches, DELETE: dels };
 }
 function listRoutePaths(routeFile) {
@@ -257,11 +266,18 @@ function auditSynthetic(modKey) {
 
 // Status heuristic — multi-signal classifier (conservative: never upgrades to COMPLETE without rigor)
 function classifyStatus(mod) {
-  const hasService = !!mod.service;
-  const routeCount = mod.routes.reduce((a,b)=>a+b.count.total,0);
-  const hasClient = !!mod.webClient;
-  const hasTypes = !!mod.sharedType;
-  const hasBootstrap = mod.bootstrap && /ensureBootstrapped|bootstrap/.test(mod.bootstrap);
+  // The emitted object nests these under `backend` / `web`; the original
+  // classifier read flat fields (mod.service, mod.webClient, mod.sharedType)
+  // that never existed on it, so every module looked service-less and
+  // client-less. Read the real shape, falling back to the flat one.
+  const hasService = !!(mod.backend?.serviceFile ?? mod.service)
+    || (mod.backend?.serviceTotalSloc ?? 0) > 0;
+  // Route entries are `count` while being collected and `counts` once emitted;
+  // classifyStatus runs over the emitted shape. Accept either.
+  const routeCount = mod.routes.reduce((a,b)=>a+((b.counts ?? b.count)?.total ?? 0),0);
+  const hasClient = !!(mod.web?.client ?? mod.webClient);
+  const hasTypes = !!(mod.sharedTypes ?? mod.sharedType);
+  const hasBootstrap = !!(mod.backend?.bootstrapFile ?? mod.bootstrap);
   const hasTests = mod.tests.length > 0;
   const hasRealData = mod.syntheticData.length === 0;
 
@@ -284,8 +300,41 @@ const inventory = [];
 const allModules = new Set([
   ...serviceDirs,
   ...routeFiles.map(f => ROUTE_OVERRIDES[f.replace(/\.ts$/,"")] || f.replace(/\.ts$/,"")),
-  "auth","billing","mobile","talk","conversations","canvas","platform","release","qa","developers","publicApi","admin",
+  "auth","billing","mobile","talk","conversations","platform","release","qa","developers","publicApi","admin",
+  // `canvas` is intentionally absent: its routes are canvases.ts / canvasCollab.ts,
+  // both mapped to `collaboration` by ROUTE_OVERRIDES, so a bare `canvas` key
+  // would always look implementation-less.
 ]);
+
+/**
+ * Resolve the service files a module's route file actually imports.
+ *
+ * The directory scan below only looks in `apps/api/src/<modKey>/`, which misses
+ * every module whose service lives in the shared `src/services/` folder under a
+ * singular name (agent.service.ts backing the `agents` module, and likewise
+ * conversation / attachment / promptTemplate / apikey). Those modules were
+ * repeatedly reported as "no service files" while being fully implemented.
+ *
+ * Following the route's own imports reports what the running server loads,
+ * rather than guessing from folder shape.
+ */
+function servicesFromRoutes(modKey) {
+  const out = new Set();
+  for (const entry of (routeByModule.get(modKey) || [])) {
+    // entry.file is the bare route filename (e.g. "agents.ts"), not a repo path.
+    const src = read(path.join(API_ROUTES, entry.file));
+    if (!src) continue;
+    for (const m of src.matchAll(/from\s+"((?:\.\.\/)+)([^"]+\.js)"/g)) {
+      const rel = m[2].replace(/\.js$/, ".ts");
+      // Only count real service modules, not middleware/db/util plumbing.
+      if (!/\.service\.ts$|^services\//.test(rel)) continue;
+      if (/^(db|utils|config)\//.test(rel)) continue;
+      const abs = path.join(API_SERVICES, rel);
+      if (fexists(abs)) out.add(rel);
+    }
+  }
+  return [...out];
+}
 
 for (const modKey of [...allModules].sort()) {
   const meta = MODULE_META[modKey] || { title: modKey, sessions: [], tier: "unknown" };
@@ -297,16 +346,28 @@ for (const modKey of [...allModules].sort()) {
   const webClient = `${modKey}.ts`;
   const routeEntries = routeByModule.get(modKey) || [];
 
-  const svc = svcEntry ? {
-    file: svcEntry,
-    path: path.join(svcDir, svcEntry),
-    sloc: sloc(path.join(svcDir, svcEntry)),
-    mathRandom: usesMathRandom(path.join(svcDir, svcEntry)),
-    externalFetch: usesExternalFetch(path.join(svcDir, svcEntry)),
+  // Services reached through the route's imports (e.g. services/agent.service.ts
+  // backing the `agents` module) count just as much as a same-named directory.
+  const importedSvcRel = servicesFromRoutes(modKey);
+  const importedSvcSloc = importedSvcRel.reduce((a, r) => a + sloc(path.join(API_SERVICES, r)), 0);
+
+  const svcEntryPath = svcEntry
+    ? path.join(svcDir, svcEntry)
+    : (importedSvcRel[0] ? path.join(API_SERVICES, importedSvcRel[0]) : null);
+
+  const svc = svcEntryPath ? {
+    file: svcEntry || path.basename(importedSvcRel[0]),
+    path: svcEntryPath,
+    sloc: sloc(svcEntryPath),
+    mathRandom: usesMathRandom(svcEntryPath),
+    externalFetch: usesExternalFetch(svcEntryPath),
   } : null;
 
   const mod = {
-    moduleKey,
+    // Pre-existing bug: this referenced an undefined `moduleKey`, so the
+    // generator threw on its first module and the inventory could never be
+    // regenerated — which is why its statuses drifted so far from the code.
+    moduleKey: modKey,
     title: meta.title,
     sessions: meta.sessions,
     tier: meta.tier,
@@ -314,8 +375,10 @@ for (const modKey of [...allModules].sort()) {
     backend: {
       serviceDir: fexists(svcDir) ? `apps/api/src/${modKey}` : null,
       serviceFile: svc,
-      serviceTotalSloc: svcFiles.reduce((a,f)=>a+sloc(path.join(svcDir,f)),0),
-      serviceFiles: svcFiles,
+      serviceTotalSloc: svcFiles.reduce((a,f)=>a+sloc(path.join(svcDir,f)),0) + importedSvcSloc,
+      serviceFiles: [...svcFiles, ...importedSvcRel],
+      /** Services resolved via the route's imports rather than folder name. */
+      importedServiceFiles: importedSvcRel,
       bootstrapFile: bootstrapFile ? `apps/api/src/${modKey}/${bootstrapFile}` : null,
     },
     routes: routeEntries.map(r => ({
