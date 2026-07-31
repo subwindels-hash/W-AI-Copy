@@ -126,9 +126,11 @@ export interface ProductionDeployment {
   releaseId: string;
   status: ProductionStatus;
   canaryPercent: number;
+  /** Only true once real post-rollout health has been observed at 100%. */
   healthyAt100: boolean;
-  errorRate: number;
-  p95LatencyMs: number;
+  /** Observed canary telemetry. Undefined until a metrics source reports it. */
+  errorRate?: number;
+  p95LatencyMs?: number;
   startedAt?: string;
   promotedAt?: string;
   rolledBackAt?: string;

@@ -39,7 +39,10 @@ function fakeCompletion(prompt: string): { text: string; latencyMs: number } {
   else text += "the answer is 42. If you need further assistance please ask.";
   // Make it a bit longer
   text += " This is a synthetic response for QA.";
-  return { text, latencyMs: Math.round(performance.now() - t0 + 20 + Math.random()*80) };
+  // Report the latency actually elapsed. The previous +20-100ms padding made a
+  // synthetic QA responder look like it had real inference cost, which then fed
+  // the validation report's latency assertions.
+  return { text, latencyMs: Math.round(performance.now() - t0) };
 }
 
 export async function runAiValidation(c: TestCase): Promise<TestCaseResult> {

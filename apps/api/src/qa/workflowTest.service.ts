@@ -47,14 +47,18 @@ export async function runWorkflowTest(c: TestCase): Promise<TestCaseResult> {
   return res;
 }
 
+/**
+ * Deterministic stand-in used by the QA harness when no real workflow engine is
+ * attached. Named `synthetic` on purpose — its output is never presented as a
+ * production workflow result.
+ */
 async function syntheticRun(workflowId: string, trigger: any) {
-  // Simulated deterministic execution
-  await new Promise((r)=>setTimeout(r, 20 + Math.random()*80));
+  const t0 = performance.now();
   const id = trigger?.id ?? "";
   const isFail = /fail/i.test(workflowId) || trigger?.forceFail === true;
   return {
     status: isFail ? "failed" : "completed",
-    durationMs: Math.round(50 + Math.random()*400),
+    durationMs: Math.round(performance.now() - t0),
     stepsCompleted: isFail ? 1 : 4,
     outputs: { result: `processed ${id || "event"}`, count: 42, ok: !isFail },
   };

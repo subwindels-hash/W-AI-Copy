@@ -103,26 +103,40 @@ to 91 call sites**, and every remaining item is descriptive dashboard telemetry
 | `collaboration/meetings` (4) | Marked ~70% of CRM/project/calendar follow-ups `synced` with fabricated record IDs — nothing was ever synced, and the pending count under-reported the real backlog. | Tasks stay `queued` until a connector syncs them. |
 | `collaboration/screenIntel` (3) | Frame counts back-filled randomly; guide elapsed time incremented by a random 15–105 s per step. | Real counters; elapsed measured from a new `startedAt`. |
 
-**Remaining (91 sites, 56 files)** — the two largest are legitimate:
+**Batches 4–5 (platform, devportal, program, release):**
+
+| Module | What was invented | Now |
+|---|---|---|
+| `platform/cluster` | An entire Kubernetes estate at boot — 3 named nodes, 8 workloads, a pod per replica with invented `10.42.x.x` IPs and a 20% restart chance. `probe()` walked it on every call applying ±6% jitter, turning a static seed into a convincing live feed. It cascaded: FinOps emitted "downsize windels-api" advice about workloads never deployed. | Topology comes from a real source or not at all. `KUBERNETES_SERVICE_HOST` is detected and reported `unknown` pending live hydration; the demo topology needs `WINDELS_DEMO_DATA`; otherwise zero nodes and `status: "unknown"`. |
+| `platform/iac` | `run()` reported `succeeded` with an invented plan diff (add 0–2 / change 0–4 / destroy 0–1) without invoking terraform/pulumi/helm; each stack claimed 20–100 managed resources. | Runs queue for an external executor; `recordRun()` writes the real outcome (`POST /iac/runs/:runId/result`). |
+| `platform/optimization` | A hardcoded **$14,820/month** cost breakdown with a $15,200 forecast, plus three recommendations naming resources that do not exist (PVC `windels-old-pvc-2026-01`, node `windels-worker-2`, a gp2→gp3 migration) each with a confident saving. `list()` generated them just by opening the dashboard. | Cost zeroed until a billing export reports; invented recommendations removed; `list()` no longer generates. |
+| `release/production` | `promote()` ran a 60 ms-per-stage loop across 25/50/75/100%, inventing an error rate (5–15%) and p95 (40–70 ms) at each step, then hard-set `healthyAt100 = true` and marked the release **deployed** — a full "canary passed, promoted to production" record for a rollout that never touched an environment. | Ramp driven externally by `reportCanary()`; `finalize()` refuses unless the canary really reached 100% **and** health was confirmed. |
+| `devportal/sdkRegistry` | Every SDK stamped with 100–9,100 weekly downloads and 10–910 stars, shown on the public developer portal as real adoption. | Supplied by the registry/VCS; the existing download counter increments from the real total. |
+| `devportal/environment` | 5–40% CPU and 200–800 MB reported the instant an environment started. | Undefined until the environment reports. |
+| `program/sprint` | Random 30–45 projected velocity, a random 3–11 story points assigned to unpointed stories (feeding capacity planning), and a burndown chart drawn as the ideal line plus noise. | Measured or absent; burndown shows only the computable ideal line. |
+| `program/roadmap` | `aiConfidence` a random 60–95, presented as an AI assessment. | Supplied by whatever scores it. |
+| `qa/aiValidation`, `qa/workflowTest` | Padded latency (+20–100 ms) and a random 50–450 ms duration on a synthetic QA responder, feeding the validation report's latency assertions. | Measured elapsed time. |
+
+**Remaining (71 sites, 33 files)** — the two largest are legitimate:
 
 | File | Calls | Note |
 |---|---|---|
 | `marketplace/simulation.service.ts` | 24 | **Legitimate** — Monte-Carlo sampling is the point of a simulator. |
 | `services/tools/builtin/index.ts` | 4 | **Legitimate** — this *is* the `random` agent tool. |
-| `platform/iac.service.ts`, `platform/cluster.service.ts` | 7 | Simulated Kubernetes topology. |
-| `devportal/environment`, `legal`, `mlOps/rag`, `program/sprint` | 3 each | Dashboard counters. |
-| …48 further files | 1–2 each | |
+| `mediaGen`, `robotics`, `scientific`, `industry`, `extensions`, `dataFabric`, `tradingIntel` | 2 each | Dashboard counters. |
+| …24 further files | 1 each | |
 
-A further **76 calls** sit behind `WINDELS_DEMO_DATA` (default off) and do not
+A further **79 calls** sit behind `WINDELS_DEMO_DATA` (default off) and do not
 run in a normal deployment.
 
 Also deliberately left alone: retry jitter, id/nonce generation, list shuffling,
 and `tradingIntel`'s `SyntheticProvider`, which flags `synthetic: true` on every
-quote it returns. `engineering/metrics.refreshSynthetic()` is honestly named,
-has no callers, and is now gated as well.
+quote it returns. The `qa/*` harnesses that remain are named `synthetic` on
+purpose and never present their output as production data.
 
-**Suggested next order:** `platform/cluster` + `platform/iac` (simulated k8s
-topology) → `devportal/*` → `program/*`.
+**Suggested next order:** the remaining 1–2 call sites are isolated dashboard
+counters (`mediaGen`, `robotics`, `scientific`, `industry`, `spatial`,
+`quantum`, `selfHosted`, …) — each is a small, independent fix.
 
 ---
 
@@ -144,7 +158,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 126 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 140 passing, 0 failing.**
 
 ---
 
