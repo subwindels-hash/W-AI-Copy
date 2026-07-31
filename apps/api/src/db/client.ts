@@ -1,8 +1,14 @@
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "@prisma/client/wasm";
+import { PrismaPg } from "@prisma/adapter-pg";
+import { Pool } from "pg";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { startSpan, getCtx } from "../observability/tracer.js";
+
+// Driver adapter: use `pg` Pool + WASM query engine (no native libquery binary needed).
+const pool = new Pool({ connectionString: env.DATABASE_URL });
+const adapter = new PrismaPg(pool, { schema: "public" });
 
 declare global {
   // eslint-disable-next-line no-var
@@ -46,6 +52,7 @@ function withObservability(p: PrismaClient) {
 export const prisma =
   globalThis.__windels_prisma ??
   withObservability(new PrismaClient({
+    adapter,
     log:
       env.NODE_ENV === "development"
         ? ["warn", "error"]
