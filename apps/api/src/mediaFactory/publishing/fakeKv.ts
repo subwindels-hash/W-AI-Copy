@@ -212,6 +212,15 @@ export class FakeKv {
       srem(key: string, ...members: string[]) { ops.push(() => self.srem(key, ...members)); return chain; },
       zadd(key: string, score: number, member: string) { ops.push(() => self.zadd(key, score, member)); return chain; },
       lpush(key: string, value: string) { ops.push(() => self.lpush(key, value)); return chain; },
+      // rpush/incr/expire existed on the class but were missing from the multi
+      // chain, so a queued call threw inside the pipeline. Services wrap
+      // pipeline.exec() in try/catch, so the write was silently dropped and the
+      // data simply never appeared — the failure mode is invisible.
+      rpush(key: string, value: string) { ops.push(() => self.rpush(key, value)); return chain; },
+      incr(key: string) { ops.push(() => self.incr(key)); return chain; },
+      incrby(key: string, by: number) { ops.push(() => self.incrby(key, by)); return chain; },
+      expire(_key: string, _sec: number) { ops.push(async () => 1); return chain; },
+      zremrangebyrank(key: string, start: number, stop: number) { ops.push(() => self.zremrangebyrank(key, start, stop)); return chain; },
       ltrim(key: string, start: number, stop: number) { ops.push(() => self.ltrim(key, start, stop)); return chain; },
       async exec() {
         const out: Array<[null, unknown]> = [];

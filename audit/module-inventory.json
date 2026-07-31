@@ -68,11 +68,11 @@
       "serviceFile": {
         "file": "agentIdentity.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterprise/agentComm/agentIdentity.service.ts",
-        "sloc": 184,
+        "sloc": 195,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1234,
+      "serviceTotalSloc": 1305,
       "serviceFiles": [
         "enterprise/agentComm/agentIdentity.service.ts",
         "enterprise/agentComm/commProtocol.service.ts",
@@ -204,10 +204,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "enterprise/agentComm/agentComm.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "agents",
@@ -295,7 +297,8 @@
     },
     "tests": [
       "extensions.spec.ts",
-      "sessions41-76-80.spec.ts"
+      "sessions41-76-80.spec.ts",
+      "agents/agents.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -616,7 +619,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "attachments/attachments.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -1022,7 +1027,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "biomedical/biomedical.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -1419,7 +1425,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "collaboration.spec.ts"
+      "collaboration.spec.ts",
+      "collaboration/canvasCollab.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -1763,7 +1770,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "conversations/conversations.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -2124,7 +2133,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -2200,7 +2210,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "mlOps.spec.ts"
+      "mlOps.spec.ts",
+      "deployment/verdicts.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -2485,7 +2496,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -2641,7 +2653,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "education/lecturer.test.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -2866,7 +2880,8 @@
       "agentComm.spec.ts",
       "dataPlatform.spec.ts",
       "enterprise.spec.ts",
-      "enterpriseFoundation.spec.ts"
+      "enterpriseFoundation.spec.ts",
+      "enterprise/agentComm/agentComm.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -2988,7 +3003,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "enterpriseFoundation.spec.ts"
+      "enterpriseFoundation.spec.ts",
+      "config/liveFabrication.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -3061,7 +3077,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "etl/etl.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -3411,7 +3429,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -3871,7 +3890,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions73-75.spec.ts"
+      "sessions73-75.spec.ts",
+      "healthEcosystem/healthEcosystem.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -4627,7 +4647,15 @@
     },
     "tests": [
       "mediaPublishing.spec.ts",
-      "sessions41-76-80.spec.ts"
+      "sessions41-76-80.spec.ts",
+      "mediaFactory/pipeline.test.ts",
+      "mediaFactory/publishing/platforms.test.ts",
+      "mediaFactory/publishing/publishJobs.test.ts",
+      "mediaFactory/publishing/tokens.test.ts",
+      "mediaFactory/publishing/uploads.test.ts",
+      "mediaFactory/publishing/webhooks.test.ts",
+      "config/liveFabrication.test.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -4946,7 +4974,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "mlOps.spec.ts"
+      "mlOps.spec.ts",
+      "config/liveFabrication.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -5261,7 +5290,9 @@
       "sessions37-40.spec.ts",
       "sessions41-76-80.spec.ts",
       "sessions42-47.spec.ts",
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "platform/cluster.test.ts",
+      "platform/infraMetrics.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -5507,10 +5538,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "config/liveFabrication.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "projectContinuity",
@@ -5576,10 +5609,16 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "projectContinuity/clamav.test.ts",
+      "projectContinuity/inspection.test.ts",
+      "projectContinuity/quarantine.test.ts",
+      "projectContinuity/sandbox.test.ts",
+      "projectContinuity/snapshots.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "promptTemplates",
@@ -5643,7 +5682,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "promptTemplates/promptTemplates.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -5719,7 +5760,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "publicApi/publicApi.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -5874,7 +5917,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -5959,10 +6003,13 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "release/production.test.ts",
+      "config/liveFabrication.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "robotics",
@@ -6030,7 +6077,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -6104,7 +6152,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -6183,7 +6232,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -6272,7 +6322,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "security/serviceToken.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -6675,7 +6727,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "tradingIntel/indicators.test.ts",
+      "tradingIntel/marketData.test.ts",
+      "tradingIntel/risk.test.ts",
+      "config/seedGate.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "AlphaVantage",
@@ -6683,7 +6740,7 @@
       "Polygon.io",
       "CoinGecko"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "training",
@@ -6756,7 +6813,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "training/training.test.ts",
+      "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -6911,7 +6970,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "usage/rollups.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],

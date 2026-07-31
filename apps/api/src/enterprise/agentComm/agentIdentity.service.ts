@@ -50,6 +50,17 @@ export const AgentIdentityService = {
       capabilities: (agent?.capabilities ?? []).map((c: string) => ({ id: c, attestedAt: now(), attestedBy: "system", version: "1.0.0" })),
       credentials: [],
       version: "1.0.0",
+      // These 0.5s are a deliberate EWMA prior, not invented telemetry, and
+      // were checked before being left alone: `FeedbackService.applyScore`
+      // updates them as `score * (1 - alpha) + signal * alpha` with
+      // alpha = 0.2. Starting from 0 would make an agent's first upvote yield
+      // 0.20 while its first downvote yields 0.00 — so a *praised* agent would
+      // rank below the neutral midpoint and barely above a criticised one.
+      // A neutral prior is the correct seed for this estimator.
+      //
+      // What must not happen is this prior leaking into reported *metrics* as
+      // though it were measured; `FeedbackService.getMetrics` therefore reports
+      // 0 for an agent with no recorded feedback rather than echoing 0.5.
       performanceScore: 0.5,
       reputationScore: 0.5,
       objectives: [],

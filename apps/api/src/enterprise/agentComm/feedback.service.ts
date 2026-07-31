@@ -114,11 +114,22 @@ export const FeedbackService = {
       const metric: AgentPerformanceMetric = existing ? JSON.parse(existing) : {
         agentId, window: win, windowStart: windowStart(win),
         tasksCompleted: 0, tasksFailed: 0, avgLatencyMs: 0,
-        approvalRate: 0.5, meanReward: 0,
-        performanceScore: 0.5, reputationScore: 0.5, updatedAt: now(),
+        // An agent with no feedback has no approval rate. 0.5 was a fabricated
+        // "neutral" that is indistinguishable from a genuine 50% approval
+        // measured over real signals.
+        approvalRate: 0, meanReward: 0,
+        performanceScore: 0, reputationScore: 0, updatedAt: now(),
       };
       if (ok) metric.tasksCompleted++; else metric.tasksFailed++;
-      metric.avgLatencyMs = (metric.avgLatencyMs + latencyMs) / 2;
+      // `avgLatencyMs` is documented as an average, but `(avg + new) / 2` is an
+      // exponentially-weighted moving average: after 1000 fast tasks a single
+      // 10 s outlier drags the reported "average" to ~5 s, and the first task
+      // ever recorded is halved (a 200 ms task reports 100 ms). Compute the
+      // real arithmetic mean over the tasks actually counted.
+      const totalTasks = metric.tasksCompleted + metric.tasksFailed;
+      metric.avgLatencyMs = totalTasks > 0
+        ? (metric.avgLatencyMs * (totalTasks - 1) + latencyMs) / totalTasks
+        : latencyMs;
       const identity = await AgentIdentityService.get(agentId);
       if (identity) { metric.performanceScore = identity.performanceScore; metric.reputationScore = identity.reputationScore; }
       metric.updatedAt = now();
@@ -132,12 +143,16 @@ export const FeedbackService = {
       if (r) return JSON.parse(r) as AgentPerformanceMetric;
     } catch {}
     const identity = await AgentIdentityService.get(agentId);
+    // No metric has been recorded for this agent in this window. Every figure
+    // is therefore zero — a 0.5 approval rate here read as "half of this
+    // agent's work was approved" when in fact none of it had been assessed.
+    // Scores fall back to the identity record only when it actually has them.
     return {
       agentId, window, windowStart: windowStart(window),
       tasksCompleted: 0, tasksFailed: 0, avgLatencyMs: 0,
-      approvalRate: 0.5, meanReward: 0,
-      performanceScore: identity?.performanceScore ?? 0.5,
-      reputationScore: identity?.reputationScore ?? 0.5,
+      approvalRate: 0, meanReward: 0,
+      performanceScore: identity?.performanceScore ?? 0,
+      reputationScore: identity?.reputationScore ?? 0,
       updatedAt: now(),
     };
   },

@@ -211,19 +211,72 @@ for (const rf of routeFiles) {
   });
 }
 
-// Find test files
+/**
+ * Find the tests covering a module.
+ *
+ * This used to scan ONLY tests/e2e/*.spec.ts, so the 39 co-located unit tests
+ * under apps/api/src/<module>/<module>.test.ts were invisible. Modules with
+ * real, passing suites - attachments, publicApi, promptTemplates,
+ * conversations, projectContinuity - were all reported `tests=0`, which in turn
+ * held them at PARTIAL because classifyStatus() requires hasTests for COMPLETE.
+ * The repo's own convention is co-located unit tests; the audit was looking in
+ * the one place they are not.
+ */
 function findTestsFor(modKey) {
   const tests = [];
+
+  // 1. End-to-end specs that reference the module.
   for (const f of ls(TESTS)) {
     if (!f.endsWith(".spec.ts")) continue;
-    const p = path.join(TESTS, f);
-    const src = read(p);
-    // match explicit mention of the route prefix, service import, or dashboard path
+    const src = read(path.join(TESTS, f));
     if (src.includes(`/${moduleRoutePrefix(modKey)}`) || src.includes(`from "../lib/${modKey}`) ||
         src.includes(`${modKey}Api`) || src.includes(`${modKey}.service`)) {
       tests.push(f);
     }
   }
+
+  // 2. Unit tests living inside the module directory (the repo convention).
+  const modDir = path.join(API_SERVICES, modKey);
+  for (const f of ls(modDir)) {
+    if (f.endsWith(".test.ts")) tests.push(`${modKey}/${f}`);
+  }
+  // ...including one level of nesting, e.g. mediaFactory/publishing/*.test.ts.
+  for (const sub of ls(modDir)) {
+    const subDir = path.join(modDir, sub);
+    if (!fexists(subDir)) continue;
+    let entries = [];
+    try { entries = ls(subDir); } catch { continue; }
+    for (const f of entries) {
+      if (f.endsWith(".test.ts")) tests.push(`${modKey}/${sub}/${f}`);
+    }
+  }
+
+  // 2b. Some modules live under a grouping directory rather than at the top
+  //     level (enterprise/agentComm/*), so the route file is the only pointer
+  //     to where the code — and its tests — actually are.
+  for (const group of ["enterprise", "platform", "services"]) {
+    const groupDir = path.join(API_SERVICES, group, modKey);
+    if (!fexists(groupDir)) continue;
+    for (const f of ls(groupDir)) {
+      if (f.endsWith(".test.ts")) tests.push(`${group}/${modKey}/${f}`);
+    }
+  }
+
+  // 3. Cross-cutting suites that exercise a module from elsewhere (a service
+  //    moved onto the standard layout may still be tested from src/services,
+  //    and config/*.test.ts pins behaviour across many modules).
+  for (const extra of ["config", "services"]) {
+    const dir = path.join(API_SERVICES, extra);
+    if (dir === modDir) continue;
+    for (const f of ls(dir)) {
+      if (!f.endsWith(".test.ts")) continue;
+      const src = read(path.join(dir, f));
+      if (src.includes(`/${modKey}/`) || src.includes(`${modKey}.service`)) {
+        tests.push(`${extra}/${f}`);
+      }
+    }
+  }
+
   return [...new Set(tests)];
 }
 function moduleRoutePrefix(key) {
