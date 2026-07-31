@@ -13,7 +13,7 @@
  *  - Events are emitted through KernelService (S39)
  *  - Keys gc:*
  */
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID, createHash, randomInt } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
 import type {
@@ -38,12 +38,19 @@ function hashPin(pin: string): string {
 }
 
 function genCode(): string {
-  // 16-char alnum gift card code in 4-char groups
+  // 16-char alnum gift card code in 4-char groups.
+  //
+  // A gift card code is a bearer instrument redeemable for money, so it must be
+  // unguessable. Math.random() is a non-cryptographic PRNG whose internal state
+  // can be recovered from a handful of observed outputs, which would let an
+  // attacker who legitimately holds a few cards predict codes that were issued
+  // around the same time. randomInt() draws from the CSPRNG and is unbiased
+  // across the alphabet (it rejection-samples internally).
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < 16; i++) {
     if (i > 0 && i % 4 === 0) out += "-";
-    out += chars[Math.floor(Math.random() * chars.length)];
+    out += chars[randomInt(chars.length)];
   }
   return out;
 }

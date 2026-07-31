@@ -7,8 +7,12 @@ import { SkillsService } from "./skills.service.js";
 import { DigitalTwinsService } from "./digitalTwins.service.js";
 import { SimulationService } from "./simulation.service.js";
 import { AppStoreService } from "./appStore.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 export async function bootstrapMarketplace(logger?: any): Promise<void> {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("marketplace", logger);
+
   const existing = await redis.zrange("mk:skills", 0, -1);
   if (existing.length > 0) {
     logger?.info("[marketplace] bootstrap skipped — already seeded", { skills: existing.length });

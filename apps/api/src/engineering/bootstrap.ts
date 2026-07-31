@@ -8,6 +8,7 @@ import { TechDebtService } from "./techDebt.service.js";
 import { PipelineService } from "./pipeline.service.js";
 import { ProductivityService } from "./productivity.service.js";
 import type { SLOTier, ServiceMetric } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const SEED_SERVICES: Array<{ id: string; name: string; tier: SLOTier; owner: string; p50: number; rps: number; err: number; sat: number; sloLatency: number; sloAvail: number }> = [
   { id: "svc-api", name: "API", tier: "tier1", owner: "platform-team", p50: 40, rps: 850, err: 0.3, sat: 62, sloLatency: 200, sloAvail: 99.95 },
@@ -34,6 +35,9 @@ const DEBT_SEEDS = [
 ];
 
 export async function bootstrapEngineering() {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("engineering");
+
   const existing = await MetricsService.list();
   if (existing.length > 0) {
     const dep = await DeploymentService.analytics();

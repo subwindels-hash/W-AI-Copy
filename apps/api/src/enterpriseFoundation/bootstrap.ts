@@ -9,8 +9,12 @@ import { FinOpsService } from "./finops.service.js";
 import { ResilienceService } from "./resilience.service.js";
 import { QualityService } from "./quality.service.js";
 import { OpsCenterService } from "./opsCenter.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 export async function bootstrapEnterpriseFoundation() {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("enterprise-foundation");
+
   const conns = await DataFabricService.listConnectors();
   if (conns.length > 0) {
     const dps = await DataFabricService.listProducts();

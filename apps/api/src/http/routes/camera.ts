@@ -1,8 +1,30 @@
 import { Router } from "express";
+import { randomBytes } from "node:crypto";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { z } from "zod";
 import { CameraService } from "../../camera/camera.service.js";
+
+/**
+ * ICE servers for WebRTC playback.
+ *
+ * TURN credentials are secrets and are handed to the browser, so they must come
+ * from configuration — never from a literal in source. When TURN is not
+ * configured we return STUN only rather than shipping a placeholder credential
+ * that would fail (or, worse, work) in production.
+ */
+function iceServers() {
+  const servers: Array<{ urls: string; username?: string; credential?: string }> = [
+    { urls: process.env.WEBRTC_STUN_URL || "stun:stun.l.google.com:19302" },
+  ];
+  const turnUrl = process.env.WEBRTC_TURN_URL;
+  const turnUser = process.env.WEBRTC_TURN_USERNAME;
+  const turnCredential = process.env.WEBRTC_TURN_CREDENTIAL;
+  if (turnUrl && turnUser && turnCredential) {
+    servers.push({ urls: turnUrl, username: turnUser, credential: turnCredential });
+  }
+  return servers;
+}
 
 const createFeedSchema = {
   body: z.object({
@@ -39,11 +61,11 @@ export function registerCameraRoutes(router: Router) {
       res.json({
         ok: true,
         data: {
-          webrtcSessionToken: "session_" + Math.random().toString(36).slice(2, 10),
-          iceServers: [
-            { urls: "stun:stun.l.google.com:19302" },
-            { urls: "turn:turn.windels.ai:3478", username: "windels", credential: "change-me-in-production" }
-          ]
+          // Session tokens gate access to a live camera feed, so they are drawn
+          // from the CSPRNG. Math.random() produced a guessable 8-char token.
+          webrtcSessionToken: "session_" + randomBytes(24).toString("base64url"),
+          iceServers: iceServers(),
+          turnConfigured: Boolean(process.env.WEBRTC_TURN_URL),
         },
         meta: { requestId: req.requestId }
       });

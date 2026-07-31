@@ -57,6 +57,23 @@ const EnvSchema = z.object({
   // Encryption (AES-256-GCM) — 64 hex chars. Falls back to deterministic dev key in NODE_ENV=development.
   WINDELS_ENCRYPTION_KEY: z.string().length(64).optional(),
 
+  /**
+   * Opt-in synthetic seed data.
+   *
+   * Many session bootstraps seed randomly generated demo records (fake service
+   * metrics, fake findings, fake ESG figures) so dashboards look populated on a
+   * fresh install. That data is indistinguishable from real measurements once
+   * rendered, so it is now **off by default**: a fresh organization starts
+   * empty and fills from real activity.
+   *
+   * Set WINDELS_DEMO_DATA=true only for demos and local UI work — never in an
+   * environment where anyone might mistake the output for real data.
+   */
+  WINDELS_DEMO_DATA: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+
   // Web Push (VAPID) — for mobile/browser push notifications (Session 15)
   VAPID_PUBLIC_KEY: z.string().min(60).default("BKwIHmBhWdeXUpnNQ_IGQOnQb0jry-q1Fw0jXO_vi9N4BChQmayUVu1ii4UeVaO4jjrV6CV7EyeFSbJWmxe46e4"),
   VAPID_PRIVATE_KEY: z.string().min(20).default("Tg9wSuR5xpNc8wspnQjuurMbNL0uRlnQLtcCzCoRVIo"),
