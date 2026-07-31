@@ -737,3 +737,11 @@ This file is appended at the end of every session per the roadmap's working agre
 - **Realtime cursor sync = pub/sub + hash:** peers receive live moves via `canvas:collab:<id>` Redis channels; the hash is the durable "latest position" for late joiners. Events are fire-and-forget; state is authoritative.
 - **Files page reuses the finished attachments module as-is:** no new backend surface (upload/list/get/delete already existed, org-scoped with sha256 + MIME allowlist + text preview). The page is pure frontend over `/attachments`, replacing the placeholder route. This closed the last "…comes online in later sessions" placeholder in the app shell.
 - **Keyless real-provider stack is the norm where possible:** FX (frankfurter + open.er-api), crypto candles (CoinGecko), video (ffmpeg) are real without API keys; the sandbox's outbound HTTPS block is an environment limit, not a code gap — the honest `synthetic`/`not_configured` labels already exist.
+
+## Session 83 (ETL) — Decisions Logged (2026-07-31)
+
+- **Runs must report real counts or fail honestly:** the previous engine hard-coded `rowsProcessed=100, rowsSucceeded=100`. The rewrite executes parse → map → load for every row; `rowsProcessed/rowsSucceeded/rowsFailed` are measured, `succeeded|partial|failed` derives from them, and a zero-success run is `failed` — never a fabricated pass.
+- **Per-row failures never abort the run:** each row maps in isolation; failures land in the org-scoped DLQ (`etl:dlq:<oid>:<pipe>`, capped 500, raw-row snippet + error) and drive the `partial` verdict. The DLQ is the spec's dead-letter queue, now real.
+- **Remote sources are honest-first:** sftp/s3/http without credentials fail with `SOURCE_NOT_CONFIGURED` and remediation text; XML/SQL parsing is reported as `UNSUPPORTED_FORMAT` rather than silently skipped. No "connected" claims without a connection.
+- **Inline payload is the run input for upload sources:** `POST .../run {content}` carries the file content (matching the UI's paste/upload flow); `sourceConfig.content` persists a default. This keeps the engine testable without external file storage.
+- **Kernel events per verdict:** `etl.run.succeeded|partial|failed` route through the S39 kernel, consistent with the cross-module event rule.

@@ -1395,3 +1395,11 @@ Full Project Development Dashboard (S84.13): archive upload, project list with s
 
 ## Global Currency FX (Session 80) — verified already real
 **Status:** ✅ No code needed — the exchange-rate layer is already a real provider stack: `billing/exchangeRates.ts` fetches frankfurter.app + open.er-api.com (free, keyless) with Redis cache + stale protection + honest `synthetic` labeling; `globalCurrency/refreshRates.ts` refreshes at boot + hourly (`startFxRefreshJob` wired in index.ts). Live verification is blocked in this sandbox only by outbound network (same restriction as Prisma binaries).
+
+## Session 83 — ETL: real execution engine (completion pass, 2026-07-31)
+**Status:** ✅ The run engine no longer fabricates success — it executes real ingestion with real row counts.
+- **Was:** `triggerRun` hard-coded `rowsProcessed = 100, rowsSucceeded = 100` with zero actual ingestion (a fake-completion violation).
+- **Now:** real parsing (CSV with quoted-field support, JSON arrays, JSON-lines), schema mapping (source→target, type coercion string/number/boolean/date, transform rules trim/upper/lower/int/float/round2/parse-date), per-row error isolation → org DLQ (`etl:dlq:<oid>:<pipe>` capped 500), honest verdicts: `succeeded` (0 failures) / `partial` (some) / `failed` (all bad, 0 fabricated successes).
+- **Remote sources (sftp/s3/http)** without credentials fail with `SOURCE_NOT_CONFIGURED` + remediation instead of pretending; XML/SQL report `UNSUPPORTED_FORMAT` honestly (CSV + JSON supported).
+- **New endpoints:** `POST /etl/pipelines/:id/run` accepts optional inline `{content}`; `GET /etl/pipelines/:id/runs/:runId` (run detail); `GET /etl/pipelines/:id/dlq`; `DELETE /etl/pipelines/:id`. Kernel events `etl.run.succeeded|partial|failed` emitted.
+- **Tests:** `etl.test.ts` — 14/14 (CSV parser quoting/CRLF, JSON+JSONL, coercion/transform, mapRow, full run semantics via mocked redis: succeeded real counts, partial+DLQ, all-bad failed, SOURCE_NOT_CONFIGURED, JSON end-to-end). **Suite total 152/152.** API tsc adds 0 new errors.
