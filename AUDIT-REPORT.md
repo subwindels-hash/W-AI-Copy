@@ -170,7 +170,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 223 passing, 0 failing** (after merging `main`).
+Gates: **build 4/4 · typecheck 5/5 · tests 245 passing, 0 failing.**
 
 ---
 
@@ -217,3 +217,57 @@ and a `registerMediaFactoryWebhookRoutes` import with no matching export.
 The guard test is now satisfied repo-wide: every remaining `Math.random()` is
 in its allowlist (the `random` agent tool, echo-provider jitter, request-id
 generation, WebRTC tokens, flagged-synthetic market candles).
+
+---
+
+## 6. "Critical 5 (No Service Files)" — corrected (2026-07-31)
+
+Reported as five core modules missing their service layer: **agents,
+conversations, attachments, promptTemplates, publicApi**.
+
+**All five are implemented.** The report is a path-convention false positive:
+they live at `src/services/<name>.service.ts` (singular) rather than
+`src/<module>/<module>.service.ts`, so a directory-shaped scan misses them.
+
+| Module | Service | Prisma calls | Route | Registered |
+|---|---|---|---|---|
+| agents | `services/agent.service.ts` (215 ln) | 14 | 14 endpoints | ✅ |
+| conversations | `services/conversation.service.ts` (145 ln) | 8 | full CRUD | ✅ |
+| attachments | `services/attachment.service.ts` (129 ln) | 11 | full CRUD | ✅ |
+| promptTemplates | `services/promptTemplate.service.ts` (94 ln) | 10 | full CRUD | ✅ |
+| publicApi | `services/apikey.service.ts` + `middleware/apiKeyAuth.ts` | — | 6 endpoints | ✅ |
+
+They are backed by real Prisma models (`Agent`, `AgentEvent`, `Conversation`,
+`ConversationParticipant`, `Message`, `MessageAttachment`, `PromptTemplate`,
+`ApiKey`) with organization scoping, Zod validation, participant-based access
+control, SHA-256 API-key hashing, and Bearer-only key transport.
+
+### The real gap: zero test coverage
+
+Being pure Prisma consumers, these five could only run against a live Postgres —
+so they shipped untested. Added `testUtils/fakePrisma.ts`, an in-memory Prisma
+stand-in that parses `@default(...)` values straight out of `schema.prisma`
+(so it stays accurate as the schema evolves) and supports the query surface
+these services use — nested `OR`, relation `some` filters, `include`,
+`_count`, `orderBy`, pagination, and both array and interactive `$transaction`.
+
+`services/coreCrud.test.ts` — **22 tests** covering the properties that matter:
+
+- **Tenancy** — agents, conversations, attachments and templates are invisible
+  and unusable across organizations (4 separate cross-tenant assertions).
+- **Access control** — reading another org's agent or conversation throws.
+- **Soft delete** — a deleted conversation survives for audit with `deletedAt`
+  set, and disappears from listings.
+- **Upload validation** — empty file, disallowed MIME type, and the 25 MB cap
+  are each rejected; stored records carry a SHA-256 checksum and an
+  org-prefixed storage key.
+- **Template rendering** — `{{var}}`, `{{var|default}}`, unknown-variable
+  substitution (empty, never a leaked placeholder), and usage counting.
+- **API keys** — the plaintext token is returned once and **never persisted**
+  (asserted against the serialised row); revoked and expired keys are rejected;
+  a token without the `wnd_` prefix is rejected before any DB lookup.
+
+Two test assumptions were wrong and corrected against the implementation rather
+than the other way round: `updateAgentStatus(agentId, status)` takes no user
+argument, and status changes do not implicitly write an `AgentEvent` — the
+runtime calls both primitives separately.

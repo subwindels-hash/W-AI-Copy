@@ -1,0 +1,311 @@
+/**
+ * In-memory stand-in for the Prisma client.
+ *
+ * The core CRUD services (agents, conversations, attachments, prompt
+ * templates, public API keys) are pure Prisma consumers, so they could only be
+ * exercised against a live Postgres — which meant they shipped with no tests at
+ * all. This fake implements the subset of the Prisma surface those services
+ * actually use, so their access-control and tenancy rules can be verified
+ * without infrastructure.
+ *
+ * Supported per model: create, createMany, findUnique, findFirst, findMany,
+ * update, updateMany, delete, deleteMany, count — with `where` (including
+ * nested `OR`, `some`, `contains`, `not`, `in`, `gte`/`lt`), `orderBy`, `skip`,
+ * `take`, `select`, `include`, and `_count`. Relations are resolved by
+ * convention (`<model>Id` -> `<model>`), which covers every include these
+ * services perform.
+ */
+
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+type Row = Record<string, any>;
+
+/**
+ * Scalar `@default(...)` values parsed straight out of schema.prisma.
+ *
+ * Real Prisma fills these in on create; without them a service that reads e.g.
+ * `agent.status` gets undefined and crashes in a way it never would against a
+ * real database. Parsing the schema keeps the fake honest as the schema evolves
+ * instead of hard-coding a list that silently drifts.
+ */
+function loadSchemaDefaults(): Map<string, Row> {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const schemaPath = path.resolve(here, "../../prisma/schema.prisma");
+  const out = new Map<string, Row>();
+  let text = "";
+  try { text = fs.readFileSync(schemaPath, "utf8"); } catch { return out; }
+
+  for (const m of text.matchAll(/^model\s+(\w+)\s*\{([\s\S]*?)^\}/gm)) {
+    const [, model, body] = m;
+    const defaults: Row = {};
+    for (const line of body.split("\n")) {
+      const f = line.match(/^\s*(\w+)\s+(\w+)(\[\])?(\?)?\s+.*@default\(([^)]*)\)/);
+      if (!f) continue;
+      const [, field, type, isList, , raw] = f;
+      if (/autoincrement|cuid|uuid|dbgenerated/.test(raw)) continue;
+      let value: any;
+      if (isList) value = [];
+      else if (raw === "now()") value = undefined;         // set by create()
+      else if (raw === "true" || raw === "false") value = raw === "true";
+      else if (/^-?\d+(\.\d+)?$/.test(raw)) value = Number(raw);
+      else value = raw.replace(/^"|"$/g, "");              // string or enum member
+      if (value !== undefined) defaults[field] = value;
+      void type;
+    }
+    if (Object.keys(defaults).length) out.set(model, defaults);
+  }
+  return out;
+}
+
+const SCHEMA_DEFAULTS = loadSchemaDefaults();
+
+let seq = 0;
+/** Prisma cuids are opaque; tests only need uniqueness and the cuid shape. */
+export function cuid(): string {
+  seq += 1;
+  return `c${Date.now().toString(36)}${seq.toString(36).padStart(6, "0")}`;
+}
+
+function matchScalar(value: any, cond: any): boolean {
+  if (cond === null) return value === null || value === undefined;
+  if (cond instanceof Date) return value instanceof Date && +value === +cond;
+  if (typeof cond !== "object" || Array.isArray(cond)) return value === cond;
+
+  for (const [op, operand] of Object.entries(cond as Row)) {
+    switch (op) {
+      case "equals": if (value !== operand) return false; break;
+      case "not": if (matchScalar(value, operand)) return false; break;
+      case "in": if (!(operand as any[]).includes(value)) return false; break;
+      case "notIn": if ((operand as any[]).includes(value)) return false; break;
+      case "contains": {
+        const hay = String(value ?? "");
+        const needle = String(operand);
+        const ci = (cond as Row).mode === "insensitive";
+        if (!(ci ? hay.toLowerCase().includes(needle.toLowerCase()) : hay.includes(needle))) return false;
+        break;
+      }
+      case "startsWith": if (!String(value ?? "").startsWith(String(operand))) return false; break;
+      case "gte": if (!(value >= operand)) return false; break;
+      case "gt": if (!(value > operand)) return false; break;
+      case "lte": if (!(value <= operand)) return false; break;
+      case "lt": if (!(value < operand)) return false; break;
+      case "mode": break; // handled alongside `contains`
+      default: return false;
+    }
+  }
+  return true;
+}
+
+export class FakePrisma {
+  /** model name -> rows */
+  tables = new Map<string, Row[]>();
+
+  private rows(model: string): Row[] {
+    if (!this.tables.has(model)) this.tables.set(model, []);
+    return this.tables.get(model)!;
+  }
+
+  reset() { this.tables.clear(); }
+
+  /** Seed rows directly, bypassing service logic. */
+  seed(model: string, rows: Row[]) {
+    this.rows(model).push(...rows.map((r) => ({ ...r })));
+  }
+
+  private matches(model: string, row: Row, where?: Row): boolean {
+    if (!where) return true;
+    for (const [key, cond] of Object.entries(where)) {
+      if (key === "AND") {
+        if (!(cond as Row[]).every((c) => this.matches(model, row, c))) return false;
+        continue;
+      }
+      if (key === "OR") {
+        if (!(cond as Row[]).some((c) => this.matches(model, row, c))) return false;
+        continue;
+      }
+      if (key === "NOT") {
+        if (this.matches(model, row, cond as Row)) return false;
+        continue;
+      }
+      // Relation filter: { participants: { some: {...} } }
+      if (cond && typeof cond === "object" && ("some" in cond || "every" in cond || "none" in cond)) {
+        const related = this.relatedRows(model, row, key);
+        const inner = (cond as Row).some ?? (cond as Row).every ?? (cond as Row).none;
+        const hits = related.filter((r) => this.matches(this.relatedModel(key), r, inner));
+        if ("some" in cond && hits.length === 0) return false;
+        if ("every" in cond && hits.length !== related.length) return false;
+        if ("none" in cond && hits.length > 0) return false;
+        continue;
+      }
+      if (!matchScalar(row[key], cond)) return false;
+    }
+    return true;
+  }
+
+  /** `participants` -> `ConversationParticipant`, `messages` -> `Message`. */
+  private relatedModel(field: string): string {
+    const singular = field.endsWith("s") ? field.slice(0, -1) : field;
+    const known: Record<string, string> = {
+      participant: "ConversationParticipant",
+      message: "Message",
+      event: "AgentEvent",
+      attachment: "MessageAttachment",
+    };
+    return known[singular] ?? singular.charAt(0).toUpperCase() + singular.slice(1);
+  }
+
+  private relatedRows(model: string, row: Row, field: string): Row[] {
+    const target = this.relatedModel(field);
+    const fk = `${model.charAt(0).toLowerCase()}${model.slice(1)}Id`;
+    return this.rows(target).filter((r) => r[fk] === row.id);
+  }
+
+  private hydrate(model: string, row: Row, opts: Row = {}): Row {
+    const out: Row = { ...row };
+    const inc = opts.include ?? {};
+    for (const [field, spec] of Object.entries(inc)) {
+      if (!spec) continue;
+      if (field === "_count") {
+        const counts: Row = {};
+        for (const c of Object.keys((spec as Row).select ?? {})) {
+          counts[c] = this.relatedRows(model, row, c).length;
+        }
+        out._count = counts;
+        continue;
+      }
+      // to-one by convention: <field>Id on this row
+      const fkOnSelf = `${field}Id`;
+      if (fkOnSelf in row) {
+        const target = this.relatedModel(field);
+        const found = this.rows(target).find((r) => r.id === row[fkOnSelf]) ?? null;
+        out[field] = found ? this.hydrate(target, found, typeof spec === "object" ? spec as Row : {}) : null;
+        continue;
+      }
+      // to-many
+      const target = this.relatedModel(field);
+      out[field] = this.relatedRows(model, row, field)
+        .map((r) => this.hydrate(target, r, typeof spec === "object" ? spec as Row : {}));
+    }
+    if (opts.select) {
+      const sel: Row = {};
+      for (const k of Object.keys(opts.select)) if (opts.select[k]) sel[k] = out[k];
+      return sel;
+    }
+    return out;
+  }
+
+  private sort(rows: Row[], orderBy?: Row | Row[]): Row[] {
+    if (!orderBy) return rows;
+    const specs = Array.isArray(orderBy) ? orderBy : [orderBy];
+    return [...rows].sort((a, b) => {
+      for (const spec of specs) {
+        for (const [field, dir] of Object.entries(spec)) {
+          const av = a[field], bv = b[field];
+          if (av === bv) continue;
+          const less = av === null || av === undefined ? true
+            : bv === null || bv === undefined ? false
+            : av < bv;
+          return (less ? -1 : 1) * (dir === "desc" ? -1 : 1);
+        }
+      }
+      return 0;
+    });
+  }
+
+  /** Build the `prisma.<model>` delegate object. */
+  private delegate(model: string) {
+    const self = this;
+    return {
+      async create({ data, include, select }: Row) {
+        const row: Row = {
+          id: data.id ?? cuid(),
+          createdAt: new Date(),
+          updatedAt: new Date(),
+          ...(SCHEMA_DEFAULTS.get(model) ?? {}),
+          ...data,
+        };
+        self.rows(model).push(row);
+        return self.hydrate(model, row, { include, select });
+      },
+      async createMany({ data }: Row) {
+        const items = Array.isArray(data) ? data : [data];
+        for (const d of items) {
+          self.rows(model).push({
+            id: d.id ?? cuid(), createdAt: new Date(), updatedAt: new Date(),
+            ...(SCHEMA_DEFAULTS.get(model) ?? {}), ...d,
+          });
+        }
+        return { count: items.length };
+      },
+      async findUnique({ where, include, select }: Row) {
+        const row = self.rows(model).find((r) => self.matches(model, r, where));
+        return row ? self.hydrate(model, row, { include, select }) : null;
+      },
+      async findFirst({ where, include, select, orderBy }: Row = {}) {
+        const rows = self.sort(self.rows(model).filter((r) => self.matches(model, r, where)), orderBy);
+        return rows[0] ? self.hydrate(model, rows[0], { include, select }) : null;
+      },
+      async findMany({ where, include, select, orderBy, skip, take }: Row = {}) {
+        let rows = self.sort(self.rows(model).filter((r) => self.matches(model, r, where)), orderBy);
+        if (skip) rows = rows.slice(skip);
+        if (take !== undefined) rows = rows.slice(0, take);
+        return rows.map((r) => self.hydrate(model, r, { include, select }));
+      },
+      async update({ where, data, include, select }: Row) {
+        const row = self.rows(model).find((r) => self.matches(model, r, where));
+        if (!row) throw Object.assign(new Error("Record not found"), { code: "P2025" });
+        for (const [k, v] of Object.entries(data as Row)) {
+          if (v && typeof v === "object" && "increment" in v) row[k] = (row[k] ?? 0) + (v as Row).increment;
+          else if (v && typeof v === "object" && "decrement" in v) row[k] = (row[k] ?? 0) - (v as Row).decrement;
+          else row[k] = v;
+        }
+        row.updatedAt = new Date();
+        return self.hydrate(model, row, { include, select });
+      },
+      async updateMany({ where, data }: Row) {
+        const rows = self.rows(model).filter((r) => self.matches(model, r, where));
+        for (const row of rows) Object.assign(row, data, { updatedAt: new Date() });
+        return { count: rows.length };
+      },
+      async delete({ where }: Row) {
+        const list = self.rows(model);
+        const i = list.findIndex((r) => self.matches(model, r, where));
+        if (i < 0) throw Object.assign(new Error("Record not found"), { code: "P2025" });
+        return list.splice(i, 1)[0];
+      },
+      async deleteMany({ where }: Row = {}) {
+        const list = self.rows(model);
+        const keep = list.filter((r) => !self.matches(model, r, where));
+        const n = list.length - keep.length;
+        self.tables.set(model, keep);
+        return { count: n };
+      },
+      async count({ where }: Row = {}) {
+        return self.rows(model).filter((r) => self.matches(model, r, where)).length;
+      },
+    };
+  }
+
+  /** Proxy so `prisma.anyModel` resolves lazily, like the real client. */
+  client() {
+    const cache = new Map<string, any>();
+    return new Proxy({}, {
+      get: (_t, prop: string) => {
+        if (prop === "$transaction") {
+          // Prisma accepts either an array of promises or an interactive
+          // callback receiving a transactional client. Support both.
+          return async (arg: any) =>
+            typeof arg === "function" ? arg(this.client()) : Promise.all(arg);
+        }
+        if (prop === "$queryRaw" || prop === "$executeRaw") return async () => [];
+        if (prop === "$connect" || prop === "$disconnect") return async () => undefined;
+        if (typeof prop !== "string" || prop.startsWith("$")) return undefined;
+        const model = prop.charAt(0).toUpperCase() + prop.slice(1);
+        if (!cache.has(model)) cache.set(model, this.delegate(model));
+        return cache.get(model);
+      },
+    }) as any;
+  }
+}
