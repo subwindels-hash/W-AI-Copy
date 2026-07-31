@@ -111,10 +111,11 @@ is marked complete before all five.
 3. **Typecheck debt:** ~402 pre-existing `tsc` errors in older bulk-generated
    `apps/api/src/services/*` modules (never typechecked end-to-end; Prisma engine
    download previously blocked the build).
-4. **Demo-data modules:** ~44 of 85 modules return seeded/Math.random() demo data
-   (per `MISSING_FEATURES_REPORT.md` + `UNFINISHED_MODULES.md`); real provider
-   integrations (market data, voice, media, CV inference, ETL connectors) are the big
-   remaining milestone.
+4. ~~**Demo-data modules (~44)**~~ — **DONE 2026-07-31**: zero `Math.random` in routed
+   session modules (guard test `noRandomData.guard.test.ts` enforces); dashboards aggregate
+   real records, seeds deterministic. Remaining: real *provider* integrations (TTS, image/video
+   gen, non-crypto market feeds, CV inference) need external keys/hardware — honest
+   `not_configured` labels already in place.
 5. **Publishing follow-ups:** register OAuth apps per platform + set `*_CLIENT_ID`/
    `*_CLIENT_SECRET`, `PUBLISH_REDIRECT_URI`, `PUBLISH_WEBHOOK_BASE_URL`; TikTok/X app
    review. The code-level milestones (webhook status sync, browser-side direct upload,
