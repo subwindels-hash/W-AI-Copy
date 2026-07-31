@@ -11,6 +11,7 @@ import {
   DebugSession, ProfileRun, CodeTemplate, SdkDashboard,
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('sdk');
@@ -75,6 +76,7 @@ export const SdkService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.pkgs(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("sdk", logger);
     const now = new Date().toISOString();
     for (const s of SDK_PACKAGES_SEED) {
       const id = uid("sdkp-");

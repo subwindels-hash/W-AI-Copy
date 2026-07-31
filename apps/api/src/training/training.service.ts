@@ -8,6 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const _rng = makeRng("training:training");
 import {
   TrainingDataset, TrainingJob, TUNING_STRATEGIES, TuningStrategy,
@@ -44,6 +45,7 @@ export const SAFETY_CATS: SafetyCheck["category"][] = ["toxicity","hallucination
 export const TrainingService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
     if (await redis.exists(K.ds(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("training", logger);
     const now = new Date().toISOString();
     // seed datasets
     const dsIds: string[] = [];

@@ -9,6 +9,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const _rng = makeRng("robotics:robotics");
 import {
   Robot, RobotKind, RobotStatus, ROBOT_KINDS, MaintenanceWindow,
@@ -53,6 +54,7 @@ const SEED_ROBOTS: Array<{ name: string; kind: RobotKind; site: string }> = [
 export const RoboticsService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
     if (await redis.exists(K.rs(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("robotics", logger);
     const now = new Date().toISOString();
     for (const s of SEED_ROBOTS) {
       const id = uid("rob-");
@@ -107,7 +109,14 @@ export const RoboticsService = {
     const offline = robots.filter(r=>r.status==="offline").length;
     const bats = robots.map(r=>r.batteryPct).filter((x): x is number => typeof x === "number");
     const avgBattery = bats.length ? +(bats.reduce((s,x)=>s+x,0)/bats.length).toFixed(1) : 0;
-    const avgCpu = +(robots.reduce((s,r)=>s+r.cpuPct,0)/robots.length).toFixed(1);
+    // Guard the empty fleet: this previously divided by robots.length
+    // unconditionally, so an organization with no robots registered got
+    // `avgCpuPct: NaN`, which serialises to `null` through JSON and renders as
+    // a blank gauge rather than "no fleet". It was masked only because the
+    // bootstrap always seeded 12 demo robots.
+    const avgCpu = robots.length
+      ? +(robots.reduce((s,r)=>s+r.cpuPct,0)/robots.length).toFixed(1)
+      : 0;
     return {
       totalRobots: robots.length, active, idle, error, maintenance: maint, offline,
       avgBatteryPct: avgBattery, tasksCompletedToday: robots.reduce((s,r)=>s+r.tasksCompleted,0),

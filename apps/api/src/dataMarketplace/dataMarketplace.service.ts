@@ -11,6 +11,7 @@ import {
   MarketplaceInstall, MarketplaceDashboard, DmDashboard, MKT_ASSET_KINDS, MKT_LICENSE_MODELS,
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('dataMarketplace');
@@ -45,6 +46,7 @@ export const DataMarketplaceService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.as(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("data-marketplace", logger);
     const now = new Date().toISOString();
     for (const s of SEED) {
       const id = uid("ma-");

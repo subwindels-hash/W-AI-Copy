@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { EducationDashboard, LearningContent, LearningPath, TutorSession, Assessment, Skill } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('education');
@@ -49,6 +50,7 @@ export const EducationService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.cs(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("education", logger);
     const now=new Date().toISOString();
     for (const c of CONTENT_SEED){
       const id=uid("lc-");

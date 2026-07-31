@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Logger } from "pino";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const _rng = makeRng("scientific:scientific");
 import {
   ScientificDashboard, Experiment, LiteratureRef, Hypothesis, RESEARCH_DOMAINS, ResearchDomain,
@@ -53,6 +54,7 @@ const EXP_SEEDS: Array<Omit<Experiment,"id"|"status"|"progressPct"|"simulations"
 export const ScientificService = {
   async ensureBootstrapped(logger?:Logger, oid="org-windels") {
     if (await redis.exists(K.meta(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("scientific", logger);
     for (const seed of EXP_SEEDS) {
       const id=uid("exp-"); const e: Experiment = {
         id, ...seed,

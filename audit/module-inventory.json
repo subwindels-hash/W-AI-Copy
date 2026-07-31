@@ -470,15 +470,7 @@
       "aiEcosystem.spec.ts",
       "marketplace.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "trustExplainability.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
       "Anthropic",
@@ -486,7 +478,7 @@
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "architecture",
@@ -558,17 +550,9 @@
     "tests": [
       "sessions37-40.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "attachments",
@@ -895,17 +879,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "benchmarks.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "billing",
@@ -971,17 +947,9 @@
     "tests": [
       "platformServices.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "exchangeRates.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "biomedical",
@@ -1056,17 +1024,9 @@
     "tests": [
       "sessions61-72-82.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "biomedical.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "camera",
@@ -1876,17 +1836,9 @@
     "tests": [
       "sessions42-47.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "coreIntegration.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "cryptoIntelligence",
@@ -2062,11 +2014,11 @@
       "serviceFile": {
         "file": "dataMarketplace.service.ts",
         "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.ts",
-        "sloc": 160,
+        "sloc": 162,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1216,
+      "serviceTotalSloc": 1220,
       "serviceFiles": [
         "bootstrap.ts",
         "dataMarketplace.service.ts",
@@ -2174,17 +2126,9 @@
     "tests": [
       "sessions61-72-82.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "dataMarketplace.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "deployment",
@@ -2485,11 +2429,11 @@
       "serviceFile": {
         "file": "digitalHumans.service.ts",
         "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.ts",
-        "sloc": 152,
+        "sloc": 154,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 314,
+      "serviceTotalSloc": 318,
       "serviceFiles": [
         "bootstrap.ts",
         "digitalHumans.service.ts",
@@ -2619,17 +2563,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "disasterRecovery.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "education",
@@ -2644,11 +2580,11 @@
       "serviceFile": {
         "file": "education.service.ts",
         "path": "/home/user/WIN/apps/api/src/education/education.service.ts",
-        "sloc": 127,
+        "sloc": 129,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 872,
+      "serviceTotalSloc": 876,
       "serviceFiles": [
         "bootstrap.ts",
         "education.service.ts",
@@ -3271,17 +3207,9 @@
     "tests": [
       "sessions41-76-80.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "expertsPlatform.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "extensions",
@@ -3421,11 +3349,11 @@
       "serviceFile": {
         "file": "fabric.service.ts",
         "path": "/home/user/WIN/apps/api/src/fabric/fabric.service.ts",
-        "sloc": 408,
+        "sloc": 416,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 826,
+      "serviceTotalSloc": 842,
       "serviceFiles": [
         "bootstrap.ts",
         "fabric.service.ts",
@@ -3651,19 +3579,11 @@
     "tests": [
       "sessions41-76-80.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "refreshRates.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "googleAuth",
@@ -3953,17 +3873,9 @@
     "tests": [
       "sessions73-75.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "healthEcosystem.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "hybridExec",
@@ -4108,17 +4020,9 @@
       "extensions.spec.ts",
       "sessions73-75.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "industry.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "infrastructure",
@@ -5673,17 +5577,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "projectIntake.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "promptTemplates",
@@ -5906,24 +5802,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "aiValidation.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "bootstrap.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "quantum",
@@ -5938,11 +5819,11 @@
       "serviceFile": {
         "file": "quantum.service.ts",
         "path": "/home/user/WIN/apps/api/src/quantum/quantum.service.ts",
-        "sloc": 129,
+        "sloc": 131,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 264,
+      "serviceTotalSloc": 268,
       "serviceFiles": [
         "bootstrap.ts",
         "quantum.service.ts",
@@ -6096,11 +5977,11 @@
       "serviceFile": {
         "file": "robotics.service.ts",
         "path": "/home/user/WIN/apps/api/src/robotics/robotics.service.ts",
-        "sloc": 197,
+        "sloc": 206,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 404,
+      "serviceTotalSloc": 422,
       "serviceFiles": [
         "bootstrap.ts",
         "robotics.service.ts",
@@ -6141,6 +6022,7 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Message",
         "Alert"
       ],
@@ -6169,11 +6051,11 @@
       "serviceFile": {
         "file": "scientific.service.ts",
         "path": "/home/user/WIN/apps/api/src/scientific/scientific.service.ts",
-        "sloc": 133,
+        "sloc": 135,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 271,
+      "serviceTotalSloc": 275,
       "serviceFiles": [
         "bootstrap.ts",
         "scientific.service.ts",
@@ -6224,19 +6106,11 @@
     "tests": [
       "sessions61-72-82.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "scientific.service.ts",
-        "mathRandom": false,
-        "rndHelper": true,
-        "seedKeywords": false,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "sdk",
@@ -6251,11 +6125,11 @@
       "serviceFile": {
         "file": "sdk.service.ts",
         "path": "/home/user/WIN/apps/api/src/sdk/sdk.service.ts",
-        "sloc": 181,
+        "sloc": 183,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 372,
+      "serviceTotalSloc": 376,
       "serviceFiles": [
         "bootstrap.ts",
         "sdk.service.ts",
@@ -6720,11 +6594,11 @@
       "serviceFile": {
         "file": "tradingIntel.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/tradingIntel.service.ts",
-        "sloc": 403,
+        "sloc": 421,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 3456,
+      "serviceTotalSloc": 3492,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
@@ -6802,43 +6676,14 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [],
-    "syntheticData": [
-      {
-        "file": "agents.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "analysis.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "journal.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      },
-      {
-        "file": "marketData.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": true
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AlphaVantage",
       "TwelveData",
       "Polygon.io",
       "CoinGecko"
     ],
-    "status": "DEMO DATA"
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "training",
@@ -6853,11 +6698,11 @@
       "serviceFile": {
         "file": "training.service.ts",
         "path": "/home/user/WIN/apps/api/src/training/training.service.ts",
-        "sloc": 281,
+        "sloc": 283,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 686,
+      "serviceTotalSloc": 690,
       "serviceFiles": [
         "bootstrap.ts",
         "training.service.ts",
@@ -6913,19 +6758,11 @@
     "tests": [
       "sessions54-60.spec.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "training.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "Whisper"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "updates",

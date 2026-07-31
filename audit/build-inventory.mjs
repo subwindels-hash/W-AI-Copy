@@ -257,7 +257,13 @@ function auditSynthetic(modKey) {
     const p = path.join(svcPath, f);
     const src = read(p);
     const hasRandom = /Math\.random\s*\(/.test(src);
-    const hasRnd = /\brnd\s*\(|\brndInt\s*\(/.test(src);    // common helper wrappers
+    // Helper wrappers around the deterministic RNG. Their mere *definition* is
+    // not fabrication - scientific.service.ts declares rnd()/rndInt() at the
+    // top of the file and calls them only from inside its gated bootstrap, so
+    // matching the definition line reported a module that fabricates nothing at
+    // runtime. Count call sites, not declarations.
+    const hasRnd = /(?<!function\s)\brnd(?:Int)?\s*\((?!\s*a\s*:)/.test(
+      src.replace(/^\s*function\s+rnd(?:Int)?\s*\([^)]*\)\s*\{[^\n]*$/gm, ""));
     // A bare mention of "seed"/"demo" is not evidence of synthetic data: it
     // matches comments, legitimate seedBuiltInTemplates(), and this repo's own
     // "no demo data" notes. Require a word that actually implies fabrication,
@@ -265,10 +271,59 @@ function auditSynthetic(modKey) {
     const codeOnly = src
       .replace(/\/\*[\s\S]*?\*\//g, "")   // block comments
       .replace(/^\s*\/\/.*$/gm, "");        // line comments
-    const hasFakeData = /\b(fake|mock|dummy|synthetic|placeholder|lorem)\b/i.test(codeOnly);
+    // Word-matching "synthetic" was tried and abandoned. It flagged 17 modules,
+    // of which 16 were false positives, because in this codebase "synthetic" is
+    // the *honesty* vocabulary rather than the fabrication vocabulary:
+    //   * a provenance flag disclosing simulated data:  `synthetic: false`
+    //   * a source-quality enum member:                 `"llm-synthetic": 0.35`
+    //   * a real catalogue product:      "Synthetic Customer Churn Dataset"
+    //   * a real architecture component: "Enterprise Synthetic Intelligence Layer"
+    //   * the secret scanner's own detection regex
+    // Meanwhile the ten modules that genuinely fabricated records - inventing
+    // robot fleets, trading positions and course enrolments - went unflagged,
+    // because they name their variables honestly. The signal pointed the wrong
+    // way, so "synthetic" is no longer a keyword; the words left are ones that
+    // only ever describe placeholder content.
+    //
+    // String, comment and regex content is excluded: naming a catalogue product
+    // "Dummy Data Pack" is content, not a fabricated measurement, and the
+    // secret scanner necessarily contains the words it hunts for.
+    const fabricationText = codeOnly
+      .replace(/(["\'`])(?:(?!\1)[\s\S])*\1/g, "")
+      .replace(/\/(?![/*])(?:\\.|\[(?:\\.|[^\]])*\]|[^/\\\n])+\/[gimsuy]*/g, "");
+    const hasFakeData = /\b(fake|dummy|lorem)\b/i.test(fabricationText);
     const hasExternal = /https?:\/\/(?!localhost|127\.0\.0\.1)/.test(src);
-    if (hasRandom || hasRnd || hasFakeData) {
-      findings.push({ file: f, mathRandom: hasRandom, rndHelper: hasRnd, seedKeywords: hasFakeData, externalHttp: hasExternal });
+    // A gated seed is not live demo data: those records only exist when an
+    // operator sets WINDELS_DEMO_DATA=true, and default installs stay empty.
+    const demoGated = /demoDataEnabled\s*\(/.test(codeOnly);
+    // The signal that actually located every real offender: a bootstrap that
+    // manufactures values and writes them straight to the store, ungated.
+    // This is precisely what robotics, tradingIntel and education were doing.
+    //
+    // It must be scoped to the ensureBootstrapped BODY, not the whole file.
+    // File-wide matching flagged industry, mediaGen and voiceStudio, whose
+    // bootstraps install only a static catalogue - the RNG they contain is used
+    // by unrelated methods further down. Brace-match the body instead.
+    const seedsUngated = !demoGated && (() => {
+      const m = codeOnly.match(/async\s+ensureBootstrapped\s*\([^)]*\)\s*\{/);
+      if (!m) return false;
+      let i = m.index + m[0].length - 1, depth = 0, end = -1;
+      for (; i < codeOnly.length; i++) {
+        if (codeOnly[i] === "{") depth++;
+        else if (codeOnly[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
+      }
+      if (end < 0) return false;
+      const body = codeOnly.slice(m.index, end + 1);
+      return /\b(?:rand|randInt|rnd|rndInt)\s*\(|_rng\.(?!reseed)/.test(body)
+        && /redis\.(?:hset|set|sadd|zadd|rpush|lpush)/.test(body);
+    })();
+    // `demoGated` covers hasRandom/hasRnd too: randomness that can only run
+    // when an operator opts in is not live demo data.
+    if (((hasRandom || hasRnd) && !demoGated) || hasFakeData || seedsUngated) {
+      findings.push({
+        file: f, mathRandom: hasRandom, rndHelper: hasRnd,
+        seedKeywords: hasFakeData, ungatedSeed: seedsUngated, externalHttp: hasExternal,
+      });
     }
   }
   return findings;

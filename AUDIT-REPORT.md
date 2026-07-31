@@ -170,7 +170,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 264 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 279 passing, 0 failing.**
 
 ---
 
@@ -385,3 +385,135 @@ organization's AI traffic never appears in another's dashboard.
 `FakePrisma` gained `aggregate`, `groupBy` and `distinct` to support them.
 
 **Gates: build 4/4 · typecheck 5/5 · 264 tests passing** (was 245).
+
+---
+
+## 8. The remaining `DEMO DATA` list — the detector was pointing the wrong way (2026-07-31)
+
+Continuing the §2.4 sweep meant working the inventory's 17 `DEMO DATA` modules.
+Reading them one at a time, **16 of the 17 were false positives** — and the
+detector was simultaneously **missing ten modules that genuinely fabricated
+records**. The list was close to an inversion of the truth, so this pass fixed
+both the modules and the instrument that was mis-measuring them.
+
+### 8.1 Why the old flag was wrong
+
+The classifier flagged any service file containing
+`\b(fake|mock|dummy|synthetic|placeholder|lorem)\b` outside a comment. In this
+codebase `synthetic` is the **honesty vocabulary**, not the fabrication
+vocabulary — it is the word the code uses to *disclose* simulated data:
+
+| Module | What actually matched | Verdict |
+|---|---|---|
+| `billing/exchangeRates` | `synthetic: rs.synthetic` — propagating a provenance flag so a caller can tell a real ECB rate from the offline fallback | **honest disclosure** |
+| `globalCurrency/refreshRates` | `if (rs.synthetic) { syn++; continue; }` — *refusing* to cache fallback rates | **honest disclosure** |
+| `aiEcosystem/trustExplainability` | `"llm-synthetic": 0.35` — a source-quality enum member, scoring LLM-written evidence *lower* | source ranking |
+| `dataMarketplace` | `"Synthetic Customer Churn Dataset"` — a real catalogue product name | catalogue content |
+| `architecture/bootstrap` | `"Enterprise Synthetic Intelligence Layer (SI)"` — a real component name | architecture registry |
+| `projectContinuity/projectIntake` | the secret scanner's **own detection regex** | circular match |
+| `benchmarks`, `biomedical`, `disasterRecovery`, `healthEcosystem` | comments this audit wrote *recording that fabrication was removed* | **fixed already** |
+| `tradingIntel/marketData` | a provider explicitly named `synthetic`, always tagged `synthetic: true` | labelled by design |
+
+Four of these had been de-faked in earlier passes; the sweep's own explanatory
+comments were re-flagging the files as offenders.
+
+### 8.2 What the detector missed — the real problem
+
+Ten modules fabricated records inside `ensureBootstrapped` and **none were
+gated**, so a default install manufactured them. They went unflagged because
+they name their variables honestly.
+
+The gate existed but was in the wrong place. Eleven bootstraps checked
+`demoDataEnabled()` — in `<module>/bootstrap.ts`, the boot-time path. But
+eighteen services also call `ensureBootstrapped()` **lazily from their own read
+methods**:
+
+```ts
+async dashboard(oid) {
+  if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
+```
+
+so a plain `GET /scientific/dashboard` for an unseen organization seeded the
+fabricated records on demand and reported them as that org's data. Gating
+`bootstrap.ts` never closed this path. **The gate now sits inside
+`ensureBootstrapped` itself**, where both entry points converge.
+
+| Module | S | What a fresh install manufactured |
+|---|---|---|
+| `tradingIntel` | S81 | **Worst case.** Three open positions carrying P&L (BTC +$2,106, AAPL +$1,197.60, EURUSD +$620) and a risk profile stating **$2,480,000 exposure, 1.82 Sharpe, 4.2% drawdown, 7/8 stress tests passed**. Nothing was ever traded. `pnl24hUsd` summed the invented P&L; the 24h counters were hard-set to 12 jobs / 480 signals / 3 blocked / 38 simulations. |
+| `robotics` | S57 | A 12-robot fleet across 8 named sites with battery/CPU/temperature, uptime and task counts — plus a predictive-maintenance alert naming a component at **62–91% failure risk**, and a scheduled maintenance window. |
+| `education` | S67 | Courses with 20–800 enrolments and 3.6–4.9 ratings, skill levels, and a **passed assessment scoring 55–98%** attributed to the admin user. |
+| `digitalHumans` | S62 | Avatars with 20–400 sessions and **78–96% satisfaction**, each with a completed session and a 3–5 star rating. |
+| `training` | S60 | Datasets, and jobs with GPU-hours, **$2–220 cost estimates** and 0.72–0.94 eval scores. |
+| `sdk` | S59 | Packages with **120–18,400 downloads**, a "running" emulator and a live debug session. |
+| `quantum` | S63 | A post-quantum migration programme: crypto inventory with migration status/owners/target dates, vendor connectors with qubit counts. |
+| `fabric` | S56 | Data sources with invented latency/throughput, twins with health and **"prediction accuracy" percentages**, signed certificates, open alerts. |
+| `scientific` | S68 | Experiments at 8–92% progress, papers with **50–8,000 citations**, hypotheses with 0.4–0.85 confidence. |
+| `dataMarketplace` | S61 | Listings with 12–2,400 installs, 3.2–4.9 ratings and quality scores. |
+
+Two real side effects had to survive the gate and do:
+
+- `fabric` — `startBus()` is a live Redis subscription, not demo content. It
+  runs before the gate, otherwise nothing published by other modules would be
+  captured.
+- `tradingIntel` — split in two. The **catalogue** (agents, indicators,
+  instruments) describes what the module *can* do and installs unconditionally;
+  only the **portfolio** is gated. Money is exactly the category that must never
+  be invented.
+
+### 8.3 A real bug the gate exposed
+
+`robotics.dashboard()` computed `avgCpuPct` by dividing by `robots.length`
+unconditionally. With the seed gone, an org with no robots produced **`NaN`**,
+which serialises to `null` over JSON and renders as a blank gauge rather than
+"no fleet". The always-on seed had masked it. Guarded, and pinned by a test that
+asserts `avgCpuPct === 0` and `Number.isNaN(...) === false`.
+
+Every other `/ .length` in the ten modules was checked; `tradingIntel/journal.ts`
+divides similarly but returns early on an empty trade list, so it is safe.
+
+### 8.4 The detector, rebuilt
+
+`synthetic` was removed as a keyword — it produced 16 false positives and zero
+true ones. Strings, comments and regex literals are now excluded (naming a
+product "Dummy Data Pack" is catalogue content; the secret scanner necessarily
+contains the words it hunts). The signal that actually finds offenders is new:
+
+> an `ensureBootstrapped` body that **manufactures values and writes them
+> straight to the store, with no `demoDataEnabled()` check**
+
+brace-matched to the method body, because a file-scoped version wrongly flagged
+`industry`, `mediaGen` and `voiceStudio`, whose bootstraps install only a static
+catalogue and whose RNG belongs to unrelated methods. `rnd()`/`rndInt()`
+*definitions* no longer count either — `scientific` declares them at file top and
+calls them only from its gated bootstrap.
+
+Randomness reachable only behind the flag is no longer reported: it cannot run
+on a default install.
+
+**`DEMO DATA` 17 → 0 · `COMPLETE` 32 → 43 · `MISSING` 0.**
+
+### 8.5 Verification
+
+The detector was **mutation-tested rather than trusted**, because one that
+reports zero is indistinguishable from one that is broken:
+
+| Mutation | Expected | Result |
+|---|---|---|
+| Remove the gate from `robotics` | re-flag | `robotics → DEMO DATA (ungatedSeed)` ✅ |
+| Inject `Math.random()` into clean `usage` | flag | `usage → SIMULATED (mathRandom)` ✅ |
+
+Both restored after testing.
+
+`config/seedGate.test.ts` (**15 tests**) pins the behaviour: each of the ten
+bootstraps writes **no keys at all** with the flag off; `tradingIntel` installs
+its catalogue but reports `positionsOpen: 0`, `pnl24hUsd: 0` and a **null** risk
+profile; and the three lazy read paths (`scientific.dashboard`,
+`robotics.dashboard`, `dataMarketplace.dashboard`) return empty states instead of
+seeding on demand.
+
+These were mutation-tested too — reverting the `robotics` and `tradingIntel`
+gates failed 3 tests, and reverting the `NaN` guard failed with
+`expected NaN to be +0`, confirming the bug was real and the tests detect it.
+
+**Gates: build 4/4 · typecheck 5/5 · 279 tests passing, 0 failing** (was 264).

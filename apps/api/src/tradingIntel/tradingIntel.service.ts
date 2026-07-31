@@ -16,6 +16,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const _rng = makeRng("tradingIntel:tradingIntel");
 import type {
   TiDashboard, TiAgent, TiAgentKey, TiAgentStatus, TiIndicatorPlugin, TiIndicatorId,
@@ -181,6 +182,23 @@ export const TradingIntelService = {
         await redis.hset(`ti:instdoc:${mc}:${inst.id}`, "_doc", s(inst));
       }
     }
+    // ── Everything above is a static catalogue: which agents exist, which
+    // indicators are computable, which instruments are tradeable. It describes
+    // the module's capabilities and is safe to install unconditionally.
+    //
+    // Everything below is a *portfolio* — open positions carrying P&L, a risk
+    // profile stating $2.48M of exposure and a 1.82 Sharpe, and "learning
+    // insights" with invented confidences. None of it was ever traded. On a
+    // fresh install the dashboard opened on three winning positions and a
+    // healthy risk book belonging to nobody, and `pnl24hUsd` summed the
+    // fabricated P&L. Money is exactly the category that must never be
+    // invented, so the portfolio is now opt-in.
+    if (!demoDataEnabled()) {
+      skipDemoSeed("trading-intel", logger);
+      logger?.info("[trading-intel] catalogue installed (no portfolio)", { agents: AGENT_DEFS.length, indicators: INDICATOR_DEFS.length, markets: Object.keys(SEED_INSTRUMENTS).length });
+      return;
+    }
+
     // Risk profile
     const risk: TiRiskProfile = {
       portfolioId: "default",

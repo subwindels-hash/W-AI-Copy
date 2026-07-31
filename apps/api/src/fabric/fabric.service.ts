@@ -8,6 +8,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis, redis as redisSub } from "../db/redis.js";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const _rng = makeRng("fabric:fabric");
 import {
   FabricDashboard, DataSource, DataFabricStats, TimeMachineReplay,
@@ -124,7 +125,14 @@ async function publishEvent(type: BusEventType, source: string, payload: any, ta
 export const FabricService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
     if (await redis.exists(K.srcs(oid))) return;
+    // The event bus is a real subscription, not demo content — it must start
+    // even when synthetic seeding is off, otherwise nothing published by other
+    // modules would ever be captured.
     startBus(logger);
+    // The rest of this bootstrap invents the fabric's entire contents: data
+    // sources with made-up latency/throughput, digital twins with health and
+    // "prediction accuracy" percentages, signed certificates and open alerts.
+    if (!demoDataEnabled()) return skipDemoSeed("fabric", logger);
 
     // Sources
     for (const s of DATA_SOURCES_SEED) {
