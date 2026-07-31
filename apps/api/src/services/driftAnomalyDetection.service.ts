@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:driftAnomalyDetection');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -713,7 +719,7 @@ function performDriftDetection(jobId: string): void {
   if (!job) return;
 
   // Simulate drift detection
-  const driftScore = Math.random();
+  const driftScore = _rng.next();
   const threshold = job.config.driftDetection.thresholds.dataDrift ?? 0.5;
   const detected = driftScore > threshold;
 
@@ -798,7 +804,7 @@ function performAnomalyDetection(jobId: string): void {
   if (!job) return;
 
   // Simulate anomaly detection
-  const anomalyScore = Math.random();
+  const anomalyScore = _rng.next();
   const threshold = job.config.anomalyDetection.thresholds.anomalyScore ?? 0.7;
   const detected = anomalyScore > threshold;
 
@@ -815,7 +821,7 @@ function performAnomalyDetection(jobId: string): void {
       score: anomalyScore,
       threshold,
       detected,
-      prediction: Math.random(),
+      prediction: _rng.next(),
       expectedRange: { min: 0, max: 1 },
       detectedAt: new Date().toISOString(),
     };

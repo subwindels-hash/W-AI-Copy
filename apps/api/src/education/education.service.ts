@@ -7,6 +7,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { EducationDashboard, LearningContent, LearningPath, TutorSession, Assessment, Skill } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('education');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   c: (oid:string,id:string)=>`edu:c:${oid}:${id}`, cs:(oid:string)=>`edu:cs:${oid}`,
@@ -16,9 +24,6 @@ const K = {
   sk: (oid:string,id:string)=>`edu:sk:${oid}:${id}`, sks:(oid:string)=>`edu:sks:${oid}`,
 };
 const s2=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return (min+max)/2;} // deterministic
-function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
-
 const CONTENT_SEED: Array<{title:string;kind:LearningContent["kind"];diff:LearningContent["difficulty"];dur:number;tags:string[];mods?:number}> = [
   {title:"AI Literacy for Leaders",kind:"course",diff:"beginner",dur:90,tags:["ai","leadership"],mods:5},
   {title:"Prompt Engineering 101",kind:"lesson",diff:"beginner",dur:25,tags:["prompts","ai"]},
@@ -42,6 +47,7 @@ const SKILLS = [
 
 export const EducationService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.cs(oid))) return;
     const now=new Date().toISOString();
     for (const c of CONTENT_SEED){

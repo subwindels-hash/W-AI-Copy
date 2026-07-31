@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelTestAutomation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -442,8 +448,8 @@ function executePipeline(run: PipelineRun, pipeline: TestAutomationPipeline): vo
 
     // Simulate stage execution
     const testResults: TestSuiteRun[] = stage.testSuites.map(suiteId => {
-      const totalTests = 50 + Math.floor(Math.random() * 50);
-      const passed = Math.floor(totalTests * (0.85 + Math.random() * 0.15));
+      const totalTests = 50 + Math.floor(_rng.next() * 50);
+      const passed = Math.floor(totalTests * (0.85 + _rng.next() * 0.15));
       const failed = totalTests - passed;
       const passRate = (passed / totalTests) * 100;
 
@@ -457,7 +463,7 @@ function executePipeline(run: PipelineRun, pipeline: TestAutomationPipeline): vo
         failed,
         skipped: 0,
         passRate,
-        duration: 10 + Math.random() * 50,
+        duration: 10 + _rng.next() * 50,
       };
     });
 

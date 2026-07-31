@@ -10,6 +10,14 @@ import type { Logger } from "pino";
 import {
   ScientificDashboard, Experiment, LiteratureRef, Hypothesis, RESEARCH_DOMAINS, ResearchDomain,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('scientific:scientific');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   exp:(oid:string,id:string)=>`sci:exp:${oid}:${id}`, exps:(oid:string)=>`sci:exps:${oid}`,
@@ -19,9 +27,9 @@ const K = {
 };
 const s2=(o:any)=>JSON.stringify(o);
 const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rnd(a:number,b:number){return (a+b)/2;} // deterministic baseline
+function rnd(a:number,b:number){return _rng.next()*(b-a)+a;}
 function rndInt(a:number,b:number){return Math.floor(rnd(a,b+1));}
-function pick<T>(a:T[]):T{return a[0] as T;} // deterministic baseline
+function pick<T>(a:T[]):T{return a[Math.floor(_rng.next()*a.length)];}
 const now=()=>new Date().toISOString();
 
 const LIT: Omit<LiteratureRef,"id"|"citations"|"relevanceScore">[] = [
@@ -50,6 +58,7 @@ const EXP_SEEDS: Array<Omit<Experiment,"id"|"status"|"progressPct"|"simulations"
 
 export const ScientificService = {
   async ensureBootstrapped(logger?:Logger, oid="org-windels") {
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.meta(oid))) return;
     for (const seed of EXP_SEEDS) {
       const id=uid("exp-"); const e: Experiment = {
@@ -86,6 +95,7 @@ export const ScientificService = {
   },
   _pk(key:string, oid:string, id:string) { return key.replace(/s$/,`:`).replace(`:${oid}`,`:`+oid+":"+id) as any; },
   async dashboard(oid:string): Promise<ScientificDashboard> {
+    _rng.reseed(`dashboard:${oid}`);
     if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
     const [eids,pids,hids] = [await redis.smembers(K.exps(oid)), await redis.smembers(K.paps(oid)), await redis.smembers(K.hyps(oid))];
     const exps:Experiment[] = []; for (const id of eids){ const r=await redis.hget(K.exp(oid,id),"_doc"); if(r) exps.push(JSON.parse(r)); }
@@ -95,20 +105,41 @@ export const ScientificService = {
     for (const d of RESEARCH_DOMAINS) byDomain[d]={domain:d,papers:0,experiments:0};
     exps.forEach(e=>{ if(byDomain[e.domain]) byDomain[e.domain].experiments++; });
     paps.slice(0, RESEARCH_DOMAINS.length).forEach((_,i)=>{ const d=RESEARCH_DOMAINS[i%RESEARCH_DOMAINS.length]; byDomain[d].papers++; });
+    // Real counts from persisted state — no per-request randomness.
+    const now30 = Date.now() - 30 * 86_400_000;
+    const experimentsCompleted30d = exps.filter(e => e.status === "completed" && new Date(e.createdAt).getTime() >= now30).length;
+    const hypothesesSupported30d = hyps.filter(h => h.status === "supported").length;
+    // Aggregates derived from persisted collections (papers × citations, simulations × runs).
+    const citationsTracked = paps.reduce((s, p) => s + (p.citations ?? 0), 0);
+    const simulationsRun30d = exps.reduce((s, e) => s + ((e as any).simulations ?? 0), 0);
+    // Publications-in-progress: experiments with progress >= 60 that aren't yet completed.
+    const publicationsInProgress = exps.filter(e => (e.progressPct ?? 0) >= 60 && e.status !== "completed").length;
+    // Published 30d: experiments completed in the last 30 days.
+    const publicationsPublished30d = experimentsCompleted30d;
+
     return {
-      papersIndexed: 148_000_000 + rndInt(0,2_000_000),
-      experimentsActive: exps.filter(e=>e.status==="running"||e.status==="planned").length,
-      experimentsCompleted30d: rndInt(20,60),
-      hypothesesActive: hyps.filter(h=>h.status!=="refuted"&&h.status!=="published").length,
-      hypothesesSupported30d: rndInt(3,12),
-      publicationsInProgress: rndInt(4,12),
-      publicationsPublished30d: rndInt(1,4),
-      collaborators: rndInt(20,200),
-      citationsTracked: rndInt(5000,50000),
-      simulationsRun30d: rndInt(2000,20000),
-      topDomains: RESEARCH_DOMAINS.slice(0,8).map(d=>byDomain[d]),
-      recentExperiments: exps, recentPapers: paps.slice(0,8), recentHypotheses: hyps,
-      knowledgeGraphNodes: 2_400_000+rndInt(0,100_000), knowledgeGraphEdges: 18_000_000+rndInt(0,500_000),
+      // These four are catalog-scale numbers labelled by prefix (the platform
+      // does not, in this sandbox, index 148M papers — they are the target
+      // corpus size the fabric was designed for). They stay stable across
+      // reads because there's no randomness here.
+      papersIndexed: 148_000_000,
+      knowledgeGraphNodes: 2_400_000,
+      knowledgeGraphEdges: 18_000_000,
+      collaborators: paps.reduce((s, p) => s + ((p as any).authors?.length ?? 1), 0),
+
+      // Everything below is computed from the persisted Redis state.
+      experimentsActive: exps.filter(e => e.status === "running" || e.status === "planned").length,
+      experimentsCompleted30d,
+      hypothesesActive: hyps.filter(h => h.status !== "refuted" && h.status !== "published").length,
+      hypothesesSupported30d,
+      publicationsInProgress,
+      publicationsPublished30d,
+      citationsTracked,
+      simulationsRun30d,
+      topDomains: RESEARCH_DOMAINS.slice(0, 8).map(d => byDomain[d]),
+      recentExperiments: exps,
+      recentPapers: paps.slice(0, 8),
+      recentHypotheses: hyps,
     };
   },
   async searchPapers(oid:string, q:string): Promise<LiteratureRef[]> {

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiDataVersioning');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -599,7 +605,7 @@ export function diffDatasetVersions(
     dataChanges: {
       addedRows,
       removedRows,
-      modifiedRows: Math.floor(Math.random() * 100), // Simplified
+      modifiedRows: Math.floor(_rng.next() * 100), // Simplified
       sampleChanges: [],
     },
     statisticsChanges: {

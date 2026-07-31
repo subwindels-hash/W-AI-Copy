@@ -13,7 +13,9 @@
     "clean": "rm -rf dist"
   },
   "dependencies": {
+    "@prisma/adapter-pg": "5.22.0",
     "@prisma/client": "^5.22.0",
+    "@types/pg": "^8.20.0",
     "@windels/shared": "workspace:*",
     "bcryptjs": "^2.4.3",
     "cookie-parser": "^1.4.7",
@@ -25,6 +27,7 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "otplib": "^13.4.1",
+    "pg": "^8.22.0",
     "pino": "^9.5.0",
     "pino-http": "^10.3.0",
     "web-push": "^3.6.7",

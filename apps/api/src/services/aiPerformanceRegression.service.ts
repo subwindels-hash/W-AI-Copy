@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiPerformanceRegression');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -521,9 +527,9 @@ function detectRegression(config: RegressionDetectionConfig, metric: MonitoredMe
   const isCritical = metric.higherIsBetter ? changePercent < -metric.thresholds.critical : changePercent > metric.thresholds.critical;
 
   // Generate detection info based on method
-  const confidence = 0.6 + Math.random() * 0.35;
-  const pValue = Math.random() * 0.05;
-  const zScore = 2 + Math.random() * 3;
+  const confidence = 0.6 + _rng.next() * 0.35;
+  const pValue = _rng.next() * 0.05;
+  const zScore = 2 + _rng.next() * 3;
 
   // Determine severity
   const severity: RegressionSeverity = isCritical ? "critical" : Math.abs(changePercent) > metric.thresholds.warning * 1.5 ? "major" : Math.abs(changePercent) > metric.thresholds.warning ? "minor" : "info";
@@ -546,7 +552,7 @@ function detectRegression(config: RegressionDetectionConfig, metric: MonitoredMe
   for (let i = 20; i >= 0; i--) {
     const ts = new Date(Date.now() - i * 3600000).toISOString();
     const drift = i < 5 ? changeAbsolute * (1 - i / 5) : 0;
-    const value = baseline + drift + (Math.random() - 0.5) * baseline * 0.05;
+    const value = baseline + drift + (_rng.next() - 0.5) * baseline * 0.05;
     dataPoints.push({ timestamp: ts, value: Math.round(value * 100) / 100, expected: baseline });
   }
 
@@ -581,7 +587,7 @@ function detectRegression(config: RegressionDetectionConfig, metric: MonitoredMe
         sampleCount: 21,
       },
       falsePositiveLikelihood: Math.round((1 - confidence) * 100) / 100,
-      previousDetections: Math.floor(Math.random() * 3),
+      previousDetections: Math.floor(_rng.next() * 3),
     },
     trendAnalysis: {
       direction: isCritical ? "degrading" : Math.abs(changePercent) > 5 ? "degrading" : "step-change",
@@ -592,8 +598,8 @@ function detectRegression(config: RegressionDetectionConfig, metric: MonitoredMe
         { timestamp: new Date(Date.now() + 3600000).toISOString(), predicted: Math.round(currentValue * 1.02 * 100) / 100, lowerBound: Math.round(currentValue * 0.98 * 100) / 100, upperBound: Math.round(currentValue * 1.06 * 100) / 100 },
         { timestamp: new Date(Date.now() + 7200000).toISOString(), predicted: Math.round(currentValue * 1.04 * 100) / 100, lowerBound: Math.round(currentValue * 0.96 * 100) / 100, upperBound: Math.round(currentValue * 1.12 * 100) / 100 },
       ],
-      seasonalityDetected: Math.random() > 0.7,
-      seasonalityPeriod: Math.random() > 0.7 ? 24 : undefined,
+      seasonalityDetected: _rng.next() > 0.7,
+      seasonalityPeriod: _rng.next() > 0.7 ? 24 : undefined,
       changePointDetected: true,
       changePointTimestamp: new Date(Date.now() - 3 * 3600000).toISOString(),
     },
@@ -609,7 +615,7 @@ function detectRegression(config: RegressionDetectionConfig, metric: MonitoredMe
 
 function generateCurrentValue(metric: MonitoredMetric, baselineConfig: BaselineConfig): number {
   const baseline = metric.baselineValue ?? 100;
-  const drift = (Math.random() - 0.3) * baseline * 0.25;
+  const drift = (_rng.next() - 0.3) * baseline * 0.25;
   return baseline + drift;
 }
 
@@ -626,21 +632,21 @@ function generateAttribution(type: RegressionType, changePercent: number): Regre
     { category: "resource-contention", description: "Resource contention from co-located workloads or services", evidence: ["CPU throttling detected", "Memory pressure increased", "I/O wait times elevated"] },
   ];
 
-  const selectedCauses = causeOptions.slice(0, 2 + Math.floor(Math.random() * 2));
+  const selectedCauses = causeOptions.slice(0, 2 + Math.floor(_rng.next() * 2));
   for (const c of selectedCauses) {
-    causes.push({ category: c.category, description: c.description, likelihood: 0.3 + Math.random() * 0.5, evidence: c.evidence });
+    causes.push({ category: c.category, description: c.description, likelihood: 0.3 + _rng.next() * 0.5, evidence: c.evidence });
   }
 
   // Generate recent changes
   const changeTypes: RecentChange["type"][] = ["deployment", "config", "infrastructure", "model"];
-  for (let i = 0; i < 2 + Math.floor(Math.random() * 3); i++) {
+  for (let i = 0; i < 2 + Math.floor(_rng.next() * 3); i++) {
     changes.push({
       id: `chg_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
-      type: changeTypes[Math.floor(Math.random() * changeTypes.length)],
+      type: changeTypes[Math.floor(_rng.next() * changeTypes.length)],
       description: `Recent ${changeTypes[i % changeTypes.length]} change detected`,
-      timestamp: new Date(Date.now() - Math.floor(Math.random() * 24) * 3600000).toISOString(),
-      author: ["alice", "bob", "ci-pipeline", "auto-scaler"][Math.floor(Math.random() * 4)],
-      correlationScore: Math.round(Math.random() * 100) / 100,
+      timestamp: new Date(Date.now() - Math.floor(_rng.next() * 24) * 3600000).toISOString(),
+      author: ["alice", "bob", "ci-pipeline", "auto-scaler"][Math.floor(_rng.next() * 4)],
+      correlationScore: Math.round(_rng.next() * 100) / 100,
     });
   }
 
@@ -650,7 +656,7 @@ function generateAttribution(type: RegressionType, changePercent: number): Regre
     type: "deployment",
     description: "Model deployment completed",
     timestamp: new Date(Date.now() - 2 * 3600000).toISOString(),
-    correlationScore: 0.7 + Math.random() * 0.25,
+    correlationScore: 0.7 + _rng.next() * 0.25,
     source: "deployment-service",
   });
 
@@ -658,7 +664,7 @@ function generateAttribution(type: RegressionType, changePercent: number): Regre
     probableCauses: causes.sort((a, b) => b.likelihood - a.likelihood),
     recentChanges: changes.sort((a, b) => b.correlationScore - a.correlationScore),
     correlatedEvents: events,
-    confidence: 0.5 + Math.random() * 0.4,
+    confidence: 0.5 + _rng.next() * 0.4,
   };
 }
 
@@ -667,10 +673,10 @@ function generateImpactAssessment(severity: RegressionSeverity, type: Regression
   const factor = severityFactor[severity];
 
   return {
-    affectedUsers: Math.round(100 * factor * (1 + Math.random())),
-    affectedRequestsPerMinute: Math.round(50 * factor * (1 + Math.random())),
-    estimatedCostImpactPerHour: Math.round(10 * factor * (1 + Math.random()) * 100) / 100,
-    slaViolationRisk: severity === "critical" ? 0.9 + Math.random() * 0.1 : severity === "major" ? 0.5 + Math.random() * 0.3 : 0.1 + Math.random() * 0.3,
+    affectedUsers: Math.round(100 * factor * (1 + _rng.next())),
+    affectedRequestsPerMinute: Math.round(50 * factor * (1 + _rng.next())),
+    estimatedCostImpactPerHour: Math.round(10 * factor * (1 + _rng.next()) * 100) / 100,
+    slaViolationRisk: severity === "critical" ? 0.9 + _rng.next() * 0.1 : severity === "major" ? 0.5 + _rng.next() * 0.3 : 0.1 + _rng.next() * 0.3,
     cascadingEffects: type === "latency-regression" ? ["Increased queue depth", "Timeout errors for downstream services", "SLA breach risk"] : type === "throughput-regression" ? ["Request queuing", "User-facing delays", "Auto-scaling trigger"] : ["Resource waste", "Cost increase"],
     businessImpactDescription: severity === "critical" ? "Critical performance degradation affecting core user experience" : severity === "major" ? "Significant performance impact requiring immediate attention" : "Minor performance degradation within acceptable limits",
   };

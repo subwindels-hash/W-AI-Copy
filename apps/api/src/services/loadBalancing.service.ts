@@ -16,6 +16,12 @@ import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { redisCmd } from "../db/redis.js";
 import { DiscoveryService } from "../enterprise/discovery/discovery.service.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:loadBalancing');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -224,7 +230,7 @@ async function selectLeastConnections(instances: ServiceInstance[]): Promise<Ser
 async function selectRandom(instances: ServiceInstance[]): Promise<ServiceInstance | null> {
   if (instances.length === 0) return null;
 
-  const index = Math.floor(Math.random() * instances.length);
+  const index = Math.floor(_rng.next() * instances.length);
   return instances[index];
 }
 

@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiFeatureServing');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -789,7 +795,7 @@ function simulateFeatureFetch(
   timestamp?: string
 ): FeatureValue {
   // Simulate feature value generation
-  const value = Math.random() * 100;
+  const value = _rng.next() * 100;
   return {
     value,
     timestamp: timestamp || new Date().toISOString(),

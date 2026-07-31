@@ -4,6 +4,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { DeploymentAnalytics, DeploymentRecord, DeploymentStatus } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('engineering');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST_KEY = "eng:deploys";
 const COUNTER = "eng:deploy:counter";
@@ -13,9 +21,6 @@ const CACHE_TTL = 60;
 
 function iso() { return new Date().toISOString(); }
 const SER = <T>(v: T) => JSON.stringify(v);
-
-function rand(min: number, max: number) { return Math.floor((min + max) / 2); } // deterministic
-
 export const DeploymentService = {
   async list(limit = 50): Promise<DeploymentRecord[]> {
     const ids = await redis.lrange(LIST_KEY, 0, limit - 1);
@@ -27,11 +32,12 @@ export const DeploymentService = {
     return out;
   },
   async record(input: Partial<DeploymentRecord>): Promise<DeploymentRecord> {
+    _rng.reseed(`record:${input}`);
     const id = randomUUID();
     const n = await redis.incr(COUNTER);
     const startedAt = input.startedAt ?? iso();
     const durationMs = input.durationMs ?? rand(90_000, 900_000);
-    const status: DeploymentStatus = input.status ?? "success";
+    const status: DeploymentStatus = input.status ?? (_rng.next() < 0.1 ? "failed" : "success");
     const rec: DeploymentRecord = {
       id,
       service: input.service ?? "platform",
@@ -42,7 +48,7 @@ export const DeploymentService = {
       startedAt,
       finishedAt: new Date(Date.now() + durationMs).toISOString(),
       durationMs,
-      leadTimeHours: 8.5,
+      leadTimeHours: Math.round((2 + _rng.next() * 20) * 10) / 10,
       rollbackOf: input.rollbackOf,
     };
     await redis.set(DETAIL(id), SER(rec));

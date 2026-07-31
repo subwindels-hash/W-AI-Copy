@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:labelQualityAssurance');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -487,12 +493,12 @@ export async function generateActiveLearningQuery(params: {
         reason = `Model confidence: ${((candidate.modelConfidence ?? 0.5) * 100).toFixed(1)}%`;
         break;
       case "random":
-        score = Math.random();
+        score = _rng.next();
         reason = "Random selection";
         break;
       case "diversity":
         // Would use embedding similarity in production
-        score = Math.random();
+        score = _rng.next();
         reason = "Diversity-based selection";
         break;
       case "committee":
@@ -502,7 +508,7 @@ export async function generateActiveLearningQuery(params: {
         break;
       case "stratified":
         // Would stratify by metadata
-        score = Math.random();
+        score = _rng.next();
         reason = "Stratified sampling";
         break;
     }

@@ -9,6 +9,14 @@
 import { redisCmd } from "../db/redis.js";
 import { ClusterService } from "./cluster.service.js";
 import type { InfraMetric, AlertFiring } from "@windels/shared/infrastructure";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('platform:infraMetrics');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const SERIES_KEY = "infra:metrics:series";
 const ALERTS_KEY = "infra:alerts";
@@ -28,13 +36,14 @@ export const InfraMetricsService = {
   stop() { if (interval) { clearInterval(interval); interval = null; } },
 
   async sample(): Promise<InfraMetric> {
+    _rng.reseed(`sample`);
     await ClusterService.seed();
     const c = await ClusterService.probe();
     // Simulate traffic metrics
-    const rps = 1100 + c.cpuPercent * 5;
-    const p95 = 32 + (c.memoryPercent > 80 ? 40 : 0);
-    const errRate = Math.max(0, (c.cpuPercent > 85 ? 2 : 0.1));
-    const readyPct = 100;
+    const rps = 500 + _rng.next() * 1200 + c.cpuPercent * 5;
+    const p95 = 15 + _rng.next() * 35 + (c.memoryPercent > 80 ? 40 : 0);
+    const errRate = Math.max(0, (c.cpuPercent > 85 ? 2 : 0.1) + (_rng.next() - 0.6));
+    const readyPct = Math.max(80, 100 - Math.floor(_rng.next() * 5));
     const m: InfraMetric = {
       ts: now(), clusterCpuPercent: c.cpuPercent, clusterMemoryPercent: c.memoryPercent,
       clusterPodPercent: c.podPercent, requestRps: Math.round(rps), requestP95Ms: Math.round(p95),

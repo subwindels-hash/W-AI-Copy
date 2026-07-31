@@ -6,6 +6,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Blueprint, BlueprintCategory, BlueprintCompatibility } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('platformServices:blueprints');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST   = "psvc:bps";
 const DETAIL = (id: string) => `psvc:bp:${id}`;
@@ -44,6 +52,7 @@ export const BlueprintsService = {
   },
 
   async publish(input: Omit<Blueprint, "id"|"installs"|"stars"|"updatedAt">): Promise<Blueprint> {
+    _rng.reseed(`publish:${input}`);
     const existing = await this.findBySlug(input.slug);
     if (existing) {
       Object.assign(existing, input, { updatedAt: iso() });
@@ -51,7 +60,7 @@ export const BlueprintsService = {
       return existing;
     }
     const id = randomUUID();
-    const b: Blueprint = { id, installs: 0, stars: 24, updatedAt: iso(), ...input };
+    const b: Blueprint = { id, installs: 0, stars: 8 + Math.floor(_rng.next()*40), updatedAt: iso(), ...input };
     await redis.set(DETAIL(id), SER(b));
     await redis.sadd(LIST, id);
     await redis.hset(BY_SLUG, b.slug, id);

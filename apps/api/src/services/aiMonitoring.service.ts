@@ -63,7 +63,11 @@ export async function recordAiRequest(r: RecordInput) {
 
 export async function getAiMetrics(userId: string, periodDays = 30) {
   const ctx = await resolveUserContext(userId);
-  const since = new Date(Date.now() - periodDays * 86_400_000);
+  // Snap since-boundary to UTC midnight so the reported window (and any
+  // counts it implies) are byte-stable within a UTC day.
+  const dayMs = 86_400_000;
+  const nowMs = Math.floor(Date.now() / dayMs) * dayMs + dayMs;
+  const since = new Date(nowMs - periodDays * dayMs);
   const [total, succeeded, failed, byModel, byChannel, recent, costs] = await Promise.all([
     prisma.aiRequest.count({ where: { organizationId: ctx.organizationId, createdAt: { gte: since } } }),
     prisma.aiRequest.count({ where: { organizationId: ctx.organizationId, createdAt: { gte: since }, status: "succeeded" } }),

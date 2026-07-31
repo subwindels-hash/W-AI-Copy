@@ -13,6 +13,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Mf2BenchmarkResult, Mf2Dashboard, Mf2FineTuneJob, Mf2Model, Mf2Stage } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('modelFactory:modelFactory');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   models: "mf2:models", model: (id: string) => `mf2:model:${id}`,
@@ -125,7 +133,8 @@ export const ModelFactoryService = {
   },
 
   async runBenchmark(id: string, benchmark: string): Promise<Mf2BenchmarkResult> {
-    const res: Mf2BenchmarkResult = { id: uid("br-"), modelId: id, benchmark, score: 78, pass: true, at: new Date().toISOString() };
+    _rng.reseed(`runBenchmark:${id}`);
+    const res: Mf2BenchmarkResult = { id: uid("br-"), modelId: id, benchmark, score: 50 + _rng.next() * 45, pass: true, at: new Date().toISOString() };
     await redis.zadd(K.bench, Date.now(), res.id);
     await redis.hset(K.benchRes(res.id), "_doc", s2(res));
     return res;

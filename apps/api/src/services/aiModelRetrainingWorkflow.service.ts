@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelRetrainingWorkflow');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -836,7 +842,7 @@ async function simulateWorkflowExecution(workflowId: string): Promise<void> {
 
     phase.status = 'completed';
     phase.completedAt = new Date().toISOString();
-    phase.duration = Math.floor(Math.random() * 3600) + 600; // 10min to 1h
+    phase.duration = Math.floor(_rng.next() * 3600) + 600; // 10min to 1h
     phase.logs.push(`Phase ${phase.name} completed successfully`);
 
     // Simulate phase results

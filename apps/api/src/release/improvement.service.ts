@@ -1,5 +1,12 @@
 /**
  * ImprovementService - Slice 204: Continuous Improvement / DORA metrics / Retros.
+ *
+ * DORA metrics are computed from actual release records:
+ *   - deploymentFrequency: deploys / 4 weeks (periodDays = 28)
+ *   - leadTimeHours:       mean of (deployedAt - createdAt) across deployed releases
+ *   - changeFailRate:      rolled_back / total, as a percentage
+ *   - mttrHours:           mean of (rollbackAt - deployedAt) across rolled-back releases;
+ *                          `null` when no rollbacks have occurred yet
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
@@ -8,10 +15,18 @@ import { PipelineService } from "./pipeline.service.js";
 
 const RETRO_KEY = (rid: string) => `rel:retro:${rid}`;
 const METRICS_KEY = "rel:metrics";
+const ROLLBACK_KEY = (rid: string) => `rel:rollback:${rid}`;
 
 function iso() { return new Date().toISOString(); }
 
 export const ImprovementService = {
+  /** Record when a release is rolled back, so MTTR can be computed. */
+  async recordRollback(releaseId: string, deployedAt: string) {
+    const now = new Date();
+    const durationH = (now.getTime() - new Date(deployedAt).getTime()) / 3_600_000;
+    await redis.set(ROLLBACK_KEY(releaseId), JSON.stringify({ rolledBackAt: now.toISOString(), durationH }), "EX", 60 * 60 * 24 * 90);
+  },
+
   async metrics(): Promise<ReleaseMetrics> {
     const releases = await PipelineService.list(100);
     const byStatus: Record<string, number> = {};
@@ -24,11 +39,28 @@ export const ImprovementService = {
       .filter((r) => r.deployedAt)
       .map((r) => (new Date(r.deployedAt!).getTime() - new Date(r.createdAt).getTime()) / 3_600_000);
     const avgLead = leadTimes.length ? leadTimes.reduce((a, b) => a + b, 0) / leadTimes.length : 0;
+
+    // Real MTTR from rollback records
+    const rolledReleases = releases.filter((r) => r.status === "rolled_back");
+    const mttrDurations: number[] = [];
+    for (const r of rolledReleases) {
+      const raw = await redis.get(ROLLBACK_KEY(r.id));
+      if (raw) {
+        try {
+          const rec = JSON.parse(raw) as { durationH: number };
+          if (typeof rec.durationH === "number") mttrDurations.push(rec.durationH);
+        } catch { /* ignore */ }
+      }
+    }
+    const mttrHours = mttrDurations.length
+      ? Math.round((mttrDurations.reduce((a, b) => a + b, 0) / mttrDurations.length) * 10) / 10
+      : null;
+
     const dora: DoraMetrics = {
       deploymentFrequency: Math.round((deployed / 4) * 10) / 10,
       leadTimeHours: Math.round(avgLead * 10) / 10,
       changeFailRate: total ? Math.round((rolled / total) * 1000) / 10 : 0,
-      mttrHours: 1.2,
+      mttrHours: mttrHours ?? 0,
       periodDays: 28,
     };
     const metrics: ReleaseMetrics = {

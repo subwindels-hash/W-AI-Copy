@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelPerformanceBenchmarking');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -441,19 +447,19 @@ function executeBenchmark(run: BenchmarkRun, suite: BenchmarkSuite): void {
 
     // Actual iterations
     for (let i = 0; i < testCase.iterations; i++) {
-      const latency = 50 + Math.random() * 100; // 50-150ms
+      const latency = 50 + _rng.next() * 100; // 50-150ms
       const throughput = 1000 / latency; // requests per second
 
       const metrics: Record<string, number> = {
         latency,
         throughput,
-        cpuUsage: 30 + Math.random() * 40,
-        memoryUsage: 40 + Math.random() * 30,
+        cpuUsage: 30 + _rng.next() * 40,
+        memoryUsage: 40 + _rng.next() * 30,
       };
 
       if (suite.configuration.hardware.gpu) {
-        metrics.gpuUsage = 50 + Math.random() * 40;
-        metrics.gpuMemoryUsage = 30 + Math.random() * 50;
+        metrics.gpuUsage = 50 + _rng.next() * 40;
+        metrics.gpuMemoryUsage = 30 + _rng.next() * 50;
       }
 
       iterations.push({

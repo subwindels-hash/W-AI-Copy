@@ -14,6 +14,12 @@
 import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { redisCmd } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:quantumCircuitManagement');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -107,7 +113,7 @@ export async function createQuantumCircuit(input: {
   createdBy: string;
   metadata?: Record<string, any>;
 }): Promise<QuantumCircuit> {
-  const circuitId = `qc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const circuitId = `qc_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
 
   const gates = input.gates || [];
@@ -229,7 +235,7 @@ export async function addGateToCircuit(
 
   const newGate: QuantumGate = {
     ...gate,
-    id: `gate_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+    id: `gate_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
   };
 
   circuit.gates.push(newGate);
@@ -389,7 +395,7 @@ export async function executeQuantumCircuit(
       // Generate simulated results
       const results = simulateQuantumCircuit(circuit, numShots);
 
-      const resultId = `qc_result_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+      const resultId = `qc_result_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
       const result: QuantumCircuitResult = {
         id: resultId,
         circuitId: circuit.id,
@@ -518,7 +524,7 @@ function simulateQuantumCircuit(
   for (let i = 0; i < numShots; i++) {
     let bitstring = "";
     for (let q = 0; q < circuit.numQubits; q++) {
-      bitstring += Math.random() < 0.5 ? "0" : "1";
+      bitstring += _rng.next() < 0.5 ? "0" : "1";
     }
 
     results[bitstring] = (results[bitstring] || 0) + 1;

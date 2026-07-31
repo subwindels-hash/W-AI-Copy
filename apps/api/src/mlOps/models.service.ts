@@ -13,6 +13,14 @@ import type {
   ModelMonitor, ModelAlert, MonitorType, ModelPolicy, ModelPolicyType,
   MlOpsDashboard,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('mlOps:models');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const MODELS     = "mlops:models";
 const MODEL      = (id: string) => `mlops:model:${id}`;
@@ -72,19 +80,20 @@ export const ModelsService = {
   },
 
   async register(input: Omit<ModelArtifact, "id"|"versions"|"stars"|"installs"|"currentStage"|"status"|"avgLatencyMs"|"errorRatePct"|"updatedAt">): Promise<ModelArtifact> {
+    _rng.reseed(`register:${input}`);
     const id = randomUUID();
     const now = iso();
     const v0: ModelVersionRec = {
       id: randomUUID(), version: "0.1.0", stage: "draft",
       artifactUri: `mlops://models/${input.slug}/0.1.0`,
-      sizeMb: 420,
+      sizeMb: 120 + Math.floor(_rng.next()*800),
       hash: "sha256:" + randomUUID().replace(/-/g,""),
       metrics: [], createdAt: now,
     };
     const m: ModelArtifact = {
-      id, versions: [v0], stars: 22, installs: 0,
-      currentStage: "draft", status: "active", avgLatencyMs: 720,
-      errorRatePct: 0.3, updatedAt: now, ...input,
+      id, versions: [v0], stars: 8 + Math.floor(_rng.next()*40), installs: 0,
+      currentStage: "draft", status: "active", avgLatencyMs: 240 + Math.floor(_rng.next()*1800),
+      errorRatePct: _rng.next()*0.8, updatedAt: now, ...input,
     };
     m.currentVersion = v0.id;
     await redis.set(MODEL(id), SER(m));
@@ -94,12 +103,13 @@ export const ModelsService = {
   },
 
   async addVersion(id: string, version: string, metrics: ModelMetric[] = [], artifactUri?: string, notes?: string, stage: ModelStage = "draft"): Promise<ModelArtifact | null> {
+    _rng.reseed(`addVersion:${id}`);
     const m = await this.get(id);
     if (!m) return null;
     const v: ModelVersionRec = {
       id: randomUUID(), version, stage,
       artifactUri: artifactUri ?? `mlops://models/${m.slug}/${version}`,
-      sizeMb: 420,
+      sizeMb: 120 + Math.floor(_rng.next()*800),
       hash: "sha256:" + randomUUID().replace(/-/g,""),
       metrics, createdAt: iso(), notes,
     };
@@ -165,6 +175,7 @@ export const ModelsService = {
     region?: string; replicas?: number; cpu?: string; memory?: string; gpu?: string;
     trafficPct?: number; deployedBy?: string;
   }): Promise<ModelDeployment> {
+    _rng.reseed(`deploy`);
     const id = randomUUID();
     const now = iso();
     const d: ModelDeployment = {
@@ -174,9 +185,9 @@ export const ModelsService = {
       status: "healthy", region: input.region ?? "na-east",
       replicas: input.replicas ?? 2, cpu: input.cpu ?? "2", memory: input.memory ?? "8Gi",
       gpu: input.gpu, endpoint: `https://inference.windels.ai/${input.environment}/${input.name}`,
-      trafficPct: input.trafficPct ?? 100, qps: 800,
-      p95Ms: 240, errorRatePct: 0.2,
-      costPerHour: 4.5,
+      trafficPct: input.trafficPct ?? 100, qps: Math.floor(50+_rng.next()*2000),
+      p95Ms: 80+Math.floor(_rng.next()*500), errorRatePct: _rng.next()*0.5,
+      costPerHour: +(1.2 + _rng.next()*8).toFixed(2),
       deployedAt: now, updatedAt: now, deployedBy: input.deployedBy ?? "admin",
     };
     await redis.set(DEP(id), SER(d));

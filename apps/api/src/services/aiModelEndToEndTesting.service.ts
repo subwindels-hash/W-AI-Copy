@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelEndToEndTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -404,7 +410,7 @@ function executeE2ETests(run: E2ETestRun, suite: E2ETestSuite): void {
       const stepStartTime = Date.now();
 
       // Simulate step execution
-      const stepPassed = Math.random() > 0.1; // 90% pass rate
+      const stepPassed = _rng.next() > 0.1; // 90% pass rate
       const actualOutput = stepPassed ? step.expectedOutput : { error: 'Step failed' };
 
       const currentStepDuration = (Date.now() - stepStartTime) / 1000;

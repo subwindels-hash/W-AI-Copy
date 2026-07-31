@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:realTimeModelMonitoring');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -673,11 +679,11 @@ function startMonitoringLoop(jobId: string): void {
 
     // Simulate prediction recording
     const prediction = {
-      input: { features: [Math.random(), Math.random(), Math.random()] },
-      output: Math.random() > 0.5 ? 1 : 0,
-      latencyMs: 50 + Math.random() * 100,
-      confidence: 0.7 + Math.random() * 0.3,
-      groundTruth: Math.random() > 0.5 ? 1 : 0,
+      input: { features: [_rng.next(), _rng.next(), _rng.next()] },
+      output: _rng.next() > 0.5 ? 1 : 0,
+      latencyMs: 50 + _rng.next() * 100,
+      confidence: 0.7 + _rng.next() * 0.3,
+      groundTruth: _rng.next() > 0.5 ? 1 : 0,
     };
 
     recordPrediction(jobId, prediction);
@@ -693,8 +699,8 @@ function updatePerformanceMetrics(job: MonitoringJob, prediction: unknown, groun
   job.metrics.performance.accuracy = (currentAccuracy * (totalPredictions - 1) + (correct ? 1 : 0)) / totalPredictions;
   
   // Update other metrics (simplified)
-  job.metrics.performance.precision = job.metrics.performance.accuracy * (0.9 + Math.random() * 0.1);
-  job.metrics.performance.recall = job.metrics.performance.accuracy * (0.9 + Math.random() * 0.1);
+  job.metrics.performance.precision = job.metrics.performance.accuracy * (0.9 + _rng.next() * 0.1);
+  job.metrics.performance.recall = job.metrics.performance.accuracy * (0.9 + _rng.next() * 0.1);
   job.metrics.performance.f1Score = 2 * (job.metrics.performance.precision * job.metrics.performance.recall) / 
                                      (job.metrics.performance.precision + job.metrics.performance.recall);
 }

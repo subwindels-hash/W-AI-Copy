@@ -4,6 +4,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { DebtCategory, DebtItem, DebtSeverity, DebtStatus, DebtSummary } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('engineering');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST_KEY = "eng:debt";
 const COUNTER = "eng:debt:counter";
@@ -11,9 +19,6 @@ const DETAIL = (id: string) => `eng:debt:${id}`;
 
 function iso() { return new Date().toISOString(); }
 const SER = <T>(v: T) => JSON.stringify(v);
-
-function rand(min: number, max: number) { return Math.round((min + max) / 2); } // deterministic
-
 export const TechDebtService = {
   async list(limit = 100): Promise<DebtItem[]> {
     const ids = await redis.zrange(LIST_KEY, 0, limit - 1);
@@ -25,6 +30,7 @@ export const TechDebtService = {
     return out;
   },
   async create(input: Partial<DebtItem>): Promise<DebtItem> {
+    _rng.reseed(`create:${input}`);
     const n = await redis.incr(COUNTER);
     const id = randomUUID();
     const item: DebtItem = {

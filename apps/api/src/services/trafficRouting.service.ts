@@ -16,6 +16,12 @@ import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { redisCmd } from "../db/redis.js";
 import { randomBytes } from "crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:trafficRouting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -284,7 +290,7 @@ export async function routeRequest(
  * Canary routing - gradual traffic shift
  */
 async function routeCanary(config: CanaryConfig): Promise<string> {
-  const random = Math.random() * 100;
+  const random = _rng.next() * 100;
 
   const selectedInstanceId = random < config.canaryWeight ? config.canaryInstanceId : config.stableInstanceId;
 
@@ -305,7 +311,7 @@ async function routeCanary(config: CanaryConfig): Promise<string> {
  * Traffic split routing - percentage-based routing
  */
 async function routeTrafficSplit(config: TrafficSplitConfig): Promise<string> {
-  const random = Math.random() * 100;
+  const random = _rng.next() * 100;
   let cumulative = 0;
 
   for (const target of config.targets) {
@@ -551,7 +557,7 @@ export async function shouldMirrorTraffic(serviceId: string): Promise<string | n
     return null;
   }
 
-  const random = Math.random() * 100;
+  const random = _rng.next() * 100;
   if (random < config.mirrorPercentage) {
     return config.mirrorInstanceId;
   }

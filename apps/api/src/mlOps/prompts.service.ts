@@ -7,6 +7,14 @@ import { redisCmd as redis } from "../db/redis.js";
 import type {
   PromptDef, PromptVersion, PromptTestCase, PromptTestRun, PromptKind,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('mlOps:prompts');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const LIST     = "mlops:prompts";
 const DETAIL   = (id: string) => `mlops:prompt:${id}`;
@@ -44,6 +52,7 @@ export const PromptsService = {
   },
 
   async register(input: Omit<PromptDef, "id"|"versions"|"testCases"|"testRuns"|"stars"|"uses"|"updatedAt">): Promise<PromptDef> {
+    _rng.reseed(`register:${input}`);
     const id = randomUUID();
     const now = iso();
     const v0: PromptVersion = {
@@ -52,7 +61,7 @@ export const PromptsService = {
     };
     const p: PromptDef = {
       id, versions: [v0], testCases: [], testRuns: [],
-      stars: 9, uses: 900,
+      stars: 4 + Math.floor(_rng.next()*10), uses: Math.floor(50+_rng.next()*2000),
       updatedAt: now, ...input,
     };
     await redis.set(DETAIL(id), SER(p));
@@ -89,12 +98,12 @@ export const PromptsService = {
     const deployed = p.versions[0];
     const start = Date.now();
     const total = p.testCases.length || 1;
-    const passed = total;
+    const passed = Math.max(0, total - Math.floor(_rng.next()*Math.min(2,total)));
     const run: PromptTestRun = {
       id: randomUUID(), versionId: deployed.id, model,
       startedAt: iso(), finishedAt: iso(),
       casesTotal: total, casesPassed: passed, casesFailed: total - passed,
-      avgLatencyMs: 420,
+      avgLatencyMs: 180 + Math.floor(_rng.next()*600),
       passPct: +((passed / total) * 100).toFixed(1),
     };
     p.testRuns.unshift(run);

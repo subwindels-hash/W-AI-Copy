@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiEdgeDeployment');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -374,7 +380,7 @@ function performDeployment(deployment: EdgeDeployment): void {
       if (!device) continue;
 
       // Simulate deployment
-      const success = Math.random() > 0.1; // 90% success rate
+      const success = _rng.next() > 0.1; // 90% success rate
 
       if (success) {
         const deployedModel: DeployedModel = {

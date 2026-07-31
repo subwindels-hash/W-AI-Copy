@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiSelfHealingWorkflows');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -262,8 +268,8 @@ export function executeHealthCheck(
   const now = new Date().toISOString();
   
   // Simulate health check execution
-  const successRate = 0.95 + Math.random() * 0.05; // 95-100%
-  const latency = 50 + Math.random() * 200; // 50-250ms
+  const successRate = 0.95 + _rng.next() * 0.05; // 95-100%
+  const latency = 50 + _rng.next() * 200; // 50-250ms
 
   let status: 'healthy' | 'degraded' | 'unhealthy' = 'healthy';
   if (successRate < healthCheck.threshold.healthy) {
@@ -366,7 +372,7 @@ function executeRecoveryStrategy(
 
   // Simulate recovery
   setTimeout(() => {
-    const success = Math.random() > 0.2; // 80% success rate
+    const success = _rng.next() > 0.2; // 80% success rate
     attempt.status = success ? 'completed' : 'failed';
     attempt.completedAt = new Date().toISOString();
     attempt.duration = new Date(attempt.completedAt).getTime() - new Date(attempt.startedAt).getTime();

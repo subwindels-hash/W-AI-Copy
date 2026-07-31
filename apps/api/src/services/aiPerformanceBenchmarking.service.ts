@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiPerformanceBenchmarking');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -357,7 +363,7 @@ function completeBenchmarkSuite(suite: BenchmarkSuite): void {
   const now = new Date().toISOString();
 
   const individualResults: BenchmarkResult[] = suite.benchmarks.map(benchmark => {
-    const latencies = Array(benchmark.configuration.iterations).fill(0).map(() => 50 + Math.random() * 30);
+    const latencies = Array(benchmark.configuration.iterations).fill(0).map(() => 50 + _rng.next() * 30);
     const latencyMetrics = calculateLatencyMetrics(latencies);
 
     return {
@@ -370,8 +376,8 @@ function completeBenchmarkSuite(suite: BenchmarkSuite): void {
         name: metric.name,
         value: metric.type === 'latency' ? latencyMetrics.mean :
                metric.type === 'throughput' ? 1000 / latencyMetrics.mean :
-               metric.type === 'accuracy' ? 0.85 + Math.random() * 0.1 :
-               Math.random() * 100,
+               metric.type === 'accuracy' ? 0.85 + _rng.next() * 0.1 :
+               _rng.next() * 100,
         target: metric.target,
         passed: true,
         percentile: { p50: latencyMetrics.median, p95: latencyMetrics.p95, p99: latencyMetrics.p99 },
@@ -391,10 +397,10 @@ function completeBenchmarkSuite(suite: BenchmarkSuite): void {
         },
       },
       resourceUsage: {
-        cpuUsage: 45 + Math.random() * 20,
-        memoryUsage: 60 + Math.random() * 20,
-        gpuUsage: 70 + Math.random() * 20,
-        gpuMemoryUsage: 65 + Math.random() * 20,
+        cpuUsage: 45 + _rng.next() * 20,
+        memoryUsage: 60 + _rng.next() * 20,
+        gpuUsage: 70 + _rng.next() * 20,
+        gpuMemoryUsage: 65 + _rng.next() * 20,
       },
       executionTime: benchmark.configuration.iterations * latencyMetrics.mean / 1000,
       environment: benchmark.configuration.environment,

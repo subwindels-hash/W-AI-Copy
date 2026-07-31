@@ -11,6 +11,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiObservabilityAnalytics');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -476,8 +482,8 @@ export async function getObservabilityAnalyticsStats(organizationId: string): Pr
     totalAnomalies: allAnomalies.length,
     openAnomalies: open.length,
     resolvedAnomalies: resolved.length,
-    averageMTTDMinutes: 5 + Math.round(Math.random() * 10),
-    averageMTTRMinutes: 30 + Math.round(Math.random() * 60),
+    averageMTTDMinutes: 5 + Math.round(_rng.next() * 10),
+    averageMTTRMinutes: 30 + Math.round(_rng.next() * 60),
     anomaliesByType: byType,
     anomaliesBySeverity: bySeverity,
     topAffectedServices: affectedServices,
@@ -504,8 +510,8 @@ export async function listDashboards(organizationId: string): Promise<Observabil
 // ─── Internal: Dashboard Generation ───────────────────────────────────────────
 
 function generateGoldenSignals(): GoldenSignals {
-  const p50Latency = 25 + Math.random() * 50;
-  const p99Latency = p50Latency * (3 + Math.random() * 2);
+  const p50Latency = 25 + _rng.next() * 50;
+  const p99Latency = p50Latency * (3 + _rng.next() * 2);
 
   return {
     latency: {
@@ -514,40 +520,40 @@ function generateGoldenSignals(): GoldenSignals {
       baselineValue: Math.round(p50Latency * 0.9 * 100) / 100,
       unit: "ms",
       status: p99Latency > 500 ? "critical" : p99Latency > 200 ? "warning" : "good",
-      trend: Math.random() > 0.6 ? "stable" : Math.random() > 0.5 ? "improving" : "degrading",
+      trend: _rng.next() > 0.6 ? "stable" : _rng.next() > 0.5 ? "improving" : "degrading",
       percentiles: { p50: Math.round(p50Latency * 100) / 100, p90: Math.round(p50Latency * 2 * 100) / 100, p95: Math.round(p50Latency * 2.5 * 100) / 100, p99: Math.round(p99Latency * 100) / 100 },
       breakdown: [{ label: "Inference", value: Math.round(p50Latency * 0.7) }, { label: "Preprocessing", value: Math.round(p50Latency * 0.15) }, { label: "Postprocessing", value: Math.round(p50Latency * 0.1) }, { label: "Queue", value: Math.round(p50Latency * 0.05) }],
       slaTarget: 200,
-      slaCompliance: Math.round((95 + Math.random() * 5) * 100) / 100,
+      slaCompliance: Math.round((95 + _rng.next() * 5) * 100) / 100,
     },
     traffic: {
       type: "traffic",
-      currentValue: Math.round((100 + Math.random() * 400) * 100) / 100,
-      baselineValue: Math.round((100 + Math.random() * 300) * 100) / 100,
+      currentValue: Math.round((100 + _rng.next() * 400) * 100) / 100,
+      baselineValue: Math.round((100 + _rng.next() * 300) * 100) / 100,
       unit: "req/s",
       status: "good",
-      trend: Math.random() > 0.5 ? "stable" : "improving",
-      breakdown: [{ label: "Real-time", value: Math.round(50 + Math.random() * 200) }, { label: "Batch", value: Math.round(20 + Math.random() * 100) }, { label: "Streaming", value: Math.round(10 + Math.random() * 50) }],
+      trend: _rng.next() > 0.5 ? "stable" : "improving",
+      breakdown: [{ label: "Real-time", value: Math.round(50 + _rng.next() * 200) }, { label: "Batch", value: Math.round(20 + _rng.next() * 100) }, { label: "Streaming", value: Math.round(10 + _rng.next() * 50) }],
     },
     errors: {
       type: "errors",
-      currentValue: Math.round(Math.random() * 5 * 100) / 100,
-      baselineValue: Math.round(Math.random() * 2 * 100) / 100,
+      currentValue: Math.round(_rng.next() * 5 * 100) / 100,
+      baselineValue: Math.round(_rng.next() * 2 * 100) / 100,
       unit: "%",
-      status: Math.random() > 0.7 ? "warning" : "good",
-      trend: Math.random() > 0.5 ? "stable" : "degrading",
-      breakdown: [{ label: "5xx", value: Math.round(Math.random() * 2 * 100) / 100 }, { label: "Timeout", value: Math.round(Math.random() * 1.5 * 100) / 100 }, { label: "Model Error", value: Math.round(Math.random() * 1 * 100) / 100 }],
+      status: _rng.next() > 0.7 ? "warning" : "good",
+      trend: _rng.next() > 0.5 ? "stable" : "degrading",
+      breakdown: [{ label: "5xx", value: Math.round(_rng.next() * 2 * 100) / 100 }, { label: "Timeout", value: Math.round(_rng.next() * 1.5 * 100) / 100 }, { label: "Model Error", value: Math.round(_rng.next() * 1 * 100) / 100 }],
       slaTarget: 1,
-      slaCompliance: Math.round((95 + Math.random() * 5) * 100) / 100,
+      slaCompliance: Math.round((95 + _rng.next() * 5) * 100) / 100,
     },
     saturation: {
       type: "saturation",
-      currentValue: Math.round((40 + Math.random() * 40) * 100) / 100,
-      baselineValue: Math.round((30 + Math.random() * 30) * 100) / 100,
+      currentValue: Math.round((40 + _rng.next() * 40) * 100) / 100,
+      baselineValue: Math.round((30 + _rng.next() * 30) * 100) / 100,
       unit: "%",
-      status: Math.random() > 0.8 ? "critical" : Math.random() > 0.5 ? "warning" : "good",
+      status: _rng.next() > 0.8 ? "critical" : _rng.next() > 0.5 ? "warning" : "good",
       trend: "stable",
-      breakdown: [{ label: "GPU", value: Math.round(50 + Math.random() * 40) }, { label: "Memory", value: Math.round(40 + Math.random() * 30) }, { label: "CPU", value: Math.round(30 + Math.random() * 30) }, { label: "Queue", value: Math.round(10 + Math.random() * 20) }],
+      breakdown: [{ label: "GPU", value: Math.round(50 + _rng.next() * 40) }, { label: "Memory", value: Math.round(40 + _rng.next() * 30) }, { label: "CPU", value: Math.round(30 + _rng.next() * 30) }, { label: "Queue", value: Math.round(10 + _rng.next() * 20) }],
     },
   };
 }
@@ -586,7 +592,7 @@ function generateMetricPanels(): MetricPanel[] {
   const generateData = (base: number, variance: number, count: number): MetricDataPoint[] =>
     Array.from({ length: count }, (_, i) => ({
       timestamp: new Date(now - (count - i) * 60000).toISOString(),
-      value: Math.round((base + (Math.random() - 0.5) * variance) * 100) / 100,
+      value: Math.round((base + (_rng.next() - 0.5) * variance) * 100) / 100,
     }));
 
   return [

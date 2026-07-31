@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiPredictiveInsights');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -192,7 +198,7 @@ export function generatePrediction(params: {
 
   const forecastDays = params.timeframe === '7d' ? 7 : params.timeframe === '30d' ? 30 : 90;
   const forecast: ForecastPoint[] = Array.from({ length: forecastDays }, (_, i) => {
-    const predictedValue = mean + trend * (n + i) + (Math.random() - 0.5) * std * 0.5;
+    const predictedValue = mean + trend * (n + i) + (_rng.next() - 0.5) * std * 0.5;
     const confidence = Math.max(0.5, 1 - (i / forecastDays) * 0.5);
     const margin = std * (1 + i * 0.1);
 

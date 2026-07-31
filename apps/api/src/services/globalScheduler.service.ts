@@ -16,6 +16,12 @@ import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
 import { pushEvent } from "../http/routes/events.js";
 import { z } from "zod";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:globalScheduler');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -89,7 +95,7 @@ export async function scheduleTask(
   organizationId: string,
   input: z.infer<typeof ScheduleTaskSchema>,
 ): Promise<ScheduledTask> {
-  const id = `job_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `job_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const now = Date.now();
   const scheduledAt = input.scheduleAt ?? now;
 

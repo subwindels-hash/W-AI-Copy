@@ -10,6 +10,14 @@ import {
   MarketplaceAsset, MktAssetKind, MktAssetStatus, MktLicenseModel,
   MarketplaceInstall, MarketplaceDashboard, DmDashboard, MKT_ASSET_KINDS, MKT_LICENSE_MODELS,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('dataMarketplace');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   a: (oid:string,id:string)=>`dmp:a:${oid}:${id}`,
@@ -20,9 +28,6 @@ const K = {
 };
 const s2 = (o:any)=>JSON.stringify(o);
 const uid = (p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return (min+max)/2;} // deterministic baseline
-function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
-
 const SEED: Array<{name:string;kind:MktAssetKind;publisher:string;desc:string;license:MktLicenseModel;price?:number;tags:string[];compliance:string[];rows?:number;sizeMb?:number}> = [
   {name:"Global Financial News Corpus",kind:"dataset",publisher:"WINDELS Data Co-op",desc:"30 years of curated financial news with entity tags.",license:"subscription",price:299,tags:["finance","news","nlp"],compliance:["gdpr"],rows:12_000_000,sizeMb:4200},
   {name:"Support Resolution RAG Pack",kind:"rag_collection",publisher:"WINDELS",desc:"Pre-chunked support tickets + resolutions for CS agents.",license:"subscription",price:99,tags:["support","rag","cs"],compliance:["soc2"],rows:420_000,sizeMb:820},
@@ -38,6 +43,7 @@ const SEED: Array<{name:string;kind:MktAssetKind;publisher:string;desc:string;li
 
 export const DataMarketplaceService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.as(oid))) return;
     const now = new Date().toISOString();
     for (const s of SEED) {

@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiStreamProcessing');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -259,8 +265,8 @@ export function ingestEvent(
     metadata: {
       eventId: randomUUID(),
       sequenceNumber: events.length,
-      partition: Math.floor(Math.random() * pipeline.config.parallelism),
-      processingTimeMs: Math.random() * 10,
+      partition: Math.floor(_rng.next() * pipeline.config.parallelism),
+      processingTimeMs: _rng.next() * 10,
       pipelineId,
       traceId: randomUUID(),
     },

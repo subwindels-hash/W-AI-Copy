@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiVendorAssessment');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -715,7 +721,7 @@ export async function createVendorComparison(
 
     const scores: CriterionScore[] = comparison.criteria.map((criterion) => {
       // In real implementation, this would be based on actual vendor data
-      const score = Math.random() * 100;
+      const score = _rng.next() * 100;
       return {
         criterionId: criterion.id,
         score,

@@ -7,6 +7,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { TARGET_ENVIRONMENTS, DeployStatus, DeploymentDashboard, DeploymentTarget, DeploymentValidation, DeploymentValidationCheck } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('deployment:deployment');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   t: (oid: string, id: string) => `dep:t:${oid}:${id}`,
@@ -62,6 +70,7 @@ export const DeploymentService = {
   },
 
   async create(input: { name: string; environment: DeploymentTarget["environment"]; region?: string; endpoint?: string; modules?: string[]; organizationId?: string; skipEmit?: boolean }): Promise<DeploymentTarget> {
+    _rng.reseed(`create`);
     const oid = input.organizationId || "org-windels";
     const id = uid("dt-"); const now = new Date().toISOString();
     const t: DeploymentTarget = {
@@ -69,7 +78,7 @@ export const DeploymentService = {
       endpoint: input.endpoint, version: LATEST_VERSION, status: "healthy",
       modules: input.modules || [], validationPassed: true,
       lastHealthCheckAt: now, lastHealthOk: true,
-      cpuPct: 32, memPct: 44, gpuPct: 28,
+      cpuPct: 20+Math.floor(_rng.next()*30), memPct: 30+Math.floor(_rng.next()*30), gpuPct: 10+Math.floor(_rng.next()*50),
       createdAt: now, updatedAt: now,
     };
     await redis.hset(K.t(oid,id), "_doc", s2(t));
@@ -80,6 +89,7 @@ export const DeploymentService = {
   },
 
   async validate(targetId: string, oid = "org-windels"): Promise<DeploymentValidation> {
+    _rng.reseed(`validate:${targetId}`);
     const start = Date.now();
     const checks: DeploymentValidationCheck[] = [];
     const specs: Array<{ category: DeploymentValidationCheck["category"]; label: string }> = [
@@ -93,8 +103,8 @@ export const DeploymentService = {
     ];
     for (const s of specs) {
       const c0 = Date.now();
-      await new Promise(r=>setTimeout(r, 10));
-      const passed = true;
+      await new Promise(r=>setTimeout(r, 5+_rng.next()*20));
+      const passed = _rng.next() > 0.05;
       checks.push({ id: uid("chk-"), category: s.category, label: s.label, passed, durationMs: Date.now()-c0, detail: passed ? undefined : "Simulated failure for drill" });
     }
     const passed = checks.every(c=>c.passed);
@@ -103,7 +113,7 @@ export const DeploymentService = {
       const t: DeploymentTarget = JSON.parse(tr._doc);
       t.validationPassed = passed; t.status = passed ? "healthy" : "degraded";
       t.lastHealthCheckAt = new Date().toISOString(); t.lastHealthOk = passed; t.updatedAt = new Date().toISOString();
-      t.cpuPct = 32; t.memPct = 44; t.gpuPct = 28;
+      t.cpuPct = 20+Math.floor(_rng.next()*30); t.memPct = 30+Math.floor(_rng.next()*30); t.gpuPct = 10+Math.floor(_rng.next()*50);
       await redis.hset(K.t(oid,targetId), "_doc", s2(t));
     }
     const v: DeploymentValidation = { targetId, ranAt: new Date().toISOString(), passed, checks, durationMs: Date.now()-start };

@@ -11,6 +11,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelSerialization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -822,7 +828,7 @@ export async function executeSerialization(jobId: string): Promise<Serialization
     stage: "complete",
     progressPercent: 100,
     currentOperation: "Serialization completed",
-    elapsedTimeMs: 15000 + Math.random() * 30000,
+    elapsedTimeMs: 15000 + _rng.next() * 30000,
     estimatedRemainingMs: 0,
     bytesProcessed: job.modelInfo.modelSizeMB * 1_000_000,
     totalBytes: job.modelInfo.modelSizeMB * 1_000_000,
@@ -885,8 +891,8 @@ export async function deserializeModel(params: {
     framework: params.targetFramework || manifest.model.framework,
     loadedSuccessfully: true,
     validationPassed: true,
-    loadTimeMs: 1000 + manifest.serialization.sizeMB * 2 + Math.random() * 2000,
-    memoryUsedMB: manifest.resources.minMemoryMB + Math.random() * 500,
+    loadTimeMs: 1000 + manifest.serialization.sizeMB * 2 + _rng.next() * 2000,
+    memoryUsedMB: manifest.resources.minMemoryMB + _rng.next() * 500,
   };
 }
 

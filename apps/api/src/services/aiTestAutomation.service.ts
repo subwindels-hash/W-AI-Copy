@@ -3,6 +3,12 @@
  * Phase 1 — AI test automation infrastructure
  */
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiTestAutomation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 export type TestAutomationStatus = "pending" | "running" | "completed" | "failed" | "cancelled";
 export type TestAutomationTrigger = "manual" | "schedule" | "webhook" | "ci-cd" | "event";
@@ -96,7 +102,7 @@ export async function executeTestAutomationJob(jobId: string): Promise<TestAutom
   // Simulate test execution
   await new Promise(resolve => setTimeout(resolve, 500));
   job.totalTests = 10;
-  job.passedTests = Math.floor(Math.random() * 10);
+  job.passedTests = Math.floor(_rng.next() * 10);
   job.failedTests = job.totalTests - job.passedTests;
   job.passRate = job.passedTests / job.totalTests;
   job.status = job.failedTests > 0 ? "failed" : "completed";
@@ -119,7 +125,7 @@ export async function generateTestData(params: any): Promise<TestDataGeneration>
     generatedData: Array.from({ length: params.config?.numSamples ?? 100 }, () => ({
       id: randomUUID(),
       timestamp: now,
-      value: Math.random() * 100,
+      value: _rng.next() * 100,
     })),
     generatedAt: now,
     createdBy: params.createdBy,

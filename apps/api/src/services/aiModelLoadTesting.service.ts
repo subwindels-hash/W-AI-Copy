@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelLoadTesting');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -492,15 +498,15 @@ function executeLoadTest(test: LoadTest): void {
     const currentUsers = Math.floor(concurrentUsers * rampUpProgress);
     
     // Generate response times (normal distribution)
-    const baseResponseTime = 100 + Math.random() * 50;
+    const baseResponseTime = 100 + _rng.next() * 50;
     const loadFactor = 1 + (currentUsers / concurrentUsers) * 0.5;
-    const responseTime = baseResponseTime * loadFactor + (Math.random() - 0.5) * 20;
+    const responseTime = baseResponseTime * loadFactor + (_rng.next() - 0.5) * 20;
     
     responseTimes.push(responseTime);
     
     // Generate requests
-    const requests = Math.floor(currentUsers * 2 + Math.random() * 10);
-    const errorCount = Math.floor(requests * 0.02 * Math.random());
+    const requests = Math.floor(currentUsers * 2 + _rng.next() * 10);
+    const errorCount = Math.floor(requests * 0.02 * _rng.next());
     const throughput = requests / (intervalMs / 1000);
     
     timeline.push({
@@ -516,7 +522,7 @@ function executeLoadTest(test: LoadTest): void {
     for (let j = 0; j < errorCount; j++) {
       errors.push({
         timestamp,
-        type: ['timeout', 'server_error', 'validation_error'][Math.floor(Math.random() * 3)],
+        type: ['timeout', 'server_error', 'validation_error'][Math.floor(_rng.next() * 3)],
         message: 'Simulated error',
       });
     }
@@ -666,7 +672,7 @@ function executeLoadTest(test: LoadTest): void {
       cpu: {
         usage: timeline.map((p, i) => ({
           timestamp: p.timestamp,
-          value: 30 + (p.concurrentUsers / concurrentUsers) * 50 + Math.random() * 10,
+          value: 30 + (p.concurrentUsers / concurrentUsers) * 50 + _rng.next() * 10,
         })),
         average: 55,
         peak: 85,
@@ -676,7 +682,7 @@ function executeLoadTest(test: LoadTest): void {
       memory: {
         usage: timeline.map((p, i) => ({
           timestamp: p.timestamp,
-          value: 40 + (p.concurrentUsers / concurrentUsers) * 30 + Math.random() * 5,
+          value: 40 + (p.concurrentUsers / concurrentUsers) * 30 + _rng.next() * 5,
         })),
         average: 55,
         peak: 75,
@@ -700,7 +706,7 @@ function executeLoadTest(test: LoadTest): void {
         writeOps: totalRequests / 2,
         ioWait: timeline.map(p => ({
           timestamp: p.timestamp,
-          value: Math.random() * 5,
+          value: _rng.next() * 5,
         })),
       },
     },

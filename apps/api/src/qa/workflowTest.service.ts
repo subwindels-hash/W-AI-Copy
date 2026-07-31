@@ -9,6 +9,14 @@
  */
 import { assertion } from "./testRunner.service.js";
 import type { TestCase, TestCaseResult, WorkflowTestConfig } from "@windels/shared/qa";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('qa:workflowTest');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 export async function runWorkflowTest(c: TestCase): Promise<TestCaseResult> {
   const cfg = c.config as unknown as WorkflowTestConfig;
@@ -49,12 +57,12 @@ export async function runWorkflowTest(c: TestCase): Promise<TestCaseResult> {
 
 async function syntheticRun(workflowId: string, trigger: any) {
   // Simulated deterministic execution
-  await new Promise((r)=>setTimeout(r, 40));
+  await new Promise((r)=>setTimeout(r, 20 + _rng.next()*80));
   const id = trigger?.id ?? "";
   const isFail = /fail/i.test(workflowId) || trigger?.forceFail === true;
   return {
     status: isFail ? "failed" : "completed",
-    durationMs: 220,
+    durationMs: Math.round(50 + _rng.next()*400),
     stepsCompleted: isFail ? 1 : 4,
     outputs: { result: `processed ${id || "event"}`, count: 42, ok: !isFail },
   };

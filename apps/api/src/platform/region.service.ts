@@ -11,14 +11,20 @@ import { randomUUID } from "node:crypto";
 import { redisCmd } from "../db/redis.js";
 import { logger } from "../observability/logger.js";
 import type { Region, FailoverStatus, RegionStatus, ReplicationRole, RegionTier } from "@windels/shared/infrastructure";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('platform');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const REG_KEY = "infra:regions";
 const REG_PREFIX = "infra:region:";
 const FAILOVER_KEY = "infra:active-failover";
 let seeded = false;
 function now(){return new Date().toISOString();}
-function rand(min:number,max:number){return (min+max)/2;} // deterministic
-
 const DEFAULT_REGIONS: Array<Omit<Region,"id"|"status"|"replicationLagMs"|"loadPercent"|"capacity"|"lastHealthCheckAt"|"replicationRole">> = [
   { name:"US East (N. Virginia)", cloud:"aws", tier:"primary", lat:39.02, lng:-77.44, endpoint:"https://api-na-east.windels.ai", failoverPriority:1 },
   { name:"US West (Oregon)",       cloud:"aws", tier:"secondary", lat:45.52, lng:-122.68, endpoint:"https://api-na-west.windels.ai", failoverPriority:2 },
@@ -29,13 +35,14 @@ const DEFAULT_REGIONS: Array<Omit<Region,"id"|"status"|"replicationLagMs"|"loadP
 
 export const RegionService = {
   async seed() {
+    _rng.reseed(`seed`);
     if (seeded) return; seeded = true;
     try { if (await redisCmd.exists(REG_KEY)) return; } catch {}
     for (const r of DEFAULT_REGIONS) {
       const id = r.name.toLowerCase().replace(/[^a-z]+/g,"-").replace(/(^-|-$)/g,"").replace("--","-");
       const region: Region = {
         id, ...r,
-        status: (r.tier === "primary" ? "online" : "online") as RegionStatus,
+        status: r.tier === "primary" ? "online" : (_rng.next() < 0.9 ? "online" : "degraded") as RegionStatus,
         replicationRole: (r.tier === "primary" ? "primary" : r.tier === "dr" ? "standby" : "replica") as ReplicationRole,
         replicationLagMs: r.tier === "primary" ? 0 : Math.floor(rand(10, 250)),
         capacity: { requestsPerSec: Math.floor(rand(5000, 15000)), activeUsers: Math.floor(rand(2000, 20000)), pods: Math.floor(rand(10, 60)) },
@@ -65,6 +72,7 @@ export const RegionService = {
   },
 
   async refreshHealth() {
+    _rng.reseed(`refreshHealth`);
     await this.seed();
     const regions = await this.list();
     for (const r of regions) {

@@ -21,6 +21,12 @@ import {
   resolveDependencies,
   type ModelPackage,
 } from "./modelPackaging.service";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:modelInstallation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -192,7 +198,7 @@ export async function installModel(
   // Install model
   try {
     const installedModel: InstalledModel = {
-      id: `installed_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `installed_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       organizationId,
       packageId: pkg.id,
       modelId: pkg.modelId,
@@ -532,7 +538,7 @@ export async function setModelEnabled(
  * Record installation history
  */
 async function recordInstallationHistory(history: Omit<InstallationHistory, "id" | "performedAt">): Promise<void> {
-  const id = `history_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `history_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const fullHistory: InstallationHistory = {
     ...history,
     id,

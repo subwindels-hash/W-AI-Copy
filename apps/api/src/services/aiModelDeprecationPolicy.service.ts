@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelDeprecationPolicy');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -256,13 +262,13 @@ function analyzeClientImpact(
   modelVersion: string
 ): ClientImpactAnalysis {
   // Simulate client impact analysis
-  const totalClients = Math.floor(Math.random() * 50) + 10;
-  const affectedClients = Math.floor(totalClients * (0.3 + Math.random() * 0.5));
+  const totalClients = Math.floor(_rng.next() * 50) + 10;
+  const affectedClients = Math.floor(totalClients * (0.3 + _rng.next() * 0.5));
   const highImpactClients = Math.floor(affectedClients * 0.2);
   
   const clientBreakdown: ClientImpact[] = [];
   for (let i = 0; i < affectedClients; i++) {
-    const usageCount = Math.floor(Math.random() * 10000);
+    const usageCount = Math.floor(_rng.next() * 10000);
     const impactLevel = usageCount > 5000 ? 'high' : usageCount > 1000 ? 'medium' : 'low';
     const migrationStatuses: Array<'not_started' | 'in_progress' | 'completed' | 'blocked'> = [
       'not_started', 'in_progress', 'completed', 'blocked'
@@ -272,10 +278,10 @@ function analyzeClientImpact(
       clientId: `client_${randomUUID()}`,
       clientName: `Client ${i + 1}`,
       usageCount,
-      lastUsedAt: new Date(Date.now() - Math.random() * 30 * 24 * 60 * 60 * 1000).toISOString(),
+      lastUsedAt: new Date(Date.now() - _rng.next() * 30 * 24 * 60 * 60 * 1000).toISOString(),
       impactLevel,
-      migrationStatus: migrationStatuses[Math.floor(Math.random() * migrationStatuses.length)],
-      contactPerson: Math.random() > 0.5 ? `contact${i}@example.com` : undefined,
+      migrationStatus: migrationStatuses[Math.floor(_rng.next() * migrationStatuses.length)],
+      contactPerson: _rng.next() > 0.5 ? `contact${i}@example.com` : undefined,
     });
   }
   

@@ -115,7 +115,7 @@ export function registerSSERoutes(router: Router) {
   ensureEventBusSubscription();
 
   // SSE stream endpoint
-  router.get("/events/stream", (req: Request, res: Response) => {
+  router.get("/stream", (req: Request, res: Response) => {
     const user = req.user;
     if (!user) {
       return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
@@ -169,7 +169,7 @@ export function registerSSERoutes(router: Router) {
   });
 
   // Health endpoint for monitoring
-  router.get("/events/health", (_req: Request, res: Response) => {
+  router.get("/health", (_req: Request, res: Response) => {
     res.json({
       ok: true,
       data: {

@@ -9,6 +9,12 @@
  */
 
 import { randomUUID, createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:twinSimulationEngine');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -664,7 +670,7 @@ function executeWhatIfSimulation(run: SimulationRun): SimulationResults {
       change: Math.round(change * 100) / 100,
       changePercent: Math.round(changePct * 100) / 100,
       unit: run.parameters.find(p => p.name === target)?.unit ?? "units",
-      confidence: 0.7 + Math.random() * 0.25,
+      confidence: 0.7 + _rng.next() * 0.25,
       percentile5: Math.round(simulatedValue * 0.85 * 100) / 100,
       percentile25: Math.round(simulatedValue * 0.93 * 100) / 100,
       percentile50: Math.round(simulatedValue * 100) / 100,
@@ -700,7 +706,7 @@ function executeWhatIfSimulation(run: SimulationRun): SimulationResults {
         const time = new Date(new Date(run.scenario.timeHorizon.startAt).getTime() + t * (new Date(run.scenario.timeHorizon.endAt).getTime() - new Date(run.scenario.timeHorizon.startAt).getTime()));
         timestamps.push(time.toISOString());
         
-        const value = startValue + (endValue - startValue) * t + (Math.random() - 0.5) * startValue * 0.05;
+        const value = startValue + (endValue - startValue) * t + (_rng.next() - 0.5) * startValue * 0.05;
         values.push(Math.round(value * 100) / 100);
         lower.push(Math.round(value * 0.9 * 100) / 100);
         upper.push(Math.round(value * 1.1 * 100) / 100);
@@ -721,10 +727,10 @@ function executeWhatIfSimulation(run: SimulationRun): SimulationResults {
     .filter(p => p.sensitivity !== "low")
     .map((p, i) => ({
       parameter: p.name,
-      correlation: Math.round((Math.random() * 2 - 1) * 100) / 100,
-      impactScore: Math.round((1 - i * 0.1) * Math.random() * 100) / 100,
+      correlation: Math.round((_rng.next() * 2 - 1) * 100) / 100,
+      impactScore: Math.round((1 - i * 0.1) * _rng.next() * 100) / 100,
       rank: i + 1,
-      direction: (Math.random() > 0.5 ? "positive" : "negative") as "positive" | "negative",
+      direction: (_rng.next() > 0.5 ? "positive" : "negative") as "positive" | "negative",
       explanation: `${p.name} has a ${p.sensitivity} impact on simulation outcomes`,
     }))
     .sort((a, b) => b.impactScore - a.impactScore);
@@ -757,8 +763,8 @@ function executeWhatIfSimulation(run: SimulationRun): SimulationResults {
     metadata: {
       totalIterations: run.config.maxIterations,
       convergenceAchieved: true,
-      computeTimeMs: 100 + Math.floor(Math.random() * 5000),
-      memoryUsageMb: 50 + Math.floor(Math.random() * 200),
+      computeTimeMs: 100 + Math.floor(_rng.next() * 5000),
+      memoryUsageMb: 50 + Math.floor(_rng.next() * 200),
     },
   };
 }
@@ -846,7 +852,7 @@ function executeMonteCarloSimulation(run: SimulationRun): SimulationResults {
     metadata: {
       totalIterations: numSamples,
       convergenceAchieved: true,
-      computeTimeMs: numSamples * 2 + Math.floor(Math.random() * 10000),
+      computeTimeMs: numSamples * 2 + Math.floor(_rng.next() * 10000),
       memoryUsageMb: 100 + Math.floor(numSamples / 1000),
     },
   };
@@ -864,7 +870,7 @@ function executeStressTestSimulation(run: SimulationRun): SimulationResults {
     
     for (let i = 0; i < stressLevels.length; i++) {
       const level = stressLevels[i];
-      const stressImpact = level > 1 ? -((level - 1) * 0.3 + Math.random() * 0.1) : 0;
+      const stressImpact = level > 1 ? -((level - 1) * 0.3 + _rng.next() * 0.1) : 0;
       const value = baselineValue * (1 + stressImpact);
       
       snapshots.push({
@@ -908,8 +914,8 @@ function executeStressTestSimulation(run: SimulationRun): SimulationResults {
     metadata: {
       totalIterations: stressLevels.length,
       convergenceAchieved: true,
-      computeTimeMs: 3000 + Math.floor(Math.random() * 5000),
-      memoryUsageMb: 80 + Math.floor(Math.random() * 100),
+      computeTimeMs: 3000 + Math.floor(_rng.next() * 5000),
+      memoryUsageMb: 80 + Math.floor(_rng.next() * 100),
     },
   };
 }
@@ -921,7 +927,7 @@ function executeOptimizationSimulation(run: SimulationRun): SimulationResults {
   const isMaximize = run.config.optimization?.objective === "maximize";
 
   // Simulate optimization finding a better value
-  const improvementFactor = isMaximize ? 1.15 + Math.random() * 0.2 : 0.7 + Math.random() * 0.15;
+  const improvementFactor = isMaximize ? 1.15 + _rng.next() * 0.2 : 0.7 + _rng.next() * 0.15;
   const optimizedValue = baselineValue * improvementFactor;
 
   metrics[target] = {
@@ -938,7 +944,7 @@ function executeOptimizationSimulation(run: SimulationRun): SimulationResults {
   const optimalParams = run.parameters.map(p => ({
     ...p,
     currentValue: typeof p.defaultValue === "number"
-      ? Math.round((p.defaultValue as number) * (1 + (Math.random() - 0.3) * 0.5) * 100) / 100
+      ? Math.round((p.defaultValue as number) * (1 + (_rng.next() - 0.3) * 0.5) * 100) / 100
       : p.defaultValue,
   }));
 
@@ -962,18 +968,18 @@ function executeOptimizationSimulation(run: SimulationRun): SimulationResults {
     distributions: [],
     sensitivity: optimalParams.map((p, i) => ({
       parameter: p.name,
-      correlation: Math.round((Math.random() * 2 - 1) * 100) / 100,
+      correlation: Math.round((_rng.next() * 2 - 1) * 100) / 100,
       impactScore: Math.round((1 - i * 0.15) * 100) / 100,
       rank: i + 1,
-      direction: (Math.random() > 0.5 ? "positive" : "negative") as "positive" | "negative",
+      direction: (_rng.next() > 0.5 ? "positive" : "negative") as "positive" | "negative",
       explanation: `${p.name} optimized to ${p.currentValue}`,
     })),
     snapshots: [],
     metadata: {
       totalIterations: run.config.optimization?.maxGenerations ?? 100,
       convergenceAchieved: true,
-      computeTimeMs: 5000 + Math.floor(Math.random() * 10000),
-      memoryUsageMb: 150 + Math.floor(Math.random() * 200),
+      computeTimeMs: 5000 + Math.floor(_rng.next() * 10000),
+      memoryUsageMb: 150 + Math.floor(_rng.next() * 200),
     },
   };
 }
@@ -1045,8 +1051,8 @@ function executeFailureModeSimulation(run: SimulationRun): SimulationResults {
     metadata: {
       totalIterations: failureModes.length,
       convergenceAchieved: true,
-      computeTimeMs: 2000 + Math.floor(Math.random() * 3000),
-      memoryUsageMb: 60 + Math.floor(Math.random() * 80),
+      computeTimeMs: 2000 + Math.floor(_rng.next() * 3000),
+      memoryUsageMb: 60 + Math.floor(_rng.next() * 80),
     },
   };
 }
@@ -1096,7 +1102,7 @@ function calculateImpactFactor(parameters: SimulationParameter[]): number {
       impact += change * weight;
     }
   }
-  return impact + (Math.random() - 0.5) * 0.1;
+  return impact + (_rng.next() - 0.5) * 0.1;
 }
 
 function calculateMonteCarloImpact(parameters: SimulationParameter[], samplingMethod: string): number {
@@ -1106,7 +1112,7 @@ function calculateMonteCarloImpact(parameters: SimulationParameter[], samplingMe
       const sample = sampleDistribution(param.constraints.distribution, param.constraints.distributionParams ?? {});
       impact += sample * (param.sensitivity === "critical" ? 0.4 : param.sensitivity === "high" ? 0.3 : 0.1);
     } else if (typeof param.currentValue === "number") {
-      const noise = (Math.random() - 0.5) * 0.2 * (param.currentValue as number);
+      const noise = (_rng.next() - 0.5) * 0.2 * (param.currentValue as number);
       impact += noise / Math.max(1, Math.abs(param.currentValue as number)) * 0.1;
     }
   }
@@ -1118,21 +1124,21 @@ function sampleDistribution(type: DistributionType, params: Record<string, numbe
     case "uniform": {
       const min = params.min ?? 0;
       const max = params.max ?? 1;
-      return min + Math.random() * (max - min);
+      return min + _rng.next() * (max - min);
     }
     case "normal": {
       const mean = params.mean ?? 0;
       const stddev = params.stddev ?? 1;
       // Box-Muller transform
-      const u1 = Math.random();
-      const u2 = Math.random();
+      const u1 = _rng.next();
+      const u2 = _rng.next();
       return mean + stddev * Math.sqrt(-2 * Math.log(u1)) * Math.cos(2 * Math.PI * u2);
     }
     case "exponential": {
       const lambda = params.lambda ?? 1;
-      return -Math.log(1 - Math.random()) / lambda;
+      return -Math.log(1 - _rng.next()) / lambda;
     }
     default:
-      return Math.random();
+      return _rng.next();
   }
 }

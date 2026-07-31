@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:conceptDriftDetection');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -530,7 +536,7 @@ async function executeDriftDetection(jobId: string): Promise<void> {
     driftJobs.set(jobId, job);
 
     // Simulate drift detection
-    const detectionTimeMs = 5000 + Math.random() * 10000;
+    const detectionTimeMs = 5000 + _rng.next() * 10000;
     await new Promise(resolve => setTimeout(resolve, Math.min(detectionTimeMs, 100)));
 
     // Generate results
@@ -578,19 +584,19 @@ function generateDriftResult(job: DriftDetectionJob): DriftDetectionResult {
   const featureDrift: FeatureDriftResult[] = [];
   for (let i = 0; i < numFeatures; i++) {
     const featureName = config.featureColumns?.[i] ?? `feature_${i}`;
-    const driftScore = Math.random();
+    const driftScore = _rng.next();
     const severity = getSeverityFromScore(driftScore, config.thresholds);
 
     featureDrift.push({
       featureName,
-      featureType: Math.random() > 0.5 ? "numeric" : "categorical",
+      featureType: _rng.next() > 0.5 ? "numeric" : "categorical",
       driftScore,
       severity,
       detectionResults: config.detectionMethods.map(method => ({
         method,
-        score: driftScore + (Math.random() - 0.5) * 0.1,
-        pValue: Math.random(),
-        statistic: Math.random(),
+        score: driftScore + (_rng.next() - 0.5) * 0.1,
+        pValue: _rng.next(),
+        statistic: _rng.next(),
         passed: driftScore < config.thresholds.medium,
       })),
       distributionComparison: generateDistributionComparison(featureName),
@@ -600,7 +606,7 @@ function generateDriftResult(job: DriftDetectionJob): DriftDetectionResult {
   // Generate prediction drift if applicable
   let predictionDrift: PredictionDriftResult | undefined;
   if (config.driftType === "prediction" || config.driftType === "concept") {
-    const predDriftScore = Math.random() * 0.5;
+    const predDriftScore = _rng.next() * 0.5;
     predictionDrift = {
       driftScore: predDriftScore,
       severity: getSeverityFromScore(predDriftScore, config.thresholds),
@@ -609,7 +615,7 @@ function generateDriftResult(job: DriftDetectionJob): DriftDetectionResult {
         current: generatePredictionDistribution(),
       },
       statisticalTests: [
-        { test: "kolmogorov_smirnov", statistic: Math.random(), pValue: Math.random(), passed: predDriftScore < 0.2 },
+        { test: "kolmogorov_smirnov", statistic: _rng.next(), pValue: _rng.next(), passed: predDriftScore < 0.2 },
       ],
     };
   }
@@ -617,7 +623,7 @@ function generateDriftResult(job: DriftDetectionJob): DriftDetectionResult {
   // Generate label drift if applicable
   let labelDrift: LabelDriftResult | undefined;
   if (config.driftType === "label" || config.driftType === "concept") {
-    const labelDriftScore = Math.random() * 0.3;
+    const labelDriftScore = _rng.next() * 0.3;
     labelDrift = {
       driftScore: labelDriftScore,
       severity: getSeverityFromScore(labelDriftScore, config.thresholds),
@@ -626,7 +632,7 @@ function generateDriftResult(job: DriftDetectionJob): DriftDetectionResult {
         current: { class_0: 0.55, class_1: 0.45 },
       },
       statisticalTests: [
-        { test: "chi_square", statistic: Math.random(), pValue: Math.random(), passed: labelDriftScore < 0.2 },
+        { test: "chi_square", statistic: _rng.next(), pValue: _rng.next(), passed: labelDriftScore < 0.2 },
       ],
     };
   }
@@ -662,7 +668,7 @@ function generateDriftResult(job: DriftDetectionJob): DriftDetectionResult {
     featuresWithDrift,
     featuresBySeverity,
     mostDriftedFeatures,
-    driftTrend: Math.random() > 0.5 ? "increasing" : Math.random() > 0.5 ? "decreasing" : "stable",
+    driftTrend: _rng.next() > 0.5 ? "increasing" : _rng.next() > 0.5 ? "decreasing" : "stable",
   };
 
   // Generate recommendations
@@ -692,52 +698,52 @@ function generateDistributionComparison(featureName: string): FeatureDriftResult
   return {
     referenceStats: {
       count: 10000,
-      mean: Math.random() * 100,
-      std: Math.random() * 20,
-      min: Math.random() * 10,
-      max: 100 + Math.random() * 50,
-      median: Math.random() * 100,
-      q1: Math.random() * 50,
-      q3: 50 + Math.random() * 50,
-      missing: Math.floor(Math.random() * 100),
-      missingPercentage: Math.random() * 5,
+      mean: _rng.next() * 100,
+      std: _rng.next() * 20,
+      min: _rng.next() * 10,
+      max: 100 + _rng.next() * 50,
+      median: _rng.next() * 100,
+      q1: _rng.next() * 50,
+      q3: 50 + _rng.next() * 50,
+      missing: Math.floor(_rng.next() * 100),
+      missingPercentage: _rng.next() * 5,
     },
     currentStats: {
       count: 5000,
-      mean: Math.random() * 100,
-      std: Math.random() * 20,
-      min: Math.random() * 10,
-      max: 100 + Math.random() * 50,
-      median: Math.random() * 100,
-      q1: Math.random() * 50,
-      q3: 50 + Math.random() * 50,
-      missing: Math.floor(Math.random() * 100),
-      missingPercentage: Math.random() * 5,
+      mean: _rng.next() * 100,
+      std: _rng.next() * 20,
+      min: _rng.next() * 10,
+      max: 100 + _rng.next() * 50,
+      median: _rng.next() * 100,
+      q1: _rng.next() * 50,
+      q3: 50 + _rng.next() * 50,
+      missing: Math.floor(_rng.next() * 100),
+      missingPercentage: _rng.next() * 5,
     },
     statisticalTests: [
-      { test: "kolmogorov_smirnov", statistic: Math.random(), pValue: Math.random(), passed: Math.random() > 0.3 },
-      { test: "wasserstein", statistic: Math.random(), pValue: Math.random(), passed: Math.random() > 0.3 },
+      { test: "kolmogorov_smirnov", statistic: _rng.next(), pValue: _rng.next(), passed: _rng.next() > 0.3 },
+      { test: "wasserstein", statistic: _rng.next(), pValue: _rng.next(), passed: _rng.next() > 0.3 },
     ],
   };
 }
 
 function generatePredictionDistribution(): PredictionDistribution {
   return {
-    mean: Math.random(),
-    std: Math.random() * 0.2,
+    mean: _rng.next(),
+    std: _rng.next() * 0.2,
     min: 0,
     max: 1,
     histogram: Array.from({ length: 10 }, (_, i) => ({
       bin: `${(i * 0.1).toFixed(1)}-${((i + 1) * 0.1).toFixed(1)}`,
-      count: Math.floor(Math.random() * 1000),
-      percentage: Math.random() * 20,
+      count: Math.floor(_rng.next() * 1000),
+      percentage: _rng.next() * 20,
     })),
     percentiles: {
-      p5: Math.random() * 0.2,
-      p25: 0.2 + Math.random() * 0.2,
-      p50: 0.4 + Math.random() * 0.2,
-      p75: 0.6 + Math.random() * 0.2,
-      p95: 0.8 + Math.random() * 0.2,
+      p5: _rng.next() * 0.2,
+      p25: 0.2 + _rng.next() * 0.2,
+      p50: 0.4 + _rng.next() * 0.2,
+      p75: 0.6 + _rng.next() * 0.2,
+      p95: 0.8 + _rng.next() * 0.2,
     },
   };
 }

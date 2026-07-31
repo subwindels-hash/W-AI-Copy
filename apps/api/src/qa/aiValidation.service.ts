@@ -11,6 +11,14 @@
 import { assertion } from "./testRunner.service.js";
 import { prisma } from "../db/client.js";
 import type { TestCase, TestCaseResult, AiValidationConfig } from "@windels/shared/qa";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('qa:aiValidation');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const PII_PATTERNS: Array<[string, RegExp]> = [
   ["email", /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi],
@@ -39,7 +47,7 @@ function fakeCompletion(prompt: string): { text: string; latencyMs: number } {
   else text += "the answer is 42. If you need further assistance please ask.";
   // Make it a bit longer
   text += " This is a synthetic response for QA.";
-  return { text, latencyMs: Math.round(performance.now() - t0 + 30) };
+  return { text, latencyMs: Math.round(performance.now() - t0 + 20 + _rng.next()*80) };
 }
 
 export async function runAiValidation(c: TestCase): Promise<TestCaseResult> {

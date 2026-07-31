@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiPolicyCompliance');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -351,7 +357,7 @@ export async function runComplianceCheck(params: {
 
   // Simulate compliance check
   for (const rule of policy.rules.filter(r => r.enabled)) {
-    const violation = Math.random() > 0.8; // 20% chance of violation
+    const violation = _rng.next() > 0.8; // 20% chance of violation
     if (violation) {
       violations.push({
         id: `violation_${randomUUID().slice(0, 8)}`,

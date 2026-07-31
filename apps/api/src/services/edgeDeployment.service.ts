@@ -23,6 +23,12 @@ import {
   getModelPackage,
   type ModelPackage,
 } from "../modelPackaging.service";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:edgeDeployment');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -141,7 +147,7 @@ export async function deployModelToEdge(input: {
     throw new Error(`Node resource validation failed: ${resourceErrors.join(", ")}`);
   }
 
-  const deploymentId = `edge_deploy_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const deploymentId = `edge_deploy_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const now = new Date().toISOString();
 
   const deployment: EdgeDeployment = {
@@ -586,7 +592,7 @@ async function updateNodeResourcesAfterDeployment(
  * Record deployment history
  */
 async function recordDeploymentHistory(history: Omit<EdgeDeploymentHistory, "id" | "performedAt">): Promise<void> {
-  const id = `edge_deploy_history_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `edge_deploy_history_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const fullHistory: EdgeDeploymentHistory = {
     ...history,
     id,

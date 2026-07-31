@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiHyperparameterOptimization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -161,19 +167,19 @@ const hpoStudies = new Map<string, HPOStudy>();
 function sampleParameter(param: HyperparameterDefinition): any {
   switch (param.type) {
     case 'int':
-      return Math.floor(Math.random() * ((param.max || 100) - (param.min || 0) + 1)) + (param.min || 0);
+      return Math.floor(_rng.next() * ((param.max || 100) - (param.min || 0) + 1)) + (param.min || 0);
     case 'float':
       if (param.log) {
         const logMin = Math.log(param.min || 0.001);
         const logMax = Math.log(param.max || 1);
-        return Math.exp(Math.random() * (logMax - logMin) + logMin);
+        return Math.exp(_rng.next() * (logMax - logMin) + logMin);
       }
-      return Math.random() * ((param.max || 1) - (param.min || 0)) + (param.min || 0);
+      return _rng.next() * ((param.max || 1) - (param.min || 0)) + (param.min || 0);
     case 'categorical':
       const values = param.values || [];
-      return values[Math.floor(Math.random() * values.length)];
+      return values[Math.floor(_rng.next() * values.length)];
     case 'boolean':
-      return Math.random() > 0.5;
+      return _rng.next() > 0.5;
     default:
       return param.default;
   }
@@ -273,7 +279,7 @@ function runOptimization(study: HPOStudy): void {
     const startTime = Date.now();
 
     // Simulate trial execution
-    const primaryMetric = Math.random() * 0.3 + 0.7; // 0.7-1.0
+    const primaryMetric = _rng.next() * 0.3 + 0.7; // 0.7-1.0
     trial.metrics = {
       primaryMetric,
       secondaryMetrics: {
@@ -281,7 +287,7 @@ function runOptimization(study: HPOStudy): void {
         accuracy: primaryMetric,
       },
       trainMetrics: {
-        accuracy: primaryMetric + Math.random() * 0.05,
+        accuracy: primaryMetric + _rng.next() * 0.05,
       },
       validationMetrics: {
         accuracy: primaryMetric,
@@ -410,7 +416,7 @@ export function getParameterImportance(studyId: string): ParameterImportance[] {
   // Simplified parameter importance calculation
   const importances = study.searchSpace.parameters.map(param => ({
     parameter: param.name,
-    importance: Math.random(),
+    importance: _rng.next(),
     rank: 0,
   }));
 
@@ -545,7 +551,7 @@ export function visualizeSearchSpace(studyId: string): {
   study.searchSpace.parameters.forEach(param1 => {
     correlations[param1.name] = {};
     study.searchSpace.parameters.forEach(param2 => {
-      correlations[param1.name][param2.name] = Math.random() * 2 - 1; // -1 to 1
+      correlations[param1.name][param2.name] = _rng.next() * 2 - 1; // -1 to 1
     });
   });
 

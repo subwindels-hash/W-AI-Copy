@@ -9,6 +9,14 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd } from "../db/redis.js";
 import type { IaCStack, IaCRun, IaCStatus } from "@windels/shared/infrastructure";
+import { makeRng } from "../utils/detRng.js";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('platform:iac');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const STACKS_KEY = "infra:iac:stacks";
 const STACK_PREFIX = "infra:iac:stack:";
@@ -31,6 +39,7 @@ const DEFAULT_STACKS: Array<Omit<IaCStack,"id"|"status"|"driftDetected"|"updated
 
 export const IaCService = {
   async seed() {
+    _rng.reseed(`seed`);
     if (seeded) return; seeded = true;
     try {
       const existing = await redisCmd.exists(STACKS_KEY);
@@ -39,8 +48,8 @@ export const IaCService = {
     for (const d of DEFAULT_STACKS) {
       const stack: IaCStack = {
         id: randomUUID(), ...d,
-        resources: 48,
-        status: "applied", driftDetected: false, updatedAt: now(),
+        resources: Math.floor(20 + _rng.next() * 80),
+        status: "applied", driftDetected: _rng.next() < 0.15, updatedAt: now(),
       };
       await redisCmd.set(sk(stack.id), JSON.stringify(stack));
       await redisCmd.sadd(STACKS_KEY, stack.id);
@@ -59,12 +68,13 @@ export const IaCService = {
   },
 
   async run(stackId: string, kind: "plan" | "apply", triggeredBy: string): Promise<IaCRun> {
+    _rng.reseed(`run:${stackId}`);
     const stack = await this.get(stackId); if (!stack) throw new Error("stack not found");
     const id = randomUUID();
     const run: IaCRun = {
       id, stackId, kind, triggeredBy, status: "succeeded",
       summary: kind === "plan"
-        ? { add: 1, change: 2, destroy: 0 }
+        ? { add: Math.floor(_rng.next()*3), change: Math.floor(_rng.next()*5), destroy: Math.floor(_rng.next()*2) }
         : { add: 0, change: 0, destroy: 0 },
       startedAt: now(), finishedAt: now(), logRef: `runs/${id}.log`,
     };

@@ -9,6 +9,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:explanationVisualization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -619,8 +625,8 @@ function generateFeatureImportanceData(config: VisualizationConfig): Visualizati
   const topN = config.featureImportance?.topN ?? 20;
   const features = Array.from({ length: topN }, (_, i) => ({
     name: `feature_${i}`,
-    importance: Math.random(),
-    stdDev: Math.random() * 0.1,
+    importance: _rng.next(),
+    stdDev: _rng.next() * 0.1,
     rank: i + 1,
   })).sort((a, b) => b.importance - a.importance);
 
@@ -641,8 +647,8 @@ function generateSHAPSummaryData(config: VisualizationConfig): VisualizationData
 
   const features = Array.from({ length: maxDisplay }, (_, i) => ({
     name: `feature_${i}`,
-    values: Array.from({ length: numSamples }, () => Math.random()),
-    shapValues: Array.from({ length: numSamples }, () => (Math.random() - 0.5) * 2),
+    values: Array.from({ length: numSamples }, () => _rng.next()),
+    shapValues: Array.from({ length: numSamples }, () => (_rng.next() - 0.5) * 2),
   }));
 
   return {
@@ -657,8 +663,8 @@ function generateSHAPForceData(config: VisualizationConfig): VisualizationData {
 
   const features = Array.from({ length: numFeatures }, (_, i) => ({
     name: `feature_${i}`,
-    value: Math.random(),
-    shapValue: (Math.random() - 0.5) * 0.5,
+    value: _rng.next(),
+    shapValue: (_rng.next() - 0.5) * 0.5,
   }));
 
   return {
@@ -674,8 +680,8 @@ function generateSHAPDependenceData(config: VisualizationConfig): VisualizationD
   const numPoints = 100;
   const featureName = config.shapDependence?.featureName ?? "feature_0";
 
-  const featureValues = Array.from({ length: numPoints }, () => Math.random());
-  const shapValues = featureValues.map(v => Math.sin(v * Math.PI) + (Math.random() - 0.5) * 0.3);
+  const featureValues = Array.from({ length: numPoints }, () => _rng.next());
+  const shapValues = featureValues.map(v => Math.sin(v * Math.PI) + (_rng.next() - 0.5) * 0.3);
 
   const data: VisualizationData = {
     type: "shap_dependence",
@@ -688,7 +694,7 @@ function generateSHAPDependenceData(config: VisualizationConfig): VisualizationD
 
   if (config.shapDependence?.interactionFeature) {
     data.shapDependence!.interactionFeature = config.shapDependence.interactionFeature;
-    data.shapDependence!.interactionValues = Array.from({ length: numPoints }, () => Math.random());
+    data.shapDependence!.interactionValues = Array.from({ length: numPoints }, () => _rng.next());
   }
 
   return data;
@@ -699,7 +705,7 @@ function generatePartialDependenceData(config: VisualizationConfig): Visualizati
   const featureName = config.partialDependence?.featureName ?? "feature_0";
 
   const featureValues = Array.from({ length: numPoints }, (_, i) => i / (numPoints - 1));
-  const pdpValues = featureValues.map(v => Math.sin(v * Math.PI * 2) + Math.random() * 0.1);
+  const pdpValues = featureValues.map(v => Math.sin(v * Math.PI * 2) + _rng.next() * 0.1);
 
   const data: VisualizationData = {
     type: "partial_dependence",
@@ -713,7 +719,7 @@ function generatePartialDependenceData(config: VisualizationConfig): Visualizati
   if (config.partialDependence?.showICE) {
     const numICE = 10;
     data.partialDependence!.iceLines = Array.from({ length: numICE }, () =>
-      pdpValues.map(v => v + (Math.random() - 0.5) * 0.3)
+      pdpValues.map(v => v + (_rng.next() - 0.5) * 0.3)
     );
   }
 
@@ -733,28 +739,28 @@ function generateCounterfactualData(config: VisualizationConfig): VisualizationD
 
   const originalFeatures = Array.from({ length: numFeatures }, (_, i) => ({
     name: `feature_${i}`,
-    value: Math.random(),
+    value: _rng.next(),
   }));
 
   const counterfactuals = Array.from({ length: numCounterfactuals }, (_, idx) => {
     const features = originalFeatures.map(f => ({
       ...f,
-      changed: Math.random() > 0.7,
+      changed: _rng.next() > 0.7,
     }));
 
     // Change some features
     features.forEach(f => {
       if (f.changed) {
-        f.value = Math.random();
+        f.value = _rng.next();
       }
     });
 
     return {
       id: `cf_${idx}`,
       features,
-      prediction: Math.random(),
-      proximity: 0.7 + Math.random() * 0.3,
-      sparsity: 0.5 + Math.random() * 0.5,
+      prediction: _rng.next(),
+      proximity: 0.7 + _rng.next() * 0.3,
+      sparsity: 0.5 + _rng.next() * 0.5,
     };
   });
 
@@ -763,7 +769,7 @@ function generateCounterfactualData(config: VisualizationConfig): VisualizationD
     counterfactual: {
       original: {
         features: originalFeatures,
-        prediction: Math.random(),
+        prediction: _rng.next(),
       },
       counterfactuals,
     },

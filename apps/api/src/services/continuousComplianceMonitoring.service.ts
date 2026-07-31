@@ -20,6 +20,12 @@ import {
   listFrameworks,
   type ComplianceStatus,
 } from "./complianceFramework.service";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:continuousComplianceMonitoring');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -161,7 +167,7 @@ export async function monitorFramework(
   // Check for drift
   if (driftDetected) {
     violations.push({
-      id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       frameworkId,
       controlId: "N/A",
       controlCode: "N/A",
@@ -178,7 +184,7 @@ export async function monitorFramework(
   // Check for score drop
   if (scoreChange < 0) {
     violations.push({
-      id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       frameworkId,
       controlId: "N/A",
       controlCode: "N/A",
@@ -195,7 +201,7 @@ export async function monitorFramework(
   // Check for new gaps
   if (newGaps > 0) {
     violations.push({
-      id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       frameworkId,
       controlId: "N/A",
       controlCode: "N/A",
@@ -212,7 +218,7 @@ export async function monitorFramework(
   // Check for critical gaps
   if (currentStatus.criticalGaps > 0) {
     violations.push({
-      id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       frameworkId,
       controlId: "N/A",
       controlCode: "N/A",

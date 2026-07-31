@@ -22,6 +22,12 @@ import {
   type ComplianceGap,
   type ComplianceEvidence,
 } from "./complianceFramework.service";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:automatedComplianceScanning');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -209,7 +215,7 @@ export async function getComplianceRules(): Promise<ComplianceRule[]> {
  * Add custom compliance rule
  */
 export async function addComplianceRule(rule: Omit<ComplianceRule, "id">): Promise<ComplianceRule> {
-  const id = `rule_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `rule_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const fullRule: ComplianceRule = { ...rule, id };
 
   await redisCmd.set(RULE_KEY(id), JSON.stringify(fullRule));
@@ -264,7 +270,7 @@ export async function runComplianceScan(
   organizationId: string,
   scanType: ComplianceScanType = "full",
 ): Promise<ComplianceScan> {
-  const scanId = `scan_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const scanId = `scan_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const startedAt = new Date().toISOString();
 
   const scan: ComplianceScan = {
@@ -352,7 +358,7 @@ export async function runComplianceScan(
 
         scan.failedChecks++;
         scan.violations.push({
-          id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+          id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
           scanId,
           violationType: "rule_execution_error",
           severity: "medium",
@@ -505,7 +511,7 @@ async function checkAccessControls(
 
   if (usersWithoutRoles > 0) {
     violations.push({
-      id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       scanId,
       frameworkId: rule.frameworkId,
       controlId: rule.controlId,
@@ -538,7 +544,7 @@ async function checkAuditLogging(
 
   if (auditLogCount === 0) {
     violations.push({
-      id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       scanId,
       frameworkId: rule.frameworkId,
       controlId: rule.controlId,
@@ -573,7 +579,7 @@ async function checkDataRetention(
 
   if (Object.keys(retention).length === 0) {
     violations.push({
-      id: `violation_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
+      id: `violation_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`,
       scanId,
       frameworkId: rule.frameworkId,
       controlId: rule.controlId,

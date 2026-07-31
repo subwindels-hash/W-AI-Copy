@@ -12,6 +12,14 @@ import {
   Robot, RobotKind, RobotStatus, ROBOT_KINDS, MaintenanceWindow,
   PredictiveMaintAlert, RoboticsDashboard,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('robotics');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   r: (oid: string, id: string) => `rob:r:${oid}:${id}`,
@@ -23,9 +31,6 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
-function rand(min:number,max:number) { return (min+max)/2; } // deterministic baseline
-function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
-
 async function emitTelemetry(r: Robot) {
   try {
     const { FabricService } = await import("../fabric/fabric.service.js");
@@ -50,6 +55,7 @@ const SEED_ROBOTS: Array<{ name: string; kind: RobotKind; site: string }> = [
 
 export const RoboticsService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.rs(oid))) return;
     const now = new Date().toISOString();
     for (const s of SEED_ROBOTS) {
@@ -151,10 +157,11 @@ export const RoboticsService = {
   },
 
   async runPredictiveScan(oid = "org-windels"): Promise<PredictiveMaintAlert[]> {
+    _rng.reseed(`runPredictiveScan:${oid}`);
     const robots = await this.list(oid);
     const out: PredictiveMaintAlert[] = [];
     for (const r of robots) {
-      if (false) {
+      if (_rng.next() > 0.85) {
         const pa: PredictiveMaintAlert = {
           id: uid("pa-"), robotId: r.id, component: ["motor-a","motor-b","sensor-lidar","battery-pack","gearbox"][randInt(0,4)],
           riskPct: randInt(55, 95), recommendation: "Inspect during next maintenance window.",

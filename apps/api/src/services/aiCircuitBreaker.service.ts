@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiCircuitBreaker');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -570,14 +576,14 @@ function calculateRetryDelay(policy: RetryPolicy, attempt: number): number {
       break;
     }
     case "decorrelated-jitter":
-      delay = Math.min(policy.maxDelayMs, policy.baseDelayMs * Math.pow(2, attempt) + Math.random() * policy.baseDelayMs);
+      delay = Math.min(policy.maxDelayMs, policy.baseDelayMs * Math.pow(2, attempt) + _rng.next() * policy.baseDelayMs);
       break;
     default:
       delay = policy.baseDelayMs * Math.pow(2, attempt);
   }
 
   // Apply jitter
-  const jitter = delay * policy.jitterFactor * (Math.random() * 2 - 1);
+  const jitter = delay * policy.jitterFactor * (_rng.next() * 2 - 1);
   return Math.min(policy.maxDelayMs, Math.max(0, delay + jitter));
 }
 

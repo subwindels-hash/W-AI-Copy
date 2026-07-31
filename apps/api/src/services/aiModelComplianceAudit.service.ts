@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelComplianceAudit');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -658,7 +664,7 @@ export function runComplianceCheck(monitoringId: string): ComplianceAlert[] {
 
   // Simulate compliance checks
   for (const check of monitoring.checks) {
-    const passed = Math.random() > 0.1; // 90% pass rate
+    const passed = _rng.next() > 0.1; // 90% pass rate
 
     check.lastCheck = now;
     check.lastResult = passed ? 'pass' : 'fail';

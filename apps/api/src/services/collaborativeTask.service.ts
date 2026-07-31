@@ -20,6 +20,12 @@ import { logger } from "../config/logger.js";
 import { AppError } from "../utils/result.js";
 import { pushEvent } from "../http/routes/events.js";
 import { z } from "zod";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:collaborativeTask');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ──────────────────────────────────────────────────────
 
@@ -119,7 +125,7 @@ export async function createCollaborativeTask(
   creatorId: string,
   input: z.infer<typeof CreateCollaborativeTaskSchema>,
 ): Promise<CollaborativeTask> {
-  const id = `collab_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+  const id = `collab_${Date.now()}_${_rng.next().toString(36).slice(2, 8)}`;
   const now = Date.now();
 
   // Create subtasks

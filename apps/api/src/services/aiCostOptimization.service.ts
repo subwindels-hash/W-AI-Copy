@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiCostOptimization');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -265,7 +271,7 @@ export async function getCostOptimizationStats(organizationId: string): Promise<
     topCategories: categories,
     topWasteTypes: wasteTypes,
     averageSavingsPercent: all.length > 0 ? Math.round(totalSavingsPercent / all.length * 100) / 100 : 0,
-    forecastAccuracy: 85 + Math.round(Math.random() * 10),
+    forecastAccuracy: 85 + Math.round(_rng.next() * 10),
   };
 }
 
@@ -303,7 +309,7 @@ function generateRecommendations(costs: Array<{ modelId: string; modelName: stri
 
     // Caching recommendation
     if (model.usage.inferenceCount > 10000) {
-      const cacheHitRate = 0.2 + Math.random() * 0.3;
+      const cacheHitRate = 0.2 + _rng.next() * 0.3;
       const savings = model.monthlyCost * cacheHitRate * 0.8;
       recs.push({
         id: `rec_${randomUUID().replace(/-/g, "").slice(0, 12)}`,
@@ -428,7 +434,7 @@ function detectWaste(costs: Array<{ modelId: string; modelName: string; monthlyC
         resourceType: "model-deployment",
         monthlyCost: model.monthlyCost,
         utilizationPercent: model.utilization.gpuPercent,
-        idleSinceDays: Math.floor(Math.random() * 30),
+        idleSinceDays: Math.floor(_rng.next() * 30),
         recommendedAction: "Scale down GPU allocation or switch to smaller instance type",
         potentialSavings: Math.round(model.monthlyCost * (1 - model.utilization.gpuPercent / 80) * 100) / 100,
         priority: model.monthlyCost > 500 ? "high" : "medium",
@@ -445,7 +451,7 @@ function detectWaste(costs: Array<{ modelId: string; modelName: string; monthlyC
         resourceType: "model-deployment",
         monthlyCost: model.monthlyCost,
         utilizationPercent: Math.max(model.utilization.cpuPercent, model.utilization.gpuPercent),
-        idleSinceDays: Math.floor(5 + Math.random() * 25),
+        idleSinceDays: Math.floor(5 + _rng.next() * 25),
         recommendedAction: "Consider decommissioning or consolidating with other models",
         potentialSavings: Math.round(model.monthlyCost * 0.9 * 100) / 100,
         priority: "critical",
@@ -464,16 +470,16 @@ function generatePricingComparisons(costs: Array<{ modelId: string; modelName: s
     const outputPricePerToken = model.monthlyCost * 0.7 / Math.max(model.usage.outputTokens, 1);
 
     const alternatives = providers.filter(p => p !== model.provider).slice(0, 4).map(p => {
-      const factor = 0.5 + Math.random() * 1.0;
+      const factor = 0.5 + _rng.next() * 1.0;
       return {
         provider: p,
         inputTokenPrice: Math.round(inputPricePerToken * factor * 1000000) / 1000000,
         outputTokenPrice: Math.round(outputPricePerToken * factor * 1000000) / 1000000,
         monthlyEstimatedCost: Math.round(model.monthlyCost * factor * 100) / 100,
-        latencyMs: Math.round(20 + Math.random() * 80),
-        qualityScore: Math.round((0.7 + Math.random() * 0.25) * 100) / 100,
+        latencyMs: Math.round(20 + _rng.next() * 80),
+        qualityScore: Math.round((0.7 + _rng.next() * 0.25) * 100) / 100,
         sla: "99.9%",
-        features: ["streaming", "function-calling", "fine-tuning"].slice(0, 1 + Math.floor(Math.random() * 3)),
+        features: ["streaming", "function-calling", "fine-tuning"].slice(0, 1 + Math.floor(_rng.next() * 3)),
       };
     });
 
@@ -488,8 +494,8 @@ function generatePricingComparisons(costs: Array<{ modelId: string; modelName: s
         inputTokenPrice: Math.round(inputPricePerToken * 1000000) / 1000000,
         outputTokenPrice: Math.round(outputPricePerToken * 1000000) / 1000000,
         monthlyEstimatedCost: model.monthlyCost,
-        latencyMs: Math.round(20 + Math.random() * 60),
-        qualityScore: Math.round((0.8 + Math.random() * 0.15) * 100) / 100,
+        latencyMs: Math.round(20 + _rng.next() * 60),
+        qualityScore: Math.round((0.8 + _rng.next() * 0.15) * 100) / 100,
         sla: "99.9%",
         features: ["streaming", "function-calling", "fine-tuning"],
       },
@@ -504,7 +510,7 @@ function generatePricingComparisons(costs: Array<{ modelId: string; modelName: s
 }
 
 function generateForecast(costs: Array<{ modelId: string; monthlyCost: number }>, totalCurrentCost: number): CostForecast {
-  const growthRate = 5 + Math.random() * 15;
+  const growthRate = 5 + _rng.next() * 15;
   const periods = 6;
   const forecastedCosts: CostForecast["forecastedCosts"] = [];
 
@@ -528,8 +534,8 @@ function generateForecast(costs: Array<{ modelId: string; monthlyCost: number }>
     currentMonthlyCost: Math.round(totalCurrentCost * 100) / 100,
     forecastedCosts,
     growthRate: Math.round(growthRate * 100) / 100,
-    confidenceScore: 0.75 + Math.random() * 0.2,
-    costDrivers: topModels.map(m => ({ factor: m.modelId, contributionPercent: Math.round((m.monthlyCost / totalCurrentCost) * 10000) / 100, trend: Math.random() > 0.5 ? "increasing" : "stable" })),
+    confidenceScore: 0.75 + _rng.next() * 0.2,
+    costDrivers: topModels.map(m => ({ factor: m.modelId, contributionPercent: Math.round((m.monthlyCost / totalCurrentCost) * 10000) / 100, trend: _rng.next() > 0.5 ? "increasing" : "stable" })),
     budgetProjection: {
       monthsUntilExceeded: Math.round(12 / (1 + growthRate / 100)),
       recommendedBudget: Math.round(totalCurrentCost * 1.3 * 100) / 100,

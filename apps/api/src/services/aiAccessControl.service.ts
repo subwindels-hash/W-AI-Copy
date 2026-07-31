@@ -11,6 +11,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiAccessControl');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -317,7 +323,7 @@ export async function maskPII(params: {
     const regex = new RegExp(pattern.regex, "gi");
     let match;
     while ((match = regex.exec(params.content)) !== null) {
-      const confidence = 0.7 + Math.random() * 0.25;
+      const confidence = 0.7 + _rng.next() * 0.25;
       if (confidence >= piiConfig.confidenceThreshold) {
         const rule = maskingRules.find(r => r.piiCategories.includes(pattern.category) && r.enabled);
         const strategy = rule?.strategy ?? "redact";

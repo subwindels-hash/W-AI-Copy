@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiExperimentSharing');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -543,9 +549,9 @@ export function verifyReproducibility(experimentId: string): ReproducibilityStat
   const experiment = sharedExperiments.get(experimentId);
   if (!experiment) throw new Error(`Shared experiment ${experimentId} not found`);
 
-  const envMatch = 0.85 + Math.random() * 0.15;
-  const depMatch = 0.8 + Math.random() * 0.2;
-  const dataMatch = 0.9 + Math.random() * 0.1;
+  const envMatch = 0.85 + _rng.next() * 0.15;
+  const depMatch = 0.8 + _rng.next() * 0.2;
+  const dataMatch = 0.9 + _rng.next() * 0.1;
   const overallScore = (envMatch + depMatch + dataMatch) / 3;
 
   const issues: ReproducibilityIssue[] = [];

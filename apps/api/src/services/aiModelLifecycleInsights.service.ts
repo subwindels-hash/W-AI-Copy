@@ -7,6 +7,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelLifecycleInsights');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -482,7 +488,7 @@ export function analyzeTrends(
 
   for (let i = daysBack; i >= 0; i--) {
     const timestamp = new Date(now - i * 24 * 60 * 60 * 1000).toISOString();
-    const baseValue = 50 + Math.sin(i / 5) * 10 + Math.random() * 5;
+    const baseValue = 50 + Math.sin(i / 5) * 10 + _rng.next() * 5;
     dataPoints.push({
       timestamp,
       value: baseValue,

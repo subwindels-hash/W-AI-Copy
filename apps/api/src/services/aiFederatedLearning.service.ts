@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiFederatedLearning');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -217,7 +223,7 @@ function calculateConvergence(
   return {
     globalLossReduction: previousMetrics.loss - currentMetrics.loss,
     accuracyImprovement: currentMetrics.accuracy - previousMetrics.accuracy,
-    participantVariance: Math.random() * 0.1, // Simplified
+    participantVariance: _rng.next() * 0.1, // Simplified
     convergenceRate: (currentMetrics.accuracy - previousMetrics.accuracy) / previousMetrics.loss,
   };
 }

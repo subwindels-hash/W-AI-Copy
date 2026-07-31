@@ -10,6 +10,12 @@
  */
 
 import { randomUUID } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiDebuggingTools');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -273,27 +279,27 @@ const debugReplays = new Map<string, DebugSessionReplay>();
 // ─── Helper Functions ─────────────────────────────────────────────────────────
 
 function generateTensorStatistics(): TensorStatistics {
-  const mean = (Math.random() - 0.5) * 2;
-  const std = Math.random() * 0.5 + 0.1;
+  const mean = (_rng.next() - 0.5) * 2;
+  const std = _rng.next() * 0.5 + 0.1;
   return {
     min: mean - std * 3,
     max: mean + std * 3,
     mean,
-    median: mean + (Math.random() - 0.5) * 0.1,
+    median: mean + (_rng.next() - 0.5) * 0.1,
     std,
     variance: std * std,
-    sparsity: Math.random() * 0.3,
-    normL1: Math.abs(mean) * 100 + Math.random() * 50,
+    sparsity: _rng.next() * 0.3,
+    normL1: Math.abs(mean) * 100 + _rng.next() * 50,
     normL2: Math.sqrt(mean * mean * 100 + std * std * 100),
     normInf: Math.abs(mean) + std * 3,
-    skewness: (Math.random() - 0.5) * 0.5,
-    kurtosis: 3 + (Math.random() - 0.5) * 2,
+    skewness: (_rng.next() - 0.5) * 0.5,
+    kurtosis: 3 + (_rng.next() - 0.5) * 2,
     percentile25: mean - std * 0.67,
     percentile75: mean + std * 0.67,
     percentile95: mean + std * 1.64,
     percentile99: mean + std * 2.33,
-    nanCount: Math.random() < 0.05 ? Math.floor(Math.random() * 10) : 0,
-    infCount: Math.random() < 0.02 ? Math.floor(Math.random() * 3) : 0,
+    nanCount: _rng.next() < 0.05 ? Math.floor(_rng.next() * 10) : 0,
+    infCount: _rng.next() < 0.02 ? Math.floor(_rng.next() * 3) : 0,
   };
 }
 
@@ -337,7 +343,7 @@ function computeGradientHealthScore(status: GradientHealthStatus): number {
     exploding: 20,
     "dead-neurons": 15,
   };
-  return scores[status] + Math.floor(Math.random() * 10 - 5);
+  return scores[status] + Math.floor(_rng.next() * 10 - 5);
 }
 
 // ─── Debug Session Management ─────────────────────────────────────────────────
@@ -478,8 +484,8 @@ export async function stepDebugSession(sessionId: string): Promise<ExecutionStep
     operationType: operationTypes[layerIndex],
     inputShape: [[1, 128, inputDim]],
     outputShape: [1, 128, outputDim],
-    executionTimeMs: Math.random() * 50 + 1,
-    memoryUsedBytes: Math.floor(Math.random() * 100000000) + 10000000,
+    executionTimeMs: _rng.next() * 50 + 1,
+    memoryUsedBytes: Math.floor(_rng.next() * 100000000) + 10000000,
     tensorStats: stats,
     breakpointHit,
     breakpointId: breakpointHit
@@ -510,7 +516,7 @@ export async function stepDebugSession(sessionId: string): Promise<ExecutionStep
           histogram: generateHistogramBins(stats),
           topValues: Array.from({ length: 5 }, (_, i) => ({
             value: stats.max - i * 0.1,
-            index: [0, Math.floor(Math.random() * 128), Math.floor(Math.random() * outputDim)],
+            index: [0, Math.floor(_rng.next() * 128), Math.floor(_rng.next() * outputDim)],
           })),
           capturedAt: now,
         },
@@ -624,7 +630,7 @@ export async function captureTensorSnapshot(watchId: string): Promise<TensorSnap
     histogram: generateHistogramBins(stats),
     topValues: Array.from({ length: 5 }, (_, i) => ({
       value: stats.max - i * (stats.std * 0.5),
-      index: [0, Math.floor(Math.random() * 128), Math.floor(Math.random() * 512)],
+      index: [0, Math.floor(_rng.next() * 128), Math.floor(_rng.next() * 512)],
     })),
     capturedAt: now,
   };
@@ -683,7 +689,7 @@ export async function compareTensors(watchId1: string, watchId2: string): Promis
     Math.abs(latest1.statistics.max - latest2.statistics.max),
     Math.abs(latest1.statistics.min - latest2.statistics.min)
   );
-  const cosineDistance = Math.random() * 0.5;
+  const cosineDistance = _rng.next() * 0.5;
   const similarity = 1 - cosineDistance;
   const distributionSimilarity = Math.max(0, 1 - meanDiff / (latest1.statistics.std + latest2.statistics.std + 0.001));
   let conclusion = "Tensors are similar";
@@ -737,10 +743,10 @@ export async function recordGradient(monitorId: string, stepNumber: number): Pro
     stepNumber,
     layerName: monitor.layerName,
     statistics: stats,
-    globalNorm: Math.abs(stats.mean) * 10 + Math.random() * 5,
-    layerNorm: Math.abs(stats.mean) * 8 + Math.random() * 3,
-    clippedNorm: Math.random() < 0.3 ? Math.abs(stats.mean) * 5 : null,
-    ratioToPreviousLayer: prevNorm ? (Math.abs(stats.mean) * 10 + Math.random() * 5) / prevNorm : null,
+    globalNorm: Math.abs(stats.mean) * 10 + _rng.next() * 5,
+    layerNorm: Math.abs(stats.mean) * 8 + _rng.next() * 3,
+    clippedNorm: _rng.next() < 0.3 ? Math.abs(stats.mean) * 5 : null,
+    ratioToPreviousLayer: prevNorm ? (Math.abs(stats.mean) * 10 + _rng.next() * 5) / prevNorm : null,
     capturedAt: now,
   };
   monitor.gradientHistory.push(snapshot);
@@ -799,9 +805,9 @@ export async function analyzeActivationPatterns(sessionId: string): Promise<Acti
     "feed_forward_2", "output_projection",
   ];
   const patterns: ActivationPattern[] = layerNames.map((layerName, idx) => {
-    const activationRate = Math.random() * 0.8 + 0.1;
-    const deadNeuronRatio = Math.random() * 0.15;
-    const saturatedNeuronRatio = Math.random() * 0.1;
+    const activationRate = _rng.next() * 0.8 + 0.1;
+    const deadNeuronRatio = _rng.next() * 0.15;
+    const saturatedNeuronRatio = _rng.next() * 0.1;
     let patternType: ActivationPattern["patternType"] = "normal";
     if (deadNeuronRatio > 0.1) patternType = "dead";
     else if (saturatedNeuronRatio > 0.08) patternType = "saturated";
@@ -816,14 +822,14 @@ export async function analyzeActivationPatterns(sessionId: string): Promise<Acti
       activationRate,
       deadNeuronRatio,
       saturatedNeuronRatio,
-      meanActivation: Math.random() * 0.5,
+      meanActivation: _rng.next() * 0.5,
       visualizationData: {
         type: "heatmap",
         dimensions: { width: 128, height: 64 },
         dataPoints: Array.from({ length: 50 }, () => ({
-          x: Math.random() * 128,
-          y: Math.random() * 64,
-          value: Math.random(),
+          x: _rng.next() * 128,
+          y: _rng.next() * 64,
+          value: _rng.next(),
           label: undefined,
         })),
         colorScale: { min: "#0000ff", max: "#ff0000", midpoint: "#00ff00" },
@@ -847,9 +853,9 @@ export async function runPerturbationTest(sessionId: string, params: {
   if (!session) throw new Error(`Debug session ${sessionId} not found`);
   const now = new Date().toISOString();
   const numOutputs = 10;
-  const originalOutput = Array.from({ length: numOutputs }, () => Math.random());
-  const sensitivity = params.magnitude * (Math.random() * 2 + 0.5);
-  const perturbedOutput = originalOutput.map((v) => v + (Math.random() - 0.5) * sensitivity);
+  const originalOutput = Array.from({ length: numOutputs }, () => _rng.next());
+  const sensitivity = params.magnitude * (_rng.next() * 2 + 0.5);
+  const perturbedOutput = originalOutput.map((v) => v + (_rng.next() - 0.5) * sensitivity);
   const outputDifference = Math.sqrt(
     originalOutput.reduce((acc, v, i) => acc + (v - perturbedOutput[i]) ** 2, 0) / numOutputs
   );

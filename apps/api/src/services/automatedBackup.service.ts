@@ -20,6 +20,12 @@ import { promisify } from "util";
 import { createHash } from "crypto";
 import { writeFileSync, readFileSync, existsSync, mkdirSync, statSync } from "fs";
 import { join } from "path";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:automatedBackup');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 const execAsync = promisify(exec);
 
@@ -132,7 +138,7 @@ export async function createBackup(input: {
   parentBackupId?: string;
   metadata?: Record<string, any>;
 }): Promise<Backup> {
-  const backupId = `backup_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const backupId = `backup_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const startTime = new Date();
 
   logger.info("Starting backup", {
@@ -377,7 +383,7 @@ export async function createBackupSchedule(input: {
   storageRegion: string;
   enabled?: boolean;
 }): Promise<BackupSchedule> {
-  const scheduleId = `schedule_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+  const scheduleId = `schedule_${Date.now()}_${_rng.next().toString(36).slice(2, 10)}`;
   const now = new Date();
 
   // Calculate next run time from cron expression

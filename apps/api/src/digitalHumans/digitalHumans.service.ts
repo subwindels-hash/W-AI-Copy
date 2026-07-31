@@ -10,6 +10,14 @@ import {
   DigitalHuman, DigitalHumanSession, DigitalHumanDashboard, AvatarRole,
   AvatarStyle, AvatarStatus, AVATAR_ROLES, AVATAR_STYLES, AVATAR_STATUSES,
 } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable per (module, seed) so dashboard
+// reads return the same numbers within a running process.
+const _rng = makeRng('digitalHumans');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
+
 
 const K = {
   h: (oid:string,id:string)=>`dh:h:${oid}:${id}`,
@@ -19,9 +27,6 @@ const K = {
 };
 const s2=(o:any)=>JSON.stringify(o);
 const uid=(p:string)=>p+randomUUID().slice(0,8);
-function rand(min:number,max:number){return (min+max)/2;} // deterministic baseline
-function randInt(min:number,max:number){return Math.floor(rand(min,max+1));}
-
 const SEED: Array<{name:string;role:AvatarRole;style:AvatarStyle;gender:DigitalHuman["gender"];langs:string[];voiceSeed:string}> = [
   {name:"Aria — Virtual Receptionist",role:"virtual_receptionist",style:"corporate",gender:"feminine",langs:["en","es","fr","zh"],voiceSeed:"vf-"},
   {name:"Prof. Nova — AI Teacher",role:"ai_teacher",style:"photoreal",gender:"feminine",langs:["en","de"],voiceSeed:"vf-"},
@@ -33,6 +38,7 @@ const SEED: Array<{name:string;role:AvatarRole;style:AvatarStyle;gender:DigitalH
 
 export const DigitalHumanService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
+    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.hs(oid))) return;
     const now = new Date().toISOString();
     for (const s of SEED){
@@ -124,6 +130,7 @@ export const DigitalHumanService = {
   },
 
   async endSession(sid:string, oid="org-windels", resolution?:DigitalHumanSession["resolution"], rating?:number): Promise<DigitalHumanSession|null>{
+    _rng.reseed(`endSession:${sid}`);
     const r=await redis.hgetall(K.s(oid,sid)); if(!r._doc) return null;
     const s:DigitalHumanSession = JSON.parse(r._doc);
     s.endedAt = new Date().toISOString(); s.resolution=resolution||"resolved"; s.satisfactionRating=rating;

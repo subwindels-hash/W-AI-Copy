@@ -8,6 +8,12 @@
  */
 
 import { randomUUID } from 'crypto';
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:aiModelDriftMonitoring');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -724,7 +730,7 @@ export async function analyzeDriftCorrelations(
       variables.push({
         name: feature.featureName,
         type: 'feature',
-        values: Array.from({ length: 20 }, () => Math.random()),
+        values: Array.from({ length: 20 }, () => _rng.next()),
       });
     }
 
@@ -732,7 +738,7 @@ export async function analyzeDriftCorrelations(
     for (let i = 0; i < variables.length; i++) {
       correlationMatrix[i] = [];
       for (let j = 0; j < variables.length; j++) {
-        correlationMatrix[i][j] = i === j ? 1 : Math.random() * 2 - 1;
+        correlationMatrix[i][j] = i === j ? 1 : _rng.next() * 2 - 1;
       }
     }
 

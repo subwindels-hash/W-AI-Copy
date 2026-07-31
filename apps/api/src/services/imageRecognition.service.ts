@@ -8,6 +8,12 @@
  */
 
 import { randomUUID, createHash } from "node:crypto";
+import { makeRng } from "../utils/detRng.js";
+// Deterministic demo RNG — stable within a running process.
+const _rng = makeRng('services:imageRecognition');
+function rand(min: number, max: number) { return _rng.rand(min, max); }
+function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -514,8 +520,8 @@ export async function recognizeFaces(
   const results: Array<{ face: DetectedFace; person?: FacePerson; confidence: number }> = [];
   for (const face of faces) {
     // Simulate matching
-    const match = Math.random() > 0.3 ? collection.persons[Math.floor(Math.random() * collection.persons.length)] : undefined;
-    const confidence = match ? 0.7 + Math.random() * 0.3 : 0;
+    const match = _rng.next() > 0.3 ? collection.persons[Math.floor(_rng.next() * collection.persons.length)] : undefined;
+    const confidence = match ? 0.7 + _rng.next() * 0.3 : 0;
 
     if (confidence >= minConfidence && match) {
       results.push({ face, person: match, confidence });
@@ -606,7 +612,7 @@ async function processImageAnalysis(jobId: string): Promise<void> {
   const startTime = Date.now();
 
   // Simulate image analysis
-  const processingTimeMs = 500 + Math.floor(Math.random() * 2000);
+  const processingTimeMs = 500 + Math.floor(_rng.next() * 2000);
 
   // Generate simulated results based on analysis types
   const result: ImageAnalysisResult = {
@@ -616,9 +622,9 @@ async function processImageAnalysis(jobId: string): Promise<void> {
       format: "jpeg",
       fileSizeBytes: 245760,
       dominantColors: generateDominantColors(),
-      qualityScore: 0.85 + Math.random() * 0.15,
+      qualityScore: 0.85 + _rng.next() * 0.15,
       isNsfw: false,
-      hasText: Math.random() > 0.5,
+      hasText: _rng.next() > 0.5,
     },
     objects: job.analysisTypes.includes("object-detection") || job.analysisTypes.includes("full-analysis")
       ? generateDetectedObjects(job.config.objectDetection?.maxObjects ?? 10)
@@ -654,7 +660,7 @@ async function processImageAnalysis(jobId: string): Promise<void> {
   job.processingTimeMs = Date.now() - startTime;
   job.completedAt = now;
   job.cost = {
-    amount: Math.round((0.001 + Math.random() * 0.005) * 1000) / 1000,
+    amount: Math.round((0.001 + _rng.next() * 0.005) * 1000) / 1000,
     currency: "USD",
     unit: "image",
   };
@@ -680,9 +686,9 @@ function generateDominantColors(): ColorInfo[] {
     { hex: "#2ECC71", rgb: { r: 46, g: 204, b: 113 }, name: "Emerald" },
   ];
 
-  return colors.slice(0, 3 + Math.floor(Math.random() * 2)).map((c, i) => ({
+  return colors.slice(0, 3 + Math.floor(_rng.next() * 2)).map((c, i) => ({
     ...c,
-    percentage: i === 0 ? 40 + Math.random() * 20 : 10 + Math.random() * 15,
+    percentage: i === 0 ? 40 + _rng.next() * 20 : 10 + _rng.next() * 15,
     isDominant: i === 0,
   }));
 }
@@ -693,19 +699,19 @@ function generateDetectedObjects(maxObjects: number): DetectedObject[] {
     "bottle", "cup", "keyboard", "monitor", "plant", "window", "door"
   ];
 
-  const count = Math.min(maxObjects, 3 + Math.floor(Math.random() * 8));
+  const count = Math.min(maxObjects, 3 + Math.floor(_rng.next() * 8));
   const objects: DetectedObject[] = [];
 
   for (let i = 0; i < count; i++) {
     objects.push({
       id: `obj_${randomUUID().slice(0, 8)}`,
-      label: objectTypes[Math.floor(Math.random() * objectTypes.length)],
-      confidence: 0.6 + Math.random() * 0.4,
+      label: objectTypes[Math.floor(_rng.next() * objectTypes.length)],
+      confidence: 0.6 + _rng.next() * 0.4,
       boundingBox: {
-        x: Math.random() * 0.7,
-        y: Math.random() * 0.7,
-        width: 0.1 + Math.random() * 0.3,
-        height: 0.1 + Math.random() * 0.3,
+        x: _rng.next() * 0.7,
+        y: _rng.next() * 0.7,
+        width: 0.1 + _rng.next() * 0.3,
+        height: 0.1 + _rng.next() * 0.3,
         normalized: true,
       },
     });
@@ -730,7 +736,7 @@ function generateImageLabels(topK: number): ImageLabel[] {
 
   return labelTypes.slice(0, topK).map(l => ({
     ...l,
-    confidence: 0.7 + Math.random() * 0.3,
+    confidence: 0.7 + _rng.next() * 0.3,
     hierarchy: [l.category, l.label],
   }));
 }
@@ -744,20 +750,20 @@ function generateCategories(): ImageCategory[] {
 }
 
 function generateDetectedFaces(config?: AnalysisConfig["faceDetection"]): DetectedFace[] {
-  const count = Math.floor(Math.random() * 3);
+  const count = Math.floor(_rng.next() * 3);
   const faces: DetectedFace[] = [];
 
   for (let i = 0; i < count; i++) {
     faces.push({
       id: `face_${randomUUID().slice(0, 8)}`,
       boundingBox: {
-        x: 0.2 + Math.random() * 0.6,
-        y: 0.1 + Math.random() * 0.3,
-        width: 0.15 + Math.random() * 0.1,
-        height: 0.2 + Math.random() * 0.1,
+        x: 0.2 + _rng.next() * 0.6,
+        y: 0.1 + _rng.next() * 0.3,
+        width: 0.15 + _rng.next() * 0.1,
+        height: 0.2 + _rng.next() * 0.1,
         normalized: true,
       },
-      confidence: 0.85 + Math.random() * 0.15,
+      confidence: 0.85 + _rng.next() * 0.15,
       landmarks: config?.detectLandmarks ? {
         leftEye: { x: 0.3, y: 0.3 },
         rightEye: { x: 0.4, y: 0.3 },
@@ -766,25 +772,25 @@ function generateDetectedFaces(config?: AnalysisConfig["faceDetection"]): Detect
         mouthRight: { x: 0.4, y: 0.5 },
       } : undefined,
       emotions: config?.detectEmotions ? {
-        happy: 0.7 + Math.random() * 0.3,
-        neutral: Math.random() * 0.3,
-        sad: Math.random() * 0.1,
-        angry: Math.random() * 0.05,
-        surprised: Math.random() * 0.1,
+        happy: 0.7 + _rng.next() * 0.3,
+        neutral: _rng.next() * 0.3,
+        sad: _rng.next() * 0.1,
+        angry: _rng.next() * 0.05,
+        surprised: _rng.next() * 0.1,
       } : undefined,
       age: config?.detectAge ? {
-        estimated: 25 + Math.floor(Math.random() * 40),
+        estimated: 25 + Math.floor(_rng.next() * 40),
         range: { min: 20, max: 65 },
       } : undefined,
       gender: config?.detectGender ? {
-        label: Math.random() > 0.5 ? "male" : "female",
-        confidence: 0.8 + Math.random() * 0.2,
+        label: _rng.next() > 0.5 ? "male" : "female",
+        confidence: 0.8 + _rng.next() * 0.2,
       } : undefined,
       quality: {
-        blur: Math.random() * 0.2,
-        exposure: 0.8 + Math.random() * 0.2,
-        noise: Math.random() * 0.15,
-        overall: 0.85 + Math.random() * 0.15,
+        blur: _rng.next() * 0.2,
+        exposure: 0.8 + _rng.next() * 0.2,
+        noise: _rng.next() * 0.15,
+        overall: 0.85 + _rng.next() * 0.15,
       },
     });
   }
@@ -801,10 +807,10 @@ function generateSceneDescription(): SceneDescription {
     { primary: "street", description: "An urban street with buildings and vehicles" },
   ];
 
-  const scene = scenes[Math.floor(Math.random() * scenes.length)];
+  const scene = scenes[Math.floor(_rng.next() * scenes.length)];
   return {
     primaryScene: scene.primary,
-    confidence: 0.8 + Math.random() * 0.2,
+    confidence: 0.8 + _rng.next() * 0.2,
     secondaryScenes: [
       { scene: "indoor", confidence: 0.7 },
       { scene: "modern", confidence: 0.6 },
@@ -829,13 +835,13 @@ function generateImageTags(): ImageTag[] {
 
   return tags.map(t => ({
     ...t,
-    confidence: 0.7 + Math.random() * 0.3,
+    confidence: 0.7 + _rng.next() * 0.3,
   }));
 }
 
 function generateEmbedding(): number[] {
   // Generate 512-dimensional embedding vector
-  return Array.from({ length: 512 }, () => Math.random() * 2 - 1);
+  return Array.from({ length: 512 }, () => _rng.next() * 2 - 1);
 }
 
 function cosineSimilarity(a: number[], b: number[]): number {

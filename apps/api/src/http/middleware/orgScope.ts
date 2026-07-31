@@ -45,8 +45,11 @@ declare global {
 export function orgScope() {
   return async (req: Request, _res: Response, next: NextFunction) => {
     try {
+      // Public / pre-auth routes (webhook receivers, healthchecks) do not have
+      // a user attached. Let them through; downstream handlers that require
+      // auth will call authenticate() explicitly and produce a helpful error.
       if (!req.user) {
-        return next(AppError.unauthorized("Authentication required"));
+        return next();
       }
 
       const { id: userId, organizationId } = req.user;
