@@ -322,6 +322,20 @@ async function main() {
         try {
           const { bootstrapMediaGen } = await import("./mediaGen/bootstrap.js");
           await bootstrapMediaGen(logger);
+          // Periodic worker: pull pending jobs across all tenants every 2s.
+          const { MediaGenService } = await import("./mediaGen/mediaGen.service.js");
+          const { redisCmd } = await import("./db/redis.js");
+          setInterval(async () => {
+            try {
+              const keys = await redisCmd.keys("mg:tenant:*:pending");
+              for (const k of keys) {
+                const org = k.split(":")[2];
+                if (org) await MediaGenService.runWorkerTick(org);
+              }
+            } catch (err) {
+              logger.warn("media-gen worker tick failed", { err });
+            }
+          }, 2000).unref();
         } catch (e) { logger.warn("media-gen bootstrap failed", { err: e }); }
       }, 17500);
 

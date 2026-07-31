@@ -1012,7 +1012,7 @@ export function createApp() {
     next();
   });
   eventsRouter.use(authenticate);
-  v1.use(eventsRouter);
+  v1.use("/events", eventsRouter);
   registerSSERoutes(eventsRouter);
 
   // Apply org-scoping middleware to all authenticated routes below this point.
