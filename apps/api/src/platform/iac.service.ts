@@ -40,7 +40,8 @@ export const IaCService = {
       const stack: IaCStack = {
         id: randomUUID(), ...d,
         resources: Math.floor(20 + Math.random() * 80),
-        status: "applied", driftDetected: Math.random() < 0.15, updatedAt: now(),
+        // Drift is only true when a plan has actually reported it.
+        status: "applied", driftDetected: false, updatedAt: now(),
       };
       await redisCmd.set(sk(stack.id), JSON.stringify(stack));
       await redisCmd.sadd(STACKS_KEY, stack.id);

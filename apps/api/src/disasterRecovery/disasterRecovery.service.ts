@@ -27,38 +27,41 @@ async function emitKernel(kind: string, payload: any) {
 }
 
 export const DisasterRecoveryService = {
+  /**
+   * Register the DR component topology. Components start with `healthy: false`
+   * and no replication telemetry: nothing is known until a real probe or drill
+   * reports in.
+   *
+   * The previous bootstrap seeded a random replication lag and a fully-formed
+   * "passed" drill dated three days ago, complete with RTO/RPO figures — an
+   * audit record for a test that never happened.
+   */
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
     if (await redis.exists(K.activeRegion(oid))) return;
     await redis.set(K.activeRegion(oid), "na-east");
     await redis.set(K.emergency(oid), "0");
     for (const c of DR_COMPONENTS) {
       const s: DrStatus = {
-        component: c, healthy: true, activeRegion: "na-east",
-        standbyRegions: REGIONS.filter(r=>r!=="na-east").slice(0,2),
-        lastReplicationAt: new Date().toISOString(), replicationLagMs: Math.floor(Math.random()*1500),
+        component: c,
+        // Unverified until a drill or probe proves otherwise.
+        healthy: false,
+        activeRegion: "na-east",
+        standbyRegions: REGIONS.filter((r) => r !== "na-east").slice(0, 2),
       };
-      await redis.hset(K.status(oid,c), "_doc", s2(s));
+      await redis.hset(K.status(oid, c), "_doc", s2(s));
     }
-    const did = uid("drill-");
-    const drill: DrDrill = {
-      id: did, organizationId: oid, component: "ai_cluster",
-      scheduledAt: new Date(Date.now()-3*24*3600*1000).toISOString(),
-      startedAt: new Date(Date.now()-3*24*3600*1000).toISOString(),
-      completedAt: new Date(Date.now()-3*24*3600*1000+28000).toISOString(),
-      status: "passed",
-      results: { rtoAchievedMs: 22000, rpoAchievedMs: 1200, issues: [] },
-    };
-    await redis.hset(K.drill(oid,did), "_doc", s2(drill));
-    await redis.zadd(K.drills(oid), Date.parse(drill.scheduledAt), did);
     await redis.hset(K.metrics(oid), "failovers30d", "0");
-    logger?.info?.("[disaster-recovery] bootstrap complete");
+    logger?.info?.("[disaster-recovery] initialized (no synthetic drills; components unverified until tested)");
   },
 
   async dashboard(oid = "org-windels"): Promise<DrDashboard> {
     const comps = await this.getStatus(oid);
     const active = (await redis.get(K.activeRegion(oid))) || "na-east";
     const standby = Array.from(new Set(comps.flatMap(c=>c.standbyRegions))).filter(r=>r!==active);
-    const maxLag = comps.reduce((m,c)=>Math.max(m,c.replicationLagMs),0);
+    // Only components that actually reported lag contribute; unsampled
+    // components are skipped rather than counted as 0ms.
+    const sampledLags = comps.map((c) => c.replicationLagMs).filter((v): v is number => typeof v === "number");
+    const maxLag = sampledLags.length ? Math.max(...sampledLags) : 0;
     const allHealthy = comps.every(c=>c.healthy);
     const fo = Number((await redis.hget(K.metrics(oid),"failovers30d")) || "0");
     const em = (await redis.get(K.emergency(oid))) === "1";
@@ -82,14 +85,19 @@ export const DisasterRecoveryService = {
   async triggerFailover(input: { component: DrComponent; toRegion: string; reason: string; organizationId?: string }): Promise<DrFailoverEvent> {
     const oid = input.organizationId || "org-windels";
     const id = uid("fo-"); const from = (await redis.get(K.activeRegion(oid))) || "na-east";
-    const start = Date.now(); await redis.set(K.activeRegion(oid), input.toRegion);
-    const rto = 5000 + Math.floor(Math.random()*25000);
-    await new Promise(r=>setTimeout(r,25));
+    const start = Date.now();
+    await redis.set(K.activeRegion(oid), input.toRegion);
+    // Measure what actually happened. The previous code invented a 5-30s RTO
+    // and a random RPO after a 25ms sleep, so every failover reported a
+    // plausible recovery time that bore no relation to the work performed.
+    // rpoMs/dataLossMs are left undefined: they require replication telemetry
+    // this service does not have, and undefined is honest where 0 is a claim.
+    const durationMs = Date.now() - start;
     const ev: DrFailoverEvent = {
       id, organizationId: oid, component: input.component, fromRegion: from, toRegion: input.toRegion,
       reason: input.reason, triggeredBy: "manual", startedAt: new Date(start).toISOString(),
-      completedAt: new Date(start+rto).toISOString(), durationMs: rto, status: "completed",
-      rtoMs: rto, rpoMs: Math.floor(Math.random()*3000), dataLossMs: 0,
+      completedAt: new Date().toISOString(), durationMs, status: "completed",
+      rtoMs: durationMs,
     };
     await redis.zadd(K.events(oid), start, s2(ev));
     await redis.zremrangebyrank(K.events(oid), 0, -201);
@@ -109,22 +117,58 @@ export const DisasterRecoveryService = {
     return d;
   },
 
+  /**
+   * Start a scheduled drill. The drill moves to `running` and stays there until
+   * an operator records the measured outcome via `recordDrillResult`.
+   *
+   * This previously fabricated the entire result: `passed = Math.random() > 0.1`
+   * with a random RTO (8-38s) and RPO, then wrote `healthy` onto the component
+   * status. A disaster-recovery drill that grades itself by coin flip is
+   * compliance theatre — it produces an audit trail of tests that never ran.
+   */
   async runDrill(id: string, oid = "org-windels"): Promise<DrDrill> {
-    const r = await redis.hgetall(K.drill(oid,id));
+    const r = await redis.hgetall(K.drill(oid, id));
     if (!r._doc) throw Object.assign(new Error("drill not found"), { status: 404 });
     const base: DrDrill = JSON.parse(r._doc);
-    const start = Date.now(); await new Promise(r2=>setTimeout(r2,30));
-    const rto = 8000 + Math.floor(Math.random()*30000);
-    const passed = Math.random() > 0.1;
+    if (base.status === "passed" || base.status === "failed") return base;
+    const d: DrDrill = { ...base, startedAt: new Date().toISOString(), status: "running" };
+    await redis.hset(K.drill(oid, id), "_doc", s2(d));
+    emitKernel("dr.drill.started", { organizationId: oid, drillId: id, component: d.component });
+    return d;
+  },
+
+  /**
+   * Record the measured outcome of a drill. RTO/RPO are supplied by whoever ran
+   * it; the component's health flag is only updated from this real result.
+   */
+  async recordDrillResult(
+    id: string,
+    input: { passed: boolean; rtoAchievedMs: number; rpoAchievedMs: number; issues?: string[]; recordedBy: string },
+    oid = "org-windels",
+  ): Promise<DrDrill> {
+    const r = await redis.hgetall(K.drill(oid, id));
+    if (!r._doc) throw Object.assign(new Error("drill not found"), { status: 404 });
+    const base: DrDrill = JSON.parse(r._doc);
     const d: DrDrill = {
-      ...base, startedAt: new Date(start).toISOString(),
-      completedAt: new Date(start+rto).toISOString(),
-      status: passed ? "passed" : "failed",
-      results: { rtoAchievedMs: rto, rpoAchievedMs: Math.floor(Math.random()*2000), issues: passed ? [] : ["Replication lag exceeded SLO in standby eu-west."] },
+      ...base,
+      completedAt: new Date().toISOString(),
+      status: input.passed ? "passed" : "failed",
+      results: {
+        rtoAchievedMs: input.rtoAchievedMs,
+        rpoAchievedMs: input.rpoAchievedMs,
+        issues: input.issues ?? [],
+      },
+      recordedBy: input.recordedBy,
     };
-    await redis.hset(K.drill(oid,id), "_doc", s2(d));
-    const sr = await redis.hgetall(K.status(oid,d.component));
-    if (sr._doc) { const s: DrStatus = JSON.parse(sr._doc); s.lastTestAt = d.completedAt; s.healthy = passed; await redis.hset(K.status(oid,d.component),"_doc",s2(s)); }
+    await redis.hset(K.drill(oid, id), "_doc", s2(d));
+    const sr = await redis.hgetall(K.status(oid, d.component));
+    if (sr._doc) {
+      const st: DrStatus = JSON.parse(sr._doc);
+      st.lastTestAt = d.completedAt;
+      st.healthy = input.passed;
+      await redis.hset(K.status(oid, d.component), "_doc", s2(st));
+    }
+    emitKernel("dr.drill.completed", { organizationId: oid, drillId: id, component: d.component, passed: input.passed });
     return d;
   },
 

@@ -124,8 +124,15 @@ export const ModelFactoryService = {
     return m;
   },
 
-  async runBenchmark(id: string, benchmark: string): Promise<Mf2BenchmarkResult> {
-    const res: Mf2BenchmarkResult = { id: uid("br-"), modelId: id, benchmark, score: 50 + Math.random() * 45, pass: true, at: new Date().toISOString() };
+  /**
+   * Record a benchmark result produced by a real evaluator.
+   *
+   * This previously invented the score (`50 + Math.random() * 45`) and
+   * hard-coded `pass: true`, so every benchmark "succeeded" with a plausible
+   * number. The caller must now supply the measured score and verdict.
+   */
+  async runBenchmark(id: string, benchmark: string, result: { score: number; pass: boolean }): Promise<Mf2BenchmarkResult> {
+    const res: Mf2BenchmarkResult = { id: uid("br-"), modelId: id, benchmark, score: result.score, pass: result.pass, at: new Date().toISOString() };
     await redis.zadd(K.bench, Date.now(), res.id);
     await redis.hset(K.benchRes(res.id), "_doc", s2(res));
     return res;

@@ -35,7 +35,8 @@ export const RegionService = {
       const id = r.name.toLowerCase().replace(/[^a-z]+/g,"-").replace(/(^-|-$)/g,"").replace("--","-");
       const region: Region = {
         id, ...r,
-        status: r.tier === "primary" ? "online" : (Math.random() < 0.9 ? "online" : "degraded") as RegionStatus,
+        // Status is refreshed by refreshHealth(); it is not guessed at seed time.
+        status: "online" as RegionStatus,
         replicationRole: (r.tier === "primary" ? "primary" : r.tier === "dr" ? "standby" : "replica") as ReplicationRole,
         replicationLagMs: r.tier === "primary" ? 0 : Math.floor(rand(10, 250)),
         capacity: { requestsPerSec: Math.floor(rand(5000, 15000)), activeUsers: Math.floor(rand(2000, 20000)), pods: Math.floor(rand(10, 60)) },

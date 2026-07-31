@@ -112,21 +112,60 @@ export const UpdateService = {
     const p = await this.get(id, oid);
     const start = Date.now();
     const checks: UpdateCheck[] = [];
-    const specs: Array<{kind: UpdateCheck["kind"]; label: string}> = [
-      { kind: "dependency", label: "Dependencies satisfied" },
-      { kind: "signature", label: "Package signature verified" },
-      { kind: "compatibility", label: "Module compatibility matrix" },
-      { kind: "space", label: "Disk & memory headroom" },
-      { kind: "backup", label: "Pre-upgrade snapshot taken" },
-      { kind: "governance", label: "Governance approval present" },
-      { kind: "preflight_test", label: "Smoke tests against staging" },
-    ];
-    for (const s of specs) {
-      const t0 = Date.now(); await new Promise(r=>setTimeout(r, 3+Math.random()*12));
-      const passed = Math.random() > 0.06;
-      checks.push({ id: uid("uc-"), packageId: id, kind: s.kind, label: s.label, passed, durationMs: Date.now()-t0, detail: passed ? undefined : "Simulated check failure" });
-    }
-    const passed = checks.every(c=>c.passed);
+    // Preflight for a software rollout. This previously slept a few ms per check
+    // and set `passed = Math.random() > 0.06`, so a package could be marked
+    // "staged" — signature verified, backup taken, smoke tests green — without
+    // any of it happening. Checks that can be verified here are executed; the
+    // rest are marked `skipped` rather than counted as passes.
+    const run = async (
+      kind: UpdateCheck["kind"],
+      label: string,
+      probe: () => Promise<{ ok: boolean; detail?: string } | "skip">,
+    ) => {
+      const t0 = Date.now();
+      let passed = false, skipped = false, detail: string | undefined;
+      try {
+        const r = await probe();
+        if (r === "skip") { skipped = true; detail = "Not verifiable from the control plane"; }
+        else { passed = r.ok; detail = r.detail; }
+      } catch (e: any) {
+        detail = e?.message ? String(e.message).slice(0, 300) : "probe threw";
+      }
+      checks.push({ id: uid("uc-"), packageId: id, kind, label, passed, skipped, detail, durationMs: Date.now() - t0 });
+    };
+
+    // Governance approval is recorded state — genuinely checkable.
+    await run("governance", "Governance approval present", async () => {
+      if (!p) return { ok: false, detail: "package not found" };
+      const have = p.approvalsGiven.length, need = p.approvalsRequired;
+      return { ok: have >= need, detail: `${have}/${need} approvals` };
+    });
+
+    // Disk headroom on the host running the control plane.
+    await run("space", "Disk & memory headroom", async () => {
+      const { statfs } = await import("node:fs/promises");
+      const st: any = await (statfs as any)(process.cwd());
+      const freeBytes = Number(st.bsize) * Number(st.bavail);
+      const freeMb = Math.floor(freeBytes / 1_048_576);
+      return { ok: freeMb > 512, detail: `${freeMb} MB free` };
+    });
+
+    // A signature can only be verified against a real artifact + public key.
+    await run("signature", "Package signature verified", async () => {
+      if (p?.signature && process.env.UPDATE_SIGNING_PUBLIC_KEY) {
+        return { ok: false, detail: "Signature present but verification is not implemented" };
+      }
+      return "skip";
+    });
+
+    // These require the artifact, a staging environment, and a snapshot target.
+    await run("dependency", "Dependencies satisfied", async () => "skip");
+    await run("compatibility", "Module compatibility matrix", async () => "skip");
+    await run("backup", "Pre-upgrade snapshot taken", async () => "skip");
+    await run("preflight_test", "Smoke tests against staging", async () => "skip");
+
+    const executed = checks.filter((c) => !c.skipped);
+    const passed = executed.length > 0 && executed.every((c) => c.passed);
     const v: UpdateValidation = { packageId: id, ranAt: new Date().toISOString(), passed, checks, durationMs: Date.now()-start };
     if (p) { p.status = passed ? "staged" : "failed"; p.updatedAt = new Date().toISOString(); await redis.hset(K.p(oid,id),"_doc",s2(p)); }
     await redis.set(K.v(oid,id), s2(v));
@@ -147,11 +186,10 @@ export const UpdateService = {
     if (p.approvalsGiven.length < p.approvalsRequired) throw Object.assign(new Error("approvals required"),{status:400});
     p.status = "deploying"; p.updatedAt = new Date().toISOString(); p.progressPct = 10;
     await redis.hset(K.p(oid,id),"_doc",s2(p));
-    // Simulate staged deploy
-    for (let i = 25; i <= 100; i += 25) {
-      await new Promise(r=>setTimeout(r, 30+Math.random()*60));
-      p.progressPct = i; await redis.hset(K.p(oid,id),"_doc",s2(p));
-    }
+    // Progress is reported, not simulated. There is no artifact transfer to
+    // pace here, so the package moves straight to deployed; the previous code
+    // slept through fake 25% increments to imitate a staged rollout.
+    p.progressPct = 100;
     p.status = "deployed"; p.deployedAt = new Date().toISOString(); p.updatedAt = p.deployedAt;
     await redis.hset(K.meta(oid), "currentVersion", p.version, "channel", p.channel);
     await redis.hset(K.p(oid,id),"_doc",s2(p));
@@ -160,7 +198,9 @@ export const UpdateService = {
       id: uid("roll-"), packageId: id, organizationId: oid, environment: "production",
       strategy: p.strategy, canaryPct: p.canaryPct||0, blueGreenSide: p.blueGreenActive||"blue",
       startedAt: new Date(Date.now()-2000).toISOString(), completedAt: p.deployedAt, status: "completed",
-      errorRate: Math.random()*0.004, p95LatencyMs: 180+Math.random()*120,
+      // errorRate / p95LatencyMs are intentionally omitted: no post-rollout
+      // telemetry has been observed yet, and undefined is honest where a
+      // flattering 0.4% error rate is a claim.
     };
     await redis.hset(K.r(oid,rollout.id), "_doc", s2(rollout));
     emitKernel("update.deployed", { packageId: id, version: p.version });

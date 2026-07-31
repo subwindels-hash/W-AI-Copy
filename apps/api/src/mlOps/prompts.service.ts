@@ -83,18 +83,31 @@ export const PromptsService = {
     return p;
   },
 
-  async runTests(id: string, model = "claude-3.5-sonnet"): Promise<{ prompt: PromptDef | null; run: PromptTestRun | null }> {
+  /**
+   * Record a prompt test run.
+   *
+   * Previously this invented the result: it passed every case bar a random 0-1
+   * of them and reported a random 180-780ms average latency, without executing
+   * a single test case. The measured outcome must now be supplied by whatever
+   * actually ran the suite.
+   */
+  async runTests(
+    id: string,
+    model = "claude-3.5-sonnet",
+    result?: { casesPassed: number; avgLatencyMs?: number },
+  ): Promise<{ prompt: PromptDef | null; run: PromptTestRun | null }> {
     const p = await this.get(id);
     if (!p) return { prompt: null, run: null };
     const deployed = p.versions[0];
-    const start = Date.now();
     const total = p.testCases.length || 1;
-    const passed = Math.max(0, total - Math.floor(Math.random()*Math.min(2,total)));
+    // With no supplied result nothing has been verified: report zero passes
+    // rather than a flattering near-perfect score.
+    const passed = Math.max(0, Math.min(total, result?.casesPassed ?? 0));
     const run: PromptTestRun = {
       id: randomUUID(), versionId: deployed.id, model,
       startedAt: iso(), finishedAt: iso(),
       casesTotal: total, casesPassed: passed, casesFailed: total - passed,
-      avgLatencyMs: 180 + Math.floor(Math.random()*600),
+      avgLatencyMs: result?.avgLatencyMs ?? 0,
       passPct: +((passed / total) * 100).toFixed(1),
     };
     p.testRuns.unshift(run);

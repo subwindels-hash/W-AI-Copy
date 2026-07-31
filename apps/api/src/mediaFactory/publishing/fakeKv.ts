@@ -71,6 +71,18 @@ export class FakeKv {
 
   async hgetall(key: string): Promise<Record<string, string>> { return this.hashes.get(key) ?? {}; }
 
+  async hget(key: string, field: string): Promise<string | null> {
+    return this.hashes.get(key)?.[field] ?? null;
+  }
+
+  async hincrby(key: string, field: string, by: number): Promise<number> {
+    const h = this.hashes.get(key) ?? {};
+    const next = Number(h[field] ?? "0") + by;
+    h[field] = String(next);
+    this.hashes.set(key, h);
+    return next;
+  }
+
   async zadd(key: string, score: number, member: string): Promise<number> {
     const z = this.zsets.get(key) ?? new Map<string, number>();
     z.set(member, score);
@@ -104,6 +116,24 @@ export class FakeKv {
   }
 
   async zcard(key: string): Promise<number> { return this.zsets.get(key)?.size ?? 0; }
+
+  async zscore(key: string, member: string): Promise<string | null> {
+    const v = this.zsets.get(key)?.get(member);
+    return v === undefined ? null : String(v);
+  }
+
+  /** Trim a sorted set to the given rank window (negative indexes count back). */
+  async zremrangebyrank(key: string, start: number, stop: number): Promise<number> {
+    const z = this.zsets.get(key);
+    if (!z) return 0;
+    const ordered = [...z.entries()].sort((a, b) => a[1] - b[1]).map(([m]) => m);
+    const n = ordered.length;
+    const lo = start < 0 ? Math.max(0, n + start) : start;
+    const hi = stop < 0 ? n + stop : stop;
+    let removed = 0;
+    for (let i = lo; i <= hi && i < n; i++) { if (z.delete(ordered[i]!)) removed++; }
+    return removed;
+  }
 
   async lpush(key: string, value: string): Promise<number> {
     const l = this.lists.get(key) ?? [];

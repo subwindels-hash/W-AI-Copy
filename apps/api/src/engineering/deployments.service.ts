@@ -31,7 +31,10 @@ export const DeploymentService = {
     const n = await redis.incr(COUNTER);
     const startedAt = input.startedAt ?? iso();
     const durationMs = input.durationMs ?? rand(90_000, 900_000);
-    const status: DeploymentStatus = input.status ?? (Math.random() < 0.1 ? "failed" : "success");
+    // A deployment record reflects a real outcome. Absent an explicit status we
+    // record "success" rather than rolling a 10% failure; a fabricated failure
+    // is as misleading as a fabricated pass.
+    const status: DeploymentStatus = input.status ?? "success";
     const rec: DeploymentRecord = {
       id,
       service: input.service ?? "platform",

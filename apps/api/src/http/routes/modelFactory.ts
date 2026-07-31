@@ -13,7 +13,7 @@ const create = z.object({
   baseModelId: z.string().optional(), stage: z.enum(["research","benchmarking","validation","approval","canary","deployed","monitoring","retired"]).optional(),
 });
 const advance = z.object({ to: z.enum(["research","benchmarking","validation","approval","canary","deployed","monitoring","retired"]) });
-const bench = z.object({ benchmark: z.string().min(2) });
+const bench = z.object({ benchmark: z.string().min(1).max(120), score: z.number().min(0).max(100), pass: z.boolean() });
 const finetune = z.object({ dataset: z.string(), method: z.enum(["supervised","rlhf","dpo","lora","qlora"]) });
 
 export function registerModelFactoryRoutes(router: Router) {
@@ -30,7 +30,7 @@ export function registerModelFactoryRoutes(router: Router) {
     try { res.json({ ok: true, data: await ModelFactoryService.advanceStage(req.params.id, req.body.to) }); } catch (e) { next(e); }
   });
   router.post("/models/:id/benchmark", validate({ body: bench }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await ModelFactoryService.runBenchmark(req.params.id, req.body.benchmark) }); } catch (e) { next(e); }
+    try { res.json({ ok: true, data: await ModelFactoryService.runBenchmark(req.params.id, req.body.benchmark, { score: req.body.score, pass: req.body.pass }) }); } catch (e) { next(e); }
   });
   router.post("/models/:id/safety", validate({ body: z.object({ passed: z.boolean() }) }), async (req, res, next) => {
     try { res.json({ ok: true, data: await ModelFactoryService.approveSafety(req.params.id, req.body.passed) }); } catch (e) { next(e); }

@@ -54,6 +54,9 @@ export interface UpdateCheck {
   kind: "dependency" | "signature" | "compatibility" | "space" | "backup" | "governance" | "preflight_test";
   label: string;
   passed: boolean;
+  /** True when the check could not be executed here. A skipped check is not a
+   *  pass: it is excluded from the verdict and surfaced so the gap is visible. */
+  skipped?: boolean;
   detail?: string;
   durationMs: number;
 }
@@ -77,8 +80,10 @@ export interface UpdateRollout {
   startedAt: string;
   completedAt?: string;
   status: "in_progress" | "completed" | "rolled_back" | "failed";
-  errorRate: number;
-  p95LatencyMs: number;
+  /** Post-rollout telemetry. Undefined until real metrics are observed —
+   *  these were previously fabricated at deploy time. */
+  errorRate?: number;
+  p95LatencyMs?: number;
 }
 
 export interface UpdateDashboard {

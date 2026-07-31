@@ -56,11 +56,22 @@ export const QualityService = {
     };
     await redis.set(RUN(id), SER(r));
     await redis.sadd(RUNS, id);
-    // simulate completion
+    // The run is queued for a real evaluator. It previously "completed"
+    // in-line with 200-1000 invented samples and a 78-98% pass rate, then
+    // graded itself passed/failed — an evaluation report for work never done.
     r.status = "running";
-    r.samples = 200 + Math.floor(Math.random()*800);
-    r.passedSamples = Math.floor(r.samples * (0.78 + Math.random()*0.2));
-    r.passPct = +((r.passedSamples / r.samples) * 100).toFixed(1);
+    await redis.set(RUN(id), SER(r));
+    return r;
+  },
+
+  /** Record the measured outcome of an evaluation run. */
+  async completeRun(id: string, input: { samples: number; passedSamples: number }): Promise<EvalRun | null> {
+    const raw = await redis.get(RUN(id));
+    if (!raw) return null;
+    const r = JSON.parse(raw) as EvalRun;
+    r.samples = input.samples;
+    r.passedSamples = Math.min(input.passedSamples, input.samples);
+    r.passPct = input.samples ? +((r.passedSamples / input.samples) * 100).toFixed(1) : 0;
     r.finishedAt = iso();
     r.status = r.passPct >= 90 ? "passed" : "failed";
     await redis.set(RUN(id), SER(r));
