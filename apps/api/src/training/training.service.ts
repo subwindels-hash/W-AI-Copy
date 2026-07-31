@@ -36,7 +36,8 @@ const SEED_DATASETS: Array<{name:string;fmt:DatasetFormat;rows:number;sizeMb:num
 ];
 
 const BASE_MODELS = ["Aria-7B","Aria-7B-Instruct","Aria-70B","Whisper-WINDELS-v3","Embed-WINDELS-v2"];
-const SAFETY_CATS: SafetyCheck["category"][] = ["toxicity","hallucination","bias","pii","jailbreak","harm"];
+/** Categories that must all be evaluated before a job can pass its safety gate. */
+export const SAFETY_CATS: SafetyCheck["category"][] = ["toxicity","hallucination","bias","pii","jailbreak","harm"];
 
 export const TrainingService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
@@ -166,44 +167,91 @@ export const TrainingService = {
       createdBy: input.createdBy, createdAt: now, updatedAt: now,
     };
     await redis.hset(K.j(oid,id),"_doc",s2(job)); await redis.sadd(K.js(oid),id);
-    // simulate async progression
-    this._simulateJob(id, oid).catch(()=>{});
+    // The job is queued for a real trainer. It previously auto-advanced
+    // through every stage on a timer — see _simulateJob below.
     return job;
   },
 
-  async _simulateJob(id: string, oid: string) {
-    const stages: TrainingJobStatus[] = ["preparing","training","evaluating","governance_review","canary","deployed"];
-    for (let i=0;i<stages.length;i++) {
-      await new Promise(r=>setTimeout(r, 400+Math.random()*500));
-      const r = await redis.hgetall(K.j(oid,id)); if (!r._doc) return;
-      const j: TrainingJob = JSON.parse(r._doc);
-      j.status = stages[i]; j.progressPct = Math.round(((i+1)/stages.length)*100); j.updatedAt = new Date().toISOString();
-      if (stages[i]==="training") j.startedAt = j.startedAt || new Date().toISOString();
-      if (stages[i]==="evaluating") j.evalScore = +rand(0.7,0.95).toFixed(3);
-      if (stages[i]==="governance_review") {
-        let ok = true;
-        for (const cat of SAFETY_CATS) {
-          const scId = uid("sc-");
-          const thresh = cat==="pii"?0.01:cat==="jailbreak"?0.02:0.05;
-          const score = +rand(0, thresh*0.9).toFixed(4);
-          const passed = score <= thresh; if (!passed) ok = false;
-          const sc: SafetyCheck = { id: scId, jobId: id, category: cat, score, threshold: thresh, passed, ranAt: new Date().toISOString() };
-          await redis.hset(K.sc(oid,id,scId),"_doc",s2(sc)); await redis.sadd(K.scs(oid,id),scId);
-        }
-        j.safetyPassed = ok;
-      }
-      if (stages[i]==="deployed") {
-        j.completedAt = new Date().toISOString();
-        j.targetModelId = uid("mdl-");
-      }
-      await redis.hset(K.j(oid,id),"_doc",s2(j));
+  /**
+   * Advance a training job to a reported stage.
+   *
+   * This replaces `_simulateJob`, which walked every job through
+   * preparing -> training -> evaluating -> governance_review -> canary ->
+   * deployed on a ~450ms-per-stage timer. Along the way it invented an
+   * evaluation score (0.70-0.95) and, more seriously, generated the safety
+   * checks themselves: each category's score was drawn from
+   * `rand(0, threshold * 0.9)`, i.e. **always below its own threshold**, so
+   * `safetyPassed` was true by construction and every model reached "deployed"
+   * with a clean safety record it had never earned.
+   *
+   * Stages now advance only when a trainer reports one, and safety results must
+   * be recorded explicitly via `recordSafetyCheck`.
+   */
+  async reportStage(
+    id: string,
+    input: { status: TrainingJobStatus; progressPct?: number; evalScore?: number; targetModelId?: string },
+    oid = "org-windels",
+  ): Promise<TrainingJob | null> {
+    const r = await redis.hgetall(K.j(oid, id));
+    if (!r._doc) return null;
+    const j: TrainingJob = JSON.parse(r._doc);
+    j.status = input.status;
+    if (input.progressPct !== undefined) j.progressPct = input.progressPct;
+    if (input.evalScore !== undefined) j.evalScore = input.evalScore;
+    if (input.targetModelId) j.targetModelId = input.targetModelId;
+    if (input.status === "training" && !j.startedAt) j.startedAt = new Date().toISOString();
+    if (input.status === "deployed") j.completedAt = new Date().toISOString();
+    j.updatedAt = new Date().toISOString();
+    await redis.hset(K.j(oid, id), "_doc", s2(j));
+    return j;
+  },
+
+  /**
+   * Record a real safety-evaluation result. `safetyPassed` flips to true only
+   * once every category has been evaluated and each one passed — it is never
+   * assumed.
+   */
+  async recordSafetyCheck(
+    id: string,
+    input: { category: (typeof SAFETY_CATS)[number]; score: number; threshold: number },
+    oid = "org-windels",
+  ): Promise<SafetyCheck | null> {
+    const r = await redis.hgetall(K.j(oid, id));
+    if (!r._doc) return null;
+    const j: TrainingJob = JSON.parse(r._doc);
+    const scId = uid("sc-");
+    const sc: SafetyCheck = {
+      id: scId, jobId: id, category: input.category,
+      score: input.score, threshold: input.threshold,
+      passed: input.score <= input.threshold,
+      ranAt: new Date().toISOString(),
+    };
+    await redis.hset(K.sc(oid, id, scId), "_doc", s2(sc));
+    await redis.sadd(K.scs(oid, id), scId);
+
+    // Re-derive the overall verdict from every recorded check.
+    const ids = await redis.smembers(K.scs(oid, id));
+    const checks: SafetyCheck[] = [];
+    for (const cid of ids) {
+      const raw = await redis.hget(K.sc(oid, id, cid), "_doc");
+      if (raw) { try { checks.push(JSON.parse(raw)); } catch { /* skip */ } }
     }
+    const covered = new Set(checks.map((c) => c.category));
+    const allCategoriesRun = SAFETY_CATS.every((c) => covered.has(c));
+    j.safetyPassed = allCategoriesRun && checks.every((c) => c.passed);
+    j.updatedAt = new Date().toISOString();
+    await redis.hset(K.j(oid, id), "_doc", s2(j));
+    return sc;
   },
 
   async promoteToCanary(id: string, pct: number, oid = "org-windels"): Promise<TrainingJob | null> {
     const r = await redis.hgetall(K.j(oid,id)); if (!r._doc) return null;
     const j: TrainingJob = JSON.parse(r._doc);
-    if (j.safetyPassed===false) throw Object.assign(new Error("safety checks did not pass"),{status:400});
+    // Require a positive result. The old check only blocked an explicit false,
+    // so a job whose safety checks had never run (undefined) was promotable.
+    if (j.safetyPassed !== true) {
+      throw Object.assign(new Error("safety checks have not passed for this job"), { status: 400 });
+    }
     j.canaryPct = Math.max(1, Math.min(50, pct));
     j.status = "canary"; j.updatedAt = new Date().toISOString();
     await redis.hset(K.j(oid,id),"_doc",s2(j)); return j;
@@ -213,6 +261,13 @@ export const TrainingService = {
     const r = await redis.hgetall(K.j(oid,id)); if (!r._doc) return null;
     const j: TrainingJob = JSON.parse(r._doc); j.status = "rolled_back" as TrainingJobStatus; j.updatedAt = new Date().toISOString();
     await redis.hset(K.j(oid,id),"_doc",s2(j)); return j;
+  },
+
+  /** Fetch a single job. The service previously exposed only listJobs(). */
+  async getJob(id: string, oid = "org-windels"): Promise<TrainingJob | null> {
+    const r = await redis.hgetall(K.j(oid, id));
+    if (!r._doc) return null;
+    try { return JSON.parse(r._doc) as TrainingJob; } catch { return null; }
   },
 
   async listJobs(oid = "org-windels"): Promise<TrainingJob[]> {

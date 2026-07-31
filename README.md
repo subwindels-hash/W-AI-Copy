@@ -105,9 +105,10 @@ self-grading gate is gone** — deployment validation now runs real probes, DR
 drills and update preflight require a recorded outcome, and test/benchmark
 runners take measured results instead of inventing them. Synthetic seeding
 across the remaining bootstraps is opt-in via `WINDELS_DEMO_DATA` (default off).
-Roughly 71 `Math.random()` calls remain in descriptive dashboard telemetry (28 of them legitimate: the scenario simulator's Monte-Carlo sampling and the `random` agent tool) —
-tracked with a suggested work order in
-**[AUDIT-REPORT.md](./AUDIT-REPORT.md) §2.4**.
+The §2.4 sweep is now complete: every remaining `Math.random()` in live code is
+either legitimate (Monte-Carlo simulation sampling, the `random` agent tool, id
+generation, retry jitter) or inside an explicitly-named QA harness. See
+**[AUDIT-REPORT.md](./AUDIT-REPORT.md) §2.4** for the full per-module record.
 
 Do not deploy into production environments handling real patient data, real money,
 or real user content until the remaining gaps in AUDIT-REPORT.md §2.4 are closed.

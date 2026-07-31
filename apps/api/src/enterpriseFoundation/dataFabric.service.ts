@@ -39,7 +39,8 @@ export const DataFabricService = {
     const id = randomUUID();
     const c: FabricConnector = {
       id, datasets: 0, rowsProcessed24h: 0, bytesProcessed24h: 0,
-      latencyMs: 40 + Math.floor(Math.random()*200), errorRatePct: Math.random()*0.5,
+      // Observed once the connector runs; not assigned at registration.
+      latencyMs: 0, errorRatePct: 0,
       tags: input.tags ?? [], encrypted: true, ...input,
     };
     await redis.set(CONN(id), SER(c));

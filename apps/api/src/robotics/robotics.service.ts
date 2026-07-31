@@ -150,18 +150,43 @@ export const RoboticsService = {
     return r;
   },
 
+  /**
+   * Raise predictive-maintenance alerts from recorded robot telemetry.
+   *
+   * A maintenance alert names a component and a failure risk on a real machine.
+   * This previously fired one for a random ~15% of the fleet on every scan,
+   * picking the component from a list and the risk from a 55-95% range — which
+   * would send crews to inspect healthy robots while masking genuine faults.
+   *
+   * Alerts are now derived from thresholds on telemetry the robot actually
+   * reported. A fleet with no concerning readings produces no alerts.
+   */
   async runPredictiveScan(oid = "org-windels"): Promise<PredictiveMaintAlert[]> {
     const robots = await this.list(oid);
     const out: PredictiveMaintAlert[] = [];
+    const raise = async (r: Robot, component: string, riskPct: number, recommendation: string) => {
+      const pa: PredictiveMaintAlert = {
+        id: uid("pa-"), robotId: r.id, component, riskPct, recommendation,
+        at: new Date().toISOString(),
+      };
+      await redis.hset(K.pa(oid, pa.id), "_doc", s2(pa));
+      await redis.sadd(K.pas(oid), pa.id);
+      out.push(pa);
+    };
     for (const r of robots) {
-      if (Math.random() > 0.85) {
-        const pa: PredictiveMaintAlert = {
-          id: uid("pa-"), robotId: r.id, component: ["motor-a","motor-b","sensor-lidar","battery-pack","gearbox"][randInt(0,4)],
-          riskPct: randInt(55, 95), recommendation: "Inspect during next maintenance window.",
-          at: new Date().toISOString(),
-        };
-        await redis.hset(K.pa(oid,pa.id),"_doc",s2(pa)); await redis.sadd(K.pas(oid),pa.id);
-        out.push(pa);
+      // Each condition cites the reading that triggered it, so an operator can
+      // verify the alert rather than trusting an opaque risk score.
+      if (typeof r.tempC === "number" && r.tempC >= 70) {
+        await raise(r, "thermal", Math.min(99, Math.round(r.tempC)),
+          `Reported temperature ${r.tempC}°C at or above 70°C — inspect cooling before next shift.`);
+      }
+      if (typeof r.batteryPct === "number" && r.batteryPct <= 15) {
+        await raise(r, "battery-pack", Math.min(99, 100 - r.batteryPct),
+          `Battery reported ${r.batteryPct}% — charge or replace pack.`);
+      }
+      if (r.cpuPct >= 95) {
+        await raise(r, "controller", Math.round(r.cpuPct),
+          `Controller CPU sustained at ${r.cpuPct}% — check workload or firmware.`);
       }
     }
     return out;

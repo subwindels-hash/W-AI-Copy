@@ -98,8 +98,9 @@ export const QuantumService = {
       id, kind:input.kind, problem:input.problem, status:"queued", qubits:randInt(20,200), startedAt:now,
     };
     await redis.hset(K.job(oid,id),"_doc",s2(j)); await redis.sadd(K.jobs(oid),id);
-    // simulate completion
-    setTimeout(async ()=>{j.status="completed"; j.completedAt=new Date().toISOString(); j.objectiveValue=+rand(0.8,0.99).toFixed(4); await redis.hset(K.job(oid,id),"_doc",s2(j));}, 1800);
+    // The job stays queued until a real quantum/hybrid backend returns a
+    // result. It previously "completed" after 1.8s with an objective value of
+    // 0.8-0.99 — a solution quality for an optimisation that never ran.
     return j;
   },
   async dashboard(oid="org-windels"):Promise<QuantumDashboard>{

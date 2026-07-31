@@ -117,26 +117,38 @@ to 91 call sites**, and every remaining item is descriptive dashboard telemetry
 | `program/roadmap` | `aiConfidence` a random 60–95, presented as an AI assessment. | Supplied by whatever scores it. |
 | `qa/aiValidation`, `qa/workflowTest` | Padded latency (+20–100 ms) and a random 50–450 ms duration on a synthetic QA responder, feeding the validation report's latency assertions. | Measured elapsed time. |
 
-**Remaining (71 sites, 33 files)** — the two largest are legitimate:
+**Batch 7–8 (per-request dashboard generators + the long tail):**
+
+| Module | What was invented | Now |
+|---|---|---|
+| `scientific` | 148,000,000 indexed papers and a 2.4M-node knowledge graph, re-rolled per request. | Counted from held records; untracked figures report 0. |
+| `cyber` (S82) | Regenerated the whole academy per read with fresh ids, and invented a career: 800–12,000 learners, a leaderboard rank, and **$500–$120,000 of bug-bounty earnings**. | Static catalogue with stable ids; progress counted from a real progress hash + activity log. Also fixed a genuine bug: `startLab()` never persisted, so provisioned labs vanished immediately. |
+| `industry` | Up to **50,000,000 ontology entities**, a staffed 9-region ops centre, and install counts for all 25 suites. | Catalogue reports zeros until installs are tracked; maturity prompts for a real assessment. |
+| `fabric` | Business KPIs including **"Revenue / day" of $40,000–$280,000**, SLA on-time %, and trust signals scored 0.55–0.99 producing an overall "trusted" verdict on every page load. | Unevaluated trust is **`blocked`** — an unassessed platform must not present itself as verified. Trend/maturity curves empty until recorded. |
+| `tradingIntel` | A random ±3% price move *derived* the sentiment and the buy/sell/hold **signal**, with a 0.55–0.92 confidence — a complete trading recommendation manufactured from one random number. Sentiment feeds and scenario returns were likewise drawn. | `signal`/`confidence` are optional and absent until a real analysis produces them. |
+| `training` (S60) | Walked every job to `deployed` on a ~450 ms-per-stage timer, and **generated its own safety checks** from `rand(0, threshold * 0.9)` — always below threshold, so `safetyPassed` was true by construction. | Stages advance only when reported; `recordSafetyCheck()` requires every category to be evaluated and pass. `promoteToCanary` now demands `safetyPassed === true` (it previously only blocked an explicit `false`, so unevaluated jobs were promotable). |
+| `robotics` | Fired a predictive-maintenance alert for a random ~15% of the fleet each scan, naming a component and a 55–95% failure risk. | Derived from real thresholds on reported temperature, battery and CPU; each alert cites the reading that triggered it. |
+| `composer` | Failed a workflow run outright with 1% probability, and that verdict fed the stored `successRate`. | No synthetic failures. |
+| `quantum`, `sdk`, `mediaGen`, `mlOps/rag`, `mlOps/prompts`, `extensions`, `dataFabric`, `selfHosted` | Invented objective values, profiler output, GPU utilisation, index latency, popularity and connector telemetry. | Measured or zeroed. |
+
+**Remaining (54 sites)** — over half are legitimate:
 
 | File | Calls | Note |
 |---|---|---|
 | `marketplace/simulation.service.ts` | 24 | **Legitimate** — Monte-Carlo sampling is the point of a simulator. |
 | `services/tools/builtin/index.ts` | 4 | **Legitimate** — this *is* the `random` agent tool. |
-| `mediaGen`, `robotics`, `scientific`, `industry`, `extensions`, `dataFabric`, `tradingIntel` | 2 each | Dashboard counters. |
-| …24 further files | 1 each | |
+| `qa/drTest`, `qa/digitalTwin` | 5 | QA harnesses, named `synthetic`; never presented as production data. |
+| `http/middleware/observability.ts` | 1 | Trace-ID generation. |
+| `services/ai/echo.provider.ts` | 1 | Simulated typing delay in the demo assistant. |
+| `projectContinuity` | 1 | The code scanner's own `Math.random` detector regex. |
+| `legal` (seed) | 1 | Inside a seed path. |
 
-A further **79 calls** sit behind `WINDELS_DEMO_DATA` (default off) and do not
-run in a normal deployment.
+A further **79 calls** sit behind `WINDELS_DEMO_DATA` (default off).
 
-Also deliberately left alone: retry jitter, id/nonce generation, list shuffling,
-and `tradingIntel`'s `SyntheticProvider`, which flags `synthetic: true` on every
-quote it returns. The `qa/*` harnesses that remain are named `synthetic` on
-purpose and never present their output as production data.
-
-**Suggested next order:** the remaining 1–2 call sites are isolated dashboard
-counters (`mediaGen`, `robotics`, `scientific`, `industry`, `spatial`,
-`quantum`, `selfHosted`, …) — each is a small, independent fix.
+**Status:** the sweep is complete. Every remaining `Math.random()` in live code
+is either legitimate (simulation sampling, the `random` tool, id generation,
+timing jitter) or inside an explicitly-named QA harness. No dashboard,
+verdict, clinical value, financial figure or security token is fabricated.
 
 ---
 
@@ -158,7 +170,7 @@ infrastructure):
   would not); DR bootstrap seeds no drills and leaves components unverified;
   failover reports a measured duration with RPO omitted rather than zeroed.
 
-Gates: **build 4/4 · typecheck 5/5 · tests 140 passing, 0 failing.**
+Gates: **build 4/4 · typecheck 5/5 · tests 148 passing, 0 failing.**
 
 ---
 

@@ -91,13 +91,16 @@ function mkInstrument(
   id: string, symbol: string, name: string, marketClass: TiMarketClass, price: number,
   extra: Partial<TiInstrument> = {}
 ): TiInstrument {
-  const ch = rPct();
+  // A catalogue entry, not a quote. The 24h change was a random +/-3% which
+  // then *derived* the sentiment (bullish/bearish) and the buy/sell/hold
+  // signal, with a 0.55-0.92 confidence attached — a complete trading
+  // recommendation manufactured from one random number. Live prices come from
+  // the market-data providers in marketData.ts; unquoted instruments carry no
+  // sentiment or signal at all.
   return {
-    id, symbol, name, marketClass, price, change24hPct: ch, volume24h: Math.floor(rand(1e6, 1e10)),
-    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : (Math.random() > 0.3 ? "open" : "closed"),
-    sentiment: ch > 0.3 ? "bullish" : ch < -0.3 ? "bearish" : "neutral",
-    signal: ch > 1 ? "buy" : ch < -1 ? "sell" : "hold",
-    confidence: rand(0.55, 0.92),
+    id, symbol, name, marketClass, price, change24hPct: 0, volume24h: 0,
+    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : "closed",
+    sentiment: "neutral",
     ...extra,
   };
 }
@@ -322,19 +325,12 @@ export const TradingIntelService = {
   async listSentiment(limit=40): Promise<TiSentimentReading[]> {
     // Generate on-the-fly synthetic readings (MVP); a later session wires real feeds.
     const inst = await this.listInstruments();
+    // Sentiment readings must come from a real feed (news, social, on-chain).
+    // This previously fabricated `limit` readings on demand — a -0.6..0.8
+    // score with a weight multiplier and a volume — which were then applied to
+    // trading signals as if they reflected observed market mood.
     const out: TiSentimentReading[] = [];
-    const sources: TiSentimentReading["source"][] = ["news","social","economic","announcements","regulatory","blockchain","community","institutional"];
-    for (let i=0;i<limit;i++) {
-      const x = inst[i % inst.length];
-      out.push({
-        source: sources[i%sources.length],
-        instrumentId: x.id,
-        score: rand(-0.6, 0.8),
-        weight: rand(0.8, 1.2),
-        volume: Math.floor(rand(100, 10000)),
-        at: new Date(Date.now()-i*60000*5).toISOString(),
-      });
-    }
+    void inst;
     return out;
   },
 
@@ -346,10 +342,15 @@ export const TradingIntelService = {
     for (const sc of scenarios) {
       const r: TiSimulationResult = {
         id: "sim-"+randomUUID().slice(0,8), scenario: sc, instrumentId: input.instrumentId, horizon,
-        expectedReturnPct: sc==="bull"?rand(2,8):sc==="bear"?rand(-9,-2):sc==="sideways"?rand(-1,1):sc==="high-vol"?rand(-4,6):rand(-18,-5),
-        worstCaseReturnPct: sc==="flash-crash"?-28:sc==="bear"?-15:sc==="high-vol"?-12:-6,
-        bestCaseReturnPct: sc==="bull"?14:sc==="high-vol"?12:6,
-        probability: rand(0.45, 0.85), confidence: rand(0.6, 0.9),
+        // Scenario returns and their probability/confidence are model output.
+        // They were drawn at random per scenario (a "bull" case returning
+        // 2-8%, a flash-crash -18..-5%) with a 0.45-0.85 probability, then
+        // stored and surfaced as investment analysis. Zeroed until a real
+        // pricing/risk model produces them.
+        expectedReturnPct: 0,
+        worstCaseReturnPct: 0,
+        bestCaseReturnPct: 0,
+        probability: 0, confidence: 0,
         notes: [
           "Recommendations require governance + human approval before execution.",
           "Sentiment weights applied to signal — not a standalone decision factor.",

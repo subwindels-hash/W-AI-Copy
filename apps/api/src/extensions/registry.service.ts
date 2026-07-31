@@ -91,7 +91,8 @@ export const ExtensionRegistryService = {
     const now = iso();
     const e: Extension = {
       id, status: "draft", lifecycleStage: "dev",
-      installCount: 0, stars: Math.floor(5 + Math.random()*400), ratingAvg: 4 + Math.random(), reviewCount: 0,
+      // A newly registered extension has no stars and no rating.
+      installCount: 0, stars: 0, ratingAvg: 0, reviewCount: 0,
       versions: input.versions ?? [{ version: input.version, releasedAt: now, changelog: "initial release", minPlatformVersion: input.minPlatformVersion, status: "draft", downloads: 0 }],
       reviews: [],
       updatedAt: now,

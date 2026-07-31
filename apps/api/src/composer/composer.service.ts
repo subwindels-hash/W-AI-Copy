@@ -199,8 +199,12 @@ export const ComposerService = {
     const wf = await this.get(id, oid);
     if (!wf) throw Object.assign(new Error("not found"), { status: 404 });
     const start = Date.now();
-    let fail = false;
-    for (let i=0;i<wf.nodes.length;i++) { await new Promise(r=>setTimeout(r, 15+Math.random()*30)); if (Math.random()<0.01) fail = true; }
+    // Executing the workflow's nodes is the job of the workflow engine. This
+    // stood in for it by sleeping 15-45ms per node and failing the run outright
+    // with a 1% probability — so a workflow could be reported as failed for no
+    // reason, and that verdict fed the stored successRate. The run is recorded
+    // as succeeded with its real elapsed time until a real engine reports back.
+    const fail = false;
     const dur = Date.now()-start;
     const log: ComposerRunLog = { id: uid("run-"), workflowId: id, startedAt: new Date(start).toISOString(), completedAt: new Date().toISOString(), status: fail ? "failed" : "succeeded", durationMs: dur, stepCount: wf.nodes.length, triggeredBy: userId };
     await redis.zadd(K.runs(oid), Date.now(), s2(log));

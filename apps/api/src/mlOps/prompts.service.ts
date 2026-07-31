@@ -52,7 +52,8 @@ export const PromptsService = {
     };
     const p: PromptDef = {
       id, versions: [v0], testCases: [], testRuns: [],
-      stars: 4 + Math.floor(Math.random()*10), uses: Math.floor(50+Math.random()*2000),
+      // Popularity accrues from real usage; a new prompt has none.
+      stars: 0, uses: 0,
       updatedAt: now, ...input,
     };
     await redis.set(DETAIL(id), SER(p));

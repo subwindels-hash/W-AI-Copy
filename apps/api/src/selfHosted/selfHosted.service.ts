@@ -87,7 +87,8 @@ export const SelfHostedService = {
       status: "completed", scheduledAt: new Date().toISOString(),
       startedAt: new Date().toISOString(), completedAt: new Date().toISOString(),
       inputTokens: itoks, outputTokens: otoks,
-      latencyMs: 80 + Math.floor(Math.random()*400),
+      // Measured inference latency, not a plausible 80-480ms.
+      latencyMs: 0,
     };
     await redis.zadd(K.jobs, Date.now(), s(job));
     await redis.incr(K.jobs24);

@@ -154,10 +154,13 @@ export const SdkService = {
     const id = uid("prof-");
     const pr: ProfileRun = {
       id, target: input.target,
-      durationMs: randInt(600, 5200), cpuMs: randInt(300, 3400), memPeakMb: randInt(120, 1100),
-      tokensIn: randInt(500, 12000), tokensOut: randInt(200, 4000), llmCalls: randInt(2, 16),
-      costUsd: +rand(0.01, 0.6).toFixed(4),
-      bottlenecks: ["serial LLM calls","N+1 vector lookup","repeated embeddings","large context window"].slice(0, randInt(1,3)),
+      // A profiler reports what it measured. Every figure here was invented —
+      // duration, CPU, memory, token counts, cost — along with a plausible
+      // list of bottlenecks ("N+1 vector lookup") for code never executed.
+      durationMs: 0, cpuMs: 0, memPeakMb: 0,
+      tokensIn: 0, tokensOut: 0, llmCalls: 0,
+      costUsd: 0,
+      bottlenecks: [],
       ranAt: new Date().toISOString(),
     };
     await redis.hset(K.prof(oid,id),"_doc",s2(pr)); await redis.sadd(K.profs(oid),id);

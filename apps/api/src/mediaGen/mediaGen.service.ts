@@ -76,7 +76,8 @@ export const MediaGenService = {
       jobs24h: Number(await redis.get(K.metrics.j24) ?? 0),
       ready, failed,
       avgLatencyMs: n ? Math.round(totalMs / n) : 0,
-      gpuUtilizationPct: Math.min(95, 20 + Math.floor(Math.random() * 30)),
+      // Reported by the GPU node; 0 until it reports.
+      gpuUtilizationPct: 0,
       capabilities: caps.length,
       videoOpsStubbed: caps.some(c => c.modality === "video" && c.status === "stub"),
       routedThroughKernel: true,
@@ -97,7 +98,8 @@ export const MediaGenService = {
       id, modality, op, prompt,
       status: unsafe ? "failed" : "ready",
       safety: unsafe ? "rejected" : childTargeted ? "approved-child-safe" : "approved",
-      durationMs: unsafe ? 0 : 2000 + Math.floor(Math.random() * 8000),
+      // Measured render time, not a plausible 2-10s.
+      durationMs: 0,
       createdAt: now,
       url: unsafe ? undefined : `/api/v1/media-generation/asset/${modality}/${id}`,
       gpuNodeId: "self-hosted-gpu-0",

@@ -5700,7 +5700,7 @@ function TradingIntelTab() {
                 <span className="text-text-bright font-semibold">{typeof i.price==="number"?i.price.toLocaleString(undefined,{maximumFractionDigits:4}):i.price}</span>
                 <span className={i.change24hPct>=0?"text-emerald":"text-crimson"}>{i.change24hPct>=0?"+":""}{i.change24hPct.toFixed(2)}%</span>
                 <Badge variant={i.signal==="buy"?"emerald":i.signal==="sell"?"crimson":"slate"}>{i.signal}</Badge>
-                <span className="text-text-muted ml-auto">{Math.round(i.confidence*100)}%</span>
+                <span className="text-text-muted ml-auto">{i.confidence != null ? `${Math.round(i.confidence*100)}%` : "—"}</span>
               </div>
             </CardContent></Card>
           ))}
