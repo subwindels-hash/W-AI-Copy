@@ -41,7 +41,9 @@ export const SprintService = {
       capacityPoints: input.capacityPoints ?? 40,
       committedPoints: 0,
       completedPoints: input.completedPoints ?? 0,
-      velocityProjected: Math.round(30 + Math.random() * 15),
+      // Projected velocity is derived from completed sprint history; a brand
+      // new sprint has none. Was a random 30-45 points.
+      velocityProjected: input.velocityProjected,
       aiSuggestedGoal: input.aiSuggestedGoal ?? `Ship sprint ${n} scope with high confidence; focus on debt reduction and roadmap initiative alignment.`,
     };
     await redis.set(SPRINT_DETAIL(id), ser(s));
@@ -64,7 +66,9 @@ export const SprintService = {
   async createStory(input: Partial<Story>): Promise<Story> {
     const n = await redis.incr(STORY_COUNTER);
     const id = randomUUID();
-    const suggested = Math.round((input.points as number) ?? (3 + Math.random() * 8));
+    // Story points are a team estimate. When none is supplied the story stays
+    // unpointed rather than being assigned a random 3-11.
+    const suggested = typeof input.points === "number" ? Math.round(input.points) : undefined;
     const story: Story = {
       id,
       sprintId: input.sprintId ?? null,
@@ -122,13 +126,16 @@ export const SprintService = {
     const days = Math.max(5, Math.round((end - start) / 86400_000));
     const pts = s.committedPoints || 40;
     const arr: { date: string; remaining: number; ideal: number }[] = [];
+    // Only the ideal line can be computed from the sprint definition. The
+    // actual remaining-points curve requires per-day story history we do not
+    // keep, so it tracks the ideal rather than being drawn with random noise —
+    // which previously produced a convincing burndown chart of a sprint that
+    // was never measured.
     for (let i = 0; i <= days; i++) {
       const ideal = Math.max(0, Math.round(pts - (pts * i / days)));
-      const noise = (Math.random() - 0.3) * (pts * 0.12);
-      const remaining = Math.max(0, Math.round(ideal + noise));
       arr.push({
         date: new Date(start + i * 86400_000).toISOString().slice(0, 10),
-        remaining,
+        remaining: ideal,
         ideal,
       });
     }

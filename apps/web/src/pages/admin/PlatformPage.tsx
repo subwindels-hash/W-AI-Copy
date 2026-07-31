@@ -1907,7 +1907,7 @@ function DevPortalTab() {
                     <Badge variant={catTone(s.category) as any}>{s.category}</Badge>
                     <span className="font-semibold">{s.name}</span>
                     <Badge variant={s.status==="ga"?"emerald":s.status==="beta"?"amber":"slate"}>{s.status} v{s.version}</Badge>
-                    <span className="ml-auto text-text-muted">★ {s.stars} · ↓ {s.weeklyDownloads.toLocaleString()}/wk</span>
+                    <span className="ml-auto text-text-muted">★ {s.stars ?? "—"} · ↓ {s.weeklyDownloads != null ? s.weeklyDownloads.toLocaleString() : "—"}/wk</span>
                   </div>
                 ))}
               </CardContent>
@@ -1968,7 +1968,7 @@ function DevPortalTab() {
                     <span className="font-semibold text-text-bright">{s.name}</span>
                     <Badge variant="slate">{s.language}</Badge>
                     <Badge variant={s.status==="ga"?"emerald":s.status==="beta"?"amber":"slate"}>{s.status} v{s.version}</Badge>
-                    <span className="ml-auto text-text-muted">★{s.stars} · ↓{s.weeklyDownloads.toLocaleString()}/wk</span>
+                    <span className="ml-auto text-text-muted">★{s.stars ?? "—"} · ↓{s.weeklyDownloads != null ? s.weeklyDownloads.toLocaleString() : "—"}/wk</span>
                   </div>
                   <div className="text-text-muted mt-1">{s.description}</div>
                 </div>
@@ -1989,7 +1989,7 @@ function DevPortalTab() {
                   <Badge variant={catTone(selectedSdk.category) as any}>{selectedSdk.category}</Badge>
                   <Badge variant="slate">{selectedSdk.language}</Badge>
                   <Badge variant={selectedSdk.status==="ga"?"emerald":selectedSdk.status==="beta"?"amber":"slate"}>{selectedSdk.status} v{selectedSdk.version}</Badge>
-                  <span className="text-text-muted">★ {selectedSdk.stars} · ↓ {selectedSdk.weeklyDownloads.toLocaleString()}/wk</span>
+                  <span className="text-text-muted">★ {selectedSdk.stars ?? "—"} · ↓ {selectedSdk.weeklyDownloads != null ? selectedSdk.weeklyDownloads.toLocaleString() : "—"}/wk</span>
                   {selectedSdk.bundleSizeKb && <span className="text-text-muted">{selectedSdk.bundleSizeKb} kB gz</span>}
                   <span className="text-text-muted">slice {selectedSdk.sliceNumber}</span>
                 </div>

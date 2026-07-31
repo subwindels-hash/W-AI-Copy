@@ -29,7 +29,8 @@ export interface Initiative {
   dependencies: string[];
   milestones: Milestone[];
   okrSummary?: string;
-  aiConfidence: number;
+  /** Undefined until a real model scores the initiative. */
+  aiConfidence?: number;
 }
 
 export interface Roadmap {
@@ -74,7 +75,8 @@ export interface Sprint {
   capacityPoints: number;
   committedPoints: number;
   completedPoints: number;
-  velocityProjected: number;
+  /** Projected from completed history. Undefined for a sprint with no history. */
+  velocityProjected?: number;
   aiSuggestedGoal?: string;
 }
 

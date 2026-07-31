@@ -22,8 +22,10 @@ export interface SDKPackage {
   installSnippet: string;
   docsUrl: string;
   description: string;
-  weeklyDownloads: number;
-  stars: number;
+  /** Registry popularity. Undefined until a real registry/VCS reports it —
+   *  these were invented (100-9100 downloads, 10-910 stars). */
+  weeklyDownloads?: number;
+  stars?: number;
   bundleSizeKb?: number;
   minPlatformVersion?: string;
   repoUrl?: string;

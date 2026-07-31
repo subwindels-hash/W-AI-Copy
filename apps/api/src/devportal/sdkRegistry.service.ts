@@ -48,6 +48,7 @@ export const SDKRegistryService = {
     slug: string; name: string; category: SDKCategory; language: SDKLanguage;
     description: string; features: string[]; status?: SDKStatus; version?: string;
     sliceNumber: number; exampleSnippet?: string; bundleSizeKb?: number;
+    weeklyDownloads?: number; stars?: number;
   }): Promise<SDKPackage> {
     const id = randomUUID();
     const sdk: SDKPackage = {
@@ -61,8 +62,11 @@ export const SDKRegistryService = {
       installSnippet: mkInstall(input.slug, input.language),
       docsUrl: `https://docs.windels.ai/sdks/${input.slug}`,
       description: input.description,
-      weeklyDownloads: Math.floor(100 + Math.random() * 9000),
-      stars: Math.floor(10 + Math.random() * 900),
+      // Popularity comes from the package registry / VCS, not from us. These
+      // were invented (100-9100 weekly downloads, 10-910 stars) and rendered
+      // on the public developer portal as if they were real adoption numbers.
+      weeklyDownloads: input.weeklyDownloads,
+      stars: input.stars,
       bundleSizeKb: input.bundleSizeKb,
       minPlatformVersion: "0.27.0",
       repoUrl: `https://github.com/windels-ai/windels/tree/main/sdks/${input.slug}`,
@@ -82,13 +86,14 @@ export const SDKRegistryService = {
     const raw = await redis.get(DETAIL(id));
     if (raw) {
       const s = JSON.parse(raw) as SDKPackage;
-      s.weeklyDownloads += 1;
+      // The counter starts from the real recorded total, not from an invented one.
+      s.weeklyDownloads = (s.weeklyDownloads ?? 0) + 1;
       s.updatedAt = iso();
       await redis.set(DETAIL(id), SER(s));
     }
   },
   async weeklyTotal(): Promise<number> {
     const all = await this.list();
-    return all.reduce((a, b) => a + b.weeklyDownloads, 0);
+    return all.reduce((a, b) => a + (b.weeklyDownloads ?? 0), 0);
   },
 };

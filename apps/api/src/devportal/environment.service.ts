@@ -48,12 +48,12 @@ export const EnvironmentService = {
     e.status = "starting";
     e.logs = [...(e.logs ?? []), `[${iso()}] starting ${e.name}...`];
     await redis.set(DETAIL(id), SER(e));
-    // Simulate boot
+    // The environment is marked running; resource usage is reported by the
+    // environment itself via reportUsage(). cpuPct/memMb were invented here
+    // (5-40% CPU, 200-800MB) for a process that had just started.
     e.status = "running";
     e.startedAt = iso();
     e.uptimeSec = 0;
-    e.cpuPct = Math.round(5 + Math.random() * 35);
-    e.memMb = Math.round(200 + Math.random() * 600);
     e.url = e.kind === "local"
       ? `http://localhost:${e.ports.find(p=>p.name==="web"||p.name==="https"||p.name==="emulator")?.port ?? 5173}`
       : `https://${e.kind}-${randomUUID().slice(0,8)}.windels.dev`;
@@ -85,9 +85,10 @@ export const EnvironmentService = {
         logs: spec.kind === "local"
           ? [`[${iso()}] ${spec.name} already running`, `[${iso()}] services healthy: ${spec.services.join(", ")}`]
           : [],
-        uptimeSec: spec.kind === "local" ? 3800 : 0,
-        cpuPct: spec.kind === "local" ? Math.round(15 + Math.random()*25) : 0,
-        memMb: spec.kind === "local" ? 420 : 0,
+        uptimeSec: undefined,
+        // Usage is unknown until the environment reports it.
+        cpuPct: undefined,
+        memMb: undefined,
         url: spec.kind === "local" ? "http://localhost:5173" : undefined,
         startedAt: spec.kind === "local" ? iso() : undefined,
       };
