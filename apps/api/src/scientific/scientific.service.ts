@@ -95,20 +95,29 @@ export const ScientificService = {
     for (const d of RESEARCH_DOMAINS) byDomain[d]={domain:d,papers:0,experiments:0};
     exps.forEach(e=>{ if(byDomain[e.domain]) byDomain[e.domain].experiments++; });
     paps.slice(0, RESEARCH_DOMAINS.length).forEach((_,i)=>{ const d=RESEARCH_DOMAINS[i%RESEARCH_DOMAINS.length]; byDomain[d].papers++; });
+    // Every figure below is counted from records this organization actually
+    // holds. They were previously re-rolled on each request — including a
+    // claim of ~148,000,000 indexed papers and a 2.4M-node knowledge graph,
+    // neither of which exists — so the dashboard reported a different research
+    // programme every time it refreshed.
+    const now = Date.now();
+    const within30d = (iso?: string) => !!iso && now - new Date(iso).getTime() < 30 * 86_400_000;
     return {
-      papersIndexed: 148_000_000 + rndInt(0,2_000_000),
+      papersIndexed: paps.length,
       experimentsActive: exps.filter(e=>e.status==="running"||e.status==="planned").length,
-      experimentsCompleted30d: rndInt(20,60),
+      experimentsCompleted30d: exps.filter(e=>e.status==="completed" && within30d((e as any).completedAt ?? (e as any).updatedAt)).length,
       hypothesesActive: hyps.filter(h=>h.status!=="refuted"&&h.status!=="published").length,
-      hypothesesSupported30d: rndInt(3,12),
-      publicationsInProgress: rndInt(4,12),
-      publicationsPublished30d: rndInt(1,4),
-      collaborators: rndInt(20,200),
-      citationsTracked: rndInt(5000,50000),
-      simulationsRun30d: rndInt(2000,20000),
+      hypothesesSupported30d: hyps.filter(h=>h.status==="supported" && within30d((h as any).updatedAt)).length,
+      publicationsInProgress: hyps.filter(h=>h.status==="testing").length,
+      publicationsPublished30d: hyps.filter(h=>h.status==="published" && within30d((h as any).updatedAt)).length,
+      // Collaborator/citation/simulation tracking has no backing store yet, so
+      // these report 0 rather than a plausible-looking count.
+      collaborators: 0,
+      citationsTracked: 0,
+      simulationsRun30d: 0,
       topDomains: RESEARCH_DOMAINS.slice(0,8).map(d=>byDomain[d]),
       recentExperiments: exps, recentPapers: paps.slice(0,8), recentHypotheses: hyps,
-      knowledgeGraphNodes: 2_400_000+rndInt(0,100_000), knowledgeGraphEdges: 18_000_000+rndInt(0,500_000),
+      knowledgeGraphNodes: 0, knowledgeGraphEdges: 0,
     };
   },
   async searchPapers(oid:string, q:string): Promise<LiteratureRef[]> {

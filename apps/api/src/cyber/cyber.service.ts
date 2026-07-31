@@ -8,9 +8,13 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Logger } from "pino";
 import { CyberDashboard, CYBER_DOMAINS, CYBER_LEVELS, CyberCourse, CyberLab, CyberCertification, CyberRange, CloudSecurityFinding, CyberChallenge, CyberDomain } from "@windels/shared";
-const K={meta:(oid:string)=>`csec:meta:${oid}`};
-const rnd=(a:number,b:number)=>Math.random()*(b-a)+a, rndInt=(a:number,b:number)=>Math.floor(rnd(a,b+1));
-const pick=<T>(a:T[])=>a[Math.floor(Math.random()*a.length)];
+const K={
+  meta:(oid:string)=>`csec:meta:${oid}`,
+  lab:(oid:string,id:string)=>`csec:lab:${oid}:${id}`,
+  labs:(oid:string)=>`csec:labs:${oid}`,
+  progress:(oid:string)=>`csec:progress:${oid}`,
+  activity:(oid:string)=>`csec:activity:${oid}`,
+};
 const uid=(p:string)=>p+randomUUID().slice(0,8);
 const now=()=>new Date().toISOString();
 
@@ -63,48 +67,105 @@ export const CyberService = {
     if (await redis.exists(K.meta(oid))) return; await redis.set(K.meta(oid),"1");
     logger?.info({ msg:"[cyber] bootstrap complete", courses: COURSE_SEEDS.length, certs: CERT_SEEDS.length, findings: FINDING_SEEDS.length });
   },
+  /**
+   * Learner-facing academy rollup.
+   *
+   * This previously rebuilt the whole academy on every request: fresh ids for
+   * every course/lab/challenge, and invented progress — 800-12,000 learners,
+   * a leaderboard rank, 2,000-80,000 points, and $500-$120,000 of bug-bounty
+   * earnings. Refreshing the page produced a different career each time.
+   *
+   * The catalogue (courses, certifications, challenge titles, finding
+   * templates) is static configuration and is served as-is. Everything that
+   * describes *this user's* progress is now counted from recorded state and
+   * starts at zero, so the dashboard reflects what actually happened.
+   */
   async dashboard(oid:string): Promise<CyberDashboard> {
     if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
-    const courses: CyberCourse[] = COURSE_SEEDS.map(c=>({id:uid("crs-"),enrolled:rndInt(200,20000),rating:Math.round(rnd(4.1,4.9)*10)/10,...c}));
-    const labs: CyberLab[] = [
-      {id:uid("lab-"),name:"Kioptrix-style boot2root",domain:"ethical_hacking",difficulty:"intermediate",status:"ready",expiresAt:new Date(Date.now()+7200_000).toISOString()},
-      {id:uid("lab-"),name:"AD Forest Persistence",domain:"active_directory",difficulty:"expert",cloud:"multi",status:"running",expiresAt:new Date(Date.now()+3600_000).toISOString(),scorePct:Math.round(rnd(10,95)),flagsCaptured:rndInt(0,7),flagsTotal:7},
-      {id:uid("lab-"),name:"S3 misconfiguration CTF",domain:"cloud_security",difficulty:"beginner",cloud:"aws",status:"ready",expiresAt:new Date(Date.now()+7200_000).toISOString()},
-      {id:uid("lab-"),name:"K8s cluster compromise",domain:"kubernetes_security",difficulty:"advanced",cloud:"gcp",status:"provisioning",expiresAt:new Date(Date.now()+7200_000).toISOString()},
-    ];
+
+    // Catalogue: stable ids derived from the seed index so they do not churn
+    // between reads. `enrolled`/`rating` are registry stats we do not collect.
+    const courses: CyberCourse[] = COURSE_SEEDS.map((c,i)=>({ id:`crs-${i}`, enrolled:0, rating:0, ...c }));
+    const certifications: CyberCertification[] = CERT_SEEDS.map((c,i)=>({ id:`cert-${i}`, preparationProgressPct: c.passed?100:0, ...c }));
     const cd = [...CYBER_DOMAINS];
     const challenges: CyberChallenge[] = CHALLENGE_TITLES.slice(0,12).map((t,i)=>({
-      id:uid("ch-"), title:t, domain: pick(cd), points:[50,100,150,200,300,500][i%6],
-      difficulty: CYBER_LEVELS[(i%4)] as any, solvedBy: rndInt(50,4000), category:(["ctf","lab","quiz","king_of_the_hill"] as const)[i%4],
+      id:`ch-${i}`, title:t, domain: cd[i % cd.length]!, points:[50,100,150,200,300,500][i%6]!,
+      difficulty: CYBER_LEVELS[(i%4)] as any, solvedBy: 0, category:(["ctf","lab","quiz","king_of_the_hill"] as const)[i%4],
     }));
-    const certifications: CyberCertification[] = CERT_SEEDS.map(c=>({id:uid("cert-"),preparationProgressPct:c.passed?100:Math.round(rnd(10,85)),...c}));
-    const ranges: CyberRange[] = [
-      {id:uid("rg-"),name:"Corporate Red Team Engagement #27",kind:"red_team",cloudTargets:["aws","azure"],players:12,durationHours:72,status:"live",startsAt:new Date(Date.now()-3600_000).toISOString(),score:rndInt(1200,3200),rank:rndInt(1,40)},
-      {id:uid("rg-"),name:"Weekend CTF: AI Security",kind:"capture_the_flag",cloudTargets:["gcp"],players:248,durationHours:24,status:"scheduled",startsAt:new Date(Date.now()+3*86400_000).toISOString()},
-      {id:uid("rg-"),name:"Purple Team — ransomware sim",kind:"purple_team",cloudTargets:["aws","azure","gcp"],players:8,durationHours:8,status:"completed",startsAt:new Date(Date.now()-7*86400_000).toISOString(),score:rndInt(800,2800),rank:rndInt(1,15)},
-      {id:uid("rg-"),name:"Public Bug Bounty — Wildcard *.windels.ai",kind:"bug_bounty",cloudTargets:["aws","cloudflare"],players:512,durationHours:720,status:"live",startsAt:new Date(Date.now()-15*86400_000).toISOString(),score:rndInt(0,500)},
-    ];
-    const findings: CloudSecurityFinding[] = FINDING_SEEDS.map((f,i)=>({id:uid("f-"),resource:"res-"+Math.random().toString(36).slice(2,8),status:(i%3===0?"remediated":i%5===0?"accepted":"open"),...f}));
-    const skillScores: any = {}; for (const d of [...CYBER_DOMAINS]) skillScores[d]=Math.round(rnd(10,95));
+    const findings: CloudSecurityFinding[] = FINDING_SEEDS.map((f,i)=>({
+      id:`f-${i}`, resource:`res-${i}`, status:(i%3===0?"remediated":i%5===0?"accepted":"open"), ...f,
+    }));
+
+    // Live state: labs the user actually provisioned, and their real progress.
+    const labIds = await redis.smembers(K.labs(oid));
+    const labs: CyberLab[] = [];
+    for (const id of labIds) {
+      const raw = await redis.hget(K.lab(oid,id), "_doc");
+      if (raw) { try { labs.push(JSON.parse(raw)); } catch { /* skip */ } }
+    }
+    const progress = await redis.hgetall(K.progress(oid));
+    const num = (k: string) => Number(progress[k] ?? "0");
+
+    const skillScores: any = {};
+    for (const d of cd) skillScores[d] = num(`skill:${d}`);
+
     return {
-      learners: rndInt(800,12000), coursesAvailable: courses.length, coursesEnrolled: rndInt(2,16), labsActive: labs.filter(l=>l.status==="running").length,
-      challengesSolved: rndInt(3,400), certificationsHeld: certifications.filter(c=>c.passed).length,
-      leaderboardRank: rndInt(1,1200), ctfWins: rndInt(0,15), totalPoints: rndInt(2000,80000),
-      bugBountiesEarnedUsd: Math.round(rnd(500, 120000)), cloudFindingsOpen: findings.filter(f=>f.status==="open").length,
+      // Platform-wide learner counts are not tracked; report this org only.
+      learners: 0,
+      coursesAvailable: courses.length,
+      coursesEnrolled: num("coursesEnrolled"),
+      labsActive: labs.filter(l=>l.status==="running").length,
+      challengesSolved: num("challengesSolved"),
+      certificationsHeld: certifications.filter(c=>c.passed).length,
+      leaderboardRank: 0,
+      ctfWins: num("ctfWins"),
+      totalPoints: num("totalPoints"),
+      bugBountiesEarnedUsd: num("bugBountiesEarnedUsd"),
+      cloudFindingsOpen: findings.filter(f=>f.status==="open").length,
       cloudFindingsCritical: findings.filter(f=>f.severity==="critical"&&f.status==="open").length,
-      cloudFindingsRemediated30d: rndInt(20,200), upcomingRanges: ranges.filter(r=>r.status==="scheduled").length, activeRanges: ranges.filter(r=>r.status==="live").length,
-      courses, labs, challenges, certifications, ranges, findings,
-      recentActivity: [
-        {at:new Date(Date.now()-12*60_000).toISOString(),what:"Completed lab 'AD Forest Persistence' with score 92%",points:250},
-        {at:new Date(Date.now()-2*3600_000).toISOString(),what:"Solved challenge 'JWT: None algorithm'",points:100},
-        {at:new Date(Date.now()-1*86400_000).toISOString(),what:"Enrolled in AWS Security Speciality Path"},
-        {at:new Date(Date.now()-3*86400_000).toISOString(),what:"Remediated 4 critical AWS findings in us-east-1",points:400},
-        {at:new Date(Date.now()-5*86400_000).toISOString(),what:"Bug bounty: XSS in marketing site — $750 award",points:750},
-      ],
+      cloudFindingsRemediated30d: findings.filter(f=>f.status==="remediated").length,
+      upcomingRanges: 0, activeRanges: 0,
+      courses, labs, challenges, certifications, ranges: [], findings,
+      // Activity is an append-only log of real events, not a scripted history.
+      recentActivity: (await redis.lrange(K.activity(oid), 0, 19)).flatMap((r) => {
+        try { return [JSON.parse(r)]; } catch { return []; }
+      }),
       skillScores,
     };
   },
+
+  /** Append a real academy event (lab completed, challenge solved, ...). */
+  async recordActivity(oid: string, what: string, points?: number) {
+    await redis.lpush(K.activity(oid), JSON.stringify({ at: new Date().toISOString(), what, points }));
+    await redis.ltrim(K.activity(oid), 0, 199);
+    if (points) await redis.hincrby(K.progress(oid), "totalPoints", points);
+  },
+
+  /**
+   * Provision a lab. The previous implementation returned a lab object without
+   * persisting it, so the lab vanished the moment the response was sent and
+   * never appeared in the dashboard. It is now stored and tracked.
+   */
   async startLab(oid:string, input:{domain:any, difficulty:any, cloud?:any}): Promise<CyberLab> {
-    return { id:uid("lab-"), name:`Lab: ${input.domain} (${input.difficulty})`, domain:input.domain, difficulty:input.difficulty, cloud:input.cloud, status:"provisioning", expiresAt:new Date(Date.now()+7200_000).toISOString() };
+    const lab: CyberLab = {
+      id: uid("lab-"),
+      name: `Lab: ${input.domain} (${input.difficulty})`,
+      domain: input.domain, difficulty: input.difficulty, cloud: input.cloud,
+      status: "provisioning",
+      expiresAt: new Date(Date.now() + 7200_000).toISOString(),
+    };
+    await redis.hset(K.lab(oid, lab.id), "_doc", JSON.stringify(lab));
+    await redis.sadd(K.labs(oid), lab.id);
+    await this.recordActivity(oid, `Provisioned lab '${lab.name}'`);
+    return lab;
+  },
+
+  /** Update a lab's status/score from the real range controller. */
+  async updateLab(oid:string, id:string, patch: Partial<Pick<CyberLab,"status"|"scorePct"|"flagsCaptured"|"flagsTotal">>): Promise<CyberLab|null> {
+    const raw = await redis.hget(K.lab(oid, id), "_doc");
+    if (!raw) return null;
+    const lab = { ...JSON.parse(raw), ...patch } as CyberLab;
+    await redis.hset(K.lab(oid, id), "_doc", JSON.stringify(lab));
+    return lab;
   },
 };

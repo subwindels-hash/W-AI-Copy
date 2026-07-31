@@ -10,17 +10,37 @@ const K={meta:(oid:string)=>`ind:meta:${oid}`};
 const uid=(p:string)=>p+randomUUID().slice(0,8);
 const rnd=(a:number,b:number)=>Math.random()*(b-a)+a, rndInt=(a:number,b:number)=>Math.floor(rnd(a,b+1));
 
-function maturity(): IndMaturityScore { return {overall:Math.round(rnd(55,85)),dimensions:[{name:"data",score:Math.round(rnd(50,90))},{name:"ai_capability",score:Math.round(rnd(45,90))},{name:"governance",score:Math.round(rnd(60,95))},{name:"adoption",score:Math.round(rnd(40,85))},{name:"ops",score:Math.round(rnd(55,92))}],benchmarkPct:Math.round(rnd(40,90)),recommendedNext:"Deploy semantic search across enterprise docs; activate L3 governance gates for model changes."}; }
+/**
+ * Maturity is an assessment, not a measurement we can take. Until one is
+ * recorded every dimension is 0 — this previously returned a random 55-85
+ * overall score with five plausible sub-scores and a benchmark percentile.
+ */
+function maturity(): IndMaturityScore {
+  return {
+    overall: 0,
+    dimensions: [
+      { name: "data", score: 0 }, { name: "ai_capability", score: 0 },
+      { name: "governance", score: 0 }, { name: "adoption", score: 0 },
+      { name: "ops", score: 0 },
+    ],
+    benchmarkPct: 0,
+    recommendedNext: "Run an industry maturity assessment to populate this score.",
+  };
+}
 
 function seedIndustries(): IndustryPack[] {
   const names: Record<string,string> = {
     government:"Government",healthcare:"Healthcare",banking:"Banking",insurance:"Insurance",construction:"Construction",manufacturing:"Manufacturing",mining:"Mining",oil_gas:"Oil & Gas",energy_utilities:"Energy & Utilities",agriculture:"Agriculture",education:"Education",retail:"Retail",telecom:"Telecom",aviation:"Aviation",maritime:"Maritime",logistics:"Logistics",smart_cities:"Smart Cities",hospitality:"Hospitality",legal_services:"Legal Services",real_estate:"Real Estate",pharmaceutical:"Pharmaceutical",biotechnology:"Biotechnology",media_entertainment:"Media & Entertainment",non_profit:"Non-Profit",defense_public_safety:"Defense & Public Safety",
   };
+  // The 25 industry suites are a catalogue. Their per-tenant counts (workflows
+  // installed, knowledge entries, twins, readiness) were invented per request,
+  // so refreshing the page showed a different deployment every time. An
+  // uninstalled pack reports zeros until real installs are tracked.
   return INDUSTRY_SUITES.map(id=>({
-    id, name: names[id]||id, employees: rndInt(5,40), workflows: rndInt(12,80), compliancePacks: rndInt(3,16),
-    knowledgeEntries: rndInt(200,5000), dashboards: rndInt(4,18), kpis: rndInt(8,40), templates: rndInt(10,60),
-    reports: rndInt(4,20), analytics: rndInt(6,24), bestPractices: rndInt(20,120), twins: rndInt(0,12), skills: rndInt(8,50),
-    digitalHumans: rndInt(1,8), readinessPct: Math.round(rnd(35,95)),
+    id, name: names[id]||id, employees: 0, workflows: 0, compliancePacks: 0,
+    knowledgeEntries: 0, dashboards: 0, kpis: 0, templates: 0,
+    reports: 0, analytics: 0, bestPractices: 0, twins: 0, skills: 0,
+    digitalHumans: 0, readinessPct: 0,
   }));
 }
 
@@ -33,12 +53,16 @@ export const IndustryService = {
   async dashboard(oid:string): Promise<IndustryDashboard> {
     if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
     return {
-      ontology:{terms:rndInt(20_000,80_000),classes:rndInt(400,2000),relationships:rndInt(8000,40_000),entities:rndInt(1_000_000,50_000_000),mappings:rndInt(200,2000),evolvingPerDay:rndInt(20,400)},
+      // Ontology / governance / operations figures are counted from real
+      // registries. They previously claimed up to 50,000,000 ontology entities
+      // and a fully staffed 9-region operations centre, re-rolled on every
+      // request. Zeroed until those registries are wired up.
+      ontology:{terms:0,classes:0,relationships:0,entities:0,mappings:0,evolvingPerDay:0},
       industries:seedIndustries(),
-      governance:{activePolicies:rndInt(80,300),arbMeetings:rndInt(2,12),pendingReviews:rndInt(3,20),exceptionsOpen:rndInt(0,8),changesMerged30d:rndInt(20,200),auditFindings:rndInt(0,12)},
-      doc:{regions:["us-east","us-west","eu-west","eu-central","ap-south","ap-east","sa-east","af-south","me-central"].map(n=>({name:n,health:(["ok","ok","ok","warn"] as const)[Math.floor(Math.random()*4)],incidents:rndInt(0,4),alerts:rndInt(0,10)})),workloads:[{domain:"inference",load:Math.round(rnd(40,95)),status:"ok"},{domain:"training",load:Math.round(rnd(20,80)),status:"ok"},{domain:"data",load:Math.round(rnd(30,70)),status:"ok"},{domain:"agents",load:Math.round(rnd(10,60)),status:"ok"}],oncall:rndInt(4,12)},
+      governance:{activePolicies:0,arbMeetings:0,pendingReviews:0,exceptionsOpen:0,changesMerged30d:0,auditFindings:0},
+      doc:{regions:[],workloads:[],oncall:0},
       maturity:maturity(),
-      activeTwins:rndInt(40,400), semanticSearchLatencyMs:Math.round(rnd(40,180)), businessGlossary:rndInt(200,2000),
+      activeTwins:0, semanticSearchLatencyMs:0, businessGlossary:0,
       layerMapping:{
         "Platform One — AI Core":["kernel","superintelligence","synthetic","memory","knowledge_graph","semantic","world_model","reasoning","god_node","governance"],
         "Platform Two — Enterprise Business":["crm","finance","procurement","hr","support","trading","cyber","bi","digital_ops","automation","industry_suites"],
