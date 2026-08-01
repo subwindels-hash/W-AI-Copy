@@ -603,7 +603,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/files.ts (54 LOC, serves /attachments)",
       "pages": []
     },
     "db": {
@@ -705,9 +705,9 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/permissions.ts (25 LOC, imported)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/api.ts (261 LOC, serves /auth)",
       "pages": []
     },
     "db": {
@@ -748,7 +748,8 @@
       "sessions54-60.spec.ts",
       "sessions61-72-82.spec.ts",
       "sessions73-75.spec.ts",
-      "smoke.spec.ts"
+      "smoke.spec.ts",
+      "services/googleAuth.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -1164,7 +1165,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/canvas.ts (102 LOC, serves /canvas)",
       "pages": []
     },
     "db": {
@@ -1762,7 +1763,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/chat.ts (86 LOC, serves /conversations)",
       "pages": []
     },
     "db": {
@@ -2428,9 +2429,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/devPortal.ts (115 LOC, supplies CLICommand/CLICommandGroup)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/devPortal.ts (34 LOC, serves /dev-portal)",
       "pages": []
     },
     "db": {
@@ -2759,7 +2760,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/engMetrics.ts (160 LOC, supplies SLOTier/ServiceMetric)",
     "web": {
       "client": "apps/web/src/lib/engineering.ts (46 LOC)",
       "pages": []
@@ -3050,11 +3051,11 @@
       "serviceFile": {
         "file": "etl.service.ts",
         "path": "/home/user/WIN/apps/api/src/etl/etl.service.ts",
-        "sloc": 333,
+        "sloc": 311,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 847,
+      "serviceTotalSloc": 803,
       "serviceFiles": [
         "etl.service.ts",
         "etl.test.ts",
@@ -3068,7 +3069,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/etl.ts",
-        "sloc": 82,
+        "sloc": 74,
         "counts": {
           "total": 7,
           "GET": 4,
@@ -3088,7 +3089,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/etl.ts (119 LOC)",
     "web": {
       "client": "apps/web/src/lib/etl.ts (33 LOC)",
       "pages": []
@@ -3106,7 +3107,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "events",
@@ -3518,7 +3519,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/wmpcGiftCards.ts (67 LOC, supplies WmpcGiftCard/GcTransaction/GcFraudFlag)",
     "web": {
       "client": "apps/web/src/lib/giftCards.ts (26 LOC)",
       "pages": []
@@ -3539,7 +3540,7 @@
     "externalIntegrations": [
       "AWS"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "globalCurrency",
@@ -3683,7 +3684,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/googleAuth.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "Google"
@@ -4688,7 +4691,9 @@
       "mediaFactory/publishing/webhooks.test.ts",
       "config/liveFabrication.test.ts",
       "config/moduleGates.test.ts",
-      "config/seedGate.test.ts"
+      "config/seedGate.test.ts",
+      "services/googleAuth.test.ts",
+      "services/mfa.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -4887,7 +4892,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/api.ts (261 LOC, serves /auth/mfa)",
       "pages": []
     },
     "db": {
@@ -4898,7 +4903,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/mfa.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -5298,7 +5305,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/infrastructure.ts (271 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/platform.ts (62 LOC)",
       "pages": []
@@ -6373,7 +6380,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "security/serviceToken.test.ts"
+      "security/serviceToken.test.ts",
+      "services/mfa.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],

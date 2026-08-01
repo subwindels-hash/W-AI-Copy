@@ -145,7 +145,7 @@ export class FakePrisma {
   }
 
   /** `participants` -> `ConversationParticipant`, `messages` -> `Message`. */
-  private relatedModel(field: string): string {
+  relatedModel(field: string): string {
     const singular = field.endsWith("s") ? field.slice(0, -1) : field;
     const known: Record<string, string> = {
       participant: "ConversationParticipant",
@@ -220,14 +220,51 @@ export class FakePrisma {
     const self = this;
     return {
       async create({ data, include, select }: Row) {
+        // Split scalar fields from nested relation writes (`{ create: … }`).
+        // Previously the whole `data` object was stored verbatim, so a nested
+        // create was persisted as a literal `{ create: {...} }` value and the
+        // related row was never inserted. Any service doing
+        //   organization.create({ data: { workspaces: { create: {...} } },
+        //                         include: { workspaces: true } })
+        // then read `org.workspaces[0].id` as undefined and crashed — which is
+        // what hid the Google OAuth provisioning path from its own tests.
+        const scalars: Row = {};
+        const nested: Array<[string, Row[]]> = [];
+        for (const [key, value] of Object.entries(data ?? {})) {
+          if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date)
+              && "create" in (value as Row)) {
+            const payload = (value as Row).create;
+            nested.push([key, Array.isArray(payload) ? payload as Row[] : [payload as Row]]);
+          } else {
+            scalars[key] = value;
+          }
+        }
+
         const row: Row = {
-          id: data.id ?? cuid(),
+          id: scalars.id ?? cuid(),
           createdAt: new Date(),
           updatedAt: new Date(),
           ...(SCHEMA_DEFAULTS.get(model) ?? {}),
-          ...data,
+          ...scalars,
         };
         self.rows(model).push(row);
+
+        // Insert each related row with the back-reference Prisma would set.
+        const fk = `${model.charAt(0).toLowerCase()}${model.slice(1)}Id`;
+        for (const [field, payloads] of nested) {
+          const target = self.relatedModel(field);
+          for (const p of payloads) {
+            self.rows(target).push({
+              id: p.id ?? cuid(),
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              ...(SCHEMA_DEFAULTS.get(target) ?? {}),
+              [fk]: row.id,
+              ...p,
+            });
+          }
+        }
+
         return self.hydrate(model, row, { include, select });
       },
       async createMany({ data }: Row) {

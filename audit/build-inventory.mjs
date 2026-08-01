@@ -303,6 +303,111 @@ function findTestsFor(modKey) {
 
   return [...new Set(tests)];
 }
+/**
+ * Locate the shared Zod/type contract for a module.
+ *
+ * This was a bare `fexists(shared/<modKey>.ts)` check, which assumes the shared
+ * file is named exactly after the backend module. `giftCards` breaks that
+ * assumption: its contract is `wmpcGiftCards.ts` (Session 79's WMPC naming) and
+ * the service imports GcType/GcStatus/WmpcGiftCard from it — yet the audit
+ * reported the module as having no shared types, i.e. as unfinished work.
+ *
+ * Resolve by what the backend actually imports, falling back to the filename.
+ */
+function findSharedTypes(modKey) {
+  const exact = path.join(SHARED, `${modKey}.ts`);
+  if (fexists(exact)) return `packages/shared/src/${modKey}.ts (${sloc(exact)} LOC)`;
+
+  // Collect the module's backend sources and see which shared file supplies the
+  // types they import.
+  const sources = [];
+  const modDir = path.join(API_SERVICES, modKey);
+  for (const f of ls(modDir)) if (f.endsWith(".ts")) sources.push(path.join(modDir, f));
+  for (const rel of servicesFromRoutes(modKey)) sources.push(path.join(API_SERVICES, rel));
+  const routeFile = path.join(API_ROUTES, `${modKey}.ts`);
+  if (fexists(routeFile)) sources.push(routeFile);
+
+  // Named subpath import, e.g. from "@windels/shared/etl".
+  for (const src of sources) {
+    const text = read(src);
+    for (const m of text.matchAll(/@windels\/shared\/([A-Za-z0-9_]+)/g)) {
+      const cand = path.join(SHARED, `${m[1]}.ts`);
+      // "api" is the generic envelope, not a module contract.
+      if (m[1] !== "api" && fexists(cand)) {
+        return `packages/shared/src/${m[1]}.ts (${sloc(cand)} LOC, imported)`;
+      }
+    }
+  }
+
+  // Barrel import — find which shared file declares the imported symbols.
+  for (const src of sources) {
+    const text = read(src);
+    for (const imp of text.matchAll(/import\s+type\s*\{([^}]+)\}\s*from\s*["']@windels\/shared["']/g)) {
+      const names = imp[1].split(",").map((s) => s.trim().split(/\s+as\s+/)[0]).filter(Boolean);
+      if (!names.length) continue;
+      for (const f of ls(SHARED)) {
+        if (!f.endsWith(".ts") || f === "index.ts" || f === "api.ts") continue;
+        const p = path.join(SHARED, f);
+        const decl = read(p);
+        const hits = names.filter((n) =>
+          new RegExp(`export\\s+(?:type|interface|const|enum)\\s+${n}\\b`).test(decl));
+        // Require more than one match so an incidental name collision does not
+        // bind a module to the wrong contract.
+        if (hits.length >= Math.min(2, names.length)) {
+          return `packages/shared/src/${f} (${sloc(p)} LOC, supplies ${hits.slice(0, 3).join("/")})`;
+        }
+      }
+    }
+  }
+  return null;
+}
+
+/**
+ * Locate the web client for a module.
+ *
+ * This used to be a bare `fexists(lib/<modKey>.ts)` check, which assumes the
+ * frontend names its API client exactly after the backend module. Several do
+ * not, and the mismatch produced false "no web client" findings for modules
+ * with perfectly good UIs:
+ *
+ *   attachments   -> lib/files.ts   (FilesPage uploads/downloads through it)
+ *   conversations -> lib/chat.ts    (calls /conversations directly)
+ *   mfa           -> lib/api.ts     (api.completeMfa)
+ *   canvasCollab  -> lib/canvas.ts  (canvasCollabApi presence/cursors)
+ *
+ * Those four were being reported as unfinished frontend work that had in fact
+ * already shipped. Fall back to searching every client for a call against the
+ * module's route prefix, which is what "has a client" actually means.
+ */
+function findWebClient(modKey) {
+  const exact = path.join(WEB_LIB, `${modKey}.ts`);
+  if (fexists(exact)) return `apps/web/src/lib/${modKey}.ts (${sloc(exact)} LOC)`;
+
+  // A few modules are mounted under a path that differs from the module key:
+  // mfa lives beneath /auth, and canvasCollab is mounted at /canvas (both
+  // /canvas and /canvases per server.ts).
+  const PREFIX_ALIASES = {
+    mfa: ["auth/mfa", "mfa"],
+    canvasCollab: ["canvas", "canvases"],
+    googleAuth: ["auth/google"],
+    promptTemplates: ["prompt-templates", "promptTemplates"],
+    publicApi: ["public", "api-keys"],
+  };
+  const prefixes = PREFIX_ALIASES[modKey] ?? [moduleRoutePrefix(modKey)];
+
+  for (const prefix of prefixes) {
+    // Match a quoted/templated request path such as "/conversations" or
+    // `/canvas/${id}/presence`, not an incidental mention of the word.
+    const re = new RegExp("[\"'`]/" + prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?:[/?\"'`]|$)");
+    for (const f of ls(WEB_LIB)) {
+      if (!f.endsWith(".ts")) continue;
+      const p = path.join(WEB_LIB, f);
+      if (re.test(read(p))) return `apps/web/src/lib/${f} (${sloc(p)} LOC, serves /${prefix})`;
+    }
+  }
+  return null;
+}
+
 function moduleRoutePrefix(key) {
   const map = {
     healthEcosystem: "health-ecosystem", v76validation: "validation",
@@ -579,9 +684,9 @@ for (const modKey of [...allModules].sort()) {
       counts: r.count,
       endpoints: r.endpoints,
     })),
-    sharedTypes: fexists(path.join(SHARED, sharedType)) ? `packages/shared/src/${sharedType} (${sloc(path.join(SHARED, sharedType))} LOC)` : null,
+    sharedTypes: findSharedTypes(modKey),
     web: {
-      client: fexists(path.join(WEB_LIB, webClient)) ? `apps/web/src/lib/${webClient} (${sloc(path.join(WEB_LIB, webClient))} LOC)` : null,
+      client: findWebClient(modKey),
       pages: [], // pages are mostly in admin/PlatformPage tabs
     },
     db: {
