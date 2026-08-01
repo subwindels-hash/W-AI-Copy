@@ -70,3 +70,4 @@ export * from "./industry.js";
 export * from "./healthEcosystem.js";
 export * from "./projectContinuity.js";
 export * from "./etl.js";
+export * from "./security.js";

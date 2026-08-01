@@ -6321,7 +6321,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1723,
+      "serviceTotalSloc": 1879,
       "serviceFiles": [
         "csrf.ts",
         "encryption.ts",
@@ -6331,6 +6331,7 @@
         "promptGuard.ts",
         "rateLimit.ts",
         "reliability.ts",
+        "securityContract.test.ts",
         "selfTest.ts",
         "serviceToken.test.ts",
         "serviceToken.ts",
@@ -6358,7 +6359,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/security.ts",
-        "sloc": 143,
+        "sloc": 155,
         "counts": {
           "total": 14,
           "GET": 8,
@@ -6385,9 +6386,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/security.ts (122 LOC)",
     "web": {
-      "client": "apps/web/src/lib/security.ts (31 LOC)",
+      "client": "apps/web/src/lib/security.ts (42 LOC)",
       "pages": []
     },
     "db": {
@@ -6402,12 +6403,13 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "security/securityContract.test.ts",
       "security/serviceToken.test.ts",
       "services/mfa.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "selfHosted",
