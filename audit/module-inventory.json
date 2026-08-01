@@ -5090,7 +5090,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/mobile/biometrics.ts (100 LOC, serves /mobile)",
       "pages": []
     },
     "db": {

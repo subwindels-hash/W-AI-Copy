@@ -304,6 +304,26 @@ function findTestsFor(modKey) {
   return [...new Set(tests)];
 }
 /**
+ * Every client file under apps/web/src/lib, including one level of
+ * subdirectory.
+ *
+ * The scan used to be flat, so `lib/mobile/{biometrics,push,offlineQueue}.ts`
+ * were invisible and the mobile module — which has 21 routes and a fully wired
+ * PWA calling them — was reported as having no web client at all.
+ */
+function webLibFiles() {
+  const out = [];
+  for (const entry of ls(WEB_LIB)) {
+    if (entry.endsWith(".ts")) { out.push(entry); continue; }
+    const sub = path.join(WEB_LIB, entry);
+    let nested = [];
+    try { nested = ls(sub); } catch { continue; }
+    for (const f of nested) if (f.endsWith(".ts")) out.push(`${entry}/${f}`);
+  }
+  return out;
+}
+
+/**
  * Locate the shared Zod/type contract for a module.
  *
  * This was a bare `fexists(shared/<modKey>.ts)` check, which assumes the shared
@@ -399,8 +419,7 @@ function findWebClient(modKey) {
     // Match a quoted/templated request path such as "/conversations" or
     // `/canvas/${id}/presence`, not an incidental mention of the word.
     const re = new RegExp("[\"'`]/" + prefix.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "(?:[/?\"'`]|$)");
-    for (const f of ls(WEB_LIB)) {
-      if (!f.endsWith(".ts")) continue;
+    for (const f of webLibFiles()) {
       const p = path.join(WEB_LIB, f);
       if (re.test(read(p))) return `apps/web/src/lib/${f} (${sloc(p)} LOC, serves /${prefix})`;
     }

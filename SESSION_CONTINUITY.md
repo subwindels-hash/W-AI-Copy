@@ -232,10 +232,52 @@ surfaced by writing its first tests:
 **Remaining 24 — unchanged reasoning.** 8 fail only the ≥5-route rule and are
 complete for their scope; the rest mostly lack a shared-types file that would
 only be worth extracting where a client actually consumes it (as was true for
-`etl` and `security`, and is not obviously true for the others). The two
-best-value items left are genuine product gaps rather than audit gaps:
-`admin`, `derivatives`, `events`, `promptTemplates` and `publicApi` have no web
-client at all.
+`etl` and `security`, and is not obviously true for the others).
+
+### 5.4 The last real product gap (2026-08-01, same branch)
+
+**Suite 594 → 614 passing** (53 files, 0 failing).
+
+§5.3 listed five modules as having "no web client". Four were **more filename
+false negatives**, confirmed by searching for the route prefix instead:
+
+| Module | Actually served by |
+|---|---|
+| `publicApi` (API keys) | `DeveloperPage.tsx` via `lib/developers.ts` — full create/list/revoke UI |
+| `promptTemplates` | `lib/chat.ts` |
+| `googleAuth` | `LoginPage.tsx` |
+| `mobile` | `lib/mobile/{biometrics,push,offlineQueue}.ts` — the client scan was flat and never descended into `lib/mobile/`. Fixed; the detector now reads one level of subdirectory. |
+
+**`derivatives` was the one genuine gap** — four working endpoints
+(Black-Scholes Greeks, IV solver, multi-leg payoff, bond duration/convexity)
+with well-tested maths and no way to reach them from the product. Now shipped:
+`packages/shared/src/derivatives.ts` (route and client compile against one
+contract), `derivativesApi` in `lib/tradingIntel.ts`, and a **Derivatives &
+Bonds** tab on the Trading Intelligence page with three calculators. The UI
+carries the API's honesty surfaces rather than swallowing them — the
+`OPTIONS_CHAIN_REQUIRED` refusal renders as a banner, and the model's own
+"European approximation, not a market quote" note is displayed.
+
+**Real bug fixed:** `impliedVolatility()` ran 60 Newton iterations then returned
+the last `sigma` regardless of convergence. Since sigma is clamped to
+`[0.001, 5]`, a price no volatility can produce (below intrinsic value, or above
+the underlying) came back as a confident `0.001` or `5.0` — indistinguishable
+from a solved value, and `analyzeOption()` would then price Greeks off it. It
+now verifies the candidate reproduces the market price before returning, and
+reports `null` otherwise.
+
+`derivatives` still reads PARTIAL because the classifier wants ≥5 routes and it
+has 4. It has a client, shared types, and tests; the remaining "gap" is the
+heuristic, not the module.
+
+**Where this leaves the pass.** Every module has tests. Every module that should
+have a UI has one. The 24 PARTIAL entries are now almost entirely the ≥5-route
+rule and missing-types-nobody-would-import — i.e. **the audit's scoring model,
+not outstanding work**. Further COMPLETE-chasing means inventing endpoints or
+writing dead files. If you want more value from this codebase, the honest next
+step is a new capability or a real hardening item (e.g. full FIDO2 attestation
+validation in `verifyRegister`, which is still explicitly MVP-level), not a
+higher number.
 
 ---
 
