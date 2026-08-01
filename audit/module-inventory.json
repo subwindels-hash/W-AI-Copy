@@ -2712,7 +2712,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1116,
+      "serviceTotalSloc": 1275,
       "serviceFiles": [
         "bootstrap.ts",
         "deployments.service.ts",
@@ -2720,6 +2720,7 @@
         "pipeline.service.ts",
         "productivity.service.ts",
         "techDebt.service.ts",
+        "techDebt.test.ts",
         "engineering/metrics.service.ts",
         "engineering/deployments.service.ts",
         "engineering/techDebt.service.ts",
@@ -2777,10 +2778,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "engineering/techDebt.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "enterprise",

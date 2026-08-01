@@ -122,6 +122,70 @@ reported "green" suite did **not** reproduce on a clean checkout:
 
 See **BUILD_STATUS.md §7**.
 
+### 5.2 Sessions 1–88 completion pass (2026-07-31, same branch)
+
+**Suite 390 → 530 passing** (49 files, 0 failing). `audit/module-inventory.json`
+**PARTIAL 32 → 26, COMPLETE 54 → 60**.
+
+**Read this before acting on the "unfinished modules" count.** The inventory's
+`status` field is a *heuristic classifier* (`audit/build-inventory.mjs`
+§classifyStatus), not a hand-verified audit. It requires ≥5 routes + a web
+client + shared types + tests for `COMPLETE`, and it used to match all three by
+**filename**. That produced false "unfinished" findings for code that shipped
+long ago. Fixed this session:
+
+- **Web clients** are now resolved by the route prefix they call. Recovered
+  `attachments` (lives in `lib/files.ts`), `conversations` (`lib/chat.ts`),
+  `mfa` (`lib/api.ts`), `canvasCollab` (`lib/canvas.ts`), `devportal`, `auth`.
+- **Shared types** are now resolved by what the backend imports. Recovered
+  `giftCards`, whose contract is `wmpcGiftCards.ts` — the service imports
+  `GcType`/`GcStatus`/`WmpcGiftCard` from it, yet the module was reported as
+  having none.
+
+**New test coverage** (chosen by risk, not by what was easiest to score):
+
+| Module | Why it mattered | Tests |
+|---|---|---|
+| `mfa` | Hand-rolled TOTP on the auth path. Pinned against **RFC 6238 Appendix B vectors** — self-consistency would pass even if real authenticator apps rejected every code. All 6 vectors pass. | 27 |
+| `googleAuth` | Turns an external ID token into a session JWT. Real RSA keypair + stubbed JWKS, so forged-signature rejection is genuine crypto, not a mock. | 23 |
+| `talk` | Largest untested service (1007 LOC) and an authorization surface. | 22 |
+| `leadDiscovery` | **Found a real bug** (below). | 15 |
+| `cryptoIntelligence` | "Disabled by default; all trades require human approval" — a money-safety control with nothing enforcing it. | 14 |
+| `qa/testRunner` | Decides whether the platform's own tests passed. | 13 |
+| `benchmarks` | Result registry that must not grade itself. | 13 |
+| `engineering/techDebt` | Effort/churn were previously fabricated and ranked. | 13 |
+
+**Real defects fixed:**
+1. `leadDiscovery.search` — `String(item.place_id)` was coerced *before* the
+   emptiness check, and `String(undefined)` is the truthy `"undefined"`. The
+   guard was dead: a Places entry with no `place_id` became a lead with
+   `sourceId: "undefined"`, colliding on dedupe and polluting CRM exports.
+2. `BmRun` declared no `metadata`, so `benchmarks.service.ts` smuggled
+   evaluator/evidence past the compiler with `as BmRun`. Type made honest, cast
+   removed.
+3. Test-double gaps: `FakeKv` lacked `sismember` (MFA recovery-code branch was
+   unreachable); `FakePrisma.create` stored nested `{ create }` writes verbatim
+   instead of inserting rows, and resolved `TalkChannel.members` to a `Member`
+   model via a `talkChannelId` FK (real: `TalkMember`/`channelId`), so every
+   private-channel membership check saw an empty list.
+
+**What the remaining 26 need — and why I did not force them to COMPLETE:**
+
+- **8 are blocked only by the ≥5-route rule** (`aiEconomy` 3, `autonomous` 3,
+  `cognitive` 4, `command` 4, `opex` 3, `spatial` 4, `sustainability` 3,
+  `usage` 3). Route counts were verified against the actual handlers and are
+  correct. Reaching COMPLETE would mean **inventing endpoints nobody asked
+  for** — a fake-completion violation. These are complete for their scope.
+- **10 are blocked only by missing shared types.** Legitimate work (extract the
+  route's inline Zod into `packages/shared`, as done for `etl` this session),
+  but only worth doing where the web client actually consumes the contract.
+  Writing a types file no one imports is scoring, not engineering.
+- **8 have genuine mixed gaps.** `devportal` and `mobile` still have no tests —
+  the best remaining candidates.
+
+**Do not** raise the COMPLETE count by adding routes, dead type files, or
+assertion-free tests. The number is only meaningful while it tracks real work.
+
 ---
 
 ## 6. Known issues / open work (candidates for continuation)
