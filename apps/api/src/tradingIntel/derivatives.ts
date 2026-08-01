@@ -71,6 +71,8 @@ export function impliedVolatility(
   opt: Omit<OptionInput, "sigma"> & { type: "call"|"put" },
 ): number | null {
   if (marketPrice <= 0) return null;
+  const SIGMA_MIN = 0.001;
+  const SIGMA_MAX = 5;
   let sigma = 0.2;
   for (let i = 0; i < 60; i++) {
     const g = blackScholes({ ...opt, sigma });
@@ -80,9 +82,20 @@ export function impliedVolatility(
     const vegaPerUnit = g.vega / 0.01;
     if (vegaPerUnit < 1e-8) break;
     sigma -= diff / vegaPerUnit;
-    if (sigma < 0.001) sigma = 0.001;
-    if (sigma > 5) sigma = 5;
+    if (sigma < SIGMA_MIN) sigma = SIGMA_MIN;
+    if (sigma > SIGMA_MAX) sigma = SIGMA_MAX;
   }
+  // Newton did not converge within the iteration budget.
+  //
+  // This previously returned the last `sigma` regardless, so a price that no
+  // volatility can produce — below intrinsic value, or above the underlying —
+  // came back as a confident 0.001 or 5.0. The caller could not tell a solved
+  // volatility from a clamped boundary, and analyzeOption() would then price
+  // Greeks off it and report them as real. Verify the candidate actually
+  // reproduces the market price before returning it; otherwise report failure.
+  const check = blackScholes({ ...opt, sigma });
+  const tolerance = Math.max(1e-3, Math.abs(marketPrice) * 1e-4);
+  if (!Number.isFinite(check.price) || Math.abs(check.price - marketPrice) > tolerance) return null;
   return +sigma.toFixed(4);
 }
 

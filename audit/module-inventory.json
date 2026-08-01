@@ -2249,11 +2249,11 @@
       "serviceFile": {
         "file": "derivatives.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/derivatives.ts",
-        "sloc": 213,
+        "sloc": 226,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 213,
+      "serviceTotalSloc": 226,
       "serviceFiles": [
         "tradingIntel/derivatives.ts"
       ],
@@ -2265,7 +2265,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/derivatives.ts",
-        "sloc": 59,
+        "sloc": 51,
         "counts": {
           "total": 4,
           "GET": 0,
@@ -2282,9 +2282,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/derivatives.ts (136 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/tradingIntel.ts (69 LOC, serves /derivatives)",
       "pages": []
     },
     "db": {
@@ -2293,7 +2293,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "tradingIntel/derivatives.test.ts"
+      "tradingIntel/derivatives.test.ts",
+      "tradingIntel/derivativesContract.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -6734,13 +6735,14 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 4924,
+      "serviceTotalSloc": 5092,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
         "bootstrap.ts",
         "derivatives.test.ts",
         "derivatives.ts",
+        "derivativesContract.test.ts",
         "indicators.test.ts",
         "indicators.ts",
         "journal.ts",
@@ -6807,7 +6809,7 @@
     ],
     "sharedTypes": "packages/shared/src/tradingIntel.ts (269 LOC)",
     "web": {
-      "client": "apps/web/src/lib/tradingIntel.ts (26 LOC)",
+      "client": "apps/web/src/lib/tradingIntel.ts (69 LOC)",
       "pages": []
     },
     "db": {
@@ -6822,6 +6824,7 @@
     },
     "tests": [
       "tradingIntel/derivatives.test.ts",
+      "tradingIntel/derivativesContract.test.ts",
       "tradingIntel/indicators.test.ts",
       "tradingIntel/marketData.test.ts",
       "tradingIntel/risk.test.ts",

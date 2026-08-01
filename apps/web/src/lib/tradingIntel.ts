@@ -23,3 +23,46 @@ export const tiApi = {
   propose: (input: { instrumentId: string; marketClass: TiMarketClass; side: "long" | "short"; size: number; reason?: string }) =>
     api<any>("/trading-intel/propose", { method: "POST", json: input }),
 };
+
+/**
+ * Derivatives & fixed-income analytics (Session 81).
+ *
+ * These four endpoints shipped with tested pricing maths but no UI, so nothing
+ * in the product could reach them. Types come from @windels/shared/derivatives,
+ * which the API route also compiles against.
+ */
+import type {
+  OptionGreeksInput,
+  OptionAnalysisResult,
+  StrategyPayoffInput,
+  StrategyPayoffResult,
+  BondAnalyticsInput,
+  BondAnalytics,
+  ImpliedVolResult,
+} from "@windels/shared/derivatives";
+
+export type {
+  OptionGreeksInput,
+  OptionAnalysisResult,
+  OptionAnalysis,
+  OptionAnalysisUnavailable,
+  OptionGreeks,
+  StrategyLeg,
+  StrategyPayoffInput,
+  StrategyPayoffResult,
+  BondAnalyticsInput,
+  BondAnalytics,
+  ImpliedVolResult,
+} from "@windels/shared/derivatives";
+export { isOptionAnalysisUnavailable } from "@windels/shared/derivatives";
+
+export const derivativesApi = {
+  optionGreeks: (input: OptionGreeksInput) =>
+    api<OptionAnalysisResult>("/derivatives/option-greeks", { method: "POST", json: input }),
+  impliedVol: (input: OptionGreeksInput) =>
+    api<ImpliedVolResult>("/derivatives/implied-vol", { method: "POST", json: input }),
+  optionPayoff: (input: StrategyPayoffInput) =>
+    api<StrategyPayoffResult>("/derivatives/option-payoff", { method: "POST", json: input }),
+  bondAnalytics: (input: BondAnalyticsInput) =>
+    api<BondAnalytics>("/fixed-income/bond-analytics", { method: "POST", json: input }),
+};
