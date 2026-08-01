@@ -3,9 +3,9 @@
 The AI-Native Enterprise Operating System. Built session-by-session per the master
 specification (`uploads/CLAUDE.md`).
 
-> **Build status as of 2026-07-31:** the monorepo builds, typechecks, and tests
+> **Build status as of 2026-08-01:** the monorepo builds, typechecks, and tests
 > green end-to-end **on a fresh clone** — `pnpm build` (4/4), `pnpm typecheck`
-> (5/5), `pnpm test` (7/7, **530 unit tests passing** across 49 files, 3
+> (5/5), `pnpm test` (7/7, **594 unit tests passing** across 52 files, 3
 > integration suites auto-skipped without a live server). No `.env`, Postgres,
 > or Redis required:
 >
@@ -13,9 +13,9 @@ specification (`uploads/CLAUDE.md`).
 > pnpm install && make verify
 > ```
 >
-> See `SESSION_CONTINUITY.md` §5.2 for the Sessions 1–88 completion pass, and
-> for why the "unfinished modules" count in the audit is a heuristic rather
-> than a work order.
+> See `SESSION_CONTINUITY.md` §5.2–§5.3 for the Sessions 1–88 completion pass
+> (every module now has test coverage), and for why the "unfinished modules"
+> count in the audit is a heuristic rather than a work order.
 >
 > An earlier pass reported this as green at 84 tests, but that only held on a
 > machine with a git-ignored local `.env`; on a clean checkout 21 of 44 test

@@ -186,6 +186,57 @@ long ago. Fixed this session:
 **Do not** raise the COMPLETE count by adding routes, dead type files, or
 assertion-free tests. The number is only meaningful while it tracks real work.
 
+### 5.3 Completion pass continued (2026-08-01, same branch)
+
+**Suite 530 → 594 passing** (52 files, 0 failing). **PARTIAL 26 → 24,
+COMPLETE 60 → 62.** **Modules with zero tests: 0** (was 14 when the pass began).
+
+**Two real vulnerabilities found and fixed in `mobileAuth.service.ts`**, both
+surfaced by writing its first tests:
+
+1. **Biometric assertions were never cryptographically verified.**
+   `verifyAuthAssertion()` validated clientData shape and the RP-ID hash, then
+   returned `{ ok: true }` — signature checking was "intentionally deferred
+   (enterprise hardening)". Possession of the device private key was never
+   proven, so any well-formed assertion passed. The route sits behind
+   `authenticate`, so this was not a primary-login bypass, but a second factor
+   that cannot fail is not a second factor. Now verifies the signature over
+   `authenticatorData || SHA256(clientDataJSON)` against the registered public
+   key (ES256/RS256), checks the challenge matches, enforces the
+   user-verification flag, and rejects a non-advancing signature counter
+   (cloned-authenticator replay). The regression test signs with a real P-256
+   keypair and asserts an assertion signed by a *different* key is rejected.
+
+2. **The PIN hash shared a client-writable column.** `setPin()` stored its
+   bcrypt hash in `MobileDevice.deviceModel`, which
+   `POST /mobile/devices/register` writes straight from the request body
+   (`deviceModel: z.string().max(64)`). A bcrypt hash is exactly 60 characters,
+   so a caller could overwrite the hash with one of a PIN they chose, or clobber
+   another device's PIN by re-registering its id. Moved to a dedicated `pinHash`
+   column (migration `20260801020000_mobile_device_pin_hash` carries existing
+   hashes over and clears the old field), and the write is now scoped by
+   `userId`.
+
+**Also this session:**
+
+- `devportal` (22 tests) — pins the de-faked toolkit: a run with no supplied
+  result stays `queued` with zeroed counters and is never `passed`; a deploy
+  with no result carries an empty log rather than the synthesised transcript it
+  used to invent; SDK downloads count only from recorded events.
+- `security` → COMPLETE via a **real refactor**, not a scoring move: the
+  dashboard's shapes were declared twice (route literals + seven hand-written
+  interfaces in `apps/web/src/lib/security.ts`) with nothing connecting them.
+  `packages/shared/src/security.ts` is now the single definition both sides
+  compile against; 15 tests cover the request schemas and the derived score.
+
+**Remaining 24 — unchanged reasoning.** 8 fail only the ≥5-route rule and are
+complete for their scope; the rest mostly lack a shared-types file that would
+only be worth extracting where a client actually consumes it (as was true for
+`etl` and `security`, and is not obviously true for the others). The two
+best-value items left are genuine product gaps rather than audit gaps:
+`admin`, `derivatives`, `events`, `promptTemplates` and `publicApi` have no web
+client at all.
+
 ---
 
 ## 6. Known issues / open work (candidates for continuation)
