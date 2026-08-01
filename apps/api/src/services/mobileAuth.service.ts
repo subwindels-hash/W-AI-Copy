@@ -128,48 +128,124 @@ export function getAuthChallenge(userId: string, rpId: string) {
 }
 
 /**
- * Verify a WebAuthn assertion. For MVP we validate challenge, origin, rpId hash, and signCount.
- * Signature verification itself requires the DER-encoded COSE key to be converted to PEM — we
- * do a structural check and return success to the app for MVP (signature verification is an
- * enterprise hardening item). The credential id is required to exist.
+ * Verify a WebAuthn assertion: challenge, clientData type, RP-ID hash, and —
+ * critically — the cryptographic signature over `authenticatorData ||
+ * SHA256(clientDataJSON)` using the public key captured at registration.
+ *
+ * The signature check was previously skipped ("deferred as an enterprise
+ * hardening item") while the function still returned `{ ok: true }`. That made
+ * the biometric factor decorative: any well-formed assertion passed, so
+ * possession of the device's private key was never proven and a credential
+ * could be asserted by anyone able to construct the JSON. The endpoint sits
+ * behind `authenticate`, so it was not a primary-login bypass, but a second
+ * factor that cannot fail is not a second factor.
+ *
+ * Supports the two algorithms offered in `getRegisterChallenge`: ES256
+ * (ECDSA P-256, the platform-authenticator default on iOS/Android) and RS256.
  */
 export async function verifyAuthAssertion(
   userId: string,
   rpId: string,
   assertion: { id: string; rawId: string; response: { clientDataJSON: string; authenticatorData: string; signature: string; userHandle?: string } }
 ) {
-  takeChallenge(userId, "auth", rpId);
+  const challenge = takeChallenge(userId, "auth", rpId);
   const cred = await prisma.biometricCredential.findFirst({ where: { userId } });
   if (!cred) throw AppError.unauthorized("No biometric credential registered");
-  // Structural validation:
-  const clientData = JSON.parse(Buffer.from(assertion.response.clientDataJSON, "base64url").toString("utf8"));
+
+  // Structural validation.
+  const clientDataBuf = Buffer.from(assertion.response.clientDataJSON, "base64url");
+  const clientData = JSON.parse(clientDataBuf.toString("utf8"));
   if (clientData.type !== "webauthn.get") throw AppError.badRequest("Bad clientData type");
+  if (clientData.challenge !== challenge) throw AppError.badRequest("Challenge mismatch");
   const authData = Buffer.from(assertion.response.authenticatorData, "base64url");
   if (authData.length < 37) throw AppError.badRequest("Authenticator data too short");
   const rpIdHash = authData.subarray(0, 32);
   const expectedRpIdHash = crypto.createHash("sha256").update(rpId).digest();
   if (!rpIdHash.equals(expectedRpIdHash)) throw AppError.badRequest("RP ID hash mismatch");
-  // Signature verification is intentionally deferred (enterprise hardening).
-  await prisma.biometricCredential.update({ where: { id: cred.id }, data: { lastUsedAt: new Date() } });
+
+  // User-verification flag (bit 2) — the challenge demands userVerification:
+  // "required", so an authenticator that did not verify the user is rejected.
+  const flags = authData[32]!;
+  if ((flags & 0x04) === 0) throw AppError.unauthorized("User verification required");
+
+  // Cryptographic verification over authenticatorData || SHA256(clientDataJSON).
+  const signedPayload = Buffer.concat([
+    authData,
+    crypto.createHash("sha256").update(clientDataBuf).digest(),
+  ]);
+  const signature = Buffer.from(assertion.response.signature, "base64url");
+  if (!verifyCredentialSignature(cred.publicKey, signedPayload, signature)) {
+    throw AppError.unauthorized("Assertion signature verification failed");
+  }
+
+  // Signature counter must not go backwards — a decrease indicates a cloned
+  // authenticator replaying captured assertions.
+  const signCount = authData.readUInt32BE(33);
+  if (signCount !== 0 && cred.counter != null && signCount <= cred.counter) {
+    throw AppError.unauthorized("Authenticator signature counter replay detected");
+  }
+
+  await prisma.biometricCredential.update({
+    where: { id: cred.id },
+    data: { lastUsedAt: new Date(), counter: signCount },
+  });
   return { ok: true };
+}
+
+/**
+ * Verify an assertion signature against a stored public key.
+ *
+ * Registration stores the key as base64url SPKI DER (see `verifyRegister`), so
+ * it is imported directly. ES256 signatures arrive DER-encoded from the
+ * authenticator, which is what `crypto.verify` expects for an EC key with the
+ * default `dsaEncoding`.
+ */
+function verifyCredentialSignature(storedKey: string, payload: Buffer, signature: Buffer): boolean {
+  let keyObject: crypto.KeyObject;
+  try {
+    keyObject = crypto.createPublicKey({
+      key: Buffer.from(storedKey, "base64url"),
+      format: "der",
+      type: "spki",
+    });
+  } catch {
+    // A key we cannot parse must never be treated as a passing signature.
+    logger.warn("biometric credential public key could not be parsed", {});
+    return false;
+  }
+  try {
+    return crypto.verify(
+      keyObject.asymmetricKeyType === "rsa" ? "sha256" : "sha256",
+      payload,
+      keyObject,
+      signature,
+    );
+  } catch {
+    return false;
+  }
 }
 
 // ─── PIN fallback ───────────────────────────────────────────────────────────
 export async function setPin(userId: string, deviceId: string, pin: string) {
   if (!/^[0-9]{4,8}$/.test(pin)) throw AppError.badRequest("PIN must be 4-8 digits");
   const hash = await bcrypt.hash(pin, 10);
-  // We store pin hashes in the device metadata JSON via an in-memory secret store.
-  // In production this would be a dedicated column; keeping it simple for MVP.
-  await prisma.mobileDevice.update({
-    where: { id: deviceId },
-    data: { deviceModel: hash },
+  // Stored in a dedicated `pinHash` column. It used to live in `deviceModel`,
+  // which POST /mobile/devices/register writes directly from the request body —
+  // a 60-character bcrypt hash fits inside that field's 64-character limit, so
+  // a caller could overwrite the hash with one of their own and then "verify"
+  // a PIN they picked. Scope the write by userId too, so a device id belonging
+  // to someone else cannot be targeted.
+  const res = await prisma.mobileDevice.updateMany({
+    where: { id: deviceId, userId },
+    data: { pinHash: hash },
   });
+  if (res.count === 0) throw AppError.notFound("Device not found");
   return { ok: true };
 }
 export async function verifyPin(userId: string, deviceId: string, pin: string) {
   const device = await prisma.mobileDevice.findFirst({ where: { id: deviceId, userId } });
-  if (!device?.deviceModel) throw AppError.unauthorized("No PIN set");
-  const ok = await bcrypt.compare(pin, device.deviceModel);
+  if (!device?.pinHash) throw AppError.unauthorized("No PIN set");
+  const ok = await bcrypt.compare(pin, device.pinHash);
   if (!ok) throw AppError.unauthorized("Incorrect PIN");
   return { ok: true };
 }

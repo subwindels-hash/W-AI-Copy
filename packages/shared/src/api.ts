@@ -40,7 +40,11 @@ export type ErrorCode =
   | "AI_RATE_LIMITED"
   | "AI_TIMEOUT"
   | "AI_ABORTED"
-  | "AI_PROMPT_INJECTION";
+  | "AI_PROMPT_INJECTION"
+  // S77 ChildSafetyReviewer — a publish blocked by the content-safety gate.
+  // Distinct from BAD_REQUEST so clients can present a safety outcome rather
+  // than a generic validation failure, and so it is greppable in audit trails.
+  | "CONTENT_SAFETY_REJECTED";
 
 export interface PaginationMeta {
   page: number;

@@ -98,6 +98,283 @@ is marked complete before all five.
 - **Test suites:** 26 Playwright specs in `tests/e2e/`; k6 load tests in `tests/load/`; vitest unit suites per module
 - **Known test baseline:** 103/103 regression pass (mediaFactory+tradingIntel+security) · 54/54 publishing unit tests (incl. webhook sync, org tokens, uploads) · 57/57 Playwright (smoke + S37–82) — all pass **on a working dev environment** (Postgres+Redis running)
 
+### 5.1 Verified gate status (2026-07-31, fresh-clone pass on `arena/019fbaf7-win`)
+
+Run `make verify` — no `.env`, Postgres, Redis, or Prisma network access needed.
+
+| Gate | Result |
+|---|---|
+| `pnpm build` | ✅ 4/4 |
+| `pnpm typecheck` | ✅ 5/5 |
+| `pnpm test` | ✅ 7/7 — **41 files passed, 3 skipped, 0 failed; 390 tests passed, 51 skipped** |
+
+Two blockers were found and fixed this session — both meant the previously
+reported "green" suite did **not** reproduce on a clean checkout:
+
+1. `config/env.ts` `process.exit(1)`s at import when `DATABASE_URL`/`REDIS_URL`/
+   `JWT_SECRET` are unset, killing **21 of 44 test files** during collection.
+   The prior remedy was a git-ignored local `.env`. Now fixed in tracked config:
+   `apps/api/vitest.config.ts` (production validation left strict on purpose —
+   `config/demoData.test.ts` asserts it still exits on a bad value).
+2. `services/ai/registry.test.ts` transitively constructed a real `PrismaClient`
+   at import, so a pure unit test needed a downloaded Prisma engine. Now mocked
+   with the repo's existing `FakePrisma`, recovering 5 never-executed tests.
+
+See **BUILD_STATUS.md §7**.
+
+### 5.2 Sessions 1–88 completion pass (2026-07-31, same branch)
+
+**Suite 390 → 530 passing** (49 files, 0 failing). `audit/module-inventory.json`
+**PARTIAL 32 → 26, COMPLETE 54 → 60**.
+
+**Read this before acting on the "unfinished modules" count.** The inventory's
+`status` field is a *heuristic classifier* (`audit/build-inventory.mjs`
+§classifyStatus), not a hand-verified audit. It requires ≥5 routes + a web
+client + shared types + tests for `COMPLETE`, and it used to match all three by
+**filename**. That produced false "unfinished" findings for code that shipped
+long ago. Fixed this session:
+
+- **Web clients** are now resolved by the route prefix they call. Recovered
+  `attachments` (lives in `lib/files.ts`), `conversations` (`lib/chat.ts`),
+  `mfa` (`lib/api.ts`), `canvasCollab` (`lib/canvas.ts`), `devportal`, `auth`.
+- **Shared types** are now resolved by what the backend imports. Recovered
+  `giftCards`, whose contract is `wmpcGiftCards.ts` — the service imports
+  `GcType`/`GcStatus`/`WmpcGiftCard` from it, yet the module was reported as
+  having none.
+
+**New test coverage** (chosen by risk, not by what was easiest to score):
+
+| Module | Why it mattered | Tests |
+|---|---|---|
+| `mfa` | Hand-rolled TOTP on the auth path. Pinned against **RFC 6238 Appendix B vectors** — self-consistency would pass even if real authenticator apps rejected every code. All 6 vectors pass. | 27 |
+| `googleAuth` | Turns an external ID token into a session JWT. Real RSA keypair + stubbed JWKS, so forged-signature rejection is genuine crypto, not a mock. | 23 |
+| `talk` | Largest untested service (1007 LOC) and an authorization surface. | 22 |
+| `leadDiscovery` | **Found a real bug** (below). | 15 |
+| `cryptoIntelligence` | "Disabled by default; all trades require human approval" — a money-safety control with nothing enforcing it. | 14 |
+| `qa/testRunner` | Decides whether the platform's own tests passed. | 13 |
+| `benchmarks` | Result registry that must not grade itself. | 13 |
+| `engineering/techDebt` | Effort/churn were previously fabricated and ranked. | 13 |
+
+**Real defects fixed:**
+1. `leadDiscovery.search` — `String(item.place_id)` was coerced *before* the
+   emptiness check, and `String(undefined)` is the truthy `"undefined"`. The
+   guard was dead: a Places entry with no `place_id` became a lead with
+   `sourceId: "undefined"`, colliding on dedupe and polluting CRM exports.
+2. `BmRun` declared no `metadata`, so `benchmarks.service.ts` smuggled
+   evaluator/evidence past the compiler with `as BmRun`. Type made honest, cast
+   removed.
+3. Test-double gaps: `FakeKv` lacked `sismember` (MFA recovery-code branch was
+   unreachable); `FakePrisma.create` stored nested `{ create }` writes verbatim
+   instead of inserting rows, and resolved `TalkChannel.members` to a `Member`
+   model via a `talkChannelId` FK (real: `TalkMember`/`channelId`), so every
+   private-channel membership check saw an empty list.
+
+**What the remaining 26 need — and why I did not force them to COMPLETE:**
+
+- **8 are blocked only by the ≥5-route rule** (`aiEconomy` 3, `autonomous` 3,
+  `cognitive` 4, `command` 4, `opex` 3, `spatial` 4, `sustainability` 3,
+  `usage` 3). Route counts were verified against the actual handlers and are
+  correct. Reaching COMPLETE would mean **inventing endpoints nobody asked
+  for** — a fake-completion violation. These are complete for their scope.
+- **10 are blocked only by missing shared types.** Legitimate work (extract the
+  route's inline Zod into `packages/shared`, as done for `etl` this session),
+  but only worth doing where the web client actually consumes the contract.
+  Writing a types file no one imports is scoring, not engineering.
+- **8 have genuine mixed gaps.** `devportal` and `mobile` still have no tests —
+  the best remaining candidates.
+
+**Do not** raise the COMPLETE count by adding routes, dead type files, or
+assertion-free tests. The number is only meaningful while it tracks real work.
+
+### 5.3 Completion pass continued (2026-08-01, same branch)
+
+**Suite 530 → 594 passing** (52 files, 0 failing). **PARTIAL 26 → 24,
+COMPLETE 60 → 62.** **Modules with zero tests: 0** (was 14 when the pass began).
+
+**Two real vulnerabilities found and fixed in `mobileAuth.service.ts`**, both
+surfaced by writing its first tests:
+
+1. **Biometric assertions were never cryptographically verified.**
+   `verifyAuthAssertion()` validated clientData shape and the RP-ID hash, then
+   returned `{ ok: true }` — signature checking was "intentionally deferred
+   (enterprise hardening)". Possession of the device private key was never
+   proven, so any well-formed assertion passed. The route sits behind
+   `authenticate`, so this was not a primary-login bypass, but a second factor
+   that cannot fail is not a second factor. Now verifies the signature over
+   `authenticatorData || SHA256(clientDataJSON)` against the registered public
+   key (ES256/RS256), checks the challenge matches, enforces the
+   user-verification flag, and rejects a non-advancing signature counter
+   (cloned-authenticator replay). The regression test signs with a real P-256
+   keypair and asserts an assertion signed by a *different* key is rejected.
+
+2. **The PIN hash shared a client-writable column.** `setPin()` stored its
+   bcrypt hash in `MobileDevice.deviceModel`, which
+   `POST /mobile/devices/register` writes straight from the request body
+   (`deviceModel: z.string().max(64)`). A bcrypt hash is exactly 60 characters,
+   so a caller could overwrite the hash with one of a PIN they chose, or clobber
+   another device's PIN by re-registering its id. Moved to a dedicated `pinHash`
+   column (migration `20260801020000_mobile_device_pin_hash` carries existing
+   hashes over and clears the old field), and the write is now scoped by
+   `userId`.
+
+**Also this session:**
+
+- `devportal` (22 tests) — pins the de-faked toolkit: a run with no supplied
+  result stays `queued` with zeroed counters and is never `passed`; a deploy
+  with no result carries an empty log rather than the synthesised transcript it
+  used to invent; SDK downloads count only from recorded events.
+- `security` → COMPLETE via a **real refactor**, not a scoring move: the
+  dashboard's shapes were declared twice (route literals + seven hand-written
+  interfaces in `apps/web/src/lib/security.ts`) with nothing connecting them.
+  `packages/shared/src/security.ts` is now the single definition both sides
+  compile against; 15 tests cover the request schemas and the derived score.
+
+**Remaining 24 — unchanged reasoning.** 8 fail only the ≥5-route rule and are
+complete for their scope; the rest mostly lack a shared-types file that would
+only be worth extracting where a client actually consumes it (as was true for
+`etl` and `security`, and is not obviously true for the others).
+
+### 5.4 The last real product gap (2026-08-01, same branch)
+
+**Suite 594 → 614 passing** (53 files, 0 failing).
+
+§5.3 listed five modules as having "no web client". Four were **more filename
+false negatives**, confirmed by searching for the route prefix instead:
+
+| Module | Actually served by |
+|---|---|
+| `publicApi` (API keys) | `DeveloperPage.tsx` via `lib/developers.ts` — full create/list/revoke UI |
+| `promptTemplates` | `lib/chat.ts` |
+| `googleAuth` | `LoginPage.tsx` |
+| `mobile` | `lib/mobile/{biometrics,push,offlineQueue}.ts` — the client scan was flat and never descended into `lib/mobile/`. Fixed; the detector now reads one level of subdirectory. |
+
+**`derivatives` was the one genuine gap** — four working endpoints
+(Black-Scholes Greeks, IV solver, multi-leg payoff, bond duration/convexity)
+with well-tested maths and no way to reach them from the product. Now shipped:
+`packages/shared/src/derivatives.ts` (route and client compile against one
+contract), `derivativesApi` in `lib/tradingIntel.ts`, and a **Derivatives &
+Bonds** tab on the Trading Intelligence page with three calculators. The UI
+carries the API's honesty surfaces rather than swallowing them — the
+`OPTIONS_CHAIN_REQUIRED` refusal renders as a banner, and the model's own
+"European approximation, not a market quote" note is displayed.
+
+**Real bug fixed:** `impliedVolatility()` ran 60 Newton iterations then returned
+the last `sigma` regardless of convergence. Since sigma is clamped to
+`[0.001, 5]`, a price no volatility can produce (below intrinsic value, or above
+the underlying) came back as a confident `0.001` or `5.0` — indistinguishable
+from a solved value, and `analyzeOption()` would then price Greeks off it. It
+now verifies the candidate reproduces the market price before returning, and
+reports `null` otherwise.
+
+`derivatives` still reads PARTIAL because the classifier wants ≥5 routes and it
+has 4. It has a client, shared types, and tests; the remaining "gap" is the
+heuristic, not the module.
+
+**Where this leaves the pass.** Every module has tests. Every module that should
+have a UI has one. The 24 PARTIAL entries are now almost entirely the ≥5-route
+rule and missing-types-nobody-would-import — i.e. **the audit's scoring model,
+not outstanding work**. Further COMPLETE-chasing means inventing endpoints or
+writing dead files.
+
+### 5.5 Self-declared incompleteness sweep (2026-08-01, same branch)
+
+**Suite 614 → 639 passing** (55 files, 0 failing).
+
+The audit's `status` field had stopped being a useful lead, so this pass changed
+technique: **grep live code for places that admit they are incomplete** —
+`not implemented`, `placeholder`, `intentionally deferred`, discarded `_arg`
+parameters — rather than trusting module metadata. That found two routed
+endpoints reporting outcomes they had not earned.
+
+**1. `expertsPlatform.query()` returned placeholder text as expert advice.**
+The whole implementation was:
+
+```ts
+async query(id, _q) {
+  await redis.incr(K.q24);
+  return { response: "[expert response placeholder — ...]", ... };
+}
+```
+
+The question was discarded, nothing was consulted, and the call was counted as
+a served query while the dashboard reported `disclaimerEnforced: true`. The
+declared domains are **government, healthcare, pharmacy, engineering, legal**
+and lecturer — a placeholder rendered where a user expects clinical or legal
+guidance is the most consequential fake completion found in this codebase.
+
+Two further defects sat on the same endpoint, invisible because nothing
+exercised it end to end: the route validated `{ q }` while the web client posts
+`{ question }` (so every UI call 400'd), and the service returned `response`
+while the client read `answer`.
+
+Now follows the `education/lecturer` rule — answer with a real model, or state
+plainly that no answer was produced. Returns a discriminated union
+(`EpExpertQueryResult`) so a caller cannot read an `answer` that was never
+generated; refusals keep the consult-a-professional disclaimer and are **not**
+counted as served queries.
+
+**2. `composer.run()` recorded success for work it never did.** Node execution
+belongs to the workflow engine, but `run()` marked the run `succeeded` on
+trigger and fed that into `successRate`; new workflows also defaulted to
+`successRate: 1`. So a workflow that had executed nothing advertised 100%
+success. Runs are now `queued` until `reportRunOutcome()` receives a real,
+attributable verdict (rejecting a duplicate report with 409).
+
+Notably, `moduleGates.test.ts` had a test asserting `status === "succeeded"` for
+30 triggered runs. It was written to prove an earlier 1%-random-failure bug was
+gone, but it **locked in the replacement fabrication**. Rewritten — a reminder
+that a passing test can encode the bug.
+
+**Technique worth reusing next session:** the grep above still lists items in
+`platform/cluster.service.ts` (live hydration "not implemented", honestly
+reports `unknown`) and `governance/securityStandards.service.ts` (a control
+register that self-reports `partial`/`missing` — accurate, not fake). Those two
+are honest and were left alone. `services/*` bulk files are excluded from the
+build gate and out of scope.
+
+### 5.6 The pattern, and the guard that ends the manual hunt (2026-08-01)
+
+**Suite 639 → 652 passing** (57 files, 0 failing).
+
+Re-running the §5.5 sweep found the placeholder class now clean (0 hits) but
+surfaced one more instance of the deeper pattern, in **`qa/drTest.service.ts`**.
+Three of its six scenarios — `backup-restore`, `db-failover`, `redis-restore` —
+slept for a randomised interval, invented a snapshot size, set `rtoMs` from
+their own sleep and hardcoded `rpoMs = 200`. `success` defaults to `true` and
+that branch never reassigned it, so the drill reported **passed**, and those
+invented figures were then asserted against the caller's `maxRtoMs`/`maxRpoMs`.
+**A recovery-objective audit could be satisfied by a drill that did nothing.**
+It now reports `DR_SCENARIO_NOT_IMPLEMENTED` with no RTO/RPO assertions at all.
+
+**The real deliverable is the guard.** Four sessions of this pass each found the
+same shape by hand:
+
+| Module | Reported | Actually did |
+|---|---|---|
+| `composer.run` | `succeeded` + successRate | nothing (engine's job) |
+| `expertsPlatform.query` | expert answer | returned a placeholder string |
+| `toolkit.runTests` / `deploy` | pass counts, log transcript | nothing |
+| `qa/drTest` | `passed` against an SLA | slept |
+
+`noFakeVerdict.guard.test.ts` turns that into a build failure: a **simulation
+marker** (a sleep commented `simulate`, a returned placeholder literal) within
+12 lines of a **success claim** (`status: "passed"|"succeeded"|"completed"|
+"healthy"`, `success = true`, `ok: true`) fails the suite. It is deliberately
+narrow — it cannot prove code does real work, only catch the shape that has now
+recurred four times.
+
+It carries a **negative test**: a guard that cannot detect its own target reads
+as assurance while providing none. Replaying the pre-fix `drTest` and
+`expertsPlatform` source through its matcher produces 4 hits, so it would have
+caught both without a manual sweep.
+
+**This is where the "complete the unfinished modules" thread ends usefully.**
+The audit's PARTIAL count is a scoring artifact; the placeholder and
+fake-verdict classes are now closed *and enforced*. The accepted honest
+patterns, for anyone adding code: `queued` until an executor reports
+(`composer`), `not_configured` refusals (`expertsPlatform`, `leadDiscovery`),
+and `*_NOT_IMPLEMENTED` with no derived assertions (`drTest`).
+
 ---
 
 ## 6. Known issues / open work (candidates for continuation)

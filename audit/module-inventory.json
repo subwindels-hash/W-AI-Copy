@@ -603,7 +603,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/files.ts (54 LOC, serves /attachments)",
       "pages": []
     },
     "db": {
@@ -621,7 +621,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "attachments/attachments.test.ts"
+      "attachments/attachments.test.ts",
+      "services/talk.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -705,9 +706,9 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/permissions.ts (25 LOC, imported)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/api.ts (261 LOC, serves /auth)",
       "pages": []
     },
     "db": {
@@ -748,7 +749,8 @@
       "sessions54-60.spec.ts",
       "sessions61-72-82.spec.ts",
       "sessions73-75.spec.ts",
-      "smoke.spec.ts"
+      "smoke.spec.ts",
+      "services/googleAuth.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -837,9 +839,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 199,
+      "serviceTotalSloc": 394,
       "serviceFiles": [
         "benchmarks.service.ts",
+        "benchmarks.test.ts",
         "bootstrap.ts",
         "benchmarks/benchmarks.service.ts"
       ],
@@ -872,7 +875,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/benchmarks.ts (83 LOC)",
+    "sharedTypes": "packages/shared/src/benchmarks.ts (106 LOC)",
     "web": {
       "client": "apps/web/src/lib/benchmarks.ts (13 LOC)",
       "pages": []
@@ -886,10 +889,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "benchmarks/benchmarks.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "billing",
@@ -1164,7 +1169,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/canvas.ts (102 LOC, serves /canvas)",
       "pages": []
     },
     "db": {
@@ -1762,7 +1767,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/chat.ts (86 LOC, serves /conversations)",
       "pages": []
     },
     "db": {
@@ -1875,10 +1880,11 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 486,
+      "serviceTotalSloc": 658,
       "serviceFiles": [
         "bootstrap.ts",
         "cryptoIntelligence.service.ts",
+        "cryptoIntelligence.test.ts",
         "cryptoIntelligence/cryptoIntelligence.service.ts"
       ],
       "importedServiceFiles": [
@@ -1936,12 +1942,14 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "cryptoIntelligence/cryptoIntelligence.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "Polygon.io"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "cyber",
@@ -2241,11 +2249,11 @@
       "serviceFile": {
         "file": "derivatives.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/derivatives.ts",
-        "sloc": 213,
+        "sloc": 226,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 213,
+      "serviceTotalSloc": 226,
       "serviceFiles": [
         "tradingIntel/derivatives.ts"
       ],
@@ -2257,7 +2265,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/derivatives.ts",
-        "sloc": 59,
+        "sloc": 51,
         "counts": {
           "total": 4,
           "GET": 0,
@@ -2274,9 +2282,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/derivatives.ts (136 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/tradingIntel.ts (69 LOC, serves /derivatives)",
       "pages": []
     },
     "db": {
@@ -2285,7 +2293,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "tradingIntel/derivatives.test.ts"
+      "tradingIntel/derivatives.test.ts",
+      "tradingIntel/derivativesContract.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -2379,10 +2388,11 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 845,
+      "serviceTotalSloc": 1069,
       "serviceFiles": [
         "bootstrap.ts",
         "cli.service.ts",
+        "devportal.test.ts",
         "environment.service.ts",
         "sdkRegistry.service.ts",
         "toolkit.service.ts",
@@ -2428,9 +2438,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/devPortal.ts (115 LOC, supplies CLICommand/CLICommandGroup)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/devPortal.ts (34 LOC, serves /dev-portal)",
       "pages": []
     },
     "db": {
@@ -2444,10 +2454,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "devportal/devportal.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "digitalHumans",
@@ -2704,7 +2716,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1116,
+      "serviceTotalSloc": 1275,
       "serviceFiles": [
         "bootstrap.ts",
         "deployments.service.ts",
@@ -2712,6 +2724,7 @@
         "pipeline.service.ts",
         "productivity.service.ts",
         "techDebt.service.ts",
+        "techDebt.test.ts",
         "engineering/metrics.service.ts",
         "engineering/deployments.service.ts",
         "engineering/techDebt.service.ts",
@@ -2759,7 +2772,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/engMetrics.ts (160 LOC, supplies SLOTier/ServiceMetric)",
     "web": {
       "client": "apps/web/src/lib/engineering.ts (46 LOC)",
       "pages": []
@@ -2769,10 +2782,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "engineering/techDebt.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "enterprise",
@@ -3050,11 +3065,11 @@
       "serviceFile": {
         "file": "etl.service.ts",
         "path": "/home/user/WIN/apps/api/src/etl/etl.service.ts",
-        "sloc": 333,
+        "sloc": 311,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 847,
+      "serviceTotalSloc": 803,
       "serviceFiles": [
         "etl.service.ts",
         "etl.test.ts",
@@ -3068,7 +3083,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/etl.ts",
-        "sloc": 82,
+        "sloc": 74,
         "counts": {
           "total": 7,
           "GET": 4,
@@ -3088,7 +3103,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/etl.ts (119 LOC)",
     "web": {
       "client": "apps/web/src/lib/etl.ts (33 LOC)",
       "pages": []
@@ -3106,7 +3121,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "events",
@@ -3518,7 +3533,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/wmpcGiftCards.ts (67 LOC, supplies WmpcGiftCard/GcTransaction/GcFraudFlag)",
     "web": {
       "client": "apps/web/src/lib/giftCards.ts (26 LOC)",
       "pages": []
@@ -3539,7 +3554,7 @@
     "externalIntegrations": [
       "AWS"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "globalCurrency",
@@ -3683,7 +3698,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/googleAuth.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "Google"
@@ -4276,13 +4293,14 @@
       "serviceFile": {
         "file": "leadDiscovery.service.ts",
         "path": "/home/user/WIN/apps/api/src/leadDiscovery/leadDiscovery.service.ts",
-        "sloc": 28,
+        "sloc": 36,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 56,
+      "serviceTotalSloc": 282,
       "serviceFiles": [
         "leadDiscovery.service.ts",
+        "leadDiscovery.test.ts",
         "leadDiscovery/leadDiscovery.service.ts"
       ],
       "importedServiceFiles": [
@@ -4319,12 +4337,15 @@
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Organization"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "leadDiscovery/leadDiscovery.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "Google"
@@ -4688,7 +4709,9 @@
       "mediaFactory/publishing/webhooks.test.ts",
       "config/liveFabrication.test.ts",
       "config/moduleGates.test.ts",
-      "config/seedGate.test.ts"
+      "config/seedGate.test.ts",
+      "services/googleAuth.test.ts",
+      "services/mfa.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -4887,7 +4910,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/api.ts (261 LOC, serves /auth/mfa)",
       "pages": []
     },
     "db": {
@@ -4898,7 +4921,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/mfa.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -5033,11 +5058,11 @@
       "serviceFile": {
         "file": "mobileAuth.service.ts",
         "path": "/home/user/WIN/apps/api/src/services/mobileAuth.service.ts",
-        "sloc": 354,
+        "sloc": 430,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 501,
+      "serviceTotalSloc": 577,
       "serviceFiles": [
         "services/mobileAuth.service.ts",
         "services/push.service.ts"
@@ -5065,7 +5090,7 @@
     ],
     "sharedTypes": null,
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/mobile/biometrics.ts (100 LOC, serves /mobile)",
       "pages": []
     },
     "db": {
@@ -5077,7 +5102,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/mobileAuth.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -5298,7 +5325,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/infrastructure.ts (271 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/platform.ts (62 LOC)",
       "pages": []
@@ -5820,7 +5847,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1226,
+      "serviceTotalSloc": 1455,
       "serviceFiles": [
         "aiValidation.service.ts",
         "apiTest.service.ts",
@@ -5830,6 +5857,7 @@
         "drTest.service.ts",
         "securityTest.service.ts",
         "testRunner.service.ts",
+        "testRunner.test.ts",
         "workflowTest.service.ts",
         "qa/testRunner.service.ts"
       ],
@@ -5882,10 +5910,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "qa/testRunner.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "quantum",
@@ -6292,7 +6322,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1723,
+      "serviceTotalSloc": 1879,
       "serviceFiles": [
         "csrf.ts",
         "encryption.ts",
@@ -6302,6 +6332,7 @@
         "promptGuard.ts",
         "rateLimit.ts",
         "reliability.ts",
+        "securityContract.test.ts",
         "selfTest.ts",
         "serviceToken.test.ts",
         "serviceToken.ts",
@@ -6329,7 +6360,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/security.ts",
-        "sloc": 143,
+        "sloc": 155,
         "counts": {
           "total": 14,
           "GET": 8,
@@ -6356,9 +6387,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/security.ts (122 LOC)",
     "web": {
-      "client": "apps/web/src/lib/security.ts (31 LOC)",
+      "client": "apps/web/src/lib/security.ts (42 LOC)",
       "pages": []
     },
     "db": {
@@ -6373,11 +6404,13 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "security/serviceToken.test.ts"
+      "security/securityContract.test.ts",
+      "security/serviceToken.test.ts",
+      "services/mfa.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "selfHosted",
@@ -6678,7 +6711,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/talk.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
@@ -6700,13 +6735,14 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 4924,
+      "serviceTotalSloc": 5092,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
         "bootstrap.ts",
         "derivatives.test.ts",
         "derivatives.ts",
+        "derivativesContract.test.ts",
         "indicators.test.ts",
         "indicators.ts",
         "journal.ts",
@@ -6773,7 +6809,7 @@
     ],
     "sharedTypes": "packages/shared/src/tradingIntel.ts (269 LOC)",
     "web": {
-      "client": "apps/web/src/lib/tradingIntel.ts (26 LOC)",
+      "client": "apps/web/src/lib/tradingIntel.ts (69 LOC)",
       "pages": []
     },
     "db": {
@@ -6788,6 +6824,7 @@
     },
     "tests": [
       "tradingIntel/derivatives.test.ts",
+      "tradingIntel/derivativesContract.test.ts",
       "tradingIntel/indicators.test.ts",
       "tradingIntel/marketData.test.ts",
       "tradingIntel/risk.test.ts",

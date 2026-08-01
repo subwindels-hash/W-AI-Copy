@@ -3,12 +3,26 @@
 The AI-Native Enterprise Operating System. Built session-by-session per the master
 specification (`uploads/CLAUDE.md`).
 
-> **Build status as of 2026-07-31:** the monorepo now builds, typechecks, and tests
-> green end-to-end — `pnpm build` (4/4), `pnpm typecheck` (5/5), `pnpm test` (7/7,
-> 84 unit tests passing, 3 integration suites auto-skipped without a live server).
-> This is the first end-to-end clean build; see **[BUILD_STATUS.md](./BUILD_STATUS.md)**
-> for what was fixed and the two environment caveats (Prisma engine download,
-> local Postgres/Redis).
+> **Build status as of 2026-08-01:** the monorepo builds, typechecks, and tests
+> green end-to-end **on a fresh clone** — `pnpm build` (4/4), `pnpm typecheck`
+> (5/5), `pnpm test` (7/7, **652 unit tests passing** across 57 files, 3
+> integration suites auto-skipped without a live server). No `.env`, Postgres,
+> or Redis required:
+>
+> ```bash
+> pnpm install && make verify
+> ```
+>
+> See `SESSION_CONTINUITY.md` §5.2–§5.6 for the Sessions 1–88 completion pass
+> (every module now has test coverage, and every module that should have a UI
+> has one), and for why the "unfinished modules" count in the audit is a
+> heuristic rather than a work order.
+>
+> An earlier pass reported this as green at 84 tests, but that only held on a
+> machine with a git-ignored local `.env`; on a clean checkout 21 of 44 test
+> files aborted before running. That is fixed in tracked config now — see
+> **[BUILD_STATUS.md](./BUILD_STATUS.md)** §7 for the repair, plus the two
+> environment caveats (Prisma engine download, local Postgres/Redis).
 
 > **Status as of 2026-07-21:** All sessions S1–S82 are scaffolded with routes, services,
 > UI tabs, and plausible synthetic/demo data. Core infrastructure (auth, Postgres, Redis,

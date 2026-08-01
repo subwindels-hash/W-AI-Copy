@@ -8,7 +8,7 @@ COMPOSE_PROD := $(COMPOSE) -f infra/docker/docker-compose.prod.yml
 K8S := infra/k8s
 KUSTOMIZE := kubectl
 
-.PHONY: help dev build clean typecheck test test-unit test-e2e test-load lint \
+.PHONY: help dev build clean typecheck test test-unit test-e2e test-load lint verify \
         db-migrate db-seed db-reset \
         docker-build docker-up docker-down docker-dev \
         monitoring-up monitoring-down \
@@ -50,6 +50,12 @@ db-reset: ## Reset dev DB (drop + migrate + seed)
 # ── Tests ──────────────────────────────────────────────────────────────────
 test: test-unit ## Run all tests
 test-unit: ## Unit / integration (vitest)
+	$(PNPM) test
+
+verify: ## Full offline gate: prisma client + build + typecheck + test (no DB/Redis needed)
+	$(PNPM) db:generate:offline
+	$(PNPM) build
+	$(PNPM) typecheck
 	$(PNPM) test
 
 test-e2e: ## Playwright E2E (requires built web + running API)

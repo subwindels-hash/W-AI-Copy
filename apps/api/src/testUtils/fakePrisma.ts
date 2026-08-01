@@ -145,7 +145,7 @@ export class FakePrisma {
   }
 
   /** `participants` -> `ConversationParticipant`, `messages` -> `Message`. */
-  private relatedModel(field: string): string {
+  relatedModel(field: string, parentModel?: string): string {
     const singular = field.endsWith("s") ? field.slice(0, -1) : field;
     const known: Record<string, string> = {
       participant: "ConversationParticipant",
@@ -153,13 +153,39 @@ export class FakePrisma {
       event: "AgentEvent",
       attachment: "MessageAttachment",
     };
+    // Relations whose target is prefixed by the owning model rather than named
+    // after the field — e.g. TalkChannel.members holds TalkMember rows, not
+    // "Member" rows. Without this, `include: { members: true }` silently
+    // resolved to an empty list and every private-channel membership check
+    // looked like a non-member.
+    const prefixed: Record<string, Record<string, string>> = {
+      TalkChannel: { member: "TalkMember", message: "TalkMessage" },
+      TalkMessage: { attachment: "MessageAttachment" },
+    };
+    if (parentModel && prefixed[parentModel]?.[singular]) {
+      return prefixed[parentModel]![singular]!;
+    }
     return known[singular] ?? singular.charAt(0).toUpperCase() + singular.slice(1);
   }
 
   private relatedRows(model: string, row: Row, field: string): Row[] {
-    const target = this.relatedModel(field);
-    const fk = `${model.charAt(0).toLowerCase()}${model.slice(1)}Id`;
-    return this.rows(target).filter((r) => r[fk] === row.id);
+    const target = this.relatedModel(field, model);
+    const rows = this.rows(target);
+    // Prisma names the back-reference after the *relation*, which is not always
+    // the full model name: TalkMember points at TalkChannel via `channelId`,
+    // not `talkChannelId`. Try the model-derived key first, then the same name
+    // with a known prefix stripped, so both conventions resolve.
+    const candidates = [`${model.charAt(0).toLowerCase()}${model.slice(1)}Id`];
+    for (const prefix of ["Talk", "Canvas", "Agent", "Project"]) {
+      if (model.startsWith(prefix) && model.length > prefix.length) {
+        const bare = model.slice(prefix.length);
+        candidates.push(`${bare.charAt(0).toLowerCase()}${bare.slice(1)}Id`);
+      }
+    }
+    for (const fk of candidates) {
+      if (rows.some((r) => fk in r)) return rows.filter((r) => r[fk] === row.id);
+    }
+    return [];
   }
 
   private hydrate(model: string, row: Row, opts: Row = {}): Row {
@@ -178,13 +204,13 @@ export class FakePrisma {
       // to-one by convention: <field>Id on this row
       const fkOnSelf = `${field}Id`;
       if (fkOnSelf in row) {
-        const target = this.relatedModel(field);
+        const target = this.relatedModel(field, model);
         const found = this.rows(target).find((r) => r.id === row[fkOnSelf]) ?? null;
         out[field] = found ? this.hydrate(target, found, typeof spec === "object" ? spec as Row : {}) : null;
         continue;
       }
       // to-many
-      const target = this.relatedModel(field);
+      const target = this.relatedModel(field, model);
       out[field] = this.relatedRows(model, row, field)
         .map((r) => this.hydrate(target, r, typeof spec === "object" ? spec as Row : {}));
     }
@@ -220,14 +246,51 @@ export class FakePrisma {
     const self = this;
     return {
       async create({ data, include, select }: Row) {
+        // Split scalar fields from nested relation writes (`{ create: … }`).
+        // Previously the whole `data` object was stored verbatim, so a nested
+        // create was persisted as a literal `{ create: {...} }` value and the
+        // related row was never inserted. Any service doing
+        //   organization.create({ data: { workspaces: { create: {...} } },
+        //                         include: { workspaces: true } })
+        // then read `org.workspaces[0].id` as undefined and crashed — which is
+        // what hid the Google OAuth provisioning path from its own tests.
+        const scalars: Row = {};
+        const nested: Array<[string, Row[]]> = [];
+        for (const [key, value] of Object.entries(data ?? {})) {
+          if (value && typeof value === "object" && !Array.isArray(value) && !(value instanceof Date)
+              && "create" in (value as Row)) {
+            const payload = (value as Row).create;
+            nested.push([key, Array.isArray(payload) ? payload as Row[] : [payload as Row]]);
+          } else {
+            scalars[key] = value;
+          }
+        }
+
         const row: Row = {
-          id: data.id ?? cuid(),
+          id: scalars.id ?? cuid(),
           createdAt: new Date(),
           updatedAt: new Date(),
           ...(SCHEMA_DEFAULTS.get(model) ?? {}),
-          ...data,
+          ...scalars,
         };
         self.rows(model).push(row);
+
+        // Insert each related row with the back-reference Prisma would set.
+        const fk = `${model.charAt(0).toLowerCase()}${model.slice(1)}Id`;
+        for (const [field, payloads] of nested) {
+          const target = self.relatedModel(field, model);
+          for (const p of payloads) {
+            self.rows(target).push({
+              id: p.id ?? cuid(),
+              createdAt: new Date(),
+              updatedAt: new Date(),
+              ...(SCHEMA_DEFAULTS.get(target) ?? {}),
+              [fk]: row.id,
+              ...p,
+            });
+          }
+        }
+
         return self.hydrate(model, row, { include, select });
       },
       async createMany({ data }: Row) {
@@ -273,6 +336,27 @@ export class FakePrisma {
         }
         row.updatedAt = new Date();
         return self.hydrate(model, row, { include, select });
+      },
+      /**
+       * UPSERT — update when `where` matches, otherwise create.
+       *
+       * Added for the mobile device registry, which upserts on a device id that
+       * may not exist yet. Mirrors Prisma's semantics: the `create` payload is
+       * merged with the `where` clause so the identifying field is present on
+       * the new row.
+       */
+      async upsert({ where, create, update, include, select }: Row) {
+        const row = self.rows(model).find((r) => self.matches(model, r, where));
+        if (row) {
+          for (const [k, v] of Object.entries((update ?? {}) as Row)) {
+            if (v && typeof v === "object" && "increment" in v) row[k] = (row[k] ?? 0) + (v as Row).increment;
+            else if (v && typeof v === "object" && "decrement" in v) row[k] = (row[k] ?? 0) - (v as Row).decrement;
+            else if (v !== undefined) row[k] = v;
+          }
+          row.updatedAt = new Date();
+          return self.hydrate(model, row, { include, select });
+        }
+        return this.create({ data: { ...(create ?? {}) }, include, select });
       },
       async updateMany({ where, data }: Row) {
         const rows = self.rows(model).filter((r) => self.matches(model, r, where));

@@ -21,6 +21,8 @@ import { logger } from "../config/logger.js";
 const execFileP = promisify(execFile);
 
 const RENDER_DIR = path.resolve(process.cwd(), "media-cache");
+import { MediaMeteringService } from "./metering.service.js";
+
 const PUBLIC_PREFIX = "/api/v1/media-factory/render";
 const K = { jobs: "mf:render:jobs", job: (id:string) => `mf:render:job:${id}` };
 
@@ -99,6 +101,8 @@ export const MediaPipelineService = {
     script: string;
     aspect?: AspectRatio;
     durationSec?: number;
+    /** Owning org, for usage metering. Defaults to the platform org. */
+    organizationId?: string;
   }): Promise<RenderJob> {
     await ensureDir();
     const id = "vid-" + randomUUID().slice(0, 10);
@@ -119,6 +123,10 @@ export const MediaPipelineService = {
       await this._persist(job);
       return job;
     }
+
+    // Wall-clock start for metering. Measured, never projected — the estimate
+    // lives in metering.service.estimateRender() and is explicitly separate.
+    const renderStartedMs = Date.now();
 
     try {
       await this._persist(job);
@@ -178,6 +186,11 @@ export const MediaPipelineService = {
       job.stages.publish = { status:"pending", detail:"Awaiting explicit publish call (PLATFORM CREDENTIALS REQUIRED for YouTube/TikTok/etc.)." };
       job.updatedAt = nowIso();
       await this._persist(job);
+      // Meter the real cost of work that actually happened (S77.B item 22).
+      await MediaMeteringService.recordRender(input.organizationId ?? "org-windels", id, {
+        elapsedMs: Date.now() - renderStartedMs,
+        outputBytes: stat.size,
+      });
       logger.info("[media-pipeline] rendered video", { id, aspect, size: stat.size });
       return job;
     } catch (e:any) {
@@ -185,6 +198,10 @@ export const MediaPipelineService = {
       job.error = e?.message ?? String(e);
       job.stages.video = { status:"failed", at:nowIso(), detail:job.error };
       await this._persist(job);
+      // A failed render still burned compute; omitting it would understate spend.
+      await MediaMeteringService.recordRender(input.organizationId ?? "org-windels", id, {
+        elapsedMs: Date.now() - renderStartedMs,
+      });
       return job;
     }
   },

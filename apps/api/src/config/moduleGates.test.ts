@@ -163,19 +163,49 @@ describe("composer will not deploy an invalid workflow", () => {
     expect(deployed.status).toBe("deployed");
   });
 
-  it("does not fail runs at random", async () => {
+  it("does not invent a verdict for runs it did not execute", async () => {
     const w = await wf([
       { id: "n1", kind: "trigger", label: "t" },
       { id: "n2", kind: "output", label: "o" },
     ]);
     await ComposerService.deploy(w.id);
-    // A 1% synthetic failure rate used to feed the stored successRate.
+
+    // History: this originally failed 1% of runs at random, and that synthetic
+    // verdict fed the stored successRate. The first fix made every run report
+    // "succeeded" instead — which removed the randomness but kept the
+    // fabrication, since run() executes nothing (node execution belongs to the
+    // workflow engine). Both directions are wrong; the run is now `queued`
+    // until an executor reports back.
     for (let i = 0; i < 30; i++) {
       const log = await ComposerService.run(w.id, "u1");
-      expect(log.status).toBe("succeeded");
+      expect(log.status).toBe("queued");
+      expect(log.status).not.toBe("failed"); // no random failures
     }
+
     const after = await ComposerService.get(w.id);
-    expect(after!.successRate).toBe(1);
+    // Nothing has reported an outcome, so there is no rate to report.
+    expect(after!.runs).toBe(0);
+    expect(after!.successRate).toBe(0);
+  });
+
+  it("reports a measured success rate once outcomes arrive", async () => {
+    const w = await wf([
+      { id: "n1", kind: "trigger", label: "t" },
+      { id: "n2", kind: "output", label: "o" },
+    ]);
+    await ComposerService.deploy(w.id);
+
+    for (let i = 0; i < 4; i++) {
+      const log = await ComposerService.run(w.id, "u1");
+      await ComposerService.reportRunOutcome(log.id, {
+        status: i === 3 ? "failed" : "succeeded",
+        reportedBy: "workflow-engine",
+      });
+    }
+
+    const after = await ComposerService.get(w.id);
+    expect(after!.runs).toBe(4);
+    expect(after!.successRate).toBe(0.75); // 3 of 4, measured
   });
 });
 

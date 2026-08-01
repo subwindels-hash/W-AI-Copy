@@ -1,5 +1,17 @@
 # Unfinished modules — audit baseline
 
+> **⚠️ Read `SESSION_CONTINUITY.md` §5.2 first (2026-07-31).** The counts in
+> this file — and the `status` field in `audit/module-inventory.json` — come
+> from a **heuristic classifier**, not a hand-verified audit. It demands ≥5
+> routes + web client + shared types + tests for `COMPLETE`, and it used to
+> match clients and types by *filename*, so shipped code was reported missing
+> (e.g. `attachments` has a full UI via `lib/files.ts`; `giftCards` has a
+> complete contract in `wmpcGiftCards.ts`). Those false negatives are fixed.
+>
+> Of the modules still not `COMPLETE`, **8 fail only the ≥5-route rule** and
+> are complete for their scope — raising them would mean inventing endpoints.
+> Treat this list as a starting point for investigation, never as a work order.
+
 > **⚠️ Status drift (2026-07-31).** This inventory reflects an older audit
 > snapshot. Route registration was re-verified programmatically: **every
 > `register*Routes` export is invoked**, including `infrastructure`, which is

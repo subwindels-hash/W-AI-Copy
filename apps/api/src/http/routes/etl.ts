@@ -3,26 +3,18 @@ import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { z } from "zod";
 import { EtlService } from "../../etl/etl.service.js";
+// Request contracts live in @windels/shared so the API and the web client
+// validate against one definition instead of three hand-copied ones.
+import {
+  CreateEtlPipelineSchema,
+  TriggerEtlRunSchema,
+  EtlPipelineIdSchema,
+  EtlRunIdSchema,
+} from "@windels/shared/etl";
 
-const pipelineId = z.object({ id: z.string().min(1).max(64) });
+const pipelineId = EtlPipelineIdSchema;
 
-const createPipelineSchema = {
-  body: z.object({
-    name: z.string().min(1).max(100),
-    description: z.string().max(500).optional(),
-    sourceFormat: z.enum(["CSV", "JSON", "XML", "SQL"]),
-    sourceConfig: z.record(z.any()),
-    mappingSchema: z.array(
-      z.object({
-        sourceColumn: z.string().min(1),
-        targetColumn: z.string().min(1),
-        type: z.string(),
-        transformRule: z.string().optional(),
-      })
-    ),
-    cronSchedule: z.string().optional(),
-  }),
-};
+const createPipelineSchema = { body: CreateEtlPipelineSchema };
 
 export function registerEtlRoutes(router: Router) {
   router.use(authenticate);
@@ -43,7 +35,7 @@ export function registerEtlRoutes(router: Router) {
   });
 
   // Run accepts an optional inline payload (content) for upload sources.
-  router.post("/etl/pipelines/:id/run", validate({ params: pipelineId, body: z.object({ content: z.string().max(5_000_000).optional() }).optional() }), async (req, res, next) => {
+  router.post("/etl/pipelines/:id/run", validate({ params: pipelineId, body: TriggerEtlRunSchema.optional() }), async (req, res, next) => {
     try {
       const data = await EtlService.triggerRun(oid(req), req.params.id, req.body ?? undefined);
       res.json({ ok: true, data, meta: { requestId: req.requestId } });
@@ -57,7 +49,7 @@ export function registerEtlRoutes(router: Router) {
     } catch (e) { next(e); }
   });
 
-  router.get("/etl/pipelines/:id/runs/:runId", validate({ params: pipelineId.extend({ runId: z.string().min(1).max(64) }) }), async (req, res, next) => {
+  router.get("/etl/pipelines/:id/runs/:runId", validate({ params: EtlRunIdSchema }), async (req, res, next) => {
     try {
       const data = await EtlService.getRun(req.params.id, req.params.runId);
       if (!data) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Run not found" } });

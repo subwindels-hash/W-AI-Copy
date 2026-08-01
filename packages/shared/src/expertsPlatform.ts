@@ -52,3 +52,41 @@ export interface EpDashboard {
   queries24h: number;
   disclaimerEnforced: boolean;
 }
+
+/**
+ * Result of asking a domain expert agent a question.
+ *
+ * Modelled as a discriminated union on `available` so a caller cannot read an
+ * `answer` that was never produced. The endpoint previously returned a
+ * hardcoded placeholder string in the answer slot; for the healthcare,
+ * pharmacy and legal domains this platform serves, an absent answer must be
+ * unmistakably absent rather than plausible-looking prose.
+ *
+ * `disclaimer` is present on both arms: a refusal still carries the expert's
+ * consult-a-professional labelling.
+ */
+export type EpExpertQueryUnavailableReason =
+  | "AI_PROVIDER_NOT_CONFIGURED"
+  | "AI_PROVIDER_ERROR"
+  | "AI_EMPTY_RESPONSE"
+  | "EXPERT_UNAVAILABLE";
+
+export interface EpExpertAnswer {
+  expertId: string;
+  disclaimer: EpDisclaimer;
+  available: true;
+  answer: string;
+  modelSource: "real" | "demo-ai";
+}
+
+export interface EpExpertNoAnswer {
+  expertId: string;
+  disclaimer: EpDisclaimer;
+  available: false;
+  reason: EpExpertQueryUnavailableReason;
+  /** Human-readable explanation of why no answer was produced. */
+  message: string;
+  answer?: undefined;
+}
+
+export type EpExpertQueryResult = EpExpertAnswer | EpExpertNoAnswer;

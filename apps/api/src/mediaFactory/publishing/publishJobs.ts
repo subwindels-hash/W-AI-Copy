@@ -25,6 +25,7 @@ import {
   PLATFORM_ADAPTERS, PlatformPublishError, type FetchImpl, type MediaPayload, type PlatformAdapter,
 } from "./platforms.js";
 import { ensureFreshToken, ensureFreshOrgToken } from "./tokens.js";
+import { reviewContent } from "./childSafety.js";
 import type {
   PubJob, PubJobStatus, PubPlatformId, PubPublishInput, PubAuditEvent, PubAuditKind,
   PubPlatformCallbackUpdate, PubTokenScope,
@@ -59,6 +60,12 @@ export interface EngineDeps {
   kernelDispatch?: (evt: { kind: string; source: string; payload: Record<string, unknown> }) => Promise<unknown>;
   maxAttempts?: number;
   pollBudgetMs?: number;
+  /**
+   * Usage meter hook (S77.B item 22). Injected so the engine does not take a
+   * hard dependency on the Redis-backed meter — tests supply a no-op, and the
+   * production factory wires MediaMeteringService.recordPublish.
+   */
+  recordUsage?: (oid: string, jobId: string, mediaBytes?: number) => Promise<unknown>;
 }
 
 const K = {
@@ -169,6 +176,30 @@ export function createPublishEngine(deps: EngineDeps) {
     const input = validateInput(platform, rawInput);
     const t = now();
 
+    // S77 ChildSafetyReviewer — a blocking pipeline step, per the spec's
+    // "non-bypassable safety gates ... block publish/execution, not advisory
+    // warnings". This previously ran only in mediaFactory.generate(), so the
+    // publish route was an open path to a real upload: content generate()
+    // would have refused could be posted verbatim, and content that never went
+    // through generate() was never screened at all.
+    //
+    // The check runs before the job is persisted or queued, so a rejected
+    // upload never exists as a record that a worker tick could pick up.
+    const safety = reviewContent({ title: input.title, description: input.description, tags: input.tags });
+    if (safety.verdict === "blocked") {
+      await audit(oid, "job.safety_rejected", ownerUserId, {
+        platform,
+        detail: `blocked by content safety review: ${safety.reasons.join(", ")}`,
+      });
+      throw new AppError(
+        "CONTENT_SAFETY_REJECTED",
+        `Content safety review blocked this publish: ${safety.reasons.join(", ")}. ` +
+        `Revise the title, description and tags, or route the item through human review.`,
+        422,
+        { reasons: safety.reasons },
+      );
+    }
+
     if (input.idempotencyKey) {
       const marker = await kv.set(K.idem(oid, input.idempotencyKey), "pending", "EX", IDEM_TTL_SEC, "NX");
       if (marker === null) {
@@ -194,6 +225,9 @@ export function createPublishEngine(deps: EngineDeps) {
       nextAttemptAt: isFuture ? scheduledMs! : t,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      // Records that the reviewer ran and what it concluded, so the verdict is
+      // auditable rather than implied by the job's mere existence.
+      safety: safety.verdict === "child-review" ? "child-targeted-review" : "screened",
     };
     pushHistory(job, job.status, ownerUserId, isFuture ? `scheduled for ${input.scheduledAt}` : undefined);
     await kv.zadd(K.jobs(oid), t, job.id);
@@ -368,6 +402,15 @@ export function createPublishEngine(deps: EngineDeps) {
       pushHistory(job, "published", job.ownerUserId, outcome.url ?? outcome.postId ?? "published");
       await save(job);
       await audit(oid, "job.published", job.ownerUserId, { jobId: job.id, platform: job.platform, detail: outcome.url ?? outcome.postId ?? "published" });
+      // S77.B item 22 — meter the publish that actually happened. Uses the real
+      // uploaded byte count, and never fails the job it is describing.
+      //
+      // Injected via deps so the engine stays free of a hard dependency on the
+      // Redis-backed meter: a dynamic import() here pulled in the real
+      // db/redis client and hung every test that mocks it.
+      try {
+        await deps.recordUsage?.(oid, job.id, media?.buffer?.byteLength);
+      } catch { /* metering is best-effort; a lost record must not undo a publish */ }
       await dispatch("media.publish.completed", { jobId: job.id, platform: job.platform, postId: outcome.postId });
     } catch (e) {
       const err = e instanceof PlatformPublishError
@@ -431,7 +474,15 @@ export function createPublishEngine(deps: EngineDeps) {
 export type PublishEngine = ReturnType<typeof createPublishEngine>;
 
 /** Default engine bound to the real command client. */
-export const publishEngine = createPublishEngine({ kv: redis as unknown as PublishKv });
+export const publishEngine = createPublishEngine({
+  kv: redis as unknown as PublishKv,
+  // Production wiring for S77.B item 22. Kept out of createPublishEngine's
+  // defaults so unit tests get a meter-free engine by construction.
+  recordUsage: async (oid, jobId, mediaBytes) => {
+    const { MediaMeteringService } = await import("../metering.service.js");
+    return MediaMeteringService.recordPublish(oid, jobId, mediaBytes ? { mediaBytes } : {});
+  },
+});
 
 /* ── Worker ───────────────────────────────────────────────────────── */
 

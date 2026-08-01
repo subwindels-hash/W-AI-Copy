@@ -14,6 +14,17 @@ import { Limits } from "../../security/rateLimit.js";
 import { Metrics } from "../../observability/metrics.js";
 import { snapshotRing } from "../../observability/logger.js";
 import { SecurityGovernanceService } from "../../security/governance.service.js";
+// Response and request contracts live in @windels/shared so the web dashboard
+// imports the same definitions instead of re-declaring them by hand.
+import {
+  PromptGuardScanSchema,
+  PasswordStrengthSchema,
+  SecurityEventsQuerySchema,
+  CreateSecurityIncidentSchema,
+  type SecurityScorecard,
+  type EncryptionStatus,
+  type RateLimitTier,
+} from "@windels/shared/security";
 
 export function registerSecurityRoutes(router: Router) {
   router.use(authenticate);
@@ -34,9 +45,9 @@ export function registerSecurityRoutes(router: Router) {
     const blocked = (metrics.counters["security.prompt_injection.blocked"]?.total ?? 0) + (metrics.counters["security.rate_limited"]?.total ?? 0);
     const breaker = breakerStatus();
     const openBreakers = breaker.filter((b) => b.state !== "closed").length;
-    res.json({
-      ok: true,
-      data: {
+    // Typed against the shared contract: a renamed or dropped field here is a
+    // compile error rather than an `undefined` in the dashboard.
+    const data: SecurityScorecard = {
         selfTests: { passed, total: self.length },
         promptInjectionsBlocked: metrics.counters["security.prompt_injection.blocked"]?.total ?? 0,
         rateLimitedRequests: metrics.counters["security.rate_limited"]?.total ?? 0,
@@ -47,8 +58,8 @@ export function registerSecurityRoutes(router: Router) {
         },
         totalSecurityEvents: blocked,
         score: Math.round((passed / self.length) * 100) - openBreakers * 5,
-      },
-    });
+    };
+    res.json({ ok: true, data });
   });
 
   // Self test run
@@ -57,7 +68,7 @@ export function registerSecurityRoutes(router: Router) {
   });
 
   // Test prompt guard against arbitrary text (for the dashboard's "try it" input)
-  router.post("/prompt-guard/scan", validate({ body: z.object({ text: z.string().min(1).max(20000) }) }), (req, res) => {
+  router.post("/prompt-guard/scan", validate({ body: PromptGuardScanSchema }), (req, res) => {
     res.json({ ok: true, data: scanPrompt(req.body.text) });
   });
 
@@ -77,14 +88,14 @@ export function registerSecurityRoutes(router: Router) {
 
   // Rate limit tiers
   router.get("/rate-limits", (_req, res) => {
-    const tiers = Object.entries(Limits).map(([name, l]) => ({
+    const tiers: RateLimitTier[] = Object.entries(Limits).map(([name, l]) => ({
       name, burst: l.max, sustainedPerMin: Math.round(l.refillPerSec * 60), blockSeconds: l.blockSeconds ?? 0,
     }));
     res.json({ ok: true, data: tiers });
   });
 
   // Security events (aggregated from logs + audit)
-  router.get("/events", validate({ query: z.object({ limit: z.coerce.number().min(1).max(500).optional() }) }), async (req, res, next) => {
+  router.get("/events", validate({ query: SecurityEventsQuerySchema }), async (req, res, next) => {
     try {
       const limit = Number(req.query.limit ?? 200);
       const warnings = snapshotRing({ level: "warn", limit: limit * 2 });
@@ -99,7 +110,8 @@ export function registerSecurityRoutes(router: Router) {
 
   // Encryption status
   router.get("/encryption", (_req, res) => {
-    res.json({ ok: true, data: { keys: listKeyInfo(), algorithm: "AES-256-GCM", envelopeVersion: "enc.v1" } });
+    const data: EncryptionStatus = { keys: listKeyInfo(), algorithm: "AES-256-GCM", envelopeVersion: "enc.v1" };
+    res.json({ ok: true, data });
   });
 
   // ── Incident response + access reviews ──────────────────────

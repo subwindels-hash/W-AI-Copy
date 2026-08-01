@@ -31,6 +31,28 @@ export interface BmMetric {
   target?: number;
 }
 
+/**
+ * Provenance for a recorded benchmark run.
+ *
+ * The benchmark centre is a *result registry*: it does not grade anything
+ * itself, it records evaluations performed elsewhere. Who ran the evaluation
+ * and what evidence backs it are therefore part of the result, not optional
+ * decoration — a score with no attributable evaluator is exactly the kind of
+ * unsourced number this module was rewritten to stop producing.
+ *
+ * The service already wrote these fields but reached `BmRun` through an
+ * `as BmRun` cast, so the compiler never saw them and consumers could not read
+ * them without an error. Declared here so the cast is unnecessary.
+ */
+export interface BmRunProvenance {
+  /** Who or what produced the result (harness name, team, reviewer). */
+  evaluator: string;
+  /** Where the raw result can be inspected (URL, ticket, object key). */
+  evidence: string;
+  /** True when the result was measured elsewhere and imported. */
+  imported: boolean;
+}
+
 export interface BmRun {
   id: string;
   organizationId: string;
@@ -45,6 +67,7 @@ export interface BmRun {
   overallScore: number;
   passed: boolean;
   notes?: string;
+  metadata: BmRunProvenance;
 }
 
 export interface BmScheduled {

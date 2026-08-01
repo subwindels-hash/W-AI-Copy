@@ -25,8 +25,12 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import {
   TrendingUp, TrendingDown, Activity, Shield, AlertTriangle,
   RefreshCw, Search, BarChart3, Brain, Cpu, LineChart as LineIcon,
-  Target, Scale, Zap, Clock, Database, CircleDot
+  Target, Scale, Zap, Clock, Database, CircleDot, Sigma
 } from "lucide-react";
+import {
+  derivativesApi, isOptionAnalysisUnavailable,
+  type OptionAnalysis, type StrategyLeg, type BondAnalytics as BondAnalyticsResult,
+} from "@/lib/tradingIntel";
 
 type MarketClass = "forex"|"crypto"|"stocks"|"etfs"|"commodities"|"futures"|"options"|"indices"|"bonds"|"precious-metals"|"energy"|"agriculture"|"digital-assets";
 type Timeframe = "1m"|"5m"|"15m"|"1h"|"4h"|"1d"|"1w";
@@ -149,7 +153,7 @@ export function TradingIntelPage() {
   const [journal, setJournal] = useState<JournalTrade[] | null>(null);
   const [analytics, setAnalytics] = useState<Analytics | null>(null);
 
-  const [tab, setTab] = useState<"overview"|"agents"|"journal">("overview");
+  const [tab, setTab] = useState<"overview"|"agents"|"journal"|"derivatives">("overview");
 
   const loadAnalysis = useCallback(async () => {
     setAnalysisLoading(true); setAnalysisErr(null);
@@ -292,7 +296,7 @@ export function TradingIntelPage() {
 
       {/* Tabs */}
       <div className="flex items-center gap-1 border-b border-white/5">
-        {([["overview","Overview",LineIcon],["agents","AI Agents",Brain],["journal","Journal & Analytics",Target]] as const).map(([id,label,Icon])=>(
+        {([["overview","Overview",LineIcon],["agents","AI Agents",Brain],["journal","Journal & Analytics",Target],["derivatives","Derivatives & Bonds",Sigma]] as const).map(([id,label,Icon])=>(
           <button key={id} onClick={()=>setTab(id as any)}
             className={`flex items-center gap-2 px-4 py-2.5 text-sm border-b-2 transition-colors ${tab===id?"border-azure text-white":"border-transparent text-text-muted hover:text-white"}`}>
             <Icon className="h-4 w-4"/>{label}
@@ -312,6 +316,7 @@ export function TradingIntelPage() {
         api.get<JournalTrade[]>("/trading-intel/journal").then(setJournal).catch(()=>{});
         api.get<Analytics>("/trading-intel/analytics").then(setAnalytics).catch(()=>{});
       }} />}
+      {tab === "derivatives" && <DerivativesPanel />}
     </div>
   );
 }
@@ -625,3 +630,283 @@ function JournalPanel({journal,analytics,onRefresh}:{journal:JournalTrade[]|null
 }
 
 export default TradingIntelPage;
+
+/* ────────────────────────────────────────────────────────────────────────
+ * Derivatives & fixed income (Session 81)
+ *
+ * The four endpoints behind this panel — Black-Scholes Greeks, the implied
+ * volatility solver, multi-leg payoff, and bond duration/convexity — shipped
+ * with tested maths (tradingIntel/derivatives.test.ts) but no UI at all, so
+ * nothing in the product could reach them.
+ *
+ * Two honesty rules are carried through from the API and must not be dropped:
+ *   - the pricer returns OPTIONS_CHAIN_REQUIRED rather than inventing a
+ *     volatility, and that refusal is surfaced as a banner, not swallowed;
+ *   - the model's own disclaimer (`note`) is rendered, because a European
+ *     approximation should not be presented as a market quote.
+ * ──────────────────────────────────────────────────────────────────────── */
+function DerivativesPanel() {
+  const [sub, setSub] = useState<"options"|"payoff"|"bonds">("options");
+  return (
+    <div className="space-y-4">
+      <DataBanner
+        variant="simulation"
+        title="Analytical models, not market quotes"
+        message="Greeks use a Black-Scholes European approximation and bond figures assume the yield you supply. Live open interest, volume and dealer Greeks require an options-chain provider. Decision support only — no execution."
+      />
+      <div className="flex items-center gap-1 border-b border-white/5">
+        {([["options","Option Greeks",Sigma],["payoff","Strategy Payoff",Target],["bonds","Bond Analytics",Scale]] as const).map(([id,label,Icon])=>(
+          <button key={id} onClick={()=>setSub(id)}
+            className={`flex items-center gap-2 px-3 py-2 text-sm border-b-2 transition-colors ${sub===id?"border-azure text-white":"border-transparent text-text-muted hover:text-white"}`}>
+            <Icon className="h-4 w-4"/>{label}
+          </button>
+        ))}
+      </div>
+      {sub === "options" && <OptionGreeksCard />}
+      {sub === "payoff" && <StrategyPayoffCard />}
+      {sub === "bonds" && <BondAnalyticsCard />}
+    </div>
+  );
+}
+
+/** Numeric field that keeps its raw string so a half-typed value is not clobbered. */
+function NumField({ label, value, onChange, placeholder, hint }:{
+  label: string; value: string; onChange: (v: string) => void; placeholder?: string; hint?: string;
+}) {
+  return (
+    <label className="block">
+      <span className="text-xs text-text-muted">{label}</span>
+      <Input value={value} onChange={(e:any)=>onChange(e.target.value)} placeholder={placeholder} inputMode="decimal" />
+      {hint && <span className="mt-1 block text-[11px] text-text-muted/70">{hint}</span>}
+    </label>
+  );
+}
+
+function num(v: string): number | undefined {
+  if (v.trim() === "") return undefined;
+  const n = Number(v);
+  return Number.isFinite(n) ? n : undefined;
+}
+
+function OptionGreeksCard() {
+  const [S, setS] = useState("100");
+  const [K, setK] = useState("100");
+  const [T, setT] = useState("0.5");
+  const [r, setR] = useState("0.045");
+  const [sigma, setSigma] = useState("0.25");
+  const [marketPrice, setMarketPrice] = useState("");
+  const [type, setType] = useState<"call"|"put">("call");
+  const [result, setResult] = useState<OptionAnalysis | null>(null);
+  const [unavailable, setUnavailable] = useState<string | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true); setErr(null); setUnavailable(null); setResult(null);
+    try {
+      const body: any = { S: num(S), K: num(K), T: num(T), type };
+      const rr = num(r); if (rr !== undefined) body.r = rr;
+      const sg = num(sigma); if (sg !== undefined) body.sigma = sg;
+      const mp = num(marketPrice); if (mp !== undefined) body.marketPrice = mp;
+      const res = await derivativesApi.optionGreeks(body);
+      // The pricer declines rather than guessing — show that verbatim.
+      if (isOptionAnalysisUnavailable(res)) setUnavailable(res.message);
+      else setResult(res);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Calculation failed.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Black-Scholes Greeks</CardTitle>
+        <CardDescription>
+          Supply implied volatility, or a market price to solve for it. Leave both blank to see the model refuse rather than guess.
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <NumField label="Underlying (S)" value={S} onChange={setS} />
+          <NumField label="Strike (K)" value={K} onChange={setK} />
+          <NumField label="Years to expiry (T)" value={T} onChange={setT} hint="0.5 = six months" />
+          <NumField label="Risk-free rate (r)" value={r} onChange={setR} hint="Decimal, e.g. 0.045" />
+          <NumField label="Volatility (σ)" value={sigma} onChange={setSigma} hint="Decimal, e.g. 0.25" />
+          <NumField label="Market price" value={marketPrice} onChange={setMarketPrice} hint="Optional — solves for IV" />
+          <label className="block">
+            <span className="text-xs text-text-muted">Type</span>
+            <Select value={type} onChange={(e:any)=>setType(e.target.value)}>
+              <option value="call">Call</option>
+              <option value="put">Put</option>
+            </Select>
+          </label>
+        </div>
+        <Button onClick={run} disabled={busy}>{busy ? "Calculating…" : "Calculate Greeks"}</Button>
+
+        {err && <DataBanner variant="no-data" title="Request failed" message={err} />}
+        {unavailable && (
+          <DataBanner variant="no-data" title="Insufficient inputs" message={unavailable} />
+        )}
+
+        {result && (
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <StatTile icon={BarChart3} label="Theoretical price" value={result.greeks.price.toFixed(4)} />
+              <StatTile icon={TrendingUp} label="Delta" value={result.greeks.delta.toFixed(4)} sub="per $1 of underlying" />
+              <StatTile icon={Activity} label="Gamma" value={result.greeks.gamma.toFixed(6)} sub="delta change per $1" tone="violet" />
+              <StatTile icon={Clock} label="Theta" value={result.greeks.theta.toFixed(4)} sub="per calendar day" tone="rose" />
+              <StatTile icon={Zap} label="Vega" value={result.greeks.vega.toFixed(4)} sub="per 1 vol-point" tone="amber" />
+              <StatTile icon={Scale} label="Rho" value={result.greeks.rho.toFixed(4)} sub="per 1% rate move" tone="emerald" />
+            </div>
+            {result.iv != null && (
+              <p className="text-sm text-text-muted">
+                Implied volatility solved from market price:{" "}
+                <span className="text-white">{(result.iv * 100).toFixed(2)}%</span>
+              </p>
+            )}
+            {/* The model's own caveat, straight from the API. */}
+            <p className="text-[11px] text-text-muted/70">{result.note}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function StrategyPayoffCard() {
+  const [legs, setLegs] = useState<StrategyLeg[]>([
+    { type: "call", side: "long", K: 100, premium: 5, contracts: 1 },
+  ]);
+  const [spot, setSpot] = useState("110");
+  const [pnl, setPnl] = useState<number | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  function update(i: number, patch: Partial<StrategyLeg>) {
+    setLegs((prev) => prev.map((l, idx) => (idx === i ? { ...l, ...patch } : l)));
+  }
+
+  async function run() {
+    setBusy(true); setErr(null); setPnl(null);
+    try {
+      const res = await derivativesApi.optionPayoff({
+        legs, underlyingAtExpiry: num(spot) ?? 0,
+      });
+      setPnl(res.pnl);
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Calculation failed.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Multi-leg strategy payoff</CardTitle>
+        <CardDescription>Net profit or loss at expiry, after premium paid or received.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {legs.map((leg, i) => (
+          <div key={i} className="grid items-end gap-2 rounded-lg border border-white/5 p-3 sm:grid-cols-6">
+            <label className="block">
+              <span className="text-xs text-text-muted">Side</span>
+              <Select value={leg.side} onChange={(e:any)=>update(i,{side:e.target.value})}>
+                <option value="long">Long</option><option value="short">Short</option>
+              </Select>
+            </label>
+            <label className="block">
+              <span className="text-xs text-text-muted">Type</span>
+              <Select value={leg.type} onChange={(e:any)=>update(i,{type:e.target.value})}>
+                <option value="call">Call</option><option value="put">Put</option>
+              </Select>
+            </label>
+            <NumField label="Strike" value={String(leg.K)} onChange={(v)=>update(i,{K:Number(v)||0})} />
+            <NumField label="Premium" value={String(leg.premium)} onChange={(v)=>update(i,{premium:Number(v)||0})} />
+            <NumField label="Contracts" value={String(leg.contracts ?? 1)} onChange={(v)=>update(i,{contracts:Number(v)||1})} />
+            {legs.length > 1 && (
+              <Button variant="danger" size="sm" onClick={()=>setLegs(legs.filter((_,x)=>x!==i))}>Remove</Button>
+            )}
+          </div>
+        ))}
+        <div className="flex flex-wrap items-end gap-3">
+          <Button variant="secondary" size="sm"
+            onClick={()=>setLegs([...legs,{type:"call",side:"long",K:100,premium:5,contracts:1}])}>
+            Add leg
+          </Button>
+          <div className="w-48"><NumField label="Underlying at expiry" value={spot} onChange={setSpot} /></div>
+          <Button onClick={run} disabled={busy}>{busy ? "Calculating…" : "Calculate payoff"}</Button>
+        </div>
+
+        {err && <DataBanner variant="no-data" title="Request failed" message={err} />}
+        {pnl != null && (
+          <StatTile
+            icon={pnl >= 0 ? TrendingUp : TrendingDown}
+            label="Net P&L at expiry"
+            value={`${pnl >= 0 ? "+" : ""}${pnl.toFixed(2)}`}
+            tone={pnl >= 0 ? "emerald" : "rose"}
+          />
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function BondAnalyticsCard() {
+  const [faceValue, setFaceValue] = useState("1000");
+  const [couponRate, setCouponRate] = useState("0.05");
+  const [couponFreq, setCouponFreq] = useState("2");
+  const [years, setYears] = useState("10");
+  const [ytm, setYtm] = useState("0.05");
+  const [result, setResult] = useState<BondAnalyticsResult | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+
+  async function run() {
+    setBusy(true); setErr(null); setResult(null);
+    try {
+      const body: any = { couponRate: num(couponRate) ?? 0, yearsToMaturity: num(years) ?? 0 };
+      const fv = num(faceValue); if (fv !== undefined) body.faceValue = fv;
+      const cf = num(couponFreq); if (cf !== undefined) body.couponFreq = cf;
+      const y = num(ytm); if (y !== undefined) body.ytm = y;
+      setResult(await derivativesApi.bondAnalytics(body));
+    } catch (e) {
+      setErr(e instanceof ApiError ? e.message : "Calculation failed.");
+    } finally { setBusy(false); }
+  }
+
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle>Bond analytics</CardTitle>
+        <CardDescription>Price, Macaulay and modified duration, convexity, and rate sensitivity.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid gap-3 sm:grid-cols-3">
+          <NumField label="Face value" value={faceValue} onChange={setFaceValue} />
+          <NumField label="Coupon rate" value={couponRate} onChange={setCouponRate} hint="Decimal, e.g. 0.05" />
+          <NumField label="Coupons per year" value={couponFreq} onChange={setCouponFreq} />
+          <NumField label="Years to maturity" value={years} onChange={setYears} />
+          <NumField label="Yield to maturity" value={ytm} onChange={setYtm} hint="Decimal, e.g. 0.05" />
+        </div>
+        <Button onClick={run} disabled={busy}>{busy ? "Calculating…" : "Analyse bond"}</Button>
+
+        {err && <DataBanner variant="no-data" title="Request failed" message={err} />}
+        {result && (
+          <div className="space-y-3">
+            <div className="grid gap-3 sm:grid-cols-3">
+              <StatTile icon={BarChart3} label="Price" value={result.price.toFixed(2)} />
+              <StatTile icon={Activity} label="Yield to maturity" value={`${(result.ytm * 100).toFixed(3)}%`} tone="violet" />
+              <StatTile icon={Clock} label="Macaulay duration" value={`${result.duration.toFixed(3)} yrs`} tone="amber" />
+              <StatTile icon={Scale} label="Modified duration" value={result.modifiedDuration.toFixed(3)} sub="% per 1% rate move" tone="emerald" />
+              <StatTile icon={Sigma} label="Convexity" value={result.convexity.toFixed(3)} />
+              <StatTile icon={TrendingDown} label="Per +100bps" value={result.sensitivityPer100Bps.toFixed(2)} sub="approx. price change" tone="rose" />
+            </div>
+            <p className="text-sm text-text-muted">
+              Current yield <span className="text-white">{(result.currentYield * 100).toFixed(3)}%</span>
+            </p>
+            <p className="text-[11px] text-text-muted/70">{result.creditNote}</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}

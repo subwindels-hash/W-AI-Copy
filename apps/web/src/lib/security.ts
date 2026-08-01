@@ -1,21 +1,32 @@
 import { api } from "./api";
 
-export interface SecurityScorecard {
-  selfTests: { passed: number; total: number };
-  promptInjectionsBlocked: number;
-  rateLimitedRequests: number;
-  openBreakers: number;
-  encryptionKeys: Array<{ id: string; createdAt: string; primary: boolean }>;
-  headers: Record<string, any>;
-  totalSecurityEvents: number;
-  score: number;
-}
-export interface SelfTest { id: string; name: string; passed: boolean; detail?: string }
-export interface GuardResult { safe: boolean; score: number; reasons: string[] }
-export interface PasswordStrength { score: 0|1|2|3|4; label: string; issues: string[]; meetsPolicy: boolean }
-export interface Breaker { name: string; state: string; failures: number; successes: number; openedAt: string|null; nextProbe: string|null }
-export interface RateLimitTier { name: string; burst: number; sustainedPerMin: number; blockSeconds: number }
-export interface EncryptionStatus { keys: Array<{ id: string; createdAt: string; primary: boolean }>; algorithm: string; envelopeVersion: string }
+/**
+ * Types come from @windels/shared/security, which the API route also compiles
+ * against. They were previously re-declared here by hand, so nothing connected
+ * the two: a field renamed on the server compiled cleanly on both sides and
+ * simply rendered `undefined` in the dashboard.
+ *
+ * Local aliases keep the existing import names used across the UI.
+ */
+import type {
+  SecurityScorecard,
+  SecuritySelfTest,
+  PromptGuardResult,
+  PasswordStrength,
+  CircuitBreakerStatus,
+  RateLimitTier,
+  EncryptionStatus,
+} from "@windels/shared/security";
+
+export type {
+  SecurityScorecard,
+  PasswordStrength,
+  RateLimitTier,
+  EncryptionStatus,
+};
+export type SelfTest = SecuritySelfTest;
+export type GuardResult = PromptGuardResult;
+export type Breaker = CircuitBreakerStatus;
 
 export const securityApi = {
   scorecard: () => api<SecurityScorecard>("/security/scorecard"),

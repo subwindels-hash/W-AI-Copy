@@ -67,7 +67,7 @@ export const BenchmarksService = {
   async runBenchmark(input: { area: BmArea; targetId?: string; targetName?: string; notes?: string; metrics: BmMetric[]; overallScore: number; passed: boolean; evaluator: string; evidence: string; organizationId?: string }): Promise<BmRun> {
     const oid = input.organizationId || "org-windels";
     const id = uid("br-"); const start = Date.now();
-    const run: BmRun = { id, organizationId: oid, area: input.area, targetId: input.targetId, targetName: input.targetName || input.targetId || input.area.replace(/_/g," "), status: "completed", startedAt: new Date(start).toISOString(), completedAt: new Date(start).toISOString(), durationMs: 0, metrics: input.metrics, overallScore: input.overallScore, passed: input.passed, notes: input.notes, metadata: { evaluator: input.evaluator, evidence: input.evidence, imported: true } } as BmRun;
+    const run: BmRun = { id, organizationId: oid, area: input.area, targetId: input.targetId, targetName: input.targetName || input.targetId || input.area.replace(/_/g," "), status: "completed", startedAt: new Date(start).toISOString(), completedAt: new Date(start).toISOString(), durationMs: 0, metrics: input.metrics, overallScore: input.overallScore, passed: input.passed, notes: input.notes, metadata: { evaluator: input.evaluator, evidence: input.evidence, imported: true } };
     await redis.hset(K.run(oid,id), "_doc", s2(run));
     await redis.zadd(K.runs(oid), start, id);
     await redis.zadd(K.areaScore(oid), input.overallScore, input.area);

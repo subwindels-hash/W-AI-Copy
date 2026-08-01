@@ -164,7 +164,7 @@ export const V76ValidationService = {
       { item: "S40 cloned voices default to private", passed: true, detail: "Default visibility = private enforced at create" },
       { item: "S41 Foundry voices consent-exempt with immutable audit", passed: true, detail: "Foundry-generated voices carry auditTrail entry with ownership=windels/foundry-autonomous" },
       { item: "S77 Expert Agents extend common ExpertAgent base with disclaimers", passed: true, detail: "Experts + UX agents + Gift Card agents + Currency agents all return informational disclaimer" },
-      { item: "S77 ChildSafetyReviewer non-bypassable in Media Factory", passed: true, detail: "Content generation runs child-safety keyword gate prior to job creation" },
+      { item: "S77 ChildSafetyReviewer non-bypassable in Media Factory", passed: true, detail: "Keyword gate screens title/description/tags on BOTH paths: mediaFactory.generate() before job creation, and publishJobs.createJob() before a publish job is persisted or queued (throws CONTENT_SAFETY_REJECTED). Screens supplied text only — not video/image content." },
       { item: "S78 Design Quality Gate non-bypassable", passed: true, detail: "UXIntel runDesignQa reports findings; tokens registered" },
       { item: "S79 Gift cards register into existing Payment Gateway (no parallel)", passed: !!gcPm, detail: gcPm ? `Registered method: ${gcPm.id}` : "Not registered" },
       { item: "S79 Gift card PIN + fraud detection active", passed: true, detail: "PIN sha256, velocity heuristic, fraud flags seeded" },

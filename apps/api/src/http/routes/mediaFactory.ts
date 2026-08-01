@@ -8,6 +8,8 @@ import { MediaFactoryService } from "../../mediaFactory/mediaFactory.service.js"
 import { MediaPipelineService } from "../../mediaFactory/pipeline.service.js";
 import { PublishingService } from "../../mediaFactory/publishing.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
+import { MediaMeteringService } from "../../mediaFactory/metering.service.js";
+import { EstimateRenderSchema, EstimatePublishSchema } from "@windels/shared/mediaMetering";
 import { authenticate as _authenticate } from "../middleware/auth.js";
 import { z as z_notes } from "zod";
 
@@ -23,6 +25,28 @@ const MEDIA_CACHE_DIR = path.resolve(process.cwd(), "media-cache");
 
 export function registerMediaFactoryRoutes(router: Router) {
   router.get("/dashboard/rollup", async (_req, res, next) => { try { res.json({ ok:true, data: await MediaFactoryService.dashboard() }); } catch(e){next(e);} });
+
+  // ── S77.B item 22: usage metering + pre-execution cost estimates ────────
+  // Estimates are projections and say so (isEstimate: true); the summary
+  // reports only measured usage recorded after work completed.
+  router.post("/usage/estimate/render", validate({ body: EstimateRenderSchema }), (req, res) => {
+    res.json({ ok: true, data: MediaMeteringService.estimateRender(req.body) });
+  });
+  router.post("/usage/estimate/publish", validate({ body: EstimatePublishSchema }), (req, res) => {
+    res.json({ ok: true, data: MediaMeteringService.estimatePublish(req.body) });
+  });
+  router.get("/usage/summary", validate({ query: z.object({ windowDays: z.coerce.number().int().min(1).max(365).optional() }) }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      res.json({ ok: true, data: await MediaMeteringService.summary(ctx.organizationId, Number(req.query.windowDays ?? 30)) });
+    } catch (e) { next(e); }
+  });
+  router.get("/usage/records", validate({ query: z.object({ limit: z.coerce.number().int().min(1).max(200).optional() }) }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      res.json({ ok: true, data: await MediaMeteringService.listRecords(ctx.organizationId, Number(req.query.limit ?? 50)) });
+    } catch (e) { next(e); }
+  });
   router.post("/generate", validate({body:genBody}), async (req, res, next) => { try { res.json({ ok:true, data: await MediaFactoryService.generate(req.body.type, req.body.channel, req.body.prompt) }); } catch(e){next(e);} });
   router.get("/jobs", async (_req, res, next) => { try { res.json({ ok:true, data: await MediaFactoryService.listJobs() }); } catch(e){next(e);} });
   router.get("/characters", async (_req, res, next) => { try { res.json({ ok:true, data: await MediaFactoryService.listCharacters() }); } catch(e){next(e);} });

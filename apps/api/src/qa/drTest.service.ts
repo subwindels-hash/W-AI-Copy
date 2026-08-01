@@ -27,6 +27,12 @@ export async function runDrTest(c: TestCase): Promise<TestCaseResult> {
   try {
     res.logs.push(`dr drill: ${cfg.scenario}`);
     let rpoMs = 0; let rtoMs = 0; let success = true;
+    // Set when a scenario performed no work: suppresses RTO/RPO assertions and
+    // the metrics block, so nothing downstream can read an invented figure.
+    let notPerformed = false;
+    // Cleared by a scenario that cannot measure recovery-point objective, so
+    // no RPO assertion or metric is emitted for it.
+    let rpoMeasured = true;
 
     if (cfg.scenario === "region-failover") {
       const tStart = performance.now();
@@ -43,20 +49,48 @@ export async function runDrTest(c: TestCase): Promise<TestCaseResult> {
       res.logs.push(`failover state=${fo.state} in ${Math.round(rtoMs)}ms`);
       success = fo.state === "complete";
     } else if (cfg.scenario === "backup-restore" || cfg.scenario === "db-failover" || cfg.scenario === "redis-restore") {
-      // Simulate backup snapshot + restore (no actual data loss in MVP)
-      const t1 = performance.now();
-      await sleep(50 + _rng.next()*150); // simulate backup
-      const snapshotBytes = Math.floor(1_000_000 + _rng.next()*50_000_000);
-      await sleep(30 + _rng.next()*200);  // simulate restore
-      rtoMs = performance.now() - t1; rpoMs = 200; // 200ms acceptable RPO for MVP
-      res.logs.push(`restored snapshot (${(snapshotBytes/1024/1024).toFixed(1)} MiB) in ${Math.round(rtoMs)}ms`);
+      // NOT IMPLEMENTED — and reported as such.
+      //
+      // This branch used to sleep for a randomised interval, invent a snapshot
+      // size, set rtoMs from its own sleep and hardcode rpoMs = 200. Because
+      // `success` defaults to true and this path never reassigned it, the drill
+      // reported "passed", and those two invented numbers were then checked
+      // against the caller's maxRtoMs/maxRpoMs. A recovery-objective audit
+      // could be satisfied by a drill that backed up and restored nothing.
+      //
+      // Performing it for real needs a snapshot/restore integration this
+      // service does not have. Until then it reports honestly: no measurement,
+      // no assertions derived from one, and a failing verdict so it cannot be
+      // mistaken for a successful drill.
+      res.logs.push(
+        `${cfg.scenario}: not performed — no backup/restore integration is configured, ` +
+        `so no RTO or RPO was measured. Wire a snapshot provider to run this drill.`,
+      );
+      res.assertions.push(assertion("success", "drill completed successfully", false, {
+        actual: "not_performed",
+      }));
+      res.error = {
+        code: "DR_SCENARIO_NOT_IMPLEMENTED",
+        message: `DR scenario "${cfg.scenario}" is not implemented; no drill was performed and no recovery objective was measured.`,
+      };
+      notPerformed = true;
     } else if (cfg.scenario === "dns-failover" || cfg.scenario === "total-outage") {
+      // This branch does perform a real check — it probes /health and derives
+      // `success` from the actual status code. Two things were still invented
+      // and have been removed: an artificial 80-380ms sleep that inflated the
+      // reported RTO, and a hardcoded `rpoMs = 500` that was then compared
+      // against the caller's RPO threshold. Recovery-point objective needs
+      // replication telemetry this service does not collect, so it is left
+      // unmeasured rather than asserted.
       const t1 = performance.now();
-      await sleep(80 + _rng.next()*300); // simulate DNS propagation / cold start
-      // Verify health returns after recovery
       const h = await fetch(`${BASE}/health`);
-      rtoMs = performance.now() - t1; rpoMs = 500; success = h.status === 200;
-      res.logs.push(`recovery in ${Math.round(rtoMs)}ms (health=${h.status})`);
+      rtoMs = performance.now() - t1;
+      success = h.status === 200;
+      rpoMeasured = false;
+      res.logs.push(
+        `recovery probe in ${Math.round(rtoMs)}ms (health=${h.status}); ` +
+        `RPO not measured — no replication telemetry available.`,
+      );
     }
 
     // Validate URLs after drill
@@ -65,14 +99,20 @@ export async function runDrTest(c: TestCase): Promise<TestCaseResult> {
       res.assertions.push(assertion(`url:${u}`, `${u} responds post-drill`, r.status < 500, { actual: r.status }));
     }
 
-    if (cfg.maxRtoMs != null) {
-      res.assertions.push(assertion("rto", `RTO ≤ ${cfg.maxRtoMs}ms`, rtoMs <= cfg.maxRtoMs, { actual: Math.round(rtoMs) }));
+    // An SLA can only be asserted against a real measurement. When the drill
+    // did not run, no rto/rpo assertion is recorded — a generous threshold must
+    // not be able to manufacture a passing check.
+    if (!notPerformed) {
+      if (cfg.maxRtoMs != null) {
+        res.assertions.push(assertion("rto", `RTO ≤ ${cfg.maxRtoMs}ms`, rtoMs <= cfg.maxRtoMs, { actual: Math.round(rtoMs) }));
+      }
+      if (cfg.maxRpoMs != null && rpoMeasured) {
+        res.assertions.push(assertion("rpo", `RPO ≤ ${cfg.maxRpoMs}ms`, rpoMs <= cfg.maxRpoMs, { actual: Math.round(rpoMs) }));
+      }
+      res.assertions.push(assertion("success", "drill completed successfully", success));
+      res.metrics.rtoMs = Math.round(rtoMs);
+      if (rpoMeasured) res.metrics.rpoMs = Math.round(rpoMs);
     }
-    if (cfg.maxRpoMs != null) {
-      res.assertions.push(assertion("rpo", `RPO ≤ ${cfg.maxRpoMs}ms`, rpoMs <= cfg.maxRpoMs, { actual: Math.round(rpoMs) }));
-    }
-    res.assertions.push(assertion("success", "drill completed successfully", success));
-    res.metrics.rtoMs = Math.round(rtoMs); res.metrics.rpoMs = Math.round(rpoMs);
 
     res.finishedAt = new Date().toISOString(); res.durationMs = Math.round(performance.now()-t0);
     res.status = res.assertions.every(a=>a.passed) ? "passed" : "failed";

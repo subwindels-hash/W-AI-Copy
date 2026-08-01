@@ -61,6 +61,17 @@ export class FakeKv {
 
   async smembers(key: string): Promise<string[]> { return [...(this.sets.get(key) ?? [])]; }
 
+  /**
+   * SISMEMBER — returns 1/0 like ioredis (not a boolean).
+   *
+   * Added for MfaService.verify(), which checks a recovery-code hash for set
+   * membership. Without it the fake threw `sismember is not a function`, which
+   * is why the recovery-code branch of MFA had never been exercised.
+   */
+  async sismember(key: string, member: string): Promise<number> {
+    return this.sets.get(key)?.has(String(member)) ? 1 : 0;
+  }
+
   async srem(key: string, ...members: string[]): Promise<number> {
     const s = this.sets.get(key);
     if (!s) return 0;

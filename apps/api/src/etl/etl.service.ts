@@ -31,52 +31,30 @@ const s2 = (o: unknown) => JSON.stringify(o);
 const j = <T>(s: string | null): T | null => (s ? (JSON.parse(s) as T) : null);
 const DLQ_CAP = 500;
 
-export interface EtlSourceConfig {
-  /** "upload" (inline content from the UI) | "sftp" | "s3" | "http" */
-  type: string;
-  /** Inline file content for upload sources (UI pasted/uploaded file). */
-  content?: string;
-  filename?: string;
-  delimiter?: string;
-  /** Remote source config — presence of real credentials is checked, never assumed. */
-  host?: string;
-  port?: number;
-  user?: string;
-  path?: string;
-  url?: string;
-}
+/**
+ * Record and input shapes come from @windels/shared/etl, which the route also
+ * validates against. They were previously re-declared here, so the service and
+ * the HTTP contract could drift apart silently.
+ */
+export type {
+  EtlSourceConfig,
+  EtlPipelineRecord,
+  EtlRunRecord,
+  EtlRowError,
+  EtlPipelineStatus,
+  EtlRunStatus,
+  EtlSourceFormat,
+} from "@windels/shared/etl";
 
-export interface EtlPipelineInput {
-  name: string;
-  description?: string;
-  sourceFormat: "CSV" | "JSON" | "XML" | "SQL";
-  sourceConfig: EtlSourceConfig;
-  mappingSchema: Array<{ sourceColumn: string; targetColumn: string; type: string; transformRule?: string }>;
-  cronSchedule?: string;
-}
+import type {
+  EtlSourceConfig,
+  EtlPipelineRecord,
+  EtlRunRecord,
+  CreateEtlPipelineInput,
+} from "@windels/shared/etl";
 
-export interface EtlPipelineRecord extends EtlPipelineInput {
-  id: string;
-  organizationId: string;
-  createdById: string;
-  status: "draft" | "active" | "paused" | "archived";
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface EtlRunRecord {
-  id: string;
-  pipelineId: string;
-  status: "queued" | "running" | "succeeded" | "failed" | "partial";
-  startedAt?: string;
-  completedAt?: string;
-  rowsProcessed: number;
-  rowsSucceeded: number;
-  rowsFailed: number;
-  errorSummary?: string;
-  errorLog: Array<{ rowIndex: number; rawRow: string; error: string }>;
-  createdAt: string;
-}
+/** Alias kept for the existing call sites in this module. */
+export type EtlPipelineInput = CreateEtlPipelineInput;
 
 /* ── Parsers (real) ─────────────────────────────────────────────── */
 
