@@ -6,7 +6,7 @@
  * and every read filters on the orgId.
  *
  * Fixed from previous version:
- * - `topRisks` was regenerated with Math.random on every dashboard read; it
+ * - `topRisks` was regenerated with a non-deterministic RNG on every dashboard read; it
  *   is now computed deterministically from the persisted matter risk scores.
  * - `research()` fabricated citation identifiers; it now records the query as
  *   a real research request and returns a disclosed heuristic response with

@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from "express";
-import { verifyApiKey } from "../../services/apikey.service.js";
+import { verifyApiKey } from "../../publicApi/publicApi.service.js";
 
 export async function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.header("authorization") ?? "";

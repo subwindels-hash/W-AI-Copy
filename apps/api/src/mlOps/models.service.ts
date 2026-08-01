@@ -13,14 +13,6 @@ import type {
   ModelMonitor, ModelAlert, MonitorType, ModelPolicy, ModelPolicyType,
   MlOpsDashboard,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('mlOps:models');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const MODELS     = "mlops:models";
 const MODEL      = (id: string) => `mlops:model:${id}`;
@@ -80,20 +72,22 @@ export const ModelsService = {
   },
 
   async register(input: Omit<ModelArtifact, "id"|"versions"|"stars"|"installs"|"currentStage"|"status"|"avgLatencyMs"|"errorRatePct"|"updatedAt">): Promise<ModelArtifact> {
-    _rng.reseed(`register:${input}`);
     const id = randomUUID();
     const now = iso();
     const v0: ModelVersionRec = {
       id: randomUUID(), version: "0.1.0", stage: "draft",
       artifactUri: `mlops://models/${input.slug}/0.1.0`,
-      sizeMb: 120 + Math.floor(_rng.next()*800),
-      hash: "sha256:" + randomUUID().replace(/-/g,""),
+      // sizeMb / hash describe a real artifact. They were previously invented
+      // (120-920 MB and a UUID dressed up as a sha256), which made an
+      // unverifiable value look like a content hash. Left undefined until the
+      // artifact is actually uploaded and measured.
       metrics: [], createdAt: now,
     };
     const m: ModelArtifact = {
-      id, versions: [v0], stars: 8 + Math.floor(_rng.next()*40), installs: 0,
-      currentStage: "draft", status: "active", avgLatencyMs: 240 + Math.floor(_rng.next()*1800),
-      errorRatePct: _rng.next()*0.8, updatedAt: now, ...input,
+      // stars start at 0 and accrue from real ratings; latency/error rate are
+      // observed from serving traffic, not assigned at registration time.
+      id, versions: [v0], stars: 0, installs: 0,
+      currentStage: "draft", status: "active", updatedAt: now, ...input,
     };
     m.currentVersion = v0.id;
     await redis.set(MODEL(id), SER(m));
@@ -103,14 +97,12 @@ export const ModelsService = {
   },
 
   async addVersion(id: string, version: string, metrics: ModelMetric[] = [], artifactUri?: string, notes?: string, stage: ModelStage = "draft"): Promise<ModelArtifact | null> {
-    _rng.reseed(`addVersion:${id}`);
     const m = await this.get(id);
     if (!m) return null;
     const v: ModelVersionRec = {
       id: randomUUID(), version, stage,
       artifactUri: artifactUri ?? `mlops://models/${m.slug}/${version}`,
-      sizeMb: 120 + Math.floor(_rng.next()*800),
-      hash: "sha256:" + randomUUID().replace(/-/g,""),
+      // See register(): size and hash belong to a real artifact.
       metrics, createdAt: iso(), notes,
     };
     m.versions.unshift(v);
@@ -161,7 +153,52 @@ export const ModelsService = {
       if (filter?.modelId && d.modelId !== filter.modelId) continue;
       out.push(d);
     }
-    return out.sort((a,b) => b.qps - a.qps);
+    // Deployments with no observed traffic sort last rather than being treated
+    // as 0 qps alongside genuinely idle ones.
+    return out.sort((a, b) => (b.qps ?? -1) - (a.qps ?? -1));
+  },
+
+  /**
+   * Ingest observed serving telemetry for a deployment.
+   *
+   * This is the intake path that replaces the fabricated qps/p95/error-rate
+   * previously assigned at deploy time. Only the fields actually supplied are
+   * written, so a partial report never implies a measurement that was not made.
+   * The health status is derived from the reported error rate rather than
+   * assumed.
+   */
+  async reportMetrics(
+    id: string,
+    m: { qps?: number; p95Ms?: number; errorRatePct?: number; costPerHour?: number; status?: MlDeploymentStatus },
+  ): Promise<ModelDeployment | null> {
+    const d = await this.getDeployment(id);
+    if (!d) return null;
+    if (m.qps !== undefined) d.qps = m.qps;
+    if (m.p95Ms !== undefined) d.p95Ms = m.p95Ms;
+    if (m.errorRatePct !== undefined) d.errorRatePct = m.errorRatePct;
+    if (m.costPerHour !== undefined) d.costPerHour = m.costPerHour;
+    d.status = m.status
+      ?? (m.errorRatePct !== undefined ? (m.errorRatePct > 5 ? "degraded" : "healthy") : d.status);
+    d.updatedAt = iso();
+    await redis.set(DEP(id), SER(d));
+    return d;
+  },
+
+  /** Record the measured size and content hash of an uploaded artifact. */
+  async recordArtifact(
+    modelId: string,
+    versionId: string,
+    artifact: { sizeMb: number; hash: string },
+  ): Promise<ModelArtifact | null> {
+    const m = await this.get(modelId);
+    if (!m) return null;
+    const v = m.versions.find((x) => x.id === versionId);
+    if (!v) return null;
+    v.sizeMb = artifact.sizeMb;
+    v.hash = artifact.hash;
+    m.updatedAt = iso();
+    await redis.set(MODEL(modelId), SER(m));
+    return m;
   },
 
   async getDeployment(id: string): Promise<ModelDeployment | null> {
@@ -175,19 +212,21 @@ export const ModelsService = {
     region?: string; replicas?: number; cpu?: string; memory?: string; gpu?: string;
     trafficPct?: number; deployedBy?: string;
   }): Promise<ModelDeployment> {
-    _rng.reseed(`deploy`);
     const id = randomUUID();
     const now = iso();
     const d: ModelDeployment = {
       id, modelId: input.modelId, modelVersionId: input.modelVersionId,
       name: input.name, environment: input.environment,
       strategy: input.strategy ?? "rolling",
-      status: "healthy", region: input.region ?? "na-east",
+      // Unverified until the serving layer reports in.
+      status: "provisioning", region: input.region ?? "na-east",
       replicas: input.replicas ?? 2, cpu: input.cpu ?? "2", memory: input.memory ?? "8Gi",
       gpu: input.gpu, endpoint: `https://inference.windels.ai/${input.environment}/${input.name}`,
-      trafficPct: input.trafficPct ?? 100, qps: Math.floor(50+_rng.next()*2000),
-      p95Ms: 80+Math.floor(_rng.next()*500), errorRatePct: _rng.next()*0.5,
-      costPerHour: +(1.2 + _rng.next()*8).toFixed(2),
+      trafficPct: input.trafficPct ?? 100,
+      // qps / p95Ms / errorRatePct / costPerHour are runtime observations.
+      // They were fabricated here at deploy time (up to 2050 qps, 580ms p95,
+      // $9.20/h) for a deployment that had served zero requests. They stay
+      // undefined until reportMetrics() receives real numbers.
       deployedAt: now, updatedAt: now, deployedBy: input.deployedBy ?? "admin",
     };
     await redis.set(DEP(id), SER(d));

@@ -10,7 +10,6 @@ import { ScreenIntelService } from "../../collaboration/screenIntel.service.js";
 import { CameraIntelService } from "../../collaboration/cameraIntel.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 // ── Zod schemas ──────────────────────────────────────────────────

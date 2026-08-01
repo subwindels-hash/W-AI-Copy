@@ -13,14 +13,6 @@ import type {
   CameraPipeline, Detection, CameraFinding, CameraPipelineKind,
   CameraStatus, DetectionVerdict, CameraFindingKind,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('collaboration:cameraIntel');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   pSet: "coll:c:pipes", p: (id: string) => `coll:c:p:${id}`,
@@ -53,7 +45,6 @@ export const CameraIntelService = {
     name: string; kind: CameraPipelineKind; site: string; cameraCount?: number;
     fps?: number; resolution?: string; owner?: string; approvedWorkflow?: string; tags?: string[];
   }): Promise<CameraPipeline> {
-    _rng.reseed(`registerPipeline`);
     const id = randomUUID();
     const verdictDefault: DetectionVerdict = input.approvedWorkflow ? "approved-workflow" : "advisory";
     const p: CameraPipeline = {
@@ -62,8 +53,9 @@ export const CameraIntelService = {
       modelVersion: "vision-v1.3.0", fps: input.fps ?? 8,
       resolution: input.resolution ?? "1920x1080", verdictDefault,
       detectionsToday: 0, findingsOpen: 0, acknowledgedFindings: 0,
-      safetyAlerts24h: 0, uptimePct: 99.5 + _rng.next() * 0.5,
-      latencyMs: 140 + Math.floor(_rng.next() * 220),
+      // Uptime and latency are observed from the running pipeline. A brand new
+      // pipeline has served nothing, so a 99.5-100% uptime was pure invention.
+      safetyAlerts24h: 0,
       owner: input.owner ?? "vision-ops",
       approvedWorkflow: input.approvedWorkflow,
       tags: input.tags ?? [],
@@ -81,10 +73,14 @@ export const CameraIntelService = {
   },
 
   async emitDetection(pid: string, d: Omit<Detection, "id" | "pipelineId" | "timestamp" | "verdict" | "advisoryNote" | "confidenceBand" | "frameId"> & { frameId?: string; confidence?: number; verdict?: DetectionVerdict }): Promise<Detection> {
-    _rng.reseed(`emitDetection`);
     const p = await this.getPipeline(pid);
     if (!p) throw new Error("pipeline not found");
-    const conf = d.confidence ?? 0.6 + _rng.next() * 0.35;
+    // Confidence comes from the vision model. It was previously invented as
+    // 0.6-0.95 when the caller omitted it, and that number then set the
+    // confidence band a human operator uses to triage a safety detection.
+    // A detection with no model confidence is recorded as 0 / "low" so it
+    // cannot masquerade as a high-confidence hit.
+    const conf = d.confidence ?? 0;
     const band = conf >= 0.9 ? "very-high" : conf >= 0.75 ? "high" : conf >= 0.5 ? "medium" : "low";
     const verdict = d.verdict ?? p.verdictDefault;
     const id = randomUUID();
@@ -145,12 +141,14 @@ export const CameraIntelService = {
 
   async summary() {
     const pipes = await this.listPipelines();
-    let dets = 0, open = 0, safety = 0, advisory = 0, total = 0, latency = 0;
+    let dets = 0, open = 0, safety = 0, advisory = 0, total = 0, latency = 0, latencySamples = 0;
     for (const p of pipes) {
       dets += p.detectionsToday;
       open += p.findingsOpen;
       safety += p.safetyAlerts24h;
-      latency += p.latencyMs;
+      // Average only over pipelines that actually reported latency, so
+      // unreported ones do not pull the mean toward zero.
+      if (typeof p.latencyMs === "number") { latency += p.latencyMs; latencySamples++; }
       const fs = await this.listFindings(p.id);
       total += fs.length;
       advisory += fs.filter(x => x.verdict === "advisory").length;
@@ -162,7 +160,7 @@ export const CameraIntelService = {
       openFindings: open,
       safetyAlerts24h: safety,
       advisoryFindingsPct: total ? Math.round((advisory / total) * 100) : 100,
-      avgCameraLatencyMs: pipes.length ? Math.round(latency / pipes.length) : 0,
+      avgCameraLatencyMs: latencySamples ? Math.round(latency / latencySamples) : 0,
     };
   },
 };

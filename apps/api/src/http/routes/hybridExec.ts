@@ -7,7 +7,6 @@ import { validate } from "../middleware/validate.js";
 import { HybridExecService } from "../../hybridExec/hybridExec.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const route = z.object({ modality: z.string(), requiredVramMb: z.number().int().positive(), safetyCritical: z.boolean().optional(), costOptimize: z.boolean().optional() });

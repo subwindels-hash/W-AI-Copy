@@ -6,7 +6,6 @@ import { SdkService } from "../../sdk/sdk.service.js";
 import { SDK_KINDS } from "@windels/shared";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const EmuSchema = z.object({ name: z.string().min(2), sdkKind: z.enum(SDK_KINDS), port: z.number().int().min(1024).max(65535).optional() });

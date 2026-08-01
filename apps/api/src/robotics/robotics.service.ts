@@ -8,18 +8,13 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+const _rng = makeRng("robotics:robotics");
 import {
   Robot, RobotKind, RobotStatus, ROBOT_KINDS, MaintenanceWindow,
   PredictiveMaintAlert, RoboticsDashboard,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable per (module, seed) so dashboard
-// reads return the same numbers within a running process.
-const _rng = makeRng('robotics');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   r: (oid: string, id: string) => `rob:r:${oid}:${id}`,
@@ -31,6 +26,9 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
+// Seed-path helper on the deterministic RNG (demo topology only).
+function randInt(min:number,max:number) { return _rng.randInt(min,max); }
+
 async function emitTelemetry(r: Robot) {
   try {
     const { FabricService } = await import("../fabric/fabric.service.js");
@@ -55,8 +53,8 @@ const SEED_ROBOTS: Array<{ name: string; kind: RobotKind; site: string }> = [
 
 export const RoboticsService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
-    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.rs(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("robotics", logger);
     const now = new Date().toISOString();
     for (const s of SEED_ROBOTS) {
       const id = uid("rob-");
@@ -111,7 +109,14 @@ export const RoboticsService = {
     const offline = robots.filter(r=>r.status==="offline").length;
     const bats = robots.map(r=>r.batteryPct).filter((x): x is number => typeof x === "number");
     const avgBattery = bats.length ? +(bats.reduce((s,x)=>s+x,0)/bats.length).toFixed(1) : 0;
-    const avgCpu = +(robots.reduce((s,r)=>s+r.cpuPct,0)/robots.length).toFixed(1);
+    // Guard the empty fleet: this previously divided by robots.length
+    // unconditionally, so an organization with no robots registered got
+    // `avgCpuPct: NaN`, which serialises to `null` through JSON and renders as
+    // a blank gauge rather than "no fleet". It was masked only because the
+    // bootstrap always seeded 12 demo robots.
+    const avgCpu = robots.length
+      ? +(robots.reduce((s,r)=>s+r.cpuPct,0)/robots.length).toFixed(1)
+      : 0;
     return {
       totalRobots: robots.length, active, idle, error, maintenance: maint, offline,
       avgBatteryPct: avgBattery, tasksCompletedToday: robots.reduce((s,r)=>s+r.tasksCompleted,0),
@@ -156,19 +161,43 @@ export const RoboticsService = {
     return r;
   },
 
+  /**
+   * Raise predictive-maintenance alerts from recorded robot telemetry.
+   *
+   * A maintenance alert names a component and a failure risk on a real machine.
+   * This previously fired one for a random ~15% of the fleet on every scan,
+   * picking the component from a list and the risk from a 55-95% range — which
+   * would send crews to inspect healthy robots while masking genuine faults.
+   *
+   * Alerts are now derived from thresholds on telemetry the robot actually
+   * reported. A fleet with no concerning readings produces no alerts.
+   */
   async runPredictiveScan(oid = "org-windels"): Promise<PredictiveMaintAlert[]> {
-    _rng.reseed(`runPredictiveScan:${oid}`);
     const robots = await this.list(oid);
     const out: PredictiveMaintAlert[] = [];
+    const raise = async (r: Robot, component: string, riskPct: number, recommendation: string) => {
+      const pa: PredictiveMaintAlert = {
+        id: uid("pa-"), robotId: r.id, component, riskPct, recommendation,
+        at: new Date().toISOString(),
+      };
+      await redis.hset(K.pa(oid, pa.id), "_doc", s2(pa));
+      await redis.sadd(K.pas(oid), pa.id);
+      out.push(pa);
+    };
     for (const r of robots) {
-      if (_rng.next() > 0.85) {
-        const pa: PredictiveMaintAlert = {
-          id: uid("pa-"), robotId: r.id, component: ["motor-a","motor-b","sensor-lidar","battery-pack","gearbox"][randInt(0,4)],
-          riskPct: randInt(55, 95), recommendation: "Inspect during next maintenance window.",
-          at: new Date().toISOString(),
-        };
-        await redis.hset(K.pa(oid,pa.id),"_doc",s2(pa)); await redis.sadd(K.pas(oid),pa.id);
-        out.push(pa);
+      // Each condition cites the reading that triggered it, so an operator can
+      // verify the alert rather than trusting an opaque risk score.
+      if (typeof r.tempC === "number" && r.tempC >= 70) {
+        await raise(r, "thermal", Math.min(99, Math.round(r.tempC)),
+          `Reported temperature ${r.tempC}°C at or above 70°C — inspect cooling before next shift.`);
+      }
+      if (typeof r.batteryPct === "number" && r.batteryPct <= 15) {
+        await raise(r, "battery-pack", Math.min(99, 100 - r.batteryPct),
+          `Battery reported ${r.batteryPct}% — charge or replace pack.`);
+      }
+      if (r.cpuPct >= 95) {
+        await raise(r, "controller", Math.round(r.cpuPct),
+          `Controller CPU sustained at ${r.cpuPct}% — check workload or firmware.`);
       }
     }
     return out;

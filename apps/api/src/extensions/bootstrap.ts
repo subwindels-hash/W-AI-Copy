@@ -11,8 +11,12 @@ import { AgentsService } from "./agents.service.js";
 import { WorkflowExtService } from "./workflowExt.service.js";
 import { DashboardExtService } from "./dashboardExt.service.js";
 import { UIComponentsService } from "./uiComponents.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 export async function bootstrapExtensions() {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("extensions");
+
   const existing = await ExtensionRegistryService.list();
   if (existing.length > 0) {
     const b = await BusinessModuleService.list();

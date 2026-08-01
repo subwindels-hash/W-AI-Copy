@@ -148,6 +148,28 @@ export function registerReleaseRoutes(router: Router) {
       res.json({ ok: true, data: dep });
     } catch (e) { next(e); }
   });
+  // Advance the canary with observed telemetry. The ramp used to run as an
+  // in-process timer loop that invented an error rate and p95 at each step.
+  rel.post("/canary", validate({ body: z.object({
+    canaryPercent: z.number().min(0).max(100),
+    errorRate: z.number().min(0).max(100).optional(),
+    p95LatencyMs: z.number().min(0).optional(),
+  }) }), async (req, res, next) => {
+    try {
+      const dep = await ProductionService.reportCanary((req as any).release.id, req.body);
+      if (!dep) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "No deployment" } });
+      res.json({ ok: true, data: dep });
+    } catch (e) { next(e); }
+  });
+  // Finalise to production — requires the canary to have actually reached 100%
+  // and health to have been confirmed.
+  rel.post("/finalize", validate({ body: z.object({ healthyAt100: z.boolean() }) }), async (req, res, next) => {
+    try {
+      const dep = await ProductionService.finalize((req as any).release.id, req.body.healthyAt100);
+      if (!dep) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "No deployment" } });
+      res.json({ ok: true, data: dep });
+    } catch (e) { next(e); }
+  });
   rel.post("/rollback", async (req, res, next) => {
     try {
       const dep = await ProductionService.rollback((req as any).release.id);

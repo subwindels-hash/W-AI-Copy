@@ -5,8 +5,11 @@
  * Certification Center, AIO Bus.
  * Keys: fab:*
  */
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID } from "node:crypto";
 import { redisCmd as redis, redis as redisSub } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+const _rng = makeRng("fabric:fabric");
 import {
   FabricDashboard, DataSource, DataFabricStats, TimeMachineReplay,
   TrustSignal, TrustCenterReport, Sandbox, SandboxStatus, MissionControlStatus,
@@ -14,14 +17,6 @@ import {
   FabricTwinKind, InstalledPackage, PackageRepo, FabricCertification, BusEvent, BusStats,
   BusEventType, CertLevel, CertTargetKind,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable per (module, seed) so dashboard
-// reads return the same numbers within a running process.
-const _rng = makeRng('fabric');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   src: (oid: string, id: string) => `fab:src:${oid}:${id}`,
@@ -46,6 +41,9 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
+function rand(min:number,max:number) { return _rng.rand(min,max); }
+function randInt(min:number,max:number) { return Math.floor(rand(min,max+1)); }
+
 const DATA_SOURCES_SEED: Array<{name:string;kind:DataSource["kind"]}> = [
   {name:"WINDELS Primary Postgres", kind:"postgres"},
   {name:"Event Stream (Kafka)", kind:"kafka"},
@@ -126,9 +124,15 @@ async function publishEvent(type: BusEventType, source: string, payload: any, ta
 // ---------- Service ----------
 export const FabricService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
-    _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.srcs(oid))) return;
+    // The event bus is a real subscription, not demo content — it must start
+    // even when synthetic seeding is off, otherwise nothing published by other
+    // modules would ever be captured.
     startBus(logger);
+    // The rest of this bootstrap invents the fabric's entire contents: data
+    // sources with made-up latency/throughput, digital twins with health and
+    // "prediction accuracy" percentages, signed certificates and open alerts.
+    if (!demoDataEnabled()) return skipDemoSeed("fabric", logger);
 
     // Sources
     for (const s of DATA_SOURCES_SEED) {
@@ -136,7 +140,8 @@ export const FabricService = {
       const now = new Date().toISOString();
       const src: DataSource = {
         id, name: s.name, kind: s.kind,
-        status: _rng.next() > 0.1 ? "healthy" : "degraded",
+        // Health is unknown until the source is actually probed.
+        status: "unknown",
         latencyMs: randInt(8, 120), rowsPerSec: randInt(400, 9000), connectedAt: now,
       };
       await redis.hset(K.src(oid,id), "_doc", s2(src));
@@ -163,7 +168,7 @@ export const FabricService = {
         id, name: t.name, kind: t.kind,
         healthPct: +rand(72, 99).toFixed(1), simulationRuns: randInt(3, 240),
         lastSimulationAt: new Date(Date.now()-randInt(1,24)*3600000).toISOString(),
-        status: _rng.next()>0.7?"simulating":"idle",
+        status: "idle",
         predictionAccuracyPct: +rand(82, 98).toFixed(1),
       };
       await redis.hset(K.twin(oid,id), "_doc", s2(twin)); await redis.sadd(K.twins(oid), id);
@@ -219,7 +224,6 @@ export const FabricService = {
   },
 
   async _gatherAll(oid: string): Promise<FabricDashboard> {
-    _rng.reseed(`_gatherAll:${oid}`);
     const multi = async <T,>(ids: string[], keyFn:(id:string)=>string): Promise<T[]> => {
       const out: T[] = [];
       for (const id of ids) { const r = await redis.hgetall(keyFn(id)); if (r._doc) { try { out.push(JSON.parse(r._doc)); } catch {} } }
@@ -243,74 +247,70 @@ export const FabricService = {
     const fabric: DataFabricStats = {
       connectedSources: sources.length,
       streamsActive: sources.filter(s=>s.status==="healthy").length,
-      pipelinesRunning: randInt(8, 60),
-      dataQualityScore: +(healthySrcs/Math.max(1,sources.length) * rand(0.85,0.98)).toFixed(3),
-      lineageEdges: randInt(400, 4800),
-      catalogEntries: randInt(1200, 9600),
-      governancePoliciesEnforced: randInt(18, 96),
-      throughputRps: +rand(120, 1800).toFixed(0),
+      // Counted from registered sources. Pipeline/lineage/catalog registries
+      // are not wired up, so they report 0 rather than a plausible count.
+      pipelinesRunning: 0,
+      dataQualityScore: sources.length ? +(healthySrcs / sources.length).toFixed(3) : 0,
+      lineageEdges: 0,
+      catalogEntries: 0,
+      governancePoliciesEnforced: 0,
+      throughputRps: 0,
     };
 
     // Trust
-    const signals: TrustSignal[] = TRUST_CATEGORIES.map(cat => {
-      const score = +rand(0.55, 0.99).toFixed(2);
-      const status: TrustSignal["status"] = score >= 0.85 ? "good" : score >= 0.7 ? "warn" : "bad";
-      return { id: "tsi-" + createHash("sha1").update(cat).digest("hex").slice(0, 8), category: cat, label: TRUST_LABELS[cat], score, status };
-    });
-    const overall = Math.round(signals.reduce((s,x)=>s+x.score,0)/signals.length*100);
+    // Trust signals must be evaluated, not drawn. Each category previously got
+    // a random 0.55-0.99 score, which then produced an overall "trusted" /
+    // "watch" verdict for the whole platform on every page load.
+    const signals: TrustSignal[] = TRUST_CATEGORIES.map((cat, i) => ({
+      id: `tsi-${i}`, category: cat, label: TRUST_LABELS[cat], score: 0, status: "bad" as const,
+    }));
     const trust: TrustCenterReport = {
-      overallScore: overall,
-      level: overall>=85?"trusted":overall>=70?"watch":overall>=55?"review":"blocked",
-      signals, lastEvaluatedAt: "2026-07-31T14:00:00.000Z",
+      overallScore: 0,
+      // Unevaluated is "blocked", never "trusted" — an unassessed platform must
+      // not present itself as verified.
+      level: "blocked",
+      signals, lastEvaluatedAt: new Date().toISOString(),
     };
 
     // Mission control live
     const mission: MissionControlStatus = {
-      workforceActive: randInt(120, 800),
-      agentsBusy: randInt(40, 350),
-      workflowsRunning: randInt(15, 180),
-      gpuUtilPct: randInt(20, 92),
-      cpuUtilPct: randInt(22, 78),
-      securityIncidentsOpen: randInt(0, 4),
+      // Live operational figures come from the runtime, not from a generator.
+      // These invented an active workforce of 120-800, GPU/CPU utilisation, and
+      // — most misleadingly — business KPIs including "Revenue / day" of
+      // $40,000-$280,000 and an SLA on-time percentage, all re-rolled per read.
+      workforceActive: 0,
+      agentsBusy: 0,
+      workflowsRunning: 0,
+      gpuUtilPct: 0,
+      cpuUtilPct: 0,
+      securityIncidentsOpen: 0,
       globalAlerts: alerts.filter(a=>!a.acknowledged).length,
-      businessKpis: [
-        {name:"Revenue / day", value: +rand(40000, 280000).toFixed(0), target: 200000, unit:"USD"},
-        {name:"Customer Satisfaction", value: +rand(82, 97).toFixed(1), target: 92, unit:"%"},
-        {name:"Tickets Auto-Resolved", value: +rand(55, 88).toFixed(1), target: 70, unit:"%"},
-        {name:"SLA On-Time", value: +rand(94, 99.8).toFixed(2), target: 99, unit:"%"},
-      ],
-      autonomousDecisionsPerMin: randInt(20, 400),
+      businessKpis: [],
+      autonomousDecisionsPerMin: 0,
       digitalTwinsOnline: twins.filter(t=>t.status!=="idle").length,
-      regionsOnline: 5, regionsTotal: 5,
+      regionsOnline: 0, regionsTotal: 0,
     };
 
-    // Evolution trends (12 weeks)
+    // Evolution trends and departmental maturity require 12 weeks of recorded
+    // history and a real assessment. Both were synthesised — an upward-sloping
+    // performance/productivity curve with noise, and per-department scores of
+    // 55-90 — which read as genuine longitudinal data. Empty until recorded.
     const trends: EvolutionTrend[] = [];
-    for (let i=11;i>=0;i--) {
-      const d = new Date(Date.now()-i*7*86400000);
-      trends.push({
-        period: d.toISOString().slice(0,10),
-        performanceScore: +(70 + (11-i)*1.4 + rand(-1.5,1.5)).toFixed(1),
-        productivityIndex: +(60 + (11-i)*1.8 + rand(-2,2)).toFixed(1),
-        automationPct: +(0.25 + (11-i)*0.025 + rand(-0.01,0.01)).toFixed(3),
-        modelObsolescenceRisk: +Math.max(0.05, 0.4 - (11-i)*0.01 + rand(-0.03,0.03)).toFixed(3),
-      });
-    }
-    const maturity: MaturityScore[] = DEPARTMENTS.map((d,i)=>({
-      department: d,
-      score: Math.round(rand(55+i*2, 88+i)),
-      level: (["emerging","developing","mature","leading"] as const)[Math.min(3, Math.floor(rand(1,4)))],
-    }));
+    const maturity: MaturityScore[] = [];
 
-    // Endpoints (API gateway synthetic)
-    const endpointCount = randInt(36, 140);
+    // API gateway endpoint count comes from the real route registry, not a
+    // random 36-140.
+    const endpointCount = 0;
 
     // Bus stats
     const meta = await redis.hgetall(K.busMeta(oid));
     const startedAt = meta.startedAt ? new Date(meta.startedAt).getTime() : Date.now();
     const events = Number(meta.events || 0);
     const uptimeSec = Math.max(1, Math.floor((Date.now()-startedAt)/1000));
-    const bus: BusStats = { eventsPerSec: +(events/Math.max(1,uptimeSec)).toFixed(2), topics: randInt(24,80), subscribers: randInt(40,240), deadLetters: randInt(0,5), avgLatencyMs: randInt(4,32), uptimeSec };
+    // eventsPerSec and uptime are genuinely measured from the bus counter;
+    // topic/subscriber/dead-letter counts are not tracked, so they report 0
+    // instead of an invented 24-80 topics with 40-240 subscribers.
+    const bus: BusStats = { eventsPerSec: +(events/Math.max(1,uptimeSec)).toFixed(2), topics: 0, subscribers: 0, deadLetters: 0, avgLatencyMs: 0, uptimeSec };
 
     return {
       dataFabric: fabric, sources, replays: randInt(30, 400), trust,
@@ -362,17 +362,36 @@ export const FabricService = {
   },
 
   async runSimulation(twinId: string, oid = "org-windels"): Promise<FabricTwin | null> {
-    _rng.reseed(`runSimulation:${twinId}`);
     const r = await redis.hgetall(K.twin(oid,twinId)); if (!r._doc) return null;
     const t: FabricTwin = JSON.parse(r._doc);
     t.status = "simulating"; t.simulationRuns += 1; t.lastSimulationAt = new Date().toISOString();
     await redis.hset(K.twin(oid,twinId),"_doc",s2(t));
+    // The twin returns to idle. Its health and prediction accuracy previously
+    // drifted by a random +/-3% and +/-1.5% after a 1.5s timer, which made a
+    // simulation that never ran look like it had produced new telemetry.
+    // Those figures now only change when reportTwinTelemetry() is called with
+    // real results.
     setTimeout(async () => {
-      t.status = "idle"; t.healthPct = +Math.min(100, Math.max(40, t.healthPct + rand(-3,3))).toFixed(1);
-      t.predictionAccuracyPct = +Math.min(99, Math.max(70, t.predictionAccuracyPct + rand(-1,1.5))).toFixed(1);
+      t.status = "idle";
       await redis.hset(K.twin(oid,twinId),"_doc",s2(t));
-      publishEvent("twin.telemetry", "fabric", { organizationId: oid, twinId, healthPct: t.healthPct });
     }, 1500);
+    return t;
+  },
+
+  /** Record real telemetry produced by a digital-twin simulation run. */
+  async reportTwinTelemetry(
+    twinId: string,
+    result: { healthPct?: number; predictionAccuracyPct?: number },
+    oid = "org-windels",
+  ): Promise<FabricTwin | null> {
+    const r = await redis.hgetall(K.twin(oid, twinId));
+    if (!r._doc) return null;
+    const t: FabricTwin = JSON.parse(r._doc);
+    if (result.healthPct !== undefined) t.healthPct = result.healthPct;
+    if (result.predictionAccuracyPct !== undefined) t.predictionAccuracyPct = result.predictionAccuracyPct;
+    t.status = "idle";
+    await redis.hset(K.twin(oid, twinId), "_doc", s2(t));
+    publishEvent("twin.telemetry", "fabric", { organizationId: oid, twinId, healthPct: t.healthPct });
     return t;
   },
 

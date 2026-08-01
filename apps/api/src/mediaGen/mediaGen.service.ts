@@ -27,6 +27,8 @@ import { createHash, randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
 import type { MgJob as SharedMgJob, MgCapability, MgDashboard, MgImageOp, MgAudioOp, MgVideoOp } from "@windels/shared";
+import { makeRng } from "../utils/detRng.js";
+const _rng = makeRng("mediaGen:mediaGen");
 
 export type MgStatus = "pending" | "running" | "completed" | "failed" | "cancelled" | "rejected";
 
@@ -94,7 +96,7 @@ const CAP_SEEDS: MgCapability[] = [
   { modality: "video", op: "enhancement",    gpuRequiredMb: 12000, avgMs: 14000, status: "online" },
 ];
 
-async function emitKernel(kind: string, payload: unknown) {
+async function emitKernel(kind: string, payload: Record<string, any>) {
   try {
     const { KernelService } = await import("../kernel/kernel.service.js");
     await KernelService.dispatch({ source: "media-gen", kind, payload });
@@ -291,7 +293,7 @@ export const MediaGenService = {
     const cap = caps.find((c) => c.op === job.op);
     const avgMs = cap?.avgMs ?? 2000;
     // Simulator: bounded wait proportional to capability avgMs, with jitter.
-    const jitter = Math.floor(avgMs * 0.15 * (Math.random() - 0.5));
+    const jitter = Math.floor(avgMs * 0.15 * (_rng.next() - 0.5));
     const duration = Math.max(200, avgMs + jitter);
     await new Promise((r) => setTimeout(r, Math.min(duration, 10_000))); // cap sim wait
 

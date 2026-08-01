@@ -5,6 +5,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { Metrics } from "../observability/metrics.js";
 import type { GlobalStatus, ExecKpi } from "@windels/shared";
 
 const KPI = "ef:kpis";
@@ -13,30 +14,103 @@ const KPI_ID = (id: string) => `ef:kpi:${id}`;
 const SER = <T>(v: T) => JSON.stringify(v);
 function iso() { return new Date().toISOString(); }
 
+/** Total of a counter across every tag combination. */
+function counterTotal(snap: any, name: string): number {
+  return Number(snap?.counters?.[name]?.total ?? 0);
+}
+
+/** HTTP responses with a 5xx status, summed from the tagged counter. */
+function errorTotal(snap: any): number {
+  const byTags = snap?.counters?.["http_requests_total"]?.byTags ?? {};
+  let n = 0;
+  for (const [k, v] of Object.entries(byTags)) {
+    const m = /status=(\d{3})/.exec(k);
+    if (m && Number(m[1]) >= 500) n += Number(v);
+  }
+  return n;
+}
+
 export const OpsCenterService = {
+  /**
+   * Global operations status.
+   *
+   * ── MEASURED ONLY ────────────────────────────────────────────────────
+   * This method used to `return` a literal: 48 services with 45 healthy,
+   * five named regions with per-region latency and traffic split, 12,480 rps,
+   * a 0.32% error rate, 218 ms p95, 24,891 active users and $18,420 of spend
+   * today against a $554,000 monthly run rate.
+   *
+   * It touched neither Redis nor the metrics registry, so it was not a seed and
+   * the WINDELS_DEMO_DATA gate never applied to it — `GET /enterprise/global-status`
+   * served those numbers on a default install, and `/dashboard/rollup` spread
+   * them into the executive rollup as `globalRps`, `globalP95Ms`,
+   * `globalErrorRate` and `activeUsers`. An operator reading either endpoint saw
+   * a healthy, busy, multi-region platform that did not exist. Worse, the shape
+   * was static: an actual outage would not have moved a single figure.
+   *
+   * Everything below is either measured from this process's own telemetry (the
+   * same registry that backs infraMetrics) or counted from records the platform
+   * actually holds. Region topology needs a source that can see other regions;
+   * this process cannot, so it reports none rather than inventing five. Cost
+   * needs a billing export. Both are omitted rather than guessed.
+   */
   async globalStatus(): Promise<GlobalStatus> {
+    const snap = Metrics.snapshot();
+    const reqs = counterTotal(snap, "http_requests_total");
+    const errs = errorTotal(snap);
+
+    // Request rate over this process's uptime. Honest for a single process and
+    // labelled as such by `regions: []` — there is no cluster view here.
+    const uptimeSec = Math.max(1, process.uptime());
+    const trafficRps = +(reqs / uptimeSec).toFixed(2);
+    const errorRatePct = reqs > 0 ? +((errs / reqs) * 100).toFixed(2) : 0;
+
+    // The metrics registry keeps count/sum/min/max per histogram bucket but no
+    // quantiles, so a true p95 is not derivable here. Reporting the mean while
+    // the field is named `p95Ms` would understate tail latency, which is the
+    // one thing a p95 exists to reveal — so it stays 0 until a histogram with
+    // real buckets backs it.
+    const p95Ms = 0;
+
+    // Incidents come from the resilience register rather than a constant.
+    let activeIncidents = 0;
+    try {
+      const { ResilienceService } = await import("./resilience.service.js");
+      const open = await ResilienceService.listIncidents({ status: "open" });
+      activeIncidents = open.length;
+    } catch { /* register unavailable — report none rather than inventing one */ }
+
+    // Firing alerts come from the infra sampler's real thresholds.
+    let openAlerts = 0;
+    try {
+      const { InfraMetricsService } = await import("../platform/infraMetrics.service.js");
+      openAlerts = (await InfraMetricsService.alerts()).length;
+    } catch { /* sampler not running */ }
+
     return {
-      servicesTotal: 48,
-      servicesHealthy: 45,
-      servicesDegraded: 2,
-      servicesDown: 1,
-      activeIncidents: 1,
-      openAlerts: 7,
-      openAnomalies: 2,
-      regions: [
-        { region: "na-east", status: "healthy", latencyMs: 42, trafficPct: 42 },
-        { region: "na-west", status: "healthy", latencyMs: 48, trafficPct: 18 },
-        { region: "eu-west", status: "degraded", latencyMs: 92, trafficPct: 24 },
-        { region: "ap-south", status: "healthy", latencyMs: 110, trafficPct: 11 },
-        { region: "sa-east", status: "healthy", latencyMs: 130, trafficPct: 5 },
-      ],
-      trafficRps: 12480,
-      errorRatePct: 0.32,
-      p95Ms: 218,
-      activeUsers: 24891,
-      aiRequestsPerMin: 48210,
-      costToday: 18420,
-      monthlyRunRate: 554000,
+      // Service health needs a registry that probes each service. Until one
+      // reports, claiming "45 of 48 healthy" is a fabricated all-clear.
+      servicesTotal: 0,
+      servicesHealthy: 0,
+      servicesDegraded: 0,
+      servicesDown: 0,
+      activeIncidents,
+      openAlerts,
+      openAnomalies: 0,
+      // A single process cannot observe other regions. Five invented regions
+      // with plausible latencies read exactly like a real global footprint.
+      regions: [],
+      trafficRps,
+      errorRatePct,
+      p95Ms,
+      // Active users and AI request volume need session/usage tracking to be
+      // wired through; unmeasured, they report 0 rather than 24,891.
+      activeUsers: 0,
+      aiRequestsPerMin: 0,
+      // Spend requires a billing export. $18,420/day and a $554,000 run rate
+      // were pure invention.
+      costToday: 0,
+      monthlyRunRate: 0,
     };
   },
   async listKpis(): Promise<ExecKpi[]> {

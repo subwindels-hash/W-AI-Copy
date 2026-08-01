@@ -6,7 +6,6 @@ import { DataMarketplaceService } from "../../dataMarketplace/dataMarketplace.se
 import { MKT_ASSET_KINDS, MKT_LICENSE_MODELS } from "@windels/shared";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const PublishSchema = z.object({

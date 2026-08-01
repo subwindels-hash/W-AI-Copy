@@ -10,9 +10,15 @@ export const SAFETY_CATEGORIES = [
 ] as const;
 export type SafetyCategory = typeof SAFETY_CATEGORIES[number];
 
+/** A recorded safety finding in the org-scoped safety register.
+ *  `category` is free-form: operators file findings that do not always map onto
+ *  SAFETY_CATEGORIES. Lifecycle is open -> acknowledged -> resolved, and every
+ *  transition records the administrator who made it. */
 export interface SafetyAlert {
-  id: string; category: SafetyCategory; severity: "info"|"warning"|"critical";
-  source: string; message: string; model?: string; at: string; status: "open"|"investigating"|"mitigated"|"accepted";
+  id: string; category: string; severity: "info"|"warning"|"critical";
+  source: string; message: string; model?: string; at: string;
+  status: "open"|"acknowledged"|"resolved";
+  acknowledgedBy?: string; resolvedBy?: string; note?: string;
 }
 
 export interface Regulation {
@@ -50,7 +56,9 @@ export interface OpexKpi { label: string; value: number; target: number; unit?: 
 
 export interface OpexDashboard {
   trust: TrustScores;
-  safety: { passRate: number; alertsOpen: number; alertsCritical: number; mitigations24h: number; auditsCompleted: number; benchmarks: Record<SafetyCategory, { pass: boolean; score: number }>; };
+  /** `benchmarks` is partial: only categories that have actually been evaluated
+   *  appear. An unevaluated category is absent rather than reported as passing. */
+  safety: { passRate: number; alertsOpen: number; alertsCritical: number; mitigations24h: number; auditsCompleted: number; benchmarks: Partial<Record<SafetyCategory, { pass: boolean; score: number }>>; };
   regulations: { tracked: number; changed30d: number; openGaps: number; upcoming: number; };
   playbooks: { total: number; active: number; simulating: number; avgCompliancePct: number; };
   explanations: { available24h: number; avgEvidence: number; avgConfidence: number; challenged: number; challengedUpheld: number; };

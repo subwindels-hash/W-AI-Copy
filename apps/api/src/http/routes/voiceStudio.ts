@@ -11,7 +11,6 @@ import { VoiceStudioService } from "../../voiceStudio/voiceStudio.service.js";
 import { VoiceService } from "../../voiceStudio/voice.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const AUDIO_DIR = path.resolve(process.cwd(), "audio-cache");

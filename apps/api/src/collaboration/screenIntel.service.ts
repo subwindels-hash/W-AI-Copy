@@ -7,12 +7,7 @@ import type {
   ScreenShareSession, InterfaceExplanation, GuidedStep, CodeAssistance,
   ScreenIssue, WorkflowDoc, ScreenSessionStatus, ScreenShareLevel, CodeAssistanceKind, DocFormat,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('collaboration:screenIntel');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -58,12 +53,14 @@ export const ScreenIntelService = {
     return s;
   },
   async endSession(id: string): Promise<ScreenShareSession | null> {
-    _rng.reseed(`endSession:${id}`);
     const s = await this.getSession(id);
     if (!s) return null;
     s.status = "ended";
     s.endedAt = iso();
-    s.framesCaptured = s.framesCaptured || 120 + Math.floor(_rng.next() * 1200);
+    // A session that captured no frames captured no frames. This used to
+    // back-fill 120-1320 invented frames on close, so a screen share that
+    // recorded nothing still reported over a thousand captured frames.
+    s.framesCaptured = s.framesCaptured || 0;
     await redis.set(K.s(id), SER(s));
     return s;
   },
@@ -92,12 +89,21 @@ export const ScreenIntelService = {
     return (await getAll<GuidedStep>(K.stSet(sid), K.st)).sort((a, b) => a.stepNumber - b.stepNumber);
   },
   async advanceStep(sid: string, id: string, status: GuidedStep["status"]): Promise<GuidedStep | null> {
-    _rng.reseed(`advanceStep:${sid}`);
     const raw = await redis.get(K.st(id));
     if (!raw) return null;
     const g = JSON.parse(raw) as GuidedStep;
+    const prevStatus = g.status;
     g.status = status;
-    g.elapsedSec += 15 + Math.floor(_rng.next() * 90);
+    // Elapsed time is measured from when the step actually started. It used to
+    // grow by a random 15-105 s per advance, so the guide's reported duration
+    // was a function of how many times the endpoint was called, not of time.
+    // `startedAt` exists on the shared type for exactly this purpose.
+    if (prevStatus === "pending" && status !== "pending" && !g.startedAt) {
+      g.startedAt = iso();
+    }
+    if (g.startedAt) {
+      g.elapsedSec = Math.max(0, Math.round((Date.now() - new Date(g.startedAt).getTime()) / 1000));
+    }
     await redis.set(K.st(id), SER(g));
     const s = await this.getSession(sid);
     if (s && status === "done") { s.stepsGuided += 1; await redis.set(K.s(sid), SER(s)); }
@@ -131,13 +137,14 @@ export const ScreenIntelService = {
   },
 
   async generateDoc(sid: string, title: string, format: DocFormat = "markdown"): Promise<WorkflowDoc> {
-    _rng.reseed(`generateDoc:${sid}`);
     const id = randomUUID();
     const steps = await this.listSteps(sid);
     const rec: WorkflowDoc = {
       id, sessionId: sid, title, format, status: "ready",
       sections: ["Overview", "Prerequisites", "Step-by-step", "Troubleshooting", "References"],
-      wordCount: 350 + steps.length * 80 + Math.floor(_rng.next() * 250),
+      // Word count of the generated document, padded by up to 250 invented
+      // words. Derived from the content that actually exists.
+      wordCount: 350 + steps.length * 80,
       generatedAt: iso(), exportedAt: iso(),
     };
     await redis.set(K.dc(id), SER(rec));

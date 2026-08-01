@@ -12,6 +12,7 @@ import { redisCmd } from "../db/redis.js";
 import { logger } from "../observability/logger.js";
 import type { Region, FailoverStatus, RegionStatus, ReplicationRole, RegionTier } from "@windels/shared/infrastructure";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('platform');
@@ -35,9 +36,14 @@ const DEFAULT_REGIONS: Array<Omit<Region,"id"|"status"|"replicationLagMs"|"loadP
 
 export const RegionService = {
   async seed() {
-    _rng.reseed(`seed`);
     if (seeded) return; seeded = true;
     try { if (await redisCmd.exists(REG_KEY)) return; } catch {}
+    // Five regions across NA/EU/AP with invented replication lag, capacity
+    // (5-15k rps, 2-20k active users, 10-60 pods) and 30-75% load — and a 10%
+    // chance each non-primary shows "degraded". ClusterService's fabricated
+    // Kubernetes estate was gated for exactly this reason; this is the same
+    // fiction one layer up, and failover drills read from it.
+    if (!demoDataEnabled()) return skipDemoSeed("platform-regions", logger);
     for (const r of DEFAULT_REGIONS) {
       const id = r.name.toLowerCase().replace(/[^a-z]+/g,"-").replace(/(^-|-$)/g,"").replace("--","-");
       const region: Region = {
@@ -71,18 +77,41 @@ export const RegionService = {
     return r;
   },
 
+  /**
+   * Refresh region health from reported telemetry.
+   *
+   * This used to walk every region applying ±8% load jitter, ±20 ms of
+   * replication lag and ±500 rps of capacity drift, then *derive* the region's
+   * status from the number it had just invented (`loadPercent > 92 → degraded`).
+   * Polling it produced a convincing live feed of a multi-region estate, and
+   * because it also set `lastHealthCheckAt`, every region looked freshly probed.
+   *
+   * A region's health can only come from that region. Until something reports,
+   * this records that no check has happened rather than manufacturing one.
+   */
   async refreshHealth() {
-    _rng.reseed(`refreshHealth`);
     await this.seed();
-    const regions = await this.list();
-    for (const r of regions) {
-      r.loadPercent = Math.max(5, Math.min(99, r.loadPercent + rand(-8, 8)));
-      r.replicationLagMs = r.tier === "primary" ? 0 : Math.max(5, Math.floor((r.replicationLagMs ?? 50) + rand(-20, 20)));
-      r.capacity.requestsPerSec += Math.floor(rand(-500, 500));
-      r.status = r.loadPercent > 92 ? "degraded" : "online";
-      r.lastHealthCheckAt = now();
-      await redisCmd.set(REG_PREFIX+r.id, JSON.stringify(r));
-    }
+  },
+
+  /**
+   * Record a health report for one region, from whatever actually probed it.
+   */
+  async recordHealth(
+    regionId: string,
+    report: { loadPercent?: number; replicationLagMs?: number; requestsPerSec?: number; status?: RegionStatus },
+  ): Promise<Region | null> {
+    const r = await this.get(regionId);
+    if (!r) return null;
+    if (report.loadPercent !== undefined) r.loadPercent = report.loadPercent;
+    if (report.replicationLagMs !== undefined) r.replicationLagMs = report.replicationLagMs;
+    if (report.requestsPerSec !== undefined) r.capacity.requestsPerSec = report.requestsPerSec;
+    // Prefer an explicitly reported status; otherwise derive it from a load
+    // figure that was actually measured.
+    r.status = report.status
+      ?? (report.loadPercent !== undefined ? (report.loadPercent > 92 ? "degraded" : "online") : r.status);
+    r.lastHealthCheckAt = now();
+    await redisCmd.set(REG_PREFIX + r.id, JSON.stringify(r));
+    return r;
   },
 
   async failover(fromId: string, toId: string, reason: string, triggeredBy = "system"): Promise<FailoverStatus> {
@@ -98,18 +127,52 @@ export const RegionService = {
       fromRegion: fromId, toRegion: toId, state: "preflight", startedAt: now(), reason: reason ?? "manual failover",
     };
     await redisCmd.set(FAILOVER_KEY, JSON.stringify(fo));
-    // Simulate linear state transitions
-    fo.state = "draining"; await redisCmd.set(FAILOVER_KEY, JSON.stringify(fo));
-    from.status = "read-only"; await redisCmd.set(REG_PREFIX+fromId, JSON.stringify(from));
-    fo.state = "switching"; await redisCmd.set(FAILOVER_KEY, JSON.stringify(fo));
-    to.replicationRole = "primary"; from.replicationRole = "standby";
-    await redisCmd.set(REG_PREFIX+toId, JSON.stringify(to)); await redisCmd.set(REG_PREFIX+fromId, JSON.stringify(from));
-    fo.state = "verifying"; await redisCmd.set(FAILOVER_KEY, JSON.stringify(fo));
-    to.status = "online"; from.status = "online";
-    await redisCmd.set(REG_PREFIX+toId, JSON.stringify(to)); await redisCmd.set(REG_PREFIX+fromId, JSON.stringify(from));
-    fo.state = "complete"; fo.completedAt = now();
+    // This used to run the whole state machine inline — draining, switching,
+    // verifying, complete — in a few synchronous Redis writes, then log
+    // "failover complete". No traffic was drained, no DNS or replication was
+    // switched, and nothing was verified; the record simply asserted that a
+    // regional failover had succeeded. A DR drill reading this would conclude
+    // the platform can fail over when that has never been demonstrated.
+    //
+    // The failover is now driven externally: it starts at `preflight` and an
+    // orchestrator advances it with advanceFailover(). Region roles change only
+    // when the switch is actually reported.
+    logger.info("failover initiated", { from: fromId, to: toId, triggeredBy, state: fo.state });
+    return fo;
+  },
+
+  /**
+   * Advance an in-flight failover to a state that has actually been reached.
+   *
+   * Region records are updated to match the reported state, so the topology
+   * only ever reflects a switch that really happened.
+   */
+  async advanceFailover(state: FailoverStatus["state"], detail?: string): Promise<FailoverStatus | null> {
+    const raw = await redisCmd.get(FAILOVER_KEY);
+    if (!raw) return null;
+    const fo = JSON.parse(raw) as FailoverStatus;
+    if (fo.state === "complete" || fo.state === "failed") return fo;
+
+    const from = await this.get(fo.fromRegion);
+    const to = await this.get(fo.toRegion);
+    fo.state = state;
+    if (detail) fo.reason = detail;
+
+    if (state === "draining" && from) {
+      from.status = "read-only";
+      await redisCmd.set(REG_PREFIX + fo.fromRegion, JSON.stringify(from));
+    }
+    if (state === "switching" && from && to) {
+      to.replicationRole = "primary"; from.replicationRole = "standby";
+      await redisCmd.set(REG_PREFIX + fo.toRegion, JSON.stringify(to));
+      await redisCmd.set(REG_PREFIX + fo.fromRegion, JSON.stringify(from));
+    }
+    if (state === "complete") {
+      fo.completedAt = now();
+      if (from) { from.status = "online"; await redisCmd.set(REG_PREFIX + fo.fromRegion, JSON.stringify(from)); }
+      if (to) { to.status = "online"; await redisCmd.set(REG_PREFIX + fo.toRegion, JSON.stringify(to)); }
+    }
     await redisCmd.set(FAILOVER_KEY, JSON.stringify(fo));
-    logger.info("failover complete", { from: fromId, to: toId, triggeredBy });
     return fo;
   },
 

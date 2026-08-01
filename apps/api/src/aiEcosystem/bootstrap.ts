@@ -11,8 +11,12 @@ import { redisCmd as redis } from "../db/redis.js";
 import { ProviderAbstractionService } from "./providerAbstraction.service.js";
 import { PersonalityStudioService } from "./personalityStudio.service.js";
 import { TrustExplainabilityService } from "./trustExplainability.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 export async function bootstrapAiEcosystem(logger?: any): Promise<void> {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("ai-ecosystem", logger);
+
   ProviderAbstractionService.init(logger);
   PersonalityStudioService.init(logger);
   TrustExplainabilityService.init(logger);

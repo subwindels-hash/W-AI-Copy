@@ -10,7 +10,7 @@ import {
   UpdateTemplateSchema,
   updateTemplate,
   useTemplate,
-} from "../../services/promptTemplate.service.js";
+} from "../../promptTemplates/promptTemplates.service.js";
 import type { ApiEnvelope } from "@windels/shared/api";
 
 export function registerPromptTemplateRoutes(router: Router) {

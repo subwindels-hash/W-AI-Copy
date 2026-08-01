@@ -4,14 +4,6 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { ArchFinding, ArchHotspot, ArchReview, ArchReviewStatus } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('program:archReview');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const LIST_KEY = "pgm:archReviews";
 const DETAIL = (id: string) => `pgm:arch:${id}`;
@@ -42,7 +34,6 @@ export const ArchReviewService = {
     return raw ? (JSON.parse(raw) as ArchReview) : null;
   },
   async create(input: Partial<ArchReview>): Promise<ArchReview> {
-    _rng.reseed(`create:${input}`);
     const n = await redis.incr(COUNTER);
     const id = randomUUID();
     const review: ArchReview = {
@@ -53,31 +44,33 @@ export const ArchReviewService = {
       status: (input.status as ArchReviewStatus) ?? "in_review",
       findings: (input.findings as ArchFinding[]) ?? [],
       adrsConsulted: input.adrsConsulted ?? ["ADR-001", "ADR-004", "ADR-012"],
-      aiScore: Math.round(65 + _rng.next() * 25),
+      // Unscored until a review actually runs.
       createdAt: iso(),
     };
     await redis.set(DETAIL(id), ser(review));
     await redis.lpush(LIST_KEY, id);
     return review;
   },
-  async runAiReview(id: string): Promise<ArchReview | null> {
-    _rng.reseed(`runAiReview:${id}`);
+  /**
+   * Record the outcome of an architecture review.
+   *
+   * This previously manufactured the whole thing: five boilerplate findings
+   * ("scalability posture reviewed") with severities assigned by array index,
+   * and a random 70-95 aiScore — no analysis of any kind. Findings and score
+   * must now come from whoever (or whatever) actually performed the review.
+   */
+  async runAiReview(
+    id: string,
+    result?: { findings: ArchFinding[]; aiScore?: number; status?: ArchReviewStatus },
+  ): Promise<ArchReview | null> {
     const existing = await this.get(id);
     if (!existing) return null;
-    const severities: ArchFinding["severity"][] = ["critical", "high", "medium", "low", "info"];
-    const areas = ["scalability", "security", "resilience", "performance", "maintainability"];
-    const findings: ArchFinding[] = areas.map((area, i) => ({
-      id: randomUUID(),
-      reviewId: id,
-      area,
-      severity: severities[(i + 1) % severities.length],
-      title: `${area} posture reviewed`,
-      recommendation: `Review ${area} tradeoffs against ADR-00${(i % 13) + 1}; align with upcoming session backlog.`,
-      adrRef: `ADR-00${(i % 13) + 1}`,
-    }));
-    existing.findings = findings;
-    existing.aiScore = Math.round(70 + _rng.next() * 25);
-    existing.status = "needs_changes";
+    if (!result) return existing; // nothing measured: leave the review untouched
+    existing.findings = result.findings.map((f) => ({ ...f, reviewId: id }));
+    existing.aiScore = result.aiScore;
+    existing.status = result.status ?? (result.findings.some((f) => f.severity === "critical" || f.severity === "high")
+      ? "needs_changes"
+      : "approved");
     await redis.set(DETAIL(id), ser(existing));
     return existing;
   },

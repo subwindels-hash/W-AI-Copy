@@ -5,7 +5,6 @@ import { validate } from "../middleware/validate.js";
 import { ScientificService } from "../../scientific/scientific.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const SearchSchema = z.object({ q: z.string().min(1).max(200).optional() });

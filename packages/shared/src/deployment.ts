@@ -36,10 +36,13 @@ export interface DeploymentTarget {
   modules: string[]; // enabled modules
   validationPassed: boolean;
   lastHealthCheckAt?: string;
-  lastHealthOk: boolean;
-  cpuPct: number;
-  memPct: number;
-  gpuPct: number;
+  /** Undefined until a health check has actually run. */
+  lastHealthOk?: boolean;
+  /** Resource telemetry is optional: absent means "not sampled" rather than
+   *  zero or a plausible-looking placeholder. */
+  cpuPct?: number;
+  memPct?: number;
+  gpuPct?: number;
   createdAt: string;
   updatedAt: string;
 }
@@ -49,6 +52,10 @@ export interface DeploymentValidationCheck {
   category: "connectivity" | "database" | "redis" | "kernel" | "models" | "security" | "storage";
   label: string;
   passed: boolean;
+  /** True when the check could not be executed (no probe available for this
+   *  target, dependency not configured). A skipped check is NOT a pass — it is
+   *  excluded from the verdict and surfaced so the gap is visible. */
+  skipped?: boolean;
   detail?: string;
   durationMs: number;
 }
@@ -56,9 +63,13 @@ export interface DeploymentValidationCheck {
 export interface DeploymentValidation {
   targetId: string;
   ranAt: string;
+  /** True only when at least one check ran and every executed check passed.
+   *  A run in which everything was skipped is not a pass. */
   passed: boolean;
   checks: DeploymentValidationCheck[];
   durationMs: number;
+  /** Count of checks that could not be executed. */
+  skippedCount?: number;
 }
 
 export interface DeploymentDashboard {

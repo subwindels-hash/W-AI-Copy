@@ -54,7 +54,8 @@ export interface DrStatus {
   activeRegion?: string;
   standbyRegions: string[];
   lastReplicationAt?: string;
-  replicationLagMs: number;
+  /** Undefined until replication telemetry has actually been sampled. */
+  replicationLagMs?: number;
   lastFailoverAt?: string;
   lastTestAt?: string;
 }
@@ -83,8 +84,12 @@ export interface DrDrill {
   scheduledAt: string;
   startedAt?: string;
   completedAt?: string;
+  /** `running` until an operator records the outcome. A drill is never
+   *  auto-graded: the verdict and the achieved RTO/RPO must be measured. */
   status: "scheduled" | "running" | "passed" | "failed";
   results?: { rtoAchievedMs: number; rpoAchievedMs: number; issues: string[] };
+  /** Who recorded the outcome, for auditability. */
+  recordedBy?: string;
 }
 
 export interface DrDashboard {

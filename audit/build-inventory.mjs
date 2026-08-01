@@ -6,9 +6,13 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { execSync } from "node:child_process";
 
-const ROOT = "/home/user/windels";
+// Pre-existing bug: this was hardcoded to "/home/user/windels", a path that
+// does not exist in this checkout, so the generator crashed before writing.
+// Derive the repo root from this file's own location instead.
+const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const API_ROUTES = path.join(ROOT, "apps/api/src/http/routes");
 const API_SERVICES = path.join(ROOT, "apps/api/src");
 const SHARED = path.join(ROOT, "packages/shared/src");
@@ -21,7 +25,10 @@ const MIGRATIONS_DIR = path.join(ROOT, "apps/api/prisma/migrations");
 // Service directory name ↔ human module
 // We treat each subdirectory under apps/api/src that is NOT infra
 // (db,http,utils,services,config,observability,security) as a "module".
-const INFRA_DIRS = new Set(["db","http","utils","services","config","observability","security"]);
+// Directories that are infrastructure, not product modules. `testUtils` holds
+// shared test helpers (FakePrisma, live-API probe) and must not be reported as
+// an unimplemented module.
+const INFRA_DIRS = new Set(["db","http","utils","services","config","observability","security","testUtils","kernel","enterprise","platform"]);
 
 // Map route files that don't follow [module].ts naming
 const ROUTE_OVERRIDES = {
@@ -152,11 +159,13 @@ function sloc(p) {
 }
 function countRoutes(routeFile) {
   const src = read(routeFile);
-  const gets = (src.match(/router\s*\.\s*get\s*\(/g) || []).length;
-  const posts = (src.match(/router\s*\.\s*post\s*\(/g) || []).length;
-  const puts = (src.match(/router\s*\.\s*put\s*\(/g) || []).length;
-  const patches = (src.match(/router\s*\.\s*patch\s*\(/g) || []).length;
-  const dels = (src.match(/router\s*\.\s*delete\s*\(/g) || []).length;
+  // Route files use several router aliases (`router.get`, `r.get`, `rel.post`,
+  // `v1.use`). Matching only `router.` under-counted whole modules to zero and
+  // pushed them to MISSING/STUB. Match any identifier receiving an HTTP verb.
+  const verb = (v) =>
+    (src.match(new RegExp(String.raw`\b\w+\s*\.\s*${v}\s*\(\s*["'\`]`, "g")) || []).length;
+  const gets = verb("get"), posts = verb("post"), puts = verb("put");
+  const patches = verb("patch"), dels = verb("delete");
   return { total: gets+posts+puts+patches+dels, GET: gets, POST: posts, PUT: puts, PATCH: patches, DELETE: dels };
 }
 function listRoutePaths(routeFile) {
@@ -186,7 +195,10 @@ const serviceDirs = ls(API_SERVICES).filter(n => {
 });
 
 // Gather route files
-const routeFiles = ls(API_ROUTES).filter(n => n.endsWith(".ts"));
+// Route modules only — a co-located `*.test.ts` beside a route file is a test,
+// not a module. Without this, adding routes/events.test.ts invented a phantom
+// module "events.test" with 0 routes and no service, reported as MISSING.
+const routeFiles = ls(API_ROUTES).filter(n => n.endsWith(".ts") && !/\.(test|spec)\.ts$/.test(n));
 
 // Map route file -> module key
 const routeByModule = new Map(); // moduleKey -> [{file, endpoints}]
@@ -202,19 +214,93 @@ for (const rf of routeFiles) {
   });
 }
 
-// Find test files
+/**
+ * Find the tests covering a module.
+ *
+ * This used to scan ONLY tests/e2e/*.spec.ts, so the 39 co-located unit tests
+ * under apps/api/src/<module>/<module>.test.ts were invisible. Modules with
+ * real, passing suites - attachments, publicApi, promptTemplates,
+ * conversations, projectContinuity - were all reported `tests=0`, which in turn
+ * held them at PARTIAL because classifyStatus() requires hasTests for COMPLETE.
+ * The repo's own convention is co-located unit tests; the audit was looking in
+ * the one place they are not.
+ */
 function findTestsFor(modKey) {
   const tests = [];
+
+  // 1. End-to-end specs that reference the module.
   for (const f of ls(TESTS)) {
     if (!f.endsWith(".spec.ts")) continue;
-    const p = path.join(TESTS, f);
-    const src = read(p);
-    // match explicit mention of the route prefix, service import, or dashboard path
+    const src = read(path.join(TESTS, f));
     if (src.includes(`/${moduleRoutePrefix(modKey)}`) || src.includes(`from "../lib/${modKey}`) ||
         src.includes(`${modKey}Api`) || src.includes(`${modKey}.service`)) {
       tests.push(f);
     }
   }
+
+  // 2. Unit tests living inside the module directory (the repo convention).
+  const modDir = path.join(API_SERVICES, modKey);
+  for (const f of ls(modDir)) {
+    if (f.endsWith(".test.ts")) tests.push(`${modKey}/${f}`);
+  }
+  // ...including one level of nesting, e.g. mediaFactory/publishing/*.test.ts.
+  for (const sub of ls(modDir)) {
+    const subDir = path.join(modDir, sub);
+    if (!fexists(subDir)) continue;
+    let entries = [];
+    try { entries = ls(subDir); } catch { continue; }
+    for (const f of entries) {
+      if (f.endsWith(".test.ts")) tests.push(`${modKey}/${sub}/${f}`);
+    }
+  }
+
+  // 2b. Some modules live under a grouping directory rather than at the top
+  //     level (enterprise/agentComm/*), so the route file is the only pointer
+  //     to where the code — and its tests — actually are.
+  for (const group of ["enterprise", "platform", "services"]) {
+    const groupDir = path.join(API_SERVICES, group, modKey);
+    if (!fexists(groupDir)) continue;
+    for (const f of ls(groupDir)) {
+      if (f.endsWith(".test.ts")) tests.push(`${group}/${modKey}/${f}`);
+    }
+  }
+
+  // 2c. Follow the route's own service imports. `infrastructure` is backed by
+  //     platform/*.service.ts, so its tests live in platform/, not in a
+  //     directory named after the module. servicesFromRoutes() already knows
+  //     this mapping; reuse it rather than guessing from the module name.
+  for (const rel of servicesFromRoutes(modKey)) {
+    const dir = path.dirname(path.join(API_SERVICES, rel));
+    const relDir = path.dirname(rel);
+    if (relDir === modKey || relDir === ".") continue;
+    for (const f of ls(dir)) {
+      if (!f.endsWith(".test.ts")) continue;
+      // Only count a suite that actually exercises one of the imported
+      // services, not every test that happens to share the directory.
+      const src = read(path.join(dir, f));
+      const importsBacking = servicesFromRoutes(modKey).some((r) => {
+        const base = path.basename(r, ".ts");
+        return src.includes(`./${base}.js`) || src.includes(`${base}.js"`);
+      });
+      if (importsBacking) tests.push(`${relDir}/${f}`);
+    }
+  }
+
+  // 3. Cross-cutting suites that exercise a module from elsewhere (a service
+  //    moved onto the standard layout may still be tested from src/services,
+  //    and config/*.test.ts pins behaviour across many modules).
+  for (const extra of ["config", "services"]) {
+    const dir = path.join(API_SERVICES, extra);
+    if (dir === modDir) continue;
+    for (const f of ls(dir)) {
+      if (!f.endsWith(".test.ts")) continue;
+      const src = read(path.join(dir, f));
+      if (src.includes(`/${modKey}/`) || src.includes(`${modKey}.service`)) {
+        tests.push(`${extra}/${f}`);
+      }
+    }
+  }
+
   return [...new Set(tests)];
 }
 function moduleRoutePrefix(key) {
@@ -242,14 +328,120 @@ function auditSynthetic(modKey) {
   const svcPath = path.join(API_SERVICES, modKey);
   for (const f of ls(svcPath)) {
     if (!f.endsWith(".ts")) continue;
+    // Test files legitimately contain vi.mock(), fixtures and the word
+    // "placeholder"; they are not product synthetic data.
+    if (/\.(test|spec)\.tsx?$/.test(f)) continue;
     const p = path.join(svcPath, f);
     const src = read(p);
     const hasRandom = /Math\.random\s*\(/.test(src);
-    const hasRnd = /\brnd\s*\(|\brndInt\s*\(/.test(src);    // common helper wrappers
-    const hasFakeData = /fake|seed|demo|sample|synthetic|placeholder/i.test(src);
+    // Helper wrappers around the deterministic RNG. Their mere *definition* is
+    // not fabrication - scientific.service.ts declares rnd()/rndInt() at the
+    // top of the file and calls them only from inside its gated bootstrap, so
+    // matching the definition line reported a module that fabricates nothing at
+    // runtime. Count call sites, not declarations.
+    const hasRnd = /(?<!function\s)\brnd(?:Int)?\s*\((?!\s*a\s*:)/.test(
+      src.replace(/^\s*function\s+rnd(?:Int)?\s*\([^)]*\)\s*\{[^\n]*$/gm, ""));
+    // A bare mention of "seed"/"demo" is not evidence of synthetic data: it
+    // matches comments, legitimate seedBuiltInTemplates(), and this repo's own
+    // "no demo data" notes. Require a word that actually implies fabrication,
+    // and ignore matches that only occur inside comments.
+    const codeOnly = src
+      .replace(/\/\*[\s\S]*?\*\//g, "")   // block comments
+      .replace(/^\s*\/\/.*$/gm, "");        // line comments
+    // Word-matching "synthetic" was tried and abandoned. It flagged 17 modules,
+    // of which 16 were false positives, because in this codebase "synthetic" is
+    // the *honesty* vocabulary rather than the fabrication vocabulary:
+    //   * a provenance flag disclosing simulated data:  `synthetic: false`
+    //   * a source-quality enum member:                 `"llm-synthetic": 0.35`
+    //   * a real catalogue product:      "Synthetic Customer Churn Dataset"
+    //   * a real architecture component: "Enterprise Synthetic Intelligence Layer"
+    //   * the secret scanner's own detection regex
+    // Meanwhile the ten modules that genuinely fabricated records - inventing
+    // robot fleets, trading positions and course enrolments - went unflagged,
+    // because they name their variables honestly. The signal pointed the wrong
+    // way, so "synthetic" is no longer a keyword; the words left are ones that
+    // only ever describe placeholder content.
+    //
+    // String, comment and regex content is excluded: naming a catalogue product
+    // "Dummy Data Pack" is content, not a fabricated measurement, and the
+    // secret scanner necessarily contains the words it hunts for.
+    const fabricationText = codeOnly
+      .replace(/(["\'`])(?:(?!\1)[\s\S])*\1/g, "")
+      .replace(/\/(?![/*])(?:\\.|\[(?:\\.|[^\]])*\]|[^/\\\n])+\/[gimsuy]*/g, "");
+    const hasFakeData = /\b(fake|dummy|lorem)\b/i.test(fabricationText);
     const hasExternal = /https?:\/\/(?!localhost|127\.0\.0\.1)/.test(src);
-    if (hasRandom || hasRnd || hasFakeData) {
-      findings.push({ file: f, mathRandom: hasRandom, rndHelper: hasRnd, seedKeywords: hasFakeData, externalHttp: hasExternal });
+    // A gated seed is not live demo data: those records only exist when an
+    // operator sets WINDELS_DEMO_DATA=true, and default installs stay empty.
+    const demoGated = /demoDataEnabled\s*\(/.test(codeOnly);
+    // The signal that actually located every real offender: a bootstrap that
+    // manufactures values and writes them straight to the store, ungated.
+    // This is precisely what robotics, tradingIntel and education were doing.
+    //
+    // It must be scoped to the ensureBootstrapped BODY, not the whole file.
+    // File-wide matching flagged industry, mediaGen and voiceStudio, whose
+    // bootstraps install only a static catalogue - the RNG they contain is used
+    // by unrelated methods further down. Brace-match the body instead.
+    const seedsUngated = !demoGated && (() => {
+      const m = codeOnly.match(/async\s+ensureBootstrapped\s*\([^)]*\)\s*\{/);
+      if (!m) return false;
+      let i = m.index + m[0].length - 1, depth = 0, end = -1;
+      for (; i < codeOnly.length; i++) {
+        if (codeOnly[i] === "{") depth++;
+        else if (codeOnly[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
+      }
+      if (end < 0) return false;
+      const body = codeOnly.slice(m.index, end + 1);
+      return /\b(?:rand|randInt|rnd|rndInt)\s*\(|_rng\.(?!reseed)/.test(body)
+        && /redis\.(?:hset|set|sadd|zadd|rpush|lpush)/.test(body);
+    })();
+    // Fabrication on a LIVE path - the blind spot `seedsUngated` cannot see.
+    // A seed runs once and can be gated; a write path runs on every call and no
+    // gate applies to it. opsCenter.globalStatus() returned a literal 12,480
+    // rps / $554,000 monthly run rate on every request; dataFabric stamped an
+    // invented latency onto each new connector; providerAbstraction awarded
+    // scores for benchmarks it never ran. None were seeds, so none were caught.
+    //
+    // Signal: RNG called outside ensureBootstrapped, anywhere in the file.
+    const rngOutsideSeed = (() => {
+      const m = codeOnly.match(/async\s+ensureBootstrapped\s*\([^)]*\)\s*\{/);
+      let outside = codeOnly;
+      if (m) {
+        let i = m.index + m[0].length - 1, depth = 0, end = -1;
+        for (; i < codeOnly.length; i++) {
+          if (codeOnly[i] === "{") depth++;
+          else if (codeOnly[i] === "}") { depth--; if (depth === 0) { end = i; break; } }
+        }
+        if (end > 0) outside = codeOnly.slice(0, m.index) + codeOnly.slice(end + 1);
+      }
+      // Ignore the helper declarations themselves; count only call sites.
+      const calls = outside.replace(/function\s+(?:rand|randInt|rnd|rndInt)\s*\([^)]*\)\s*\{[^\n]*/g, "");
+      return /\b(?:rand|randInt|rnd|rndInt)\s*\(|_rng\.(?!reseed)/.test(calls);
+    })();
+    // Randomness that is the feature, not a fake measurement. Each is either
+    // named for what it is or already covered by the source-level guard in
+    // apps/api/src/noRandomData.guard.test.ts. Leaving them permanently red
+    // would train readers to ignore this list.
+    //   marketplace/simulation   Monte-Carlo sampling IS the simulator
+    //   qa/digitalTwin, qa/drTest  QA harnesses, explicitly named synthetic
+    //   mediaGen                 a labelled simulator's bounded wait jitter
+    //   projectIntake            the demo-data scanner's own detection regex
+    const LEGITIMATE_RNG = new Set([
+      "marketplace/simulation.service.ts",
+      "qa/digitalTwin.service.ts",
+      "qa/drTest.service.ts",
+      "mediaGen/mediaGen.service.ts",
+      "projectContinuity/projectIntake.service.ts",
+    ]);
+    if (LEGITIMATE_RNG.has(`${modKey}/${f}`)) continue;
+    // `demoGated` covers hasRandom/hasRnd too: randomness that can only run
+    // when an operator opts in is not live demo data.
+    if (((hasRandom || hasRnd) && !demoGated) || hasFakeData || seedsUngated
+        || (rngOutsideSeed && !demoGated)) {
+      findings.push({
+        file: f, mathRandom: hasRandom, rndHelper: hasRnd,
+        seedKeywords: hasFakeData, ungatedSeed: seedsUngated,
+        liveRng: rngOutsideSeed && !demoGated, externalHttp: hasExternal,
+      });
     }
   }
   return findings;
@@ -257,11 +449,18 @@ function auditSynthetic(modKey) {
 
 // Status heuristic — multi-signal classifier (conservative: never upgrades to COMPLETE without rigor)
 function classifyStatus(mod) {
-  const hasService = !!mod.service;
-  const routeCount = mod.routes.reduce((a,b)=>a+b.count.total,0);
-  const hasClient = !!mod.webClient;
-  const hasTypes = !!mod.sharedType;
-  const hasBootstrap = mod.bootstrap && /ensureBootstrapped|bootstrap/.test(mod.bootstrap);
+  // The emitted object nests these under `backend` / `web`; the original
+  // classifier read flat fields (mod.service, mod.webClient, mod.sharedType)
+  // that never existed on it, so every module looked service-less and
+  // client-less. Read the real shape, falling back to the flat one.
+  const hasService = !!(mod.backend?.serviceFile ?? mod.service)
+    || (mod.backend?.serviceTotalSloc ?? 0) > 0;
+  // Route entries are `count` while being collected and `counts` once emitted;
+  // classifyStatus runs over the emitted shape. Accept either.
+  const routeCount = mod.routes.reduce((a,b)=>a+((b.counts ?? b.count)?.total ?? 0),0);
+  const hasClient = !!(mod.web?.client ?? mod.webClient);
+  const hasTypes = !!(mod.sharedTypes ?? mod.sharedType);
+  const hasBootstrap = !!(mod.backend?.bootstrapFile ?? mod.bootstrap);
   const hasTests = mod.tests.length > 0;
   const hasRealData = mod.syntheticData.length === 0;
 
@@ -284,8 +483,50 @@ const inventory = [];
 const allModules = new Set([
   ...serviceDirs,
   ...routeFiles.map(f => ROUTE_OVERRIDES[f.replace(/\.ts$/,"")] || f.replace(/\.ts$/,"")),
-  "auth","billing","mobile","talk","conversations","canvas","platform","release","qa","developers","publicApi","admin",
+  "auth","billing","mobile","talk","conversations","platform","release","qa","developers","publicApi","admin",
+  // `canvas` is intentionally absent: its routes are canvases.ts / canvasCollab.ts,
+  // both mapped to `collaboration` by ROUTE_OVERRIDES, so a bare `canvas` key
+  // would always look implementation-less.
 ]);
+
+/**
+ * Resolve the service files a module's route file actually imports.
+ *
+ * The directory scan below only looks in `apps/api/src/<modKey>/`, which misses
+ * every module whose service lives in the shared `src/services/` folder under a
+ * singular name (agent.service.ts backing the `agents` module, and likewise
+ * conversation / attachment / promptTemplate / apikey). Those modules were
+ * repeatedly reported as "no service files" while being fully implemented.
+ *
+ * Following the route's own imports reports what the running server loads,
+ * rather than guessing from folder shape.
+ */
+function servicesFromRoutes(modKey) {
+  const out = new Set();
+  for (const entry of (routeByModule.get(modKey) || [])) {
+    // entry.file is the bare route filename (e.g. "agents.ts"), not a repo path.
+    const src = read(path.join(API_ROUTES, entry.file));
+    if (!src) continue;
+    for (const m of src.matchAll(/from\s+"((?:\.\.\/)+)([^"]+\.js)"/g)) {
+      const rel = m[2].replace(/\.js$/, ".ts");
+      // Only count real implementation modules, not middleware/db/util
+      // plumbing. The `.service.ts` suffix is a convention, not a rule:
+      // `derivatives` is backed entirely by tradingIntel/derivatives.ts
+      // (Black-Scholes, IV solver, bond analytics — ~190 SLOC), which this
+      // filter rejected, so the module reported 0 SLOC and "no service
+      // directory" and was classified STUB. Accept a plain module in a
+      // sibling feature directory too.
+      const isService = /\.service\.ts$|^services\//.test(rel);
+      const isFeatureModule = /^[A-Za-z0-9_]+\/[A-Za-z0-9_]+\.ts$/.test(rel)
+        && !/\.(test|spec)\.ts$/.test(rel);
+      if (!isService && !isFeatureModule) continue;
+      if (/^(db|utils|config|http|middleware|observability)\//.test(rel)) continue;
+      const abs = path.join(API_SERVICES, rel);
+      if (fexists(abs)) out.add(rel);
+    }
+  }
+  return [...out];
+}
 
 for (const modKey of [...allModules].sort()) {
   const meta = MODULE_META[modKey] || { title: modKey, sessions: [], tier: "unknown" };
@@ -297,16 +538,28 @@ for (const modKey of [...allModules].sort()) {
   const webClient = `${modKey}.ts`;
   const routeEntries = routeByModule.get(modKey) || [];
 
-  const svc = svcEntry ? {
-    file: svcEntry,
-    path: path.join(svcDir, svcEntry),
-    sloc: sloc(path.join(svcDir, svcEntry)),
-    mathRandom: usesMathRandom(path.join(svcDir, svcEntry)),
-    externalFetch: usesExternalFetch(path.join(svcDir, svcEntry)),
+  // Services reached through the route's imports (e.g. services/agent.service.ts
+  // backing the `agents` module) count just as much as a same-named directory.
+  const importedSvcRel = servicesFromRoutes(modKey);
+  const importedSvcSloc = importedSvcRel.reduce((a, r) => a + sloc(path.join(API_SERVICES, r)), 0);
+
+  const svcEntryPath = svcEntry
+    ? path.join(svcDir, svcEntry)
+    : (importedSvcRel[0] ? path.join(API_SERVICES, importedSvcRel[0]) : null);
+
+  const svc = svcEntryPath ? {
+    file: svcEntry || path.basename(importedSvcRel[0]),
+    path: svcEntryPath,
+    sloc: sloc(svcEntryPath),
+    mathRandom: usesMathRandom(svcEntryPath),
+    externalFetch: usesExternalFetch(svcEntryPath),
   } : null;
 
   const mod = {
-    moduleKey,
+    // Pre-existing bug: this referenced an undefined `moduleKey`, so the
+    // generator threw on its first module and the inventory could never be
+    // regenerated — which is why its statuses drifted so far from the code.
+    moduleKey: modKey,
     title: meta.title,
     sessions: meta.sessions,
     tier: meta.tier,
@@ -314,8 +567,10 @@ for (const modKey of [...allModules].sort()) {
     backend: {
       serviceDir: fexists(svcDir) ? `apps/api/src/${modKey}` : null,
       serviceFile: svc,
-      serviceTotalSloc: svcFiles.reduce((a,f)=>a+sloc(path.join(svcDir,f)),0),
-      serviceFiles: svcFiles,
+      serviceTotalSloc: svcFiles.reduce((a,f)=>a+sloc(path.join(svcDir,f)),0) + importedSvcSloc,
+      serviceFiles: [...svcFiles, ...importedSvcRel],
+      /** Services resolved via the route's imports rather than folder name. */
+      importedServiceFiles: importedSvcRel,
       bootstrapFile: bootstrapFile ? `apps/api/src/${modKey}/${bootstrapFile}` : null,
     },
     routes: routeEntries.map(r => ({

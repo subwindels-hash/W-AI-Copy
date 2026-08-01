@@ -184,7 +184,7 @@ const randomTool: Tool = {
 
         case "pick":
           if (!params.items) return { success: false, error: "items parameter required" };
-          const list = params.items.split(",").map((s) => s.trim());
+          const list = params.items.split(",").map((s: string) => s.trim());
           const count = Math.min(params.count ?? 1, list.length);
           const picked: string[] = [];
           const available = [...list];
@@ -196,7 +196,7 @@ const randomTool: Tool = {
 
         case "shuffle":
           if (!params.items) return { success: false, error: "items parameter required" };
-          const arr = params.items.split(",").map((s) => s.trim());
+          const arr = params.items.split(",").map((s: string) => s.trim());
           for (let i = arr.length - 1; i > 0; i--) {
             const j = Math.floor(Math.random() * (i + 1));
             [arr[i], arr[j]] = [arr[j], arr[i]];

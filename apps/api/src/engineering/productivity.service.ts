@@ -5,6 +5,7 @@ import { redisCmd as redis } from "../db/redis.js";
 import type { DeveloperStats, ProductivitySummary } from "@windels/shared";
 import { DeploymentService } from "./deployments.service.js";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('engineering');
@@ -72,9 +73,15 @@ export const ProductivityService = {
     };
   },
   async seedIfEmpty() {
-    _rng.reseed(`seedIfEmpty`);
     const existing = await redis.smembers(LIST_KEY);
     if (existing.length > 0) return;
+    // Per-developer performance statistics — PRs opened/merged/reviewed, review
+    // turnaround, lines changed, a "focus score" and on-call count — invented
+    // for named individuals. This is the most sensitive fabrication in the
+    // engineering module: it is attributed telemetry about people, and a focus
+    // score of 55-92% next to someone's name reads as a real measurement of
+    // them. Opt-in only.
+    if (!demoDataEnabled()) return skipDemoSeed("engineering-productivity");
     for (const d of DEV_SEED) {
       const stats: DeveloperStats = {
         id: d.id,

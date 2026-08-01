@@ -10,7 +10,6 @@ import type {
   VsVoiceVisibility as VoiceVisibility, VsVoiceGender as VoiceGender, VsVoiceAge as VoiceAge,
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
 const _rng = makeRng('voiceStudio:voiceStudio');
 function rand(min: number, max: number) { return _rng.rand(min, max); }
@@ -92,9 +91,24 @@ const REGION: RegionDef[] = [
   ["win-ko","Korean","adult","ko","kr",["korean"]],
 ];
 for (const [id,name,age,lang,region,tags] of REGION) {
-  BUILTIN.push(bv(id, name+" Voice", genderFor(lang,region), age, lang, region, "regional", tags));
+  BUILTIN.push(bv(id, name+" Voice", genderFor(id), age, lang, region, "regional", tags));
 }
-function genderFor(_lang: string, _region?: string): VoiceGender { return (_rng.next()<0.5)?"feminine":"masculine"; }
+/**
+ * Gender for a regional built-in voice.
+ *
+ * This was a coin flip evaluated at module load, so a catalogue attribute that
+ * users browse and filter by was assigned at random — and, because the RNG
+ * advances per call, the same voice could differ between processes, giving two
+ * servers disagreeing catalogues for the same voice id.
+ *
+ * Derived deterministically from the voice id instead: still an arbitrary
+ * split across the regional set, but stable for a given voice everywhere.
+ */
+function genderFor(id: string): VoiceGender {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) >>> 0;
+  return h % 2 === 0 ? "feminine" : "masculine";
+}
 
 const DEFAULT_SETTINGS: VoiceSettings = { pitch:0, speed:1.0, volume:0.9, energy:0.6, warmth:0.7, emotion:"calm", formality:0.5, accentStrength:0.8, pauseMs:240, breathing:0.2 };
 

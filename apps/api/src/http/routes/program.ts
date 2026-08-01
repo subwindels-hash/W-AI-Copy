@@ -126,7 +126,7 @@ export function registerProgramRoutes(router: Router) {
   });
   router.post("/arch-reviews/:id/run", async (req, res, next) => {
     try {
-      const r = await ArchReviewService.runAiReview(req.params.id);
+      const r = await ArchReviewService.runAiReview(req.params.id, req.body?.result);
       if (!r) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND" } });
       res.json({ ok: true, data: r });
     } catch (e) { next(e); }

@@ -6,8 +6,12 @@ import { logger } from "../observability/logger.js";
 import { MeetingsService } from "./meetings.service.js";
 import { ScreenIntelService } from "./screenIntel.service.js";
 import { CameraIntelService } from "./cameraIntel.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 export async function bootstrapCollaboration() {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("collaboration");
+
   const existing = await MeetingsService.listConnectors();
   if (existing.length > 0) {
     const meets = await MeetingsService.listMeetings();

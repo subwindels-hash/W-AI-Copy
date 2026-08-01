@@ -8,6 +8,7 @@ export class FakeKv {
   hashes = new Map<string, Record<string, string>>();
   zsets = new Map<string, Map<string, number>>();
   lists = new Map<string, string[]>();
+  sets = new Map<string, Set<string>>();
 
   private fresh(key: string): { value: string; expiresAt?: number } | undefined {
     const e = this.strings.get(key);
@@ -16,6 +17,15 @@ export class FakeKv {
   }
 
   async get(key: string): Promise<string | null> { return this.fresh(key)?.value ?? null; }
+
+  /** INCR / INCRBY / DECR — used by id counters (sprint numbers, story keys). */
+  async incrby(key: string, by: number): Promise<number> {
+    const next = Number(this.fresh(key)?.value ?? 0) + by;
+    this.strings.set(key, { value: String(next) });
+    return next;
+  }
+  async incr(key: string): Promise<number> { return this.incrby(key, 1); }
+  async decr(key: string): Promise<number> { return this.incrby(key, -1); }
 
   async set(key: string, value: string, ...args: any[]): Promise<"OK" | null> {
     const strArgs = args.map(String);
@@ -30,18 +40,74 @@ export class FakeKv {
   }
 
   async del(key: string): Promise<number> {
-    const had = this.strings.delete(key) || this.hashes.delete(key) || this.zsets.delete(key) || this.lists.delete(key);
+    const had =
+      this.strings.delete(key) || this.hashes.delete(key) || this.zsets.delete(key) ||
+      this.lists.delete(key) || this.sets.delete(key);
     return had ? 1 : 0;
   }
 
-  async hset(key: string, field: string, value: string): Promise<number> {
+  async exists(key: string): Promise<number> {
+    return this.fresh(key) || this.hashes.has(key) || this.zsets.has(key) ||
+      this.lists.has(key) || this.sets.has(key) ? 1 : 0;
+  }
+
+  async sadd(key: string, ...members: string[]): Promise<number> {
+    const s = this.sets.get(key) ?? new Set<string>();
+    let added = 0;
+    for (const m of members.flat()) if (!s.has(String(m))) { s.add(String(m)); added++; }
+    this.sets.set(key, s);
+    return added;
+  }
+
+  async smembers(key: string): Promise<string[]> { return [...(this.sets.get(key) ?? [])]; }
+
+  async srem(key: string, ...members: string[]): Promise<number> {
+    const s = this.sets.get(key);
+    if (!s) return 0;
+    let removed = 0;
+    for (const m of members.flat()) if (s.delete(String(m))) removed++;
+    return removed;
+  }
+
+  async scard(key: string): Promise<number> { return this.sets.get(key)?.size ?? 0; }
+
+  /**
+   * HSET in all three shapes ioredis accepts:
+   *   hset(key, field, value)
+   *   hset(key, field, value, field2, value2, ...)
+   *   hset(key, { field: value, ... })
+   * Only the first was supported, so services that write a whole record in one
+   * call (release/pipeline.service.ts) silently stored nothing under test.
+   */
+  async hset(key: string, ...rest: any[]): Promise<number> {
     const h = this.hashes.get(key) ?? {};
-    h[field] = value;
+    let written = 0;
+    if (rest.length === 1 && rest[0] && typeof rest[0] === "object") {
+      for (const [f, v] of Object.entries(rest[0] as Record<string, unknown>)) {
+        h[f] = String(v); written++;
+      }
+    } else {
+      for (let i = 0; i + 1 < rest.length; i += 2) {
+        h[String(rest[i])] = String(rest[i + 1]); written++;
+      }
+    }
     this.hashes.set(key, h);
-    return 1;
+    return written;
   }
 
   async hgetall(key: string): Promise<Record<string, string>> { return this.hashes.get(key) ?? {}; }
+
+  async hget(key: string, field: string): Promise<string | null> {
+    return this.hashes.get(key)?.[field] ?? null;
+  }
+
+  async hincrby(key: string, field: string, by: number): Promise<number> {
+    const h = this.hashes.get(key) ?? {};
+    const next = Number(h[field] ?? "0") + by;
+    h[field] = String(next);
+    this.hashes.set(key, h);
+    return next;
+  }
 
   async zadd(key: string, score: number, member: string): Promise<number> {
     const z = this.zsets.get(key) ?? new Map<string, number>();
@@ -77,6 +143,24 @@ export class FakeKv {
 
   async zcard(key: string): Promise<number> { return this.zsets.get(key)?.size ?? 0; }
 
+  async zscore(key: string, member: string): Promise<string | null> {
+    const v = this.zsets.get(key)?.get(member);
+    return v === undefined ? null : String(v);
+  }
+
+  /** Trim a sorted set to the given rank window (negative indexes count back). */
+  async zremrangebyrank(key: string, start: number, stop: number): Promise<number> {
+    const z = this.zsets.get(key);
+    if (!z) return 0;
+    const ordered = [...z.entries()].sort((a, b) => a[1] - b[1]).map(([m]) => m);
+    const n = ordered.length;
+    const lo = start < 0 ? Math.max(0, n + start) : start;
+    const hi = stop < 0 ? n + stop : stop;
+    let removed = 0;
+    for (let i = lo; i <= hi && i < n; i++) { if (z.delete(ordered[i]!)) removed++; }
+    return removed;
+  }
+
   async lpush(key: string, value: string): Promise<number> {
     const l = this.lists.get(key) ?? [];
     l.unshift(value);
@@ -94,5 +178,56 @@ export class FakeKv {
     const l = this.lists.get(key) ?? [];
     const end = stop === -1 ? l.length : stop + 1;
     return l.slice(start, end);
+  }
+
+  async rpush(key: string, value: string): Promise<number> {
+    const l = this.lists.get(key) ?? [];
+    l.push(value);
+    this.lists.set(key, l);
+    return l.length;
+  }
+
+  async zremrangebyscore(key: string, min: number | string, max: number | string): Promise<number> {
+    const lo = min === "-inf" ? Number.NEGATIVE_INFINITY : Number(min);
+    const hi = max === "+inf" ? Number.POSITIVE_INFINITY : Number(max);
+    const z = this.zsets.get(key);
+    if (!z) return 0;
+    let removed = 0;
+    for (const [m, sc] of [...z.entries()]) if (sc >= lo && sc <= hi) { z.delete(m); removed++; }
+    return removed;
+  }
+
+  /**
+   * Minimal ioredis pipeline. Commands are queued and applied in order on
+   * exec(); this fake is single-threaded so no real atomicity is required.
+   */
+  multi() {
+    const ops: Array<() => Promise<unknown>> = [];
+    const self = this;
+    const chain = {
+      set(key: string, value: string, ...args: any[]) { ops.push(() => self.set(key, value, ...args)); return chain; },
+      del(key: string) { ops.push(() => self.del(key)); return chain; },
+      hset(key: string, ...rest: any[]) { ops.push(() => self.hset(key, ...rest)); return chain; },
+      sadd(key: string, ...members: string[]) { ops.push(() => self.sadd(key, ...members)); return chain; },
+      srem(key: string, ...members: string[]) { ops.push(() => self.srem(key, ...members)); return chain; },
+      zadd(key: string, score: number, member: string) { ops.push(() => self.zadd(key, score, member)); return chain; },
+      lpush(key: string, value: string) { ops.push(() => self.lpush(key, value)); return chain; },
+      // rpush/incr/expire existed on the class but were missing from the multi
+      // chain, so a queued call threw inside the pipeline. Services wrap
+      // pipeline.exec() in try/catch, so the write was silently dropped and the
+      // data simply never appeared — the failure mode is invisible.
+      rpush(key: string, value: string) { ops.push(() => self.rpush(key, value)); return chain; },
+      incr(key: string) { ops.push(() => self.incr(key)); return chain; },
+      incrby(key: string, by: number) { ops.push(() => self.incrby(key, by)); return chain; },
+      expire(_key: string, _sec: number) { ops.push(async () => 1); return chain; },
+      zremrangebyrank(key: string, start: number, stop: number) { ops.push(() => self.zremrangebyrank(key, start, stop)); return chain; },
+      ltrim(key: string, start: number, stop: number) { ops.push(() => self.ltrim(key, start, stop)); return chain; },
+      async exec() {
+        const out: Array<[null, unknown]> = [];
+        for (const op of ops) out.push([null, await op()]);
+        return out;
+      },
+    };
+    return chain;
   }
 }

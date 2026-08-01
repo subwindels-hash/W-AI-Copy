@@ -3,6 +3,13 @@
 The AI-Native Enterprise Operating System. Built session-by-session per the master
 specification (`uploads/CLAUDE.md`).
 
+> **Build status as of 2026-07-31:** the monorepo now builds, typechecks, and tests
+> green end-to-end — `pnpm build` (4/4), `pnpm typecheck` (5/5), `pnpm test` (7/7,
+> 84 unit tests passing, 3 integration suites auto-skipped without a live server).
+> This is the first end-to-end clean build; see **[BUILD_STATUS.md](./BUILD_STATUS.md)**
+> for what was fixed and the two environment caveats (Prisma engine download,
+> local Postgres/Redis).
+
 > **Status as of 2026-07-21:** All sessions S1–S82 are scaffolded with routes, services,
 > UI tabs, and plausible synthetic/demo data. Core infrastructure (auth, Postgres, Redis,
 > JWT, Kernel event bus, AI provider registry, consent ledger, gift-card ledger, memory
@@ -91,8 +98,20 @@ values. The architecture to plug in real providers is in place (ProviderRegistry
 consent gates, governance pipeline, Kernel event routing) but the actual provider
 integrations for those sessions are the next major milestone, not a finished state.
 
+As of 2026-07-31 the clinical, payment and gating paths have been de-faked:
+Session 75 (health) and Session 65 (biomedical) are record-only and invent
+nothing; gift-card codes and camera session tokens use the CSPRNG; **every
+self-grading gate is gone** — deployment validation now runs real probes, DR
+drills and update preflight require a recorded outcome, and test/benchmark
+runners take measured results instead of inventing them. Synthetic seeding
+across the remaining bootstraps is opt-in via `WINDELS_DEMO_DATA` (default off).
+The §2.4 sweep is now complete: every remaining `Math.random()` in live code is
+either legitimate (Monte-Carlo simulation sampling, the `random` agent tool, id
+generation, retry jitter) or inside an explicitly-named QA harness. See
+**[AUDIT-REPORT.md](./AUDIT-REPORT.md) §2.4** for the full per-module record.
+
 Do not deploy into production environments handling real patient data, real money,
-or real user content until the gaps called out in AUDIT-REPORT.md §B and §H are closed.
+or real user content until the remaining gaps in AUDIT-REPORT.md §2.4 are closed.
 
 ## Tests
 

@@ -1732,7 +1732,7 @@ function EngineeringTab() {
                   <span className="font-semibold">{dep.service}</span>
                   <Badge variant="slate">v{dep.version}</Badge>
                   <span className="text-text-muted">by {dep.triggeredBy}</span>
-                  <span className="ml-auto text-text-muted">{Math.round(dep.durationMs/1000)}s · {dep.leadTimeHours.toFixed(1)}h lead</span>
+                  <span className="ml-auto text-text-muted">{Math.round(dep.durationMs/1000)}s{dep.leadTimeHours != null ? ` · ${dep.leadTimeHours.toFixed(1)}h lead` : ""}</span>
                 </div>
               ))}
             </CardContent>
@@ -1907,7 +1907,7 @@ function DevPortalTab() {
                     <Badge variant={catTone(s.category) as any}>{s.category}</Badge>
                     <span className="font-semibold">{s.name}</span>
                     <Badge variant={s.status==="ga"?"emerald":s.status==="beta"?"amber":"slate"}>{s.status} v{s.version}</Badge>
-                    <span className="ml-auto text-text-muted">★ {s.stars} · ↓ {s.weeklyDownloads.toLocaleString()}/wk</span>
+                    <span className="ml-auto text-text-muted">★ {s.stars ?? "—"} · ↓ {s.weeklyDownloads != null ? s.weeklyDownloads.toLocaleString() : "—"}/wk</span>
                   </div>
                 ))}
               </CardContent>
@@ -1968,7 +1968,7 @@ function DevPortalTab() {
                     <span className="font-semibold text-text-bright">{s.name}</span>
                     <Badge variant="slate">{s.language}</Badge>
                     <Badge variant={s.status==="ga"?"emerald":s.status==="beta"?"amber":"slate"}>{s.status} v{s.version}</Badge>
-                    <span className="ml-auto text-text-muted">★{s.stars} · ↓{s.weeklyDownloads.toLocaleString()}/wk</span>
+                    <span className="ml-auto text-text-muted">★{s.stars ?? "—"} · ↓{s.weeklyDownloads != null ? s.weeklyDownloads.toLocaleString() : "—"}/wk</span>
                   </div>
                   <div className="text-text-muted mt-1">{s.description}</div>
                 </div>
@@ -1989,7 +1989,7 @@ function DevPortalTab() {
                   <Badge variant={catTone(selectedSdk.category) as any}>{selectedSdk.category}</Badge>
                   <Badge variant="slate">{selectedSdk.language}</Badge>
                   <Badge variant={selectedSdk.status==="ga"?"emerald":selectedSdk.status==="beta"?"amber":"slate"}>{selectedSdk.status} v{selectedSdk.version}</Badge>
-                  <span className="text-text-muted">★ {selectedSdk.stars} · ↓ {selectedSdk.weeklyDownloads.toLocaleString()}/wk</span>
+                  <span className="text-text-muted">★ {selectedSdk.stars ?? "—"} · ↓ {selectedSdk.weeklyDownloads != null ? selectedSdk.weeklyDownloads.toLocaleString() : "—"}/wk</span>
                   {selectedSdk.bundleSizeKb && <span className="text-text-muted">{selectedSdk.bundleSizeKb} kB gz</span>}
                   <span className="text-text-muted">slice {selectedSdk.sliceNumber}</span>
                 </div>
@@ -3328,10 +3328,13 @@ function MlOpsTab() {
                 <CardDescription className="text-xs">{d.region} · {d.endpoint} · {d.trafficPct}% traffic · {d.replicas} replicas ({d.cpu}/{d.memory}{d.gpu?` · ${d.gpu}`:""}) · by {d.deployedBy}</CardDescription>
               </CardHeader>
               <CardContent className="text-xs pt-0 grid grid-cols-4 gap-2 text-text-muted">
-                <div><div className="text-text-bright font-semibold">{d.qps.toLocaleString()}</div>QPS</div>
-                <div><div className="text-text-bright font-semibold">{d.p95Ms}ms</div>p95</div>
-                <div><div className="text-text-bright font-semibold">{d.errorRatePct.toFixed(2)}%</div>errors</div>
-                <div><div className="text-text-bright font-semibold">${d.costPerHour}/h</div>cost</div>
+                {/* Serving telemetry is undefined until the serving layer reports
+                    it. Show an em dash rather than 0, which would read as a real
+                    measurement of an idle deployment. */}
+                <div><div className="text-text-bright font-semibold">{d.qps != null ? d.qps.toLocaleString() : "—"}</div>QPS</div>
+                <div><div className="text-text-bright font-semibold">{d.p95Ms != null ? `${d.p95Ms}ms` : "—"}</div>p95</div>
+                <div><div className="text-text-bright font-semibold">{d.errorRatePct != null ? `${d.errorRatePct.toFixed(2)}%` : "—"}</div>errors</div>
+                <div><div className="text-text-bright font-semibold">{d.costPerHour != null ? `$${d.costPerHour}/h` : "—"}</div>cost</div>
               </CardContent>
             </Card>
           ))}
@@ -4262,7 +4265,7 @@ function CollaborationTab() {
                   <div><div className="text-text-bright font-semibold">{p.findingsOpen}</div>open</div>
                 </div>
                 <div className="grid grid-cols-3 gap-2 text-text-muted">
-                  <div><div className="text-text-bright font-semibold">{p.uptimePct.toFixed(1)}%</div>uptime</div>
+                  <div><div className="text-text-bright font-semibold">{p.uptimePct != null ? `${p.uptimePct.toFixed(1)}%` : "—"}</div>uptime</div>
                   <div><div className="text-text-bright font-semibold">{p.latencyMs}ms</div>latency</div>
                   <div><div className="text-text-bright font-semibold">{p.safetyAlerts24h}</div>safety</div>
                 </div>
@@ -5697,7 +5700,7 @@ function TradingIntelTab() {
                 <span className="text-text-bright font-semibold">{typeof i.price==="number"?i.price.toLocaleString(undefined,{maximumFractionDigits:4}):i.price}</span>
                 <span className={i.change24hPct>=0?"text-emerald":"text-crimson"}>{i.change24hPct>=0?"+":""}{i.change24hPct.toFixed(2)}%</span>
                 <Badge variant={i.signal==="buy"?"emerald":i.signal==="sell"?"crimson":"slate"}>{i.signal}</Badge>
-                <span className="text-text-muted ml-auto">{Math.round(i.confidence*100)}%</span>
+                <span className="text-text-muted ml-auto">{i.confidence != null ? `${Math.round(i.confidence*100)}%` : "—"}</span>
               </div>
             </CardContent></Card>
           ))}
@@ -7710,11 +7713,20 @@ function BiomedicalTab() {
     </div>
     <Card><CardHeader><CardTitle className="text-sm">Recent Studies</CardTitle></CardHeader>
     <CardContent className="space-y-2 text-xs">
+      {!(data.recentStudies||[]).length && (
+        <div className="text-text-muted">
+          No imaging studies recorded. Submitting a study queues it for reading —
+          this platform performs no automated interpretation, so findings appear
+          only once a configured inference provider or a radiologist records them.
+        </div>
+      )}
       {(data.recentStudies||[]).slice(0,8).map((s:any)=>(<div key={s.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
         <Activity className="h-3 w-3 text-crimson"/><span className="font-semibold flex-1">{s.modality} · {s.bodyPart}</span>
-        <Badge variant="slate">{s.priority||"routine"}</Badge>
-        <Badge variant={s.status==="finalized"?"emerald":s.status==="flagged"?"crimson":"amber"}>{s.status}</Badge>
-        {s.aiFindingsCount!=null && <span className="text-text-muted">{s.aiFindingsCount} findings</span>}
+        {s.radiologistReviewed && <Badge variant="emerald">radiologist read</Badge>}
+        <Badge variant={s.status==="signed_off"?"emerald":s.status==="escalated"?"crimson":"amber"}>{s.status}</Badge>
+        <span className="text-text-muted">
+          {(s.aiFindings||[]).length ? `${s.aiFindings.length} finding${s.aiFindings.length===1?"":"s"}` : "awaiting read"}
+        </span>
       </div>))}
     </CardContent></Card>
   </div>);
@@ -8297,7 +8309,26 @@ function HealthEcosystemTab() {
   if (!data) return <div/>;
   const t=data.today, w=data.weeklyAvg, lb=data.labelBreakdown||{};
   const criticalAlerts = (data.emergencyAlerts30d||[]).filter((a:any)=>a.severity==="critical"||a.severity==="emergency");
+  // Honest empty state: this module records real health data and derives
+  // aggregates from it. With nothing recorded we say so rather than showing
+  // zeroed gauges that read like real measurements.
+  const noData = data.hasData === false;
   return (<div className="space-y-4">
+    {noData && (
+      <div className="p-3 rounded-md border border-azure/40 bg-azure/10 text-xs flex items-start gap-2">
+        <Activity className="h-4 w-4 mt-0.5 text-azure shrink-0"/>
+        <div className="flex-1">
+          <div className="font-semibold text-azure">No health data recorded yet</div>
+          <div className="opacity-90 mt-0.5">
+            This module reports only measurements you record or that a connected device submits —
+            it does not generate sample vitals. Add a metric, log a session, or connect a device
+            via <span className="font-mono">/health-ecosystem/metrics</span>,
+            <span className="font-mono"> /wearables</span> or <span className="font-mono">/medical-devices</span>.
+            All scores below stay at zero until real data exists.
+          </div>
+        </div>
+      </div>
+    )}
     {/* Crimson disclaimer banner — Fifth Standing Rule */}
     <div className="p-3 rounded-md border border-crimson/40 bg-crimson/10 text-crimson-100 text-xs flex items-start gap-2">
       <ShieldAlert className="h-4 w-4 mt-0.5 text-crimson shrink-0"/>

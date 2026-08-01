@@ -93,8 +93,26 @@ export function registerEngineeringRoutes(router: Router) {
       res.json({ ok: true, data: await PipelineService.list(limit) });
     } catch (e) { next(e); }
   });
-  router.post("/pipelines/record", async (_req, res, next) => {
-    try { res.json({ ok: true, data: await PipelineService.record({}) }); } catch (e) { next(e); }
+  // Records a real CI run. This used to accept an empty body and mint a
+  // fabricated build (random pipeline, 78% pass roll, random author) that then
+  // fed the CI analytics — so the endpoint is now validated.
+  router.post("/pipelines/record", validate({ body: z.object({
+    pipeline: z.string().min(1).max(120),
+    status: z.enum(["passed","failed","canceled","running"]),
+    durationMs: z.number().int().min(0),
+    branch: z.string().max(200).optional(),
+    commitSha: z.string().max(64).optional(),
+    author: z.string().max(120).optional(),
+    startedAt: z.string().optional(),
+    finishedAt: z.string().optional(),
+    flaky: z.boolean().optional(),
+    stages: z.array(z.object({
+      name: z.string().min(1).max(80),
+      durationMs: z.number().int().min(0),
+      status: z.enum(["passed","failed","canceled","running"]),
+    })).max(50).optional(),
+  }) }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await PipelineService.record(req.body) }); } catch (e) { next(e); }
   });
   router.get("/pipelines/analytics", async (_req, res, next) => {
     try { res.json({ ok: true, data: await PipelineService.analytics() }); } catch (e) { next(e); }

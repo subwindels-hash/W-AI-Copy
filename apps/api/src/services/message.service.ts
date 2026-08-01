@@ -8,7 +8,7 @@ import { buildSmartContext } from "./ai/contextManager.js";
 import { MessageRole, MessageStatus } from "@prisma/client";
 import { env } from "../config/env.js";
 import { z } from "zod";
-import { claimConversationAttachments } from "./attachment.service.js";
+import { claimConversationAttachments } from "../attachments/attachments.service.js";
 
 export const SendMessageSchema = z.object({
   content: z.string().min(1).max(20000),

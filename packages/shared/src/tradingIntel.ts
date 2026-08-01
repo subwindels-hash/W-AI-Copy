@@ -107,8 +107,11 @@ export interface TiInstrument {
   marketCap?: number;
   status: TiMarketStatus;
   sentiment: TiDirection;
-  signal: "buy" | "sell" | "hold";
-  confidence: number;          // 0..1
+  /** Trading recommendation. Undefined until a real analysis produces one —
+   *  an instrument with no signal must not imply "hold" was a decision. */
+  signal?: "buy" | "sell" | "hold";
+  /** 0..1. Undefined until a model scores the signal. */
+  confidence?: number;
 }
 
 export interface TiForexPair extends TiInstrument {

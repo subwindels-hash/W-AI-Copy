@@ -11,7 +11,6 @@ import { env } from "../config/env.js";
 import { RegionService } from "../platform/region.service.js";
 import type { TestCase, TestCaseResult, DrConfig } from "@windels/shared/qa";
 import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
 const _rng = makeRng('qa:drTest');
 function rand(min: number, max: number) { return _rng.rand(min, max); }

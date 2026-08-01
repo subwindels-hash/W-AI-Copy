@@ -15,6 +15,9 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+const _rng = makeRng("tradingIntel:tradingIntel");
 import type {
   TiDashboard, TiAgent, TiAgentKey, TiAgentStatus, TiIndicatorPlugin, TiIndicatorId,
   TiInstrument, TiMarketClass, TiMarketStatus, TiDirection,
@@ -22,14 +25,6 @@ import type {
   TiRiskProfile, TiPosition, TiSentimentReading, TiSimulationResult, TiSimScenario,
   TiEconomicEvent, TiLearningInsight,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable per (module, seed) so dashboard
-// reads return the same numbers within a running process.
-const _rng = makeRng('tradingIntel');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   agents: "ti:agents", agent: (k: string) => `ti:agent:${k}`,
@@ -92,18 +87,23 @@ const INDICATOR_DEFS: TiIndicatorPlugin[] = [
   { id: "OBV",        name: "On-Balance Volume",            category: "volume",            installed: true, version: "1.0.0", author: "windels" },
   { id: "VWAP",       name: "Volume Weighted Avg Price",    category: "volume",            installed: true, version: "1.0.0", author: "windels" },
 ];
+
+function rand(min: number, max: number) { return _rng.rand(min, max); }
 function rPct() { return rand(-3, 3); }
 function mkInstrument(
   id: string, symbol: string, name: string, marketClass: TiMarketClass, price: number,
   extra: Partial<TiInstrument> = {}
 ): TiInstrument {
-  const ch = rPct();
+  // A catalogue entry, not a quote. The 24h change was a random +/-3% which
+  // then *derived* the sentiment (bullish/bearish) and the buy/sell/hold
+  // signal, with a 0.55-0.92 confidence attached — a complete trading
+  // recommendation manufactured from one random number. Live prices come from
+  // the market-data providers in marketData.ts; unquoted instruments carry no
+  // sentiment or signal at all.
   return {
-    id, symbol, name, marketClass, price, change24hPct: ch, volume24h: Math.floor(rand(1e6, 1e10)),
-    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : (_rng.next() > 0.3 ? "open" : "closed"),
-    sentiment: ch > 0.3 ? "bullish" : ch < -0.3 ? "bearish" : "neutral",
-    signal: ch > 1 ? "buy" : ch < -1 ? "sell" : "hold",
-    confidence: rand(0.55, 0.92),
+    id, symbol, name, marketClass, price, change24hPct: 0, volume24h: 0,
+    status: marketClass === "crypto" || marketClass === "digital-assets" ? "24/7" : "closed",
+    sentiment: "neutral",
     ...extra,
   };
 }
@@ -160,7 +160,6 @@ const SEED_INSTRUMENTS: Record<TiMarketClass, TiInstrument[]> = {
 
 export const TradingIntelService = {
   async ensureBootstrapped(logger?: any) {
-    _rng.reseed(`ensureBootstrapped:${logger}`);
     if ((await redis.get(K.enabled)) !== null) return;
     await redis.set(K.enabled, "1");
     // Agents
@@ -183,6 +182,23 @@ export const TradingIntelService = {
         await redis.hset(`ti:instdoc:${mc}:${inst.id}`, "_doc", s(inst));
       }
     }
+    // ── Everything above is a static catalogue: which agents exist, which
+    // indicators are computable, which instruments are tradeable. It describes
+    // the module's capabilities and is safe to install unconditionally.
+    //
+    // Everything below is a *portfolio* — open positions carrying P&L, a risk
+    // profile stating $2.48M of exposure and a 1.82 Sharpe, and "learning
+    // insights" with invented confidences. None of it was ever traded. On a
+    // fresh install the dashboard opened on three winning positions and a
+    // healthy risk book belonging to nobody, and `pnl24hUsd` summed the
+    // fabricated P&L. Money is exactly the category that must never be
+    // invented, so the portfolio is now opt-in.
+    if (!demoDataEnabled()) {
+      skipDemoSeed("trading-intel", logger);
+      logger?.info("[trading-intel] catalogue installed (no portfolio)", { agents: AGENT_DEFS.length, indicators: INDICATOR_DEFS.length, markets: Object.keys(SEED_INSTRUMENTS).length });
+      return;
+    }
+
     // Risk profile
     const risk: TiRiskProfile = {
       portfolioId: "default",
@@ -327,38 +343,34 @@ export const TradingIntelService = {
 
   // ── Sentiment
   async listSentiment(limit=40): Promise<TiSentimentReading[]> {
-    _rng.reseed(`listSentiment:${limit}`);
     // Generate on-the-fly synthetic readings (MVP); a later session wires real feeds.
     const inst = await this.listInstruments();
+    // Sentiment readings must come from a real feed (news, social, on-chain).
+    // This previously fabricated `limit` readings on demand — a -0.6..0.8
+    // score with a weight multiplier and a volume — which were then applied to
+    // trading signals as if they reflected observed market mood.
     const out: TiSentimentReading[] = [];
-    const sources: TiSentimentReading["source"][] = ["news","social","economic","announcements","regulatory","blockchain","community","institutional"];
-    for (let i=0;i<limit;i++) {
-      const x = inst[i % inst.length];
-      out.push({
-        source: sources[i%sources.length],
-        instrumentId: x.id,
-        score: rand(-0.6, 0.8),
-        weight: rand(0.8, 1.2),
-        volume: Math.floor(rand(100, 10000)),
-        at: new Date(Date.now()-i*60000*5).toISOString(),
-      });
-    }
+    void inst;
     return out;
   },
 
   // ── Simulation
   async runSimulation(input: { instrumentId: string; scenarios?: TiSimScenario[]; horizon?: string }): Promise<TiSimulationResult[]> {
-    _rng.reseed(`runSimulation:${input}`);
     const scenarios: TiSimScenario[] = input.scenarios ?? ["bull","bear","sideways","high-vol","flash-crash"];
     const horizon = input.horizon ?? "7d";
     const out: TiSimulationResult[] = [];
     for (const sc of scenarios) {
       const r: TiSimulationResult = {
         id: "sim-"+randomUUID().slice(0,8), scenario: sc, instrumentId: input.instrumentId, horizon,
-        expectedReturnPct: sc==="bull"?rand(2,8):sc==="bear"?rand(-9,-2):sc==="sideways"?rand(-1,1):sc==="high-vol"?rand(-4,6):rand(-18,-5),
-        worstCaseReturnPct: sc==="flash-crash"?-28:sc==="bear"?-15:sc==="high-vol"?-12:-6,
-        bestCaseReturnPct: sc==="bull"?14:sc==="high-vol"?12:6,
-        probability: rand(0.45, 0.85), confidence: rand(0.6, 0.9),
+        // Scenario returns and their probability/confidence are model output.
+        // They were drawn at random per scenario (a "bull" case returning
+        // 2-8%, a flash-crash -18..-5%) with a 0.45-0.85 probability, then
+        // stored and surfaced as investment analysis. Zeroed until a real
+        // pricing/risk model produces them.
+        expectedReturnPct: 0,
+        worstCaseReturnPct: 0,
+        bestCaseReturnPct: 0,
+        probability: 0, confidence: 0,
         notes: [
           "Recommendations require governance + human approval before execution.",
           "Sentiment weights applied to signal — not a standalone decision factor.",

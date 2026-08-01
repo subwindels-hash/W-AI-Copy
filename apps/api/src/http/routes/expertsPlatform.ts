@@ -4,7 +4,6 @@ import { validate } from "../middleware/validate.js";
 import { ExpertsPlatformService } from "../../expertsPlatform/expertsPlatform.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const query = z.object({ q: z.string().min(1) });

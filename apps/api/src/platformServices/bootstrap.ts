@@ -13,8 +13,12 @@ import { BillingService } from "./billing.service.js";
 import { CapabilitiesService } from "./capabilities.service.js";
 import { OntologyService } from "./ontology.service.js";
 import { BlueprintsService } from "./blueprints.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 export async function bootstrapPlatformServices() {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("platform-services");
+
   const existingConfigs = await ConfigService.list();
   if (existingConfigs.length > 0) {
     const flags = await FeatureFlagsService.list();

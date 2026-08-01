@@ -61,7 +61,7 @@ const WAYPOINT_KINDS: SpatialWaypoint["kind"][] = ["destination", "poi", "hazard
 
 /**
  * Deterministic PRNG derived from a seed string — used to place waypoints on
- * a stable grid instead of Math.random.
+ * a stable grid instead of a non-deterministic RNG.
  */
 function seededRng(seed: string) {
   let h = 0;

@@ -1,5 +1,11 @@
 # DEPLOYMENT BLOCKERS REPORT — WINDELS AI OS
 
+> **⚠️ SUPERSEDED (2026-07-31).** This report has drifted from the code. Its
+> §1.1 (MFA form) and §1.2 (S84/S85 frontends) describe blockers that **are
+> already implemented** — verified by reading the source, not the changelog.
+> See **[AUDIT-REPORT.md](./AUDIT-REPORT.md)** for the corrected, evidence-based
+> status. Retained for history.
+
 **Date:** 2026-07-28  
 **Scope:** Sessions 1–88 Infrastructure and Key Blockades  
 

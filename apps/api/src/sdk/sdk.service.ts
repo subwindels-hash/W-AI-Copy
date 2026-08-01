@@ -11,6 +11,7 @@ import {
   DebugSession, ProfileRun, CodeTemplate, SdkDashboard,
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('sdk');
@@ -75,6 +76,7 @@ export const SdkService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.pkgs(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("sdk", logger);
     const now = new Date().toISOString();
     for (const s of SDK_PACKAGES_SEED) {
       const id = uid("sdkp-");
@@ -162,10 +164,13 @@ export const SdkService = {
     const id = uid("prof-");
     const pr: ProfileRun = {
       id, target: input.target,
-      durationMs: randInt(600, 5200), cpuMs: randInt(300, 3400), memPeakMb: randInt(120, 1100),
-      tokensIn: randInt(500, 12000), tokensOut: randInt(200, 4000), llmCalls: randInt(2, 16),
-      costUsd: +rand(0.01, 0.6).toFixed(4),
-      bottlenecks: ["serial LLM calls","N+1 vector lookup","repeated embeddings","large context window"].slice(0, randInt(1,3)),
+      // A profiler reports what it measured. Every figure here was invented —
+      // duration, CPU, memory, token counts, cost — along with a plausible
+      // list of bottlenecks ("N+1 vector lookup") for code never executed.
+      durationMs: 0, cpuMs: 0, memPeakMb: 0,
+      tokensIn: 0, tokensOut: 0, llmCalls: 0,
+      costUsd: 0,
+      bottlenecks: [],
       ranAt: new Date().toISOString(),
     };
     await redis.hset(K.prof(oid,id),"_doc",s2(pr)); await redis.sadd(K.profs(oid),id);

@@ -11,7 +11,6 @@ import { assertion } from "./testRunner.service.js";
 import { env } from "../config/env.js";
 import type { TestCase, TestCaseResult, DigitalTwinConfig } from "@windels/shared/qa";
 import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
 const _rng = makeRng('qa:digitalTwin');
 function rand(min: number, max: number) { return _rng.rand(min, max); }

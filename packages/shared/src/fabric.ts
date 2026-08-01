@@ -21,7 +21,8 @@ export interface DataSource {
   id: string;
   name: string;
   kind: "postgres" | "kafka" | "s3" | "snowflake" | "bigquery" | "redis" | "mongo" | "api";
-  status: "healthy" | "degraded" | "offline";
+  /** "unknown" until the source has actually been probed. */
+  status: "healthy" | "degraded" | "offline" | "unknown";
   latencyMs: number;
   rowsPerSec: number;
   connectedAt: string;

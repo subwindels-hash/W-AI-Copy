@@ -6,7 +6,6 @@ import { TrainingService } from "../../training/training.service.js";
 import { DATASET_FORMATS, TUNING_STRATEGIES } from "@windels/shared";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const DatasetSchema = z.object({

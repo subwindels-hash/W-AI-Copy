@@ -5,7 +5,6 @@ import { validate } from "../middleware/validate.js";
 import { CyberService } from "../../cyber/cyber.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const LabSchema = z.object({ domain: z.string(), difficulty: z.string(), cloud: z.string().optional() });

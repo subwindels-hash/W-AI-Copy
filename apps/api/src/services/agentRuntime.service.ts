@@ -3,7 +3,7 @@ import { aiRegistry } from "./ai/registry.js";
 import { logger } from "../config/logger.js";
 import { recallMemories } from "./agentMemory.service.js";
 import { retrieveKnowledge } from "./agentKnowledge.service.js";
-import { recordAgentEvent, updateAgentStatus } from "./agent.service.js";
+import { recordAgentEvent, updateAgentStatus } from "../agents/agents.service.js";
 import { AppError } from "../utils/result.js";
 import { AI_PROVIDER_CONFIGURATION_REQUIRED_MESSAGE } from "./ai/types.js";
 import { pushEvent } from "../http/routes/events.js";

@@ -11,7 +11,7 @@ import {
   getConversation,
   listConversations,
   updateConversation,
-} from "../../services/conversation.service.js";
+} from "../../conversations/conversations.service.js";
 import type { ApiEnvelope } from "@windels/shared/api";
 
 /**

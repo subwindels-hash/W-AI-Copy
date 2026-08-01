@@ -4,12 +4,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { SDKCategory, SDKLanguage, SDKPackage, SDKStatus } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('devportal:sdkRegistry');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -57,7 +52,6 @@ export const SDKRegistryService = {
     description: string; features: string[]; status?: SDKStatus; version?: string;
     sliceNumber: number; exampleSnippet?: string; bundleSizeKb?: number;
   }): Promise<SDKPackage> {
-    _rng.reseed(`register`);
     const id = randomUUID();
     const sdk: SDKPackage = {
       id,
@@ -70,8 +64,11 @@ export const SDKRegistryService = {
       installSnippet: mkInstall(input.slug, input.language),
       docsUrl: `https://docs.windels.ai/sdks/${input.slug}`,
       description: input.description,
-      weeklyDownloads: Math.floor(100 + _rng.next() * 9000),
-      stars: Math.floor(10 + _rng.next() * 900),
+      // Shown on the public developer portal as real adoption. A newly
+      // registered SDK has neither downloads nor stars; the existing download
+      // counter increments from real traffic.
+      weeklyDownloads: 0,
+      stars: 0,
       bundleSizeKb: input.bundleSizeKb,
       minPlatformVersion: "0.27.0",
       repoUrl: `https://github.com/windels-ai/windels/tree/main/sdks/${input.slug}`,
@@ -91,13 +88,15 @@ export const SDKRegistryService = {
     const raw = await redis.get(DETAIL(id));
     if (raw) {
       const s = JSON.parse(raw) as SDKPackage;
-      s.weeklyDownloads += 1;
+      // weeklyDownloads is optional (undefined until the registry reports);
+      // count up from the real recorded total rather than assuming a baseline.
+      s.weeklyDownloads = (s.weeklyDownloads ?? 0) + 1;
       s.updatedAt = iso();
       await redis.set(DETAIL(id), SER(s));
     }
   },
   async weeklyTotal(): Promise<number> {
     const all = await this.list();
-    return all.reduce((a, b) => a + b.weeklyDownloads, 0);
+    return all.reduce((a, b) => a + (b.weeklyDownloads ?? 0), 0);
   },
 };

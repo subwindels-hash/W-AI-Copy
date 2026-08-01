@@ -13,21 +13,13 @@
  *  - Events are emitted through KernelService (S39)
  *  - Keys gc:*
  */
-import { randomUUID, createHash } from "node:crypto";
+import { randomUUID, createHash, randomInt } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
 import type {
   WmpcGiftCard, GcTransaction, GcFraudFlag, GcLoyaltyProgram,
   GcType, GcStatus,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('giftCards:giftCards');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   cards: "gc:cards", card: (id: string) => `gc:card:${id}`,
@@ -46,12 +38,19 @@ function hashPin(pin: string): string {
 }
 
 function genCode(): string {
-  // 16-char alnum gift card code in 4-char groups
+  // 16-char alnum gift card code in 4-char groups.
+  //
+  // A gift card code is a bearer instrument redeemable for money, so it must be
+  // unguessable. a non-deterministic RNG is a non-cryptographic PRNG whose internal state
+  // can be recovered from a handful of observed outputs, which would let an
+  // attacker who legitimately holds a few cards predict codes that were issued
+  // around the same time. randomInt() draws from the CSPRNG and is unbiased
+  // across the alphabet (it rejection-samples internally).
   const chars = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
   let out = "";
   for (let i = 0; i < 16; i++) {
     if (i > 0 && i % 4 === 0) out += "-";
-    out += chars[Math.floor(_rng.next() * chars.length)];
+    out += chars[randomInt(chars.length)];
   }
   return out;
 }
@@ -238,7 +237,9 @@ export const GiftCardsService = {
     // Acquire a per-card lock (5s TTL) for race-condition prevention using a Lua script
     // that returns 1 iff the key was set (i.e. lock acquired).
     const lockKey = `gc:lock:${id}`;
-    const lockId = `lock-${Date.now()}-${_rng.next().toString(36).slice(2,8)}`;
+    // Lock identifier: use the CSPRNG rather than a non-deterministic RNG, consistent
+    // with the gift-card code generator above.
+    const lockId = `lock-${Date.now()}-${randomUUID().slice(0, 8)}`;
     const LOCK_ACQUIRE = `if redis.call('SET',KEYS[1],ARGV[1],'NX','PX',ARGV[2]) then return 1 else return 0 end`;
     const acquired = await redis.eval(LOCK_ACQUIRE, 1, lockKey, lockId, "5000");
     if (acquired !== 1) {

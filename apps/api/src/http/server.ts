@@ -61,7 +61,7 @@ import { registerVoiceStudioRoutes } from "./routes/voiceStudio.js";
 import { registerTradingIntelRoutes } from "./routes/tradingIntel.js";
 import { registerVoiceFoundryRoutes } from "./routes/voiceFoundry.js";
 import { registerExpertsPlatformRoutes } from "./routes/expertsPlatform.js";
-import { registerMediaFactoryRoutes, registerMediaFactoryWebhookRoutes } from "./routes/mediaFactory.js";
+import { registerMediaFactoryRoutes } from "./routes/mediaFactory.js";
 import { registerUxIntelligenceRoutes } from "./routes/uxIntelligence.js";
 import { registerGiftCardsRoutes } from "./routes/giftCards.js";
 import { registerGlobalCurrencyRoutes } from "./routes/globalCurrency.js";
@@ -592,7 +592,6 @@ export function createApp() {
   // hubs are never rejected by the JWT middleware.
   const pubMfWebhooks = express.Router();
   v1.use("/media-factory/publishing/webhooks", pubMfWebhooks);
-  registerMediaFactoryWebhookRoutes(pubMfWebhooks);
 
   // /media-factory — Session 77B: Autonomous AI Media/Content Factory (channels, characters, courses, safety)
   const mfRouter = express.Router();

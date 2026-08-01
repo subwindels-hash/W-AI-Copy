@@ -9,14 +9,6 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd } from "../db/redis.js";
 import type { IaCStack, IaCRun, IaCStatus } from "@windels/shared/infrastructure";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('platform:iac');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const STACKS_KEY = "infra:iac:stacks";
 const STACK_PREFIX = "infra:iac:stack:";
@@ -39,7 +31,6 @@ const DEFAULT_STACKS: Array<Omit<IaCStack,"id"|"status"|"driftDetected"|"updated
 
 export const IaCService = {
   async seed() {
-    _rng.reseed(`seed`);
     if (seeded) return; seeded = true;
     try {
       const existing = await redisCmd.exists(STACKS_KEY);
@@ -48,8 +39,9 @@ export const IaCService = {
     for (const d of DEFAULT_STACKS) {
       const stack: IaCStack = {
         id: randomUUID(), ...d,
-        resources: Math.floor(20 + _rng.next() * 80),
-        status: "applied", driftDetected: _rng.next() < 0.15, updatedAt: now(),
+        // Resource count comes from a real plan/apply; it was a random 20-100.
+        // Drift is only true when a plan has actually reported it.
+        status: "applied", driftDetected: false, updatedAt: now(),
       };
       await redisCmd.set(sk(stack.id), JSON.stringify(stack));
       await redisCmd.sadd(STACKS_KEY, stack.id);
@@ -68,25 +60,63 @@ export const IaCService = {
   },
 
   async run(stackId: string, kind: "plan" | "apply", triggeredBy: string): Promise<IaCRun> {
-    _rng.reseed(`run:${stackId}`);
     const stack = await this.get(stackId); if (!stack) throw new Error("stack not found");
     const id = randomUUID();
     const run: IaCRun = {
-      id, stackId, kind, triggeredBy, status: "succeeded",
-      summary: kind === "plan"
-        ? { add: Math.floor(_rng.next()*3), change: Math.floor(_rng.next()*5), destroy: Math.floor(_rng.next()*2) }
-        : { add: 0, change: 0, destroy: 0 },
-      startedAt: now(), finishedAt: now(), logRef: `runs/${id}.log`,
+      // No terraform/pulumi/helm binary is invoked here, so the run is queued
+      // for an external executor rather than reporting "succeeded" with an
+      // invented diff (previously add 0-2 / change 0-4 / destroy 0-1 for a plan
+      // that never ran). recordRun() writes the real outcome.
+      id, stackId, kind, triggeredBy, status: "queued",
+      startedAt: now(), logRef: `runs/${id}.log`,
     };
     stack.lastPlanId = kind === "plan" ? id : stack.lastPlanId;
     stack.lastApplyId = kind === "apply" ? id : stack.lastApplyId;
-    stack.status = (kind === "apply" ? "applied" : "planned") as IaCStatus;
-    stack.driftDetected = false; stack.updatedAt = now();
+    // The stack state only advances once the executor reports back.
+    stack.updatedAt = now();
     const multi = redisCmd.multi();
     multi.set(sk(stackId), JSON.stringify(stack));
     multi.set(rk(id), JSON.stringify(run));
     multi.sadd(RUNS_KEY, id);
     await multi.exec();
+    return run;
+  },
+
+  /**
+   * Record the outcome of a run executed by a real IaC tool. This is the
+   * intake path that replaces the fabricated plan diff: the executor reports
+   * the actual add/change/destroy counts, the managed resource total, and
+   * whether the run succeeded.
+   */
+  async recordRun(
+    runId: string,
+    result: {
+      status: "succeeded" | "failed" | "cancelled";
+      summary?: { add: number; change: number; destroy: number };
+      resources?: number;
+      driftDetected?: boolean;
+    },
+  ): Promise<IaCRun | null> {
+    const raw = await redisCmd.get(rk(runId));
+    if (!raw) return null;
+    const run = JSON.parse(raw) as IaCRun;
+    run.status = result.status;
+    run.summary = result.summary;
+    run.finishedAt = now();
+    await redisCmd.set(rk(runId), JSON.stringify(run));
+
+    const stack = await this.get(run.stackId);
+    if (stack) {
+      if (result.status === "succeeded") {
+        stack.status = (run.kind === "apply" ? "applied" : "planned") as IaCStatus;
+      } else {
+        stack.status = "failed" as IaCStatus;
+      }
+      if (result.resources !== undefined) stack.resources = result.resources;
+      if (result.driftDetected !== undefined) stack.driftDetected = result.driftDetected;
+      stack.updatedAt = now();
+      await redisCmd.set(sk(run.stackId), JSON.stringify(stack));
+    }
     return run;
   },
 

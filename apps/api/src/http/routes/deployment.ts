@@ -5,7 +5,6 @@ import DeploymentService from "../../deployment/deployment.service.js";
 import { z } from "zod";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const create = z.object({

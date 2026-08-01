@@ -4,6 +4,11 @@
  */
 import { beforeAll, describe, expect, test } from "vitest";
 
+import { isApiLive } from "./testUtils/liveApi.js";
+
+// Integration suite: requires a live API. Skip (not fail) when none is up.
+const LIVE = await isApiLive();
+
 const BASE = process.env.TEST_API_URL ?? "http://localhost:4000/api/v1";
 const EMAIL = "admin@windels.ai";
 const PASSWORD = "W1ndels!Admin#2026";
@@ -21,7 +26,7 @@ async function login(): Promise<string> {
   return j.data.token as string;
 }
 
-describe("Chat / Conversations E2E", () => {
+describe.skipIf(!LIVE)("Chat / Conversations E2E", () => {
   let token: string;
   beforeAll(async () => { token = await login(); });
 

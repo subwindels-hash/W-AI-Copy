@@ -452,6 +452,7 @@ async function main() {
         const { bootstrapOpex } = await import("./opex/bootstrap.js");
         const { bootstrapIndustry } = await import("./industry/bootstrap.js");
         const { bootstrapHealthEcosystem } = await import("./healthEcosystem/bootstrap.js");
+        const { bootstrapPromptTemplates } = await import("./promptTemplates/bootstrap.js");
         await bootstrapUpdates({ logger, defaultOrgId: oid, defaultUserId: uid });
         await bootstrapUsage({ logger, defaultOrgId: oid });
         await bootstrapFabric({ logger, defaultOrgId: oid, defaultUserId: uid });
@@ -475,6 +476,7 @@ async function main() {
         await bootstrapOpex({ logger, defaultOrgId: oid, defaultUserId: uid });
         await bootstrapIndustry({ logger, defaultOrgId: oid, defaultUserId: uid });
         await bootstrapHealthEcosystem({ logger, defaultOrgId: oid, defaultUserId: uid });
+        await bootstrapPromptTemplates({ logger, defaultOrgId: oid, defaultUserId: uid });
       };
 
       // Session 54 — Update & Lifecycle Management

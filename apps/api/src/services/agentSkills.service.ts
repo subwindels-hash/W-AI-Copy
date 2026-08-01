@@ -376,7 +376,10 @@ export async function addSkillFromTemplate(
     );
   }
 
-  return createSkill(userId, agentId, template);
+  // Templates are declared `as const` (readonly, and without the `enabled`
+  // default). Parse them through the schema so the value handed to
+  // createSkill is a plain, mutable object with defaults applied.
+  return createSkill(userId, agentId, CreateSkillSchema.parse(template));
 }
 
 /**

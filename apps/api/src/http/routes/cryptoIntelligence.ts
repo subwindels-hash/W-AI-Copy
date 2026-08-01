@@ -9,7 +9,6 @@ import { validate } from "../middleware/validate.js";
 import { CryptoIntelligenceService as Ci } from "../../cryptoIntelligence/cryptoIntelligence.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const enableSchema = z.object({ status: z.enum(["disabled","enabled-readonly","enabled-paper","enabled-live"]) });

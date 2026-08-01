@@ -13,7 +13,6 @@ import { QualityService } from "../../enterpriseFoundation/quality.service.js";
 import { OpsCenterService } from "../../enterpriseFoundation/opsCenter.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const connCreate = z.object({

@@ -8,12 +8,7 @@ import type {
   ModelState, InferenceBackend, ModelFormat, ModelOrigin, NodeStatus,
   SchedulingClass, VectorBackend,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('selfHosted:selfHosted');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -82,8 +77,18 @@ export const SelfHostedService = {
     await redis.hset(K.node(target.id), "_doc", s(target));
     return m;
   },
-  async runInference(input: { modelId: string; prompt: string; maxTokens?: number; temperature?: number; schedulingClass?: SchedulingClass }): Promise<InferenceJob> {
-    _rng.reseed(`runInference:${input}`);
+  /**
+   * Record an inference job.
+   *
+   * No model is actually invoked here — this schedules and books the job. The
+   * latency was therefore invented (80-480 ms) and pushed onto the `K.lats`
+   * ring buffer, which is what the dashboard averages, so the reported
+   * inference latency described nothing that ran. Elapsed time is now measured
+   * across the call; a caller that performs the real inference should pass the
+   * observed duration via `latencyMs`.
+   */
+  async runInference(input: { modelId: string; prompt: string; maxTokens?: number; temperature?: number; schedulingClass?: SchedulingClass; latencyMs?: number }): Promise<InferenceJob> {
+    const startedAtMs = Date.now();
     const model = (await this.listModels()).find(m => m.id === input.modelId);
     if (!model) throw new Error("model not found");
     const nodes = await this.listNodes();
@@ -93,10 +98,10 @@ export const SelfHostedService = {
     const otoks = Math.min(input.maxTokens ?? 256, model.contextWindow - itoks);
     const job: InferenceJob = {
       id: "job-" + randomUUID().slice(0,8), modelId: input.modelId, nodeId: node.id,
-      status: "completed", scheduledAt: new Date().toISOString(),
-      startedAt: new Date().toISOString(), completedAt: new Date().toISOString(),
+      status: "completed", scheduledAt: new Date(startedAtMs).toISOString(),
+      startedAt: new Date(startedAtMs).toISOString(), completedAt: new Date().toISOString(),
       inputTokens: itoks, outputTokens: otoks,
-      latencyMs: 80 + Math.floor(_rng.next()*400),
+      latencyMs: input.latencyMs ?? (Date.now() - startedAtMs),
     };
     await redis.zadd(K.jobs, Date.now(), s(job));
     await redis.incr(K.jobs24);

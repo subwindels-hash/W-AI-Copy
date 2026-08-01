@@ -8,12 +8,7 @@ import type {
   RagPolicy, VectorIndex, EmbeddingModel, KnowledgeSource,
   IndexStatus, VectorMetric, EmbeddingProvider, KnowledgeSourceKind, KnowledgeStatus,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
 // Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('mlOps:rag');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
 
 
 
@@ -78,7 +73,6 @@ export const RagService = {
     name: string; dimensions: number; metric?: VectorMetric;
     embeddingModelId: string; namespace?: string; shards?: number; replicas?: number; region?: string;
   }): Promise<VectorIndex> {
-    _rng.reseed(`createIndex`);
     const id = randomUUID();
     const now = iso();
     const v: VectorIndex = {
@@ -86,7 +80,9 @@ export const RagService = {
       embeddingModelId: input.embeddingModelId, namespace: input.namespace ?? "default",
       status: "ready", documents: 0, vectors: 0, sizeMb: 0,
       shards: input.shards ?? 1, replicas: input.replicas ?? 1, region: input.region ?? "na-east",
-      avgLatencyMs: 12 + Math.floor(_rng.next()*30), qps: Math.floor(50+_rng.next()*1500),
+      // An index with 0 documents and 0 vectors cannot have served 50-1550 qps
+      // at a 12-42 ms latency. Measured once the index actually serves.
+      avgLatencyMs: 0, qps: 0,
       lastIndexedAt: now, createdAt: now, updatedAt: now,
     };
     await redis.set(IDX(id), SER(v));
@@ -161,7 +157,6 @@ export const RagService = {
   },
 
   async addSource(input: Omit<KnowledgeSource, "id"|"status"|"documents"|"chunks"|"vectors"|"sizeMb"|"lastIndexedAt"|"piiScanned"|"approved"|"updatedAt">): Promise<KnowledgeSource> {
-    _rng.reseed(`addSource:${input}`);
     const id = randomUUID();
     const now = iso();
     const k: KnowledgeSource = {
@@ -170,14 +165,38 @@ export const RagService = {
     };
     await redis.set(KS_ID(id), SER(k));
     await redis.sadd(KS, id);
-    // simulate index completion
-    k.status = "indexed";
-    k.documents = 20 + Math.floor(_rng.next()*500);
-    k.chunks = k.documents * 8;
-    k.vectors = k.chunks;
-    k.sizeMb = Math.floor(k.chunks * 0.08);
-    k.piiScanned = true;
-    k.lastIndexedAt = now;
+    // The block that stood here marked the source `indexed` immediately, with
+    // 20-520 invented documents, chunk/vector counts derived from them, and
+    // — most seriously — `piiScanned = true`. Nothing was indexed and no PII
+    // scan ran, so a source could be approved for retrieval on the strength of
+    // a scan that never happened. The source stays `indexing` until a real
+    // indexer reports via recordIndexResult().
+    return k;
+  },
+
+  /**
+   * Record the outcome of a real indexing pass.
+   *
+   * `piiScanned` can only be set here, by whatever actually performed the scan.
+   */
+  async recordIndexResult(
+    id: string,
+    result: { documents: number; chunks: number; vectors: number; sizeMb?: number; piiScanned?: boolean; error?: string },
+  ): Promise<KnowledgeSource | null> {
+    const k = await this.getKnowledge(id);
+    if (!k) return null;
+    if (result.error) {
+      k.status = "failed"; k.lastError = result.error;
+    } else {
+      k.status = "indexed";
+      k.documents = result.documents;
+      k.chunks = result.chunks;
+      k.vectors = result.vectors;
+      k.sizeMb = result.sizeMb ?? 0;
+      k.piiScanned = result.piiScanned === true;
+      k.lastIndexedAt = iso();
+    }
+    k.updatedAt = iso();
     await redis.set(KS_ID(id), SER(k));
     return k;
   },

@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { QuantumDashboard, CryptoInventoryEntry, QuantumOptimizationJob, QuantumConnector, PQ_ALGORITHMS, QuantumReadiness } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('quantum');
@@ -39,6 +40,7 @@ export const QuantumService = {
   async ensureBootstrapped(logger?:any, oid="org-windels"){
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.meta(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("quantum", logger);
     const now = new Date().toISOString();
     // inventory
     for (const sys of SYSTEMS){
@@ -106,8 +108,9 @@ export const QuantumService = {
       id, kind:input.kind, problem:input.problem, status:"queued", qubits:randInt(20,200), startedAt:now,
     };
     await redis.hset(K.job(oid,id),"_doc",s2(j)); await redis.sadd(K.jobs(oid),id);
-    // simulate completion
-    setTimeout(async ()=>{j.status="completed"; j.completedAt=new Date().toISOString(); j.objectiveValue=+rand(0.8,0.99).toFixed(4); await redis.hset(K.job(oid,id),"_doc",s2(j));}, 1800);
+    // The job stays queued until a real quantum/hybrid backend returns a
+    // result. It previously "completed" after 1.8s with an objective value of
+    // 0.8-0.99 — a solution quality for an optimisation that never ran.
     return j;
   },
   async dashboard(oid="org-windels"):Promise<QuantumDashboard>{

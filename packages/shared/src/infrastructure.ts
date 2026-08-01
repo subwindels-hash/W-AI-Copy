@@ -94,7 +94,8 @@ export interface IaCStack {
   path: string;
   lastPlanId?: string;
   lastApplyId?: string;
-  resources: number;
+  /** Managed resource count, reported by a real plan/apply. Undefined until one runs. */
+  resources?: number;
   status: IaCStatus;
   driftDetected: boolean;
   updatedAt: string;
@@ -106,7 +107,9 @@ export interface IaCRun {
   kind: "plan" | "apply" | "destroy";
   triggeredBy: string;
   status: "queued" | "running" | "succeeded" | "failed" | "cancelled";
-  summary: { add: number; change: number; destroy: number };
+  /** Plan/apply diff. Undefined until the tool reports one — a run that has not
+   *  executed has no diff, which is different from a diff of zero changes. */
+  summary?: { add: number; change: number; destroy: number };
   startedAt: string;
   finishedAt?: string;
   logRef?: string;
@@ -202,8 +205,13 @@ export interface InfraMetric {
   requestRps: number;
   requestP95Ms: number;
   errorRatePercent: number;
-  deploymentReadyPercent: number;
+  /** Undefined unless an orchestrator actually reports deployment readiness. */
+  deploymentReadyPercent?: number;
   region: string;
+  /** What produced this sample. `process` = real telemetry from this API
+   *  process (CPU/RSS + observed HTTP counters). `cluster` = reported by a real
+   *  orchestrator. Consumers must not read a process sample as cluster-wide. */
+  source: "process" | "cluster";
 }
 
 export interface AlertFiring {

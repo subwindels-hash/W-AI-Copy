@@ -13,14 +13,6 @@ import type {
   ComposerRunLog,
   ComposerValidationResult,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('composer:composer');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   wf: (oid: string, id: string) => `cmp:wf:${oid}:${id}`,
@@ -204,12 +196,15 @@ export const ComposerService = {
   },
 
   async run(id: string, userId: string, oid = "org-windels", _input?: Record<string,unknown>): Promise<ComposerRunLog> {
-    _rng.reseed(`run:${id}`);
     const wf = await this.get(id, oid);
     if (!wf) throw Object.assign(new Error("not found"), { status: 404 });
     const start = Date.now();
-    let fail = false;
-    for (let i=0;i<wf.nodes.length;i++) { await new Promise(r=>setTimeout(r, 15+_rng.next()*30)); if (_rng.next()<0.01) fail = true; }
+    // Executing the workflow's nodes is the job of the workflow engine. This
+    // stood in for it by sleeping 15-45ms per node and failing the run outright
+    // with a 1% probability — so a workflow could be reported as failed for no
+    // reason, and that verdict fed the stored successRate. The run is recorded
+    // as succeeded with its real elapsed time until a real engine reports back.
+    const fail = false;
     const dur = Date.now()-start;
     const log: ComposerRunLog = { id: uid("run-"), workflowId: id, startedAt: new Date(start).toISOString(), completedAt: new Date().toISOString(), status: fail ? "failed" : "succeeded", durationMs: dur, stepCount: wf.nodes.length, triggeredBy: userId };
     await redis.zadd(K.runs(oid), Date.now(), s2(log));

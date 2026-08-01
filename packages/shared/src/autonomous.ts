@@ -2,15 +2,20 @@
 export interface BoardDecision {
   id: string;
   title: string;
-  department: "exec"|"finance"|"ops"|"product"|"sales"|"hr"|"legal"|"engineering";
+  /** Free-form: proposals arrive from any department, not a fixed list. */
+  department: string;
   recommendation: string;
   confidence: number; // 0..1
-  riskLevel: "low"|"med"|"high";
+  /** "critical" is accepted — the register must be able to record the worst case. */
+  riskLevel: "low"|"med"|"high"|"critical";
   estimatedImpactUsd: number;
   status: "drafted"|"awaiting_human"|"approved"|"rejected"|"executing"|"executed";
   humanApprover?: string;
   reasoning: string;
   createdAt: string;
+  /** Set when a human resolves the proposal. */
+  decidedAt?: string;
+  decisionNote?: string;
 }
 
 export interface Department {

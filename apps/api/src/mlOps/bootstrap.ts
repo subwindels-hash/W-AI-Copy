@@ -8,10 +8,14 @@ import { redisCmd as redis } from "../db/redis.js";
 import { ModelsService } from "./models.service.js";
 import { PromptsService } from "./prompts.service.js";
 import { RagService } from "./rag.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 function iso() { return new Date().toISOString(); }
 
 export async function bootstrapMlOps() {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("mlops");
+
   const existing = await ModelsService.list();
   if (existing.length > 0) {
     const prompts = await PromptsService.list();

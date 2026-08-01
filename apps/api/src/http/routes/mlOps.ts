@@ -180,6 +180,34 @@ export function registerMlOpsRoutes(router: Router) {
     try { res.json({ ok:true, data: await ModelsService.deploy(req.body) }); }
     catch(e){next(e);}
   });
+  // Intake for observed serving telemetry. Replaces the qps/p95/error-rate that
+  // were previously fabricated at deploy time for a deployment serving nothing.
+  router.post("/deployments/:id/metrics", validate({ body: z.object({
+    qps: z.number().min(0).optional(),
+    p95Ms: z.number().min(0).optional(),
+    errorRatePct: z.number().min(0).max(100).optional(),
+    costPerHour: z.number().min(0).optional(),
+    status: z.enum(["provisioning","scaling","healthy","degraded","rolling-back","scaled-to-zero","failed"]).optional(),
+  }) }), async (req, res, next) => {
+    try {
+      const d = await ModelsService.reportMetrics(req.params.id, req.body);
+      if (!d) return res.status(404).json({ ok:false, error:{code:"NOT_FOUND"} });
+      res.json({ ok:true, data:d });
+    } catch(e){next(e);}
+  });
+
+  // Record the measured size + content hash of a real uploaded artifact.
+  router.post("/models/:id/versions/:versionId/artifact", validate({ body: z.object({
+    sizeMb: z.number().min(0),
+    hash: z.string().min(8).max(200),
+  }) }), async (req, res, next) => {
+    try {
+      const m = await ModelsService.recordArtifact(req.params.id, req.params.versionId, req.body);
+      if (!m) return res.status(404).json({ ok:false, error:{code:"NOT_FOUND"} });
+      res.json({ ok:true, data:m });
+    } catch(e){next(e);}
+  });
+
   router.post("/deployments/:id/status", validate({ body: z.object({ status: z.enum(["provisioning","scaling","healthy","degraded","rolling-back","scaled-to-zero","failed"]) }) }), async (req, res, next) => {
     try {
       const d = await ModelsService.setDeploymentStatus(req.params.id, req.body.status);
@@ -270,7 +298,7 @@ export function registerMlOpsRoutes(router: Router) {
       res.json({ ok:true, data:p });
     } catch(e){next(e);}
   });
-  router.post("/prompts/:id/run-tests", validate({ body: z.object({ model: z.string().default("claude-3.5-sonnet") }) }), async (req, res, next) => {
+  router.post("/prompts/:id/run-tests", validate({ body: z.object({ model: z.string().default("claude-3.5-sonnet"), result: z.object({ casesPassed: z.number().int().min(0), avgLatencyMs: z.number().int().min(0).optional() }).optional() }) }), async (req, res, next) => {
     try {
       const r = await PromptsService.runTests(req.params.id, req.body.model);
       if (!r.prompt) return res.status(404).json({ ok:false, error:{code:"NOT_FOUND"} });

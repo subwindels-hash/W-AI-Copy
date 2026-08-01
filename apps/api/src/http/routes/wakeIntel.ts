@@ -8,7 +8,6 @@ import { validate } from "../middleware/validate.js";
 import { WakeIntelligenceService as Wi } from "../../wakeIntel/wakeIntelligence.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const activateBody = z.object({

@@ -2,7 +2,7 @@ import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { z } from "zod";
-import * as keys from "../../services/apikey.service.js";
+import * as keys from "../../publicApi/publicApi.service.js";
 import * as wh from "../../services/webhook.service.js";
 
 const Id = z.object({ id: z.string().cuid() });

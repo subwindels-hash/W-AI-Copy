@@ -9,7 +9,6 @@ import { MediaPipelineService } from "../../mediaFactory/pipeline.service.js";
 import { PublishingService } from "../../mediaFactory/publishing.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
-import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
 const genBody = z.object({ type: z.enum(["image","audio","music","video","character","cartoon","lesson","quiz","marketing","podcast"]), channel: z.enum(["web","mobile","social","podcast","audiobook","training","marketing","presentation","navigation","meeting"]), prompt: z.string().min(1).max(5000) });

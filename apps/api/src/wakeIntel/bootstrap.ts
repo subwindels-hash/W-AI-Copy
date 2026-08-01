@@ -3,10 +3,14 @@
  */
 import { redisCmd as redis } from "../db/redis.js";
 import { WakeIntelligenceService as Wi } from "./wakeIntelligence.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const K = { patterns: "wi:clap-patterns", mfa: "wi:mfa-policies", bindings: "wi:bindings", emergency: { contacts: "wi:emergency:contacts" }, devices: "wi:devices" };
 
 export async function bootstrapWakeIntelligence(logger?: any): Promise<void> {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("wake-intel", logger);
+
   const existing = await redis.zrange(K.patterns, 0, -1);
   if (existing.length > 0) {
     logger?.info("[wake-intel] bootstrap skipped", { patterns: existing.length });

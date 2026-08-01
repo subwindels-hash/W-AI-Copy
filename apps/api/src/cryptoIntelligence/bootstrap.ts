@@ -4,6 +4,7 @@
  */
 import { redisCmd as redis } from "../db/redis.js";
 import { CryptoIntelligenceService as CiSvc } from "./cryptoIntelligence.service.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const K = {
   chains: "ci:chains", tickers: "ci:tickers", defi: "ci:defi", yields: "ci:yields",
@@ -12,6 +13,9 @@ const K = {
 };
 
 export async function bootstrapCryptoIntelligence(logger?: any): Promise<void> {
+  // Synthetic demo records are opt-in; see config/demoData.ts.
+  if (!demoDataEnabled()) return skipDemoSeed("crypto-intelligence", logger);
+
   const existing = await redis.zrange(K.chains, 0, -1);
   if (existing.length > 0) {
     logger?.info("[crypto-intel] bootstrap skipped", { chains: existing.length });
