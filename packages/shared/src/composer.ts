@@ -85,15 +85,35 @@ export interface ComposerValidationResult {
   estimatedCostPerRun: number;
 }
 
+/**
+ * Outcome of a composer workflow run.
+ *
+ * `queued` exists because triggering a run does not execute it: node execution
+ * belongs to the workflow engine, which reports back separately. The service
+ * previously recorded `succeeded` immediately and fed that into the stored
+ * successRate, so a workflow that had never run anything showed 100% success.
+ * A run is `queued` until something actually reports an outcome.
+ */
+export type ComposerRunStatus = "queued" | "running" | "succeeded" | "failed";
+
 export interface ComposerRunLog {
   id: string;
   workflowId: string;
   startedAt: string;
   completedAt?: string;
-  status: "running" | "succeeded" | "failed";
+  status: ComposerRunStatus;
   durationMs: number;
   stepCount: number;
   triggeredBy: string;
+  /** Present when an executor reported the outcome; absent while queued. */
+  reportedBy?: string;
+}
+
+/** Result an executor posts back once it has actually run the workflow. */
+export interface ComposerRunOutcome {
+  status: "succeeded" | "failed";
+  durationMs?: number;
+  reportedBy: string;
 }
 
 export const upsertWorkflowSchema = z.object({

@@ -22,6 +22,13 @@ const upsert = z.object({
   })),
 });
 const run = z.object({ input: z.record(z.string(), z.unknown()).optional() });
+// Only an executor that actually ran the workflow may resolve a run, and it
+// must identify itself so the verdict is attributable.
+const runOutcome = z.object({
+  status: z.enum(["succeeded", "failed"]),
+  durationMs: z.number().int().nonnegative().optional(),
+  reportedBy: z.string().min(1).max(200),
+});
 
 export function registerComposerRoutes(router: Router) {
   router.get("/dashboard/rollup", async (_req, res, next) => { try { res.json({ ok: true, data: await ComposerService.dashboard() }); } catch (e) { next(e); } });
@@ -31,6 +38,12 @@ export function registerComposerRoutes(router: Router) {
   router.get("/workflows/:id/validate", async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.validate(req.params.id) }); } catch (e) { next(e); } });
   router.post("/workflows/:id/deploy", async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.deploy(req.params.id) }); } catch (e) { next(e); } });
   router.post("/workflows/:id/run", validate({ body: run }), async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.run(req.params.id, req.user!.id) }); } catch (e) { next(e); } });
+  // An executor reports what actually happened. This is the only path that may
+  // mark a run succeeded or failed — triggering a run records it as `queued`,
+  // never as a success it has not earned.
+  router.post("/runs/:runId/outcome", validate({ body: runOutcome }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await ComposerService.reportRunOutcome(req.params.runId, req.body) }); } catch (e) { next(e); }
+  });
   router.get("/runs", async (_req, res, next) => { try { res.json({ ok: true, data: await ComposerService.getRuns() }); } catch (e) { next(e); } });
   router.get("/library", async (_req, res) => res.json({ ok: true, data: (await import("../../composer/composer.service.js")).LIBRARY }));
 

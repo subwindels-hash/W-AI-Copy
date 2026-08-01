@@ -11,6 +11,7 @@ import type {
   ComposerDashboard,
   ComposerLibraryEntry,
   ComposerRunLog,
+  ComposerRunOutcome,
   ComposerValidationResult,
 } from "@windels/shared";
 
@@ -107,7 +108,10 @@ export const ComposerService = {
       ],
       status: "draft", version: 1, createdBy: uid,
       createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
-      runs: 0, avgDurationMs: 0, successRate: 1,
+      // A workflow that has never run has no success rate to report. This was
+      // seeded at 1 (100%), so a brand-new workflow advertised a perfect record
+      // it had not earned.
+      runs: 0, avgDurationMs: 0, successRate: 0,
     };
     await redis.hset(K.wf(oid, id), "_doc", s2(wf));
     await redis.sadd(K.wfs(oid), id);
@@ -163,7 +167,7 @@ export const ComposerService = {
       version: (existing?.version || 0) + 1, createdBy: existing?.createdBy || input.createdBy,
       createdAt: existing?.createdAt || now, updatedAt: now,
       lastDeployedAt: existing?.lastDeployedAt, runs: existing?.runs || 0,
-      avgDurationMs: existing?.avgDurationMs || 0, successRate: existing?.successRate ?? 1,
+      avgDurationMs: existing?.avgDurationMs || 0, successRate: existing?.successRate ?? 0,
     };
     await redis.hset(K.wf(oid, id), "_doc", s2(wf));
     await redis.sadd(K.wfs(oid), id);
@@ -195,24 +199,78 @@ export const ComposerService = {
     return wf;
   },
 
+  /**
+   * Queue a workflow run.
+   *
+   * Executing the workflow's nodes is the job of the workflow engine, which
+   * reports back through `reportRunOutcome`. This method previously recorded
+   * the run as `succeeded` the instant it was triggered — having executed
+   * nothing — and fed that verdict into the stored `successRate`, so a
+   * workflow that had never done any work displayed 100% success. (An earlier
+   * version was worse still: it failed 1% of runs at random.)
+   *
+   * A triggered run is now `queued`. It contributes to `runs` but not to
+   * `successRate` or the success counter until a real outcome arrives.
+   */
   async run(id: string, userId: string, oid = "org-windels", _input?: Record<string,unknown>): Promise<ComposerRunLog> {
     const wf = await this.get(id, oid);
     if (!wf) throw Object.assign(new Error("not found"), { status: 404 });
     const start = Date.now();
-    // Executing the workflow's nodes is the job of the workflow engine. This
-    // stood in for it by sleeping 15-45ms per node and failing the run outright
-    // with a 1% probability — so a workflow could be reported as failed for no
-    // reason, and that verdict fed the stored successRate. The run is recorded
-    // as succeeded with its real elapsed time until a real engine reports back.
-    const fail = false;
-    const dur = Date.now()-start;
-    const log: ComposerRunLog = { id: uid("run-"), workflowId: id, startedAt: new Date(start).toISOString(), completedAt: new Date().toISOString(), status: fail ? "failed" : "succeeded", durationMs: dur, stepCount: wf.nodes.length, triggeredBy: userId };
+    const log: ComposerRunLog = {
+      id: uid("run-"), workflowId: id,
+      startedAt: new Date(start).toISOString(),
+      status: "queued",
+      durationMs: 0,
+      stepCount: wf.nodes.length,
+      triggeredBy: userId,
+    };
     await redis.zadd(K.runs(oid), Date.now(), s2(log));
     await redis.zremrangebyrank(K.runs(oid), 0, -501);
-    wf.runs += 1; wf.successRate = (wf.successRate*(wf.runs-1) + (fail?0:1))/wf.runs; wf.avgDurationMs = Math.round((wf.avgDurationMs*(wf.runs-1) + dur)/wf.runs);
-    await redis.hset(K.wf(oid, id), "_doc", s2(wf));
     await redis.hincrby(K.metrics(oid), "totalRuns", 1);
-    if (!fail) await redis.hincrby(K.metrics(oid), "success", 1);
+    return log;
+  },
+
+  /**
+   * Record the outcome an executor actually observed.
+   *
+   * This is the only path that may mark a run succeeded or failed, and the only
+   * one that moves `successRate` — keeping the reported figure a measurement
+   * rather than an assumption.
+   */
+  async reportRunOutcome(
+    runId: string,
+    outcome: ComposerRunOutcome,
+    oid = "org-windels",
+  ): Promise<ComposerRunLog> {
+    const rows = await redis.zrange(K.runs(oid), 0, -1);
+    const idx = rows.findIndex((r) => (JSON.parse(r) as ComposerRunLog).id === runId);
+    if (idx < 0) throw Object.assign(new Error("run not found"), { status: 404 });
+
+    const log = JSON.parse(rows[idx]!) as ComposerRunLog;
+    if (log.status !== "queued" && log.status !== "running") {
+      throw Object.assign(new Error("run already resolved"), { status: 409 });
+    }
+
+    const started = Date.parse(log.startedAt);
+    log.status = outcome.status;
+    log.completedAt = new Date().toISOString();
+    log.durationMs = outcome.durationMs ?? Math.max(0, Date.now() - started);
+    log.reportedBy = outcome.reportedBy;
+
+    // Rewrite the stored entry in place, preserving its ordering score.
+    const score = await redis.zscore(K.runs(oid), rows[idx]!);
+    await redis.zrem(K.runs(oid), rows[idx]!);
+    await redis.zadd(K.runs(oid), score ? Number(score) : started, s2(log));
+
+    const wf = await this.get(log.workflowId, oid);
+    if (wf) {
+      const ok = outcome.status === "succeeded" ? 1 : 0;
+      wf.runs += 1;
+      wf.successRate = (wf.successRate * (wf.runs - 1) + ok) / wf.runs;
+      wf.avgDurationMs = Math.round((wf.avgDurationMs * (wf.runs - 1) + log.durationMs) / wf.runs);
+      await redis.hset(K.wf(oid, log.workflowId), "_doc", s2(wf));
+    }
+    if (outcome.status === "succeeded") await redis.hincrby(K.metrics(oid), "success", 1);
     return log;
   },
 
