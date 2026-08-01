@@ -274,10 +274,63 @@ heuristic, not the module.
 have a UI has one. The 24 PARTIAL entries are now almost entirely the ≥5-route
 rule and missing-types-nobody-would-import — i.e. **the audit's scoring model,
 not outstanding work**. Further COMPLETE-chasing means inventing endpoints or
-writing dead files. If you want more value from this codebase, the honest next
-step is a new capability or a real hardening item (e.g. full FIDO2 attestation
-validation in `verifyRegister`, which is still explicitly MVP-level), not a
-higher number.
+writing dead files.
+
+### 5.5 Self-declared incompleteness sweep (2026-08-01, same branch)
+
+**Suite 614 → 639 passing** (55 files, 0 failing).
+
+The audit's `status` field had stopped being a useful lead, so this pass changed
+technique: **grep live code for places that admit they are incomplete** —
+`not implemented`, `placeholder`, `intentionally deferred`, discarded `_arg`
+parameters — rather than trusting module metadata. That found two routed
+endpoints reporting outcomes they had not earned.
+
+**1. `expertsPlatform.query()` returned placeholder text as expert advice.**
+The whole implementation was:
+
+```ts
+async query(id, _q) {
+  await redis.incr(K.q24);
+  return { response: "[expert response placeholder — ...]", ... };
+}
+```
+
+The question was discarded, nothing was consulted, and the call was counted as
+a served query while the dashboard reported `disclaimerEnforced: true`. The
+declared domains are **government, healthcare, pharmacy, engineering, legal**
+and lecturer — a placeholder rendered where a user expects clinical or legal
+guidance is the most consequential fake completion found in this codebase.
+
+Two further defects sat on the same endpoint, invisible because nothing
+exercised it end to end: the route validated `{ q }` while the web client posts
+`{ question }` (so every UI call 400'd), and the service returned `response`
+while the client read `answer`.
+
+Now follows the `education/lecturer` rule — answer with a real model, or state
+plainly that no answer was produced. Returns a discriminated union
+(`EpExpertQueryResult`) so a caller cannot read an `answer` that was never
+generated; refusals keep the consult-a-professional disclaimer and are **not**
+counted as served queries.
+
+**2. `composer.run()` recorded success for work it never did.** Node execution
+belongs to the workflow engine, but `run()` marked the run `succeeded` on
+trigger and fed that into `successRate`; new workflows also defaulted to
+`successRate: 1`. So a workflow that had executed nothing advertised 100%
+success. Runs are now `queued` until `reportRunOutcome()` receives a real,
+attributable verdict (rejecting a duplicate report with 409).
+
+Notably, `moduleGates.test.ts` had a test asserting `status === "succeeded"` for
+30 triggered runs. It was written to prove an earlier 1%-random-failure bug was
+gone, but it **locked in the replacement fabrication**. Rewritten — a reminder
+that a passing test can encode the bug.
+
+**Technique worth reusing next session:** the grep above still lists items in
+`platform/cluster.service.ts` (live hydration "not implemented", honestly
+reports `unknown`) and `governance/securityStandards.service.ts` (a control
+register that self-reports `partial`/`missing` — accurate, not fake). Those two
+are honest and were left alone. `services/*` bulk files are excluded from the
+build gate and out of scope.
 
 ---
 
