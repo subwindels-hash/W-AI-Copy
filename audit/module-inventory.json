@@ -621,7 +621,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "attachments/attachments.test.ts"
+      "attachments/attachments.test.ts",
+      "services/talk.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -838,9 +839,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 199,
+      "serviceTotalSloc": 394,
       "serviceFiles": [
         "benchmarks.service.ts",
+        "benchmarks.test.ts",
         "bootstrap.ts",
         "benchmarks/benchmarks.service.ts"
       ],
@@ -887,10 +889,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "benchmarks/benchmarks.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "billing",
@@ -4279,13 +4283,14 @@
       "serviceFile": {
         "file": "leadDiscovery.service.ts",
         "path": "/home/user/WIN/apps/api/src/leadDiscovery/leadDiscovery.service.ts",
-        "sloc": 28,
+        "sloc": 36,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 56,
+      "serviceTotalSloc": 282,
       "serviceFiles": [
         "leadDiscovery.service.ts",
+        "leadDiscovery.test.ts",
         "leadDiscovery/leadDiscovery.service.ts"
       ],
       "importedServiceFiles": [
@@ -4322,12 +4327,15 @@
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Organization"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "leadDiscovery/leadDiscovery.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "Google"
@@ -6686,7 +6694,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/talk.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"

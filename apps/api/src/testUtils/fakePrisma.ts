@@ -145,7 +145,7 @@ export class FakePrisma {
   }
 
   /** `participants` -> `ConversationParticipant`, `messages` -> `Message`. */
-  relatedModel(field: string): string {
+  relatedModel(field: string, parentModel?: string): string {
     const singular = field.endsWith("s") ? field.slice(0, -1) : field;
     const known: Record<string, string> = {
       participant: "ConversationParticipant",
@@ -153,13 +153,39 @@ export class FakePrisma {
       event: "AgentEvent",
       attachment: "MessageAttachment",
     };
+    // Relations whose target is prefixed by the owning model rather than named
+    // after the field — e.g. TalkChannel.members holds TalkMember rows, not
+    // "Member" rows. Without this, `include: { members: true }` silently
+    // resolved to an empty list and every private-channel membership check
+    // looked like a non-member.
+    const prefixed: Record<string, Record<string, string>> = {
+      TalkChannel: { member: "TalkMember", message: "TalkMessage" },
+      TalkMessage: { attachment: "MessageAttachment" },
+    };
+    if (parentModel && prefixed[parentModel]?.[singular]) {
+      return prefixed[parentModel]![singular]!;
+    }
     return known[singular] ?? singular.charAt(0).toUpperCase() + singular.slice(1);
   }
 
   private relatedRows(model: string, row: Row, field: string): Row[] {
-    const target = this.relatedModel(field);
-    const fk = `${model.charAt(0).toLowerCase()}${model.slice(1)}Id`;
-    return this.rows(target).filter((r) => r[fk] === row.id);
+    const target = this.relatedModel(field, model);
+    const rows = this.rows(target);
+    // Prisma names the back-reference after the *relation*, which is not always
+    // the full model name: TalkMember points at TalkChannel via `channelId`,
+    // not `talkChannelId`. Try the model-derived key first, then the same name
+    // with a known prefix stripped, so both conventions resolve.
+    const candidates = [`${model.charAt(0).toLowerCase()}${model.slice(1)}Id`];
+    for (const prefix of ["Talk", "Canvas", "Agent", "Project"]) {
+      if (model.startsWith(prefix) && model.length > prefix.length) {
+        const bare = model.slice(prefix.length);
+        candidates.push(`${bare.charAt(0).toLowerCase()}${bare.slice(1)}Id`);
+      }
+    }
+    for (const fk of candidates) {
+      if (rows.some((r) => fk in r)) return rows.filter((r) => r[fk] === row.id);
+    }
+    return [];
   }
 
   private hydrate(model: string, row: Row, opts: Row = {}): Row {
@@ -178,13 +204,13 @@ export class FakePrisma {
       // to-one by convention: <field>Id on this row
       const fkOnSelf = `${field}Id`;
       if (fkOnSelf in row) {
-        const target = this.relatedModel(field);
+        const target = this.relatedModel(field, model);
         const found = this.rows(target).find((r) => r.id === row[fkOnSelf]) ?? null;
         out[field] = found ? this.hydrate(target, found, typeof spec === "object" ? spec as Row : {}) : null;
         continue;
       }
       // to-many
-      const target = this.relatedModel(field);
+      const target = this.relatedModel(field, model);
       out[field] = this.relatedRows(model, row, field)
         .map((r) => this.hydrate(target, r, typeof spec === "object" ? spec as Row : {}));
     }
@@ -252,7 +278,7 @@ export class FakePrisma {
         // Insert each related row with the back-reference Prisma would set.
         const fk = `${model.charAt(0).toLowerCase()}${model.slice(1)}Id`;
         for (const [field, payloads] of nested) {
-          const target = self.relatedModel(field);
+          const target = self.relatedModel(field, model);
           for (const p of payloads) {
             self.rows(target).push({
               id: p.id ?? cuid(),

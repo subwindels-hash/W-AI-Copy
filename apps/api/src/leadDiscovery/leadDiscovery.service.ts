@@ -14,7 +14,15 @@ export const LeadDiscoveryService = {
     const payload: any = await response.json(); if (payload.status !== "OK" && payload.status !== "ZERO_RESULTS") throw AppError.upstream(`Google Places: ${payload.status}`);
     const leads: Lead[] = [];
     for (const item of (payload.results ?? []).slice(0, 20)) {
-      const sourceId = String(item.place_id); if (!sourceId) continue; const lead: Lead = { id: `lead-${randomUUID()}`, name: String(item.name), category: item.types?.[0], address: item.formatted_address, source: "google_places", sourceId, discoveredAt: new Date().toISOString(), verificationStatus: "source_returned", query };
+      // Guard before coercing: String(undefined) is the truthy string
+      // "undefined", so the previous `String(item.place_id); if (!sourceId)`
+      // never rejected anything. A provider entry without a place_id was stored
+      // as a lead whose sourceId literally read "undefined", which breaks
+      // dedupe (every such lead collides) and pollutes CRM exports.
+      if (item.place_id === undefined || item.place_id === null || item.place_id === "") continue;
+      const sourceId = String(item.place_id);
+      if (!sourceId) continue;
+      const lead: Lead = { id: `lead-${randomUUID()}`, name: String(item.name), category: item.types?.[0], address: item.formatted_address, source: "google_places", sourceId, discoveredAt: new Date().toISOString(), verificationStatus: "source_returned", query };
       await redis.set(K.lead(organizationId, lead.id), JSON.stringify(lead)); await redis.lpush(K.leads(organizationId), lead.id); leads.push(lead);
     }
     await redis.ltrim(K.leads(organizationId), 0, 9999); return { query, source: "google_places", results: leads };
