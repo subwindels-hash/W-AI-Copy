@@ -27,6 +27,7 @@ export class AppError extends Error {
         SERVICE_UNAVAILABLE: 503,
         INTERNAL_ERROR: 500,
         // AI provider errors — surfaced to clients so they can react
+        CONTENT_SAFETY_REJECTED: 422,
         AI_PROVIDER_CONFIGURATION_REQUIRED: 503,
         AI_PROVIDER_ERROR: 502,
         AI_RATE_LIMITED: 429,

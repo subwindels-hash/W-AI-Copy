@@ -516,6 +516,16 @@ export function MediaFactoryPage() {
                     {j.platformAvailableAt && <> · available {fmtTime(j.platformAvailableAt)}</>}
                   </div>
                 )}
+                {/* S77 ChildSafetyReviewer verdict. Blocked content never reaches
+                    this list (createJob throws before persisting), so the only
+                    state worth surfacing is child-targeted content awaiting an
+                    age-appropriateness decision a keyword screen cannot make. */}
+                {j.safety === "child-targeted-review" && (
+                  <div className="text-[11px] text-amber-300 flex items-center gap-1.5">
+                    <AlertTriangle className="h-3 w-3"/>
+                    child-targeted — needs age-appropriateness review before publishing
+                  </div>
+                )}
                 {j.statusHistory && j.statusHistory.length > 1 && (
                   <details className="text-[11px] text-text-muted">
                     <summary className="cursor-pointer hover:text-text-bright">History ({j.statusHistory.length})</summary>

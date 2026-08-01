@@ -70,6 +70,8 @@ export type PubAuditKind =
   | "connect.start" | "connect.success" | "connect.failed" | "disconnect"
   | "job.created" | "job.scheduled" | "job.attempt" | "job.retry"
   | "job.published" | "job.failed" | "job.cancelled"
+  // S77 ChildSafetyReviewer blocked a publish before the job was created.
+  | "job.safety_rejected"
   | "webhook.synced";
 
 /** One entry of the append-only per-job status history (capped, newest last). */
@@ -116,6 +118,9 @@ export interface PubJobError {
   detail?: string;
 }
 
+/** Outcome of the publish-path child-safety screen. */
+export type PubJobSafetyState = "screened" | "child-targeted-review";
+
 export interface PubJob {
   id: string;
   orgId: string;
@@ -134,6 +139,15 @@ export interface PubJob {
   createdAt: string;
   updatedAt: string;
   publishedAt?: string;
+  /**
+   * Verdict recorded by the S77 ChildSafetyReviewer when the job was created.
+   *
+   * The reviewer is a blocking pipeline step: a job that exists has been
+   * screened, and one that was blocked was never persisted. "child-targeted-review"
+   * marks content aimed at children, which a keyword screen cannot clear for
+   * age-appropriateness on its own.
+   */
+  safety?: PubJobSafetyState;
   /** Latest status reported by the platform after upload (webhook sync), e.g. "processing" or "available". */
   platformStatus?: string;
   /** ISO time the platform reported the post fully available. */

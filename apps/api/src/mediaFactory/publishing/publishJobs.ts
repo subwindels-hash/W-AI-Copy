@@ -25,6 +25,7 @@ import {
   PLATFORM_ADAPTERS, PlatformPublishError, type FetchImpl, type MediaPayload, type PlatformAdapter,
 } from "./platforms.js";
 import { ensureFreshToken, ensureFreshOrgToken } from "./tokens.js";
+import { reviewContent } from "./childSafety.js";
 import type {
   PubJob, PubJobStatus, PubPlatformId, PubPublishInput, PubAuditEvent, PubAuditKind,
   PubPlatformCallbackUpdate, PubTokenScope,
@@ -169,6 +170,30 @@ export function createPublishEngine(deps: EngineDeps) {
     const input = validateInput(platform, rawInput);
     const t = now();
 
+    // S77 ChildSafetyReviewer — a blocking pipeline step, per the spec's
+    // "non-bypassable safety gates ... block publish/execution, not advisory
+    // warnings". This previously ran only in mediaFactory.generate(), so the
+    // publish route was an open path to a real upload: content generate()
+    // would have refused could be posted verbatim, and content that never went
+    // through generate() was never screened at all.
+    //
+    // The check runs before the job is persisted or queued, so a rejected
+    // upload never exists as a record that a worker tick could pick up.
+    const safety = reviewContent({ title: input.title, description: input.description, tags: input.tags });
+    if (safety.verdict === "blocked") {
+      await audit(oid, "job.safety_rejected", ownerUserId, {
+        platform,
+        detail: `blocked by content safety review: ${safety.reasons.join(", ")}`,
+      });
+      throw new AppError(
+        "CONTENT_SAFETY_REJECTED",
+        `Content safety review blocked this publish: ${safety.reasons.join(", ")}. ` +
+        `Revise the title, description and tags, or route the item through human review.`,
+        422,
+        { reasons: safety.reasons },
+      );
+    }
+
     if (input.idempotencyKey) {
       const marker = await kv.set(K.idem(oid, input.idempotencyKey), "pending", "EX", IDEM_TTL_SEC, "NX");
       if (marker === null) {
@@ -194,6 +219,9 @@ export function createPublishEngine(deps: EngineDeps) {
       nextAttemptAt: isFuture ? scheduledMs! : t,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
+      // Records that the reviewer ran and what it concluded, so the verdict is
+      // auditable rather than implied by the job's mere existence.
+      safety: safety.verdict === "child-review" ? "child-targeted-review" : "screened",
     };
     pushHistory(job, job.status, ownerUserId, isFuture ? `scheduled for ${input.scheduledAt}` : undefined);
     await kv.zadd(K.jobs(oid), t, job.id);
