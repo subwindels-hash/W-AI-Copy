@@ -98,6 +98,30 @@ is marked complete before all five.
 - **Test suites:** 26 Playwright specs in `tests/e2e/`; k6 load tests in `tests/load/`; vitest unit suites per module
 - **Known test baseline:** 103/103 regression pass (mediaFactory+tradingIntel+security) · 54/54 publishing unit tests (incl. webhook sync, org tokens, uploads) · 57/57 Playwright (smoke + S37–82) — all pass **on a working dev environment** (Postgres+Redis running)
 
+### 5.1 Verified gate status (2026-07-31, fresh-clone pass on `arena/019fbaf7-win`)
+
+Run `make verify` — no `.env`, Postgres, Redis, or Prisma network access needed.
+
+| Gate | Result |
+|---|---|
+| `pnpm build` | ✅ 4/4 |
+| `pnpm typecheck` | ✅ 5/5 |
+| `pnpm test` | ✅ 7/7 — **41 files passed, 3 skipped, 0 failed; 390 tests passed, 51 skipped** |
+
+Two blockers were found and fixed this session — both meant the previously
+reported "green" suite did **not** reproduce on a clean checkout:
+
+1. `config/env.ts` `process.exit(1)`s at import when `DATABASE_URL`/`REDIS_URL`/
+   `JWT_SECRET` are unset, killing **21 of 44 test files** during collection.
+   The prior remedy was a git-ignored local `.env`. Now fixed in tracked config:
+   `apps/api/vitest.config.ts` (production validation left strict on purpose —
+   `config/demoData.test.ts` asserts it still exits on a bad value).
+2. `services/ai/registry.test.ts` transitively constructed a real `PrismaClient`
+   at import, so a pure unit test needed a downloaded Prisma engine. Now mocked
+   with the repo's existing `FakePrisma`, recovering 5 never-executed tests.
+
+See **BUILD_STATUS.md §7**.
+
 ---
 
 ## 6. Known issues / open work (candidates for continuation)

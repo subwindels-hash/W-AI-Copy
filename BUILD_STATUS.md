@@ -11,16 +11,30 @@ was blocking it, and the two environment limits that remain.
 
 ## 1. Current gate status
 
+Verified 2026-07-31 on a **fresh clone**: no `.env`, no Postgres, no Redis, no
+network access to `binaries.prisma.sh`. Reproduce with a single command:
+
+```bash
+make verify     # db:generate:offline + build + typecheck + test
+```
+
 | Gate | Command | Result |
 |---|---|---|
 | Build | `pnpm build` | ✅ **4/4 tasks successful** |
 | Typecheck | `pnpm typecheck` | ✅ **5/5 tasks successful** |
-| Tests | `pnpm test` | ✅ **7/7 tasks** — 84 passed, 51 skipped, **0 failed** |
+| Tests | `pnpm test` | ✅ **7/7 tasks** — **390 passed, 51 skipped, 0 failed** (44 files: 41 passed, 3 integration suites auto-skipped) |
 | Web bundle | `vite build` | ✅ 0 errors (PlatformPage 602 kB / 107 kB gzip) |
 | API bundle | `tsc -p tsconfig.json` | ✅ 0 errors, `dist/index.js` emitted |
 
 Before this pass the API had **never been typechecked end-to-end** (see
 PROGRESS.md §S77B "Known pre-existing"). The reported baseline was ~402 errors.
+
+> **Correction (2026-07-31, later pass).** The row above previously read
+> "84 passed". That number was only achievable on a machine holding a
+> **git-ignored local `.env`** — the remedy recorded in §4 below. On a clean
+> checkout, 21 of 44 test files aborted during collection and only 246 tests
+> ran. Both causes are now fixed **in tracked files**, so the figure reproduces
+> for anyone who clones the repo. See §7.
 
 ---
 
@@ -103,6 +117,9 @@ product failures:
   env, which vitest surfaces as a hard crash. Created a local `.env` from
   `.env.example` with generated `JWT_SECRET` / `WINDELS_ENCRYPTION_KEY`
   (git-ignored). → 44 → 83 passing.
+  > ⚠️ **Superseded — this fix did not survive a clone.** The `.env` was
+  > git-ignored, so the repair existed only on that one machine. Replaced by
+  > `apps/api/vitest.config.ts`, which is tracked. See §7.
 - **`lecturer.test.ts`** required live Redis and a live AI provider; it took
   ~20 s and failed without them. Now mocks Redis with the repo's existing
   `FakeKv` and stubs the AI registry, so it deterministically exercises the
@@ -135,7 +152,66 @@ These are sandbox limits; the code is unaffected.
 ```bash
 npm i -g pnpm@10.34.5
 pnpm install
+make verify                  # db:generate:offline + build + typecheck + test
+```
+
+Equivalent long form:
+
+```bash
 pnpm db:generate:offline     # or `pnpm db:generate` with network access
-pnpm --filter @windels/shared build
 pnpm build && pnpm typecheck && pnpm test
 ```
+
+---
+
+## 7. Fresh-clone repair (2026-07-31, later pass)
+
+The gates above were reported green, but a clean checkout of the merged `main`
+reproduced only the build and typecheck. `pnpm test` failed: **21 of 44 test
+files, 5 failing assertions, only 246 of 441 tests reached.** Two independent
+causes, both now fixed in tracked files.
+
+### 7.1 Env validation killed the test runner at import time
+
+`src/config/env.ts` validates `process.env` at module scope and calls
+`process.exit(1)` when `DATABASE_URL` / `REDIS_URL` / `JWT_SECRET` are absent.
+Correct for a server — it must refuse to boot half-configured — but any test
+whose import graph reaches it (directly, or via `db/redis.ts`,
+`security/encryption.ts`, `config/demoData.ts`, …) died during collection with
+`process.exit unexpectedly called with "1"`. The earlier remedy was a local
+`.env`, which is git-ignored and therefore never reached anyone else.
+
+**Fix:** `apps/api/vitest.config.ts` supplies the minimum viable configuration
+through vitest's `test.env`. Deliberately *not* done by relaxing the schema:
+`config/demoData.test.ts` asserts that an ambiguous value (`WINDELS_DEMO_DATA=1`)
+still triggers `process.exit(1)`, so the production guard has to stay strict.
+The values are inert placeholders — every suite touching Redis or Prisma already
+substitutes `vi.mock("ioredis")`, `FakeKv`, or `testUtils/fakePrisma.ts`, so
+nothing is ever dialled. The three live-integration suites still self-skip via
+`testUtils/liveApi.ts`.
+
+### 7.2 A pure unit test required a real Prisma engine
+
+`services/ai/registry.test.ts` injects fake AI providers and never touches the
+database, but the registry imports `aiMonitoring.service.ts` → `db/client.ts`,
+which constructs a `PrismaClient` at module scope. Against the no-engine client
+that throws `PrismaClientValidationError` before any test is collected, so the
+file could only run where a full Prisma engine had been downloaded.
+
+**Fix:** mock `db/client.js` with the repo's existing `FakePrisma`, matching the
+pattern already used by the agents / conversations / attachments / publicApi
+suites. The telemetry path stays exercised — `recordAiRequest` really is called
+and really does write — without an engine. Recovers **5 tests** that had never
+executed in this environment.
+
+### Result
+
+| | Before | After |
+|---|---|---|
+| Test files | 21 failed, 20 passed, 3 skipped | **41 passed, 3 skipped, 0 failed** |
+| Tests | 5 failed, 246 passed | **390 passed, 51 skipped, 0 failed** |
+| Reproducible on a fresh clone | ❌ needed a git-ignored `.env` | ✅ `make verify` |
+
+Neither fix touches production code paths: one adds a test-runner config, the
+other changes a single test file. Build and typecheck are unaffected (still
+4/4 and 5/5).

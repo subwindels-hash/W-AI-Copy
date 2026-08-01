@@ -1,5 +1,28 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
-import { ProviderRegistry } from "./registry.js";
+import { FakePrisma } from "../../testUtils/fakePrisma.js";
+
+/**
+ * The registry imports `aiMonitoring.service.js` (to record request telemetry),
+ * which imports `db/client.js`, which constructs a `PrismaClient` at module
+ * scope. That made this suite — which injects fake providers and never touches
+ * the database — fail at *collection* time with:
+ *
+ *   PrismaClientValidationError: Prisma Client was configured to use the
+ *   `adapter` option but `prisma generate` was run with `--no-engine`.
+ *
+ * i.e. a pure unit test could only run on a machine with a fully generated
+ * Prisma engine. Substituting the same `FakePrisma` the other CRUD suites use
+ * keeps the telemetry path exercised (`recordAiRequest` really is called and
+ * really does write) without requiring an engine or a live database.
+ */
+const db = new FakePrisma();
+vi.mock("../../db/client.js", () => ({ prisma: db.client() }));
+
+// Imported dynamically, after the mock is registered — `vi.mock` is hoisted
+// above module initialisation, so a static import of the registry would pull in
+// the real Prisma client before the factory could replace it. This mirrors the
+// pattern used by agents/conversations/attachments/publicApi.
+const { ProviderRegistry } = await import("./registry.js");
 import type { AIProvider, CompletionRequest, CompletionChunk, ModelHealth, ModelInfo } from "./types.js";
 
 /**
