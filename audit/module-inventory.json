@@ -2387,10 +2387,11 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 845,
+      "serviceTotalSloc": 1069,
       "serviceFiles": [
         "bootstrap.ts",
         "cli.service.ts",
+        "devportal.test.ts",
         "environment.service.ts",
         "sdkRegistry.service.ts",
         "toolkit.service.ts",
@@ -2452,10 +2453,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "devportal/devportal.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "digitalHumans",
@@ -5054,11 +5057,11 @@
       "serviceFile": {
         "file": "mobileAuth.service.ts",
         "path": "/home/user/WIN/apps/api/src/services/mobileAuth.service.ts",
-        "sloc": 354,
+        "sloc": 430,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 501,
+      "serviceTotalSloc": 577,
       "serviceFiles": [
         "services/mobileAuth.service.ts",
         "services/push.service.ts"
@@ -5098,7 +5101,9 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "services/mobileAuth.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "PARTIAL"
