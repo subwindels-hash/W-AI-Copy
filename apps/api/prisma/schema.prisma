@@ -1351,6 +1351,15 @@ model MobileDevice {
   osVersion        String?
   appVersion       String?
   deviceModel      String?
+  /// bcrypt hash of the device PIN fallback.
+  ///
+  /// Must stay a dedicated column: this previously shared `deviceModel`, which
+  /// POST /mobile/devices/register writes straight from the request body
+  /// (`deviceModel: z.string().max(64)`). A bcrypt hash is 60 characters, so a
+  /// caller could overwrite the stored hash — or plant the hash of a PIN they
+  /// chose — and then satisfy the PIN check. Never expose this field in a
+  /// select or accept it from a request body.
+  pinHash          String?
   pushTokenHash    String?   // sha256 of the push endpoint for quick lookups/rotations
   biometricEnabled Boolean   @default(false)
   lastSeenAt       DateTime  @default(now())

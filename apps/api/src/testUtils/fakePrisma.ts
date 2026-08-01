@@ -337,6 +337,27 @@ export class FakePrisma {
         row.updatedAt = new Date();
         return self.hydrate(model, row, { include, select });
       },
+      /**
+       * UPSERT — update when `where` matches, otherwise create.
+       *
+       * Added for the mobile device registry, which upserts on a device id that
+       * may not exist yet. Mirrors Prisma's semantics: the `create` payload is
+       * merged with the `where` clause so the identifying field is present on
+       * the new row.
+       */
+      async upsert({ where, create, update, include, select }: Row) {
+        const row = self.rows(model).find((r) => self.matches(model, r, where));
+        if (row) {
+          for (const [k, v] of Object.entries((update ?? {}) as Row)) {
+            if (v && typeof v === "object" && "increment" in v) row[k] = (row[k] ?? 0) + (v as Row).increment;
+            else if (v && typeof v === "object" && "decrement" in v) row[k] = (row[k] ?? 0) - (v as Row).decrement;
+            else if (v !== undefined) row[k] = v;
+          }
+          row.updatedAt = new Date();
+          return self.hydrate(model, row, { include, select });
+        }
+        return this.create({ data: { ...(create ?? {}) }, include, select });
+      },
       async updateMany({ where, data }: Row) {
         const rows = self.rows(model).filter((r) => self.matches(model, r, where));
         for (const row of rows) Object.assign(row, data, { updatedAt: new Date() });
