@@ -875,7 +875,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/benchmarks.ts (83 LOC)",
+    "sharedTypes": "packages/shared/src/benchmarks.ts (106 LOC)",
     "web": {
       "client": "apps/web/src/lib/benchmarks.ts (13 LOC)",
       "pages": []
@@ -1880,10 +1880,11 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 486,
+      "serviceTotalSloc": 658,
       "serviceFiles": [
         "bootstrap.ts",
         "cryptoIntelligence.service.ts",
+        "cryptoIntelligence.test.ts",
         "cryptoIntelligence/cryptoIntelligence.service.ts"
       ],
       "importedServiceFiles": [
@@ -1941,12 +1942,14 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "cryptoIntelligence/cryptoIntelligence.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "Polygon.io"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "cyber",
@@ -5835,7 +5838,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1226,
+      "serviceTotalSloc": 1455,
       "serviceFiles": [
         "aiValidation.service.ts",
         "apiTest.service.ts",
@@ -5845,6 +5848,7 @@
         "drTest.service.ts",
         "securityTest.service.ts",
         "testRunner.service.ts",
+        "testRunner.test.ts",
         "workflowTest.service.ts",
         "qa/testRunner.service.ts"
       ],
@@ -5897,10 +5901,12 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "qa/testRunner.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "quantum",
