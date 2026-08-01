@@ -5,7 +5,7 @@ specification (`uploads/CLAUDE.md`).
 
 > **Build status as of 2026-08-01:** the monorepo builds, typechecks, and tests
 > green end-to-end **on a fresh clone** — `pnpm build` (4/4), `pnpm typecheck`
-> (5/5), `pnpm test` (7/7, **639 unit tests passing** across 55 files, 3
+> (5/5), `pnpm test` (7/7, **652 unit tests passing** across 57 files, 3
 > integration suites auto-skipped without a live server). No `.env`, Postgres,
 > or Redis required:
 >
@@ -13,7 +13,7 @@ specification (`uploads/CLAUDE.md`).
 > pnpm install && make verify
 > ```
 >
-> See `SESSION_CONTINUITY.md` §5.2–§5.5 for the Sessions 1–88 completion pass
+> See `SESSION_CONTINUITY.md` §5.2–§5.6 for the Sessions 1–88 completion pass
 > (every module now has test coverage, and every module that should have a UI
 > has one), and for why the "unfinished modules" count in the audit is a
 > heuristic rather than a work order.

@@ -1421,3 +1421,11 @@ Full Project Development Dashboard (S84.13): archive upload, project list with s
 - `audit/module-inventory.json`: **DEMO DATA 44 → 0**; 48 modules COMPLETE (16 STUB + 16 PARTIAL + 5 MISSING remain — mostly stale entries and unmounted bulk services).
 - `UNFINISHED_MODULES.md` DEMO DATA section fully struck with per-module notes.
 - Tests: **153/153 pass** (guard + etl + collaboration + projectContinuity + mediaFactory + tradingIntel + security). API tsc: 0 new errors.
+
+## Fake-verdict guard + DR drill honesty (completion pass, 2026-08-01)
+**Status:** ✅ The second fabrication class — *reporting an outcome for work never performed* — is now closed and CI-enforced.
+
+- **`qa/drTest.service.ts` fixed.** `backup-restore`, `db-failover` and `redis-restore` slept for a randomised interval, invented a snapshot size, derived `rtoMs` from their own sleep and hardcoded `rpoMs = 200`. Since `success` defaults to `true` and those branches never reassigned it, the drill reported **passed** — and the invented figures were asserted against the caller's `maxRtoMs`/`maxRpoMs`, so a recovery-objective audit could be satisfied by a drill that did nothing. Now returns `DR_SCENARIO_NOT_IMPLEMENTED`: failing verdict, no RTO/RPO assertions, no metrics, and a log line explaining why. `dns-failover`/`total-outage` keep their real `/health` probe but lose the artificial sleep that inflated RTO and the hardcoded `rpoMs = 500`.
+- **New `apps/api/src/noFakeVerdict.guard.test.ts`** — successor to `noRandomData.guard.test.ts`. Fails the suite when a *simulation marker* (a sleep commented `simulate`, a returned placeholder literal) appears within 12 lines of a *success claim* (`status: "passed"|"succeeded"|"completed"|"healthy"`, `success = true`, `ok: true`). Carries its own negative test — a guard that cannot detect its target reads as assurance while providing none — and replaying the pre-fix `drTest`/`expertsPlatform` source through it yields 4 hits, confirming it would have caught both without a manual sweep.
+- **Accepted honest patterns** for new code: `queued` until an executor reports (`composer`), `not_configured` refusals (`expertsPlatform`, `leadDiscovery`), `*_NOT_IMPLEMENTED` with no derived assertions (`drTest`).
+- **Tests:** 9 new in `qa/drTest.test.ts`, 4 in the guard. **Suite 652/652.** Build 4/4, typecheck 5/5.

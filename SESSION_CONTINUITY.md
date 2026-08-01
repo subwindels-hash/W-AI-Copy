@@ -332,6 +332,49 @@ register that self-reports `partial`/`missing` — accurate, not fake). Those tw
 are honest and were left alone. `services/*` bulk files are excluded from the
 build gate and out of scope.
 
+### 5.6 The pattern, and the guard that ends the manual hunt (2026-08-01)
+
+**Suite 639 → 652 passing** (57 files, 0 failing).
+
+Re-running the §5.5 sweep found the placeholder class now clean (0 hits) but
+surfaced one more instance of the deeper pattern, in **`qa/drTest.service.ts`**.
+Three of its six scenarios — `backup-restore`, `db-failover`, `redis-restore` —
+slept for a randomised interval, invented a snapshot size, set `rtoMs` from
+their own sleep and hardcoded `rpoMs = 200`. `success` defaults to `true` and
+that branch never reassigned it, so the drill reported **passed**, and those
+invented figures were then asserted against the caller's `maxRtoMs`/`maxRpoMs`.
+**A recovery-objective audit could be satisfied by a drill that did nothing.**
+It now reports `DR_SCENARIO_NOT_IMPLEMENTED` with no RTO/RPO assertions at all.
+
+**The real deliverable is the guard.** Four sessions of this pass each found the
+same shape by hand:
+
+| Module | Reported | Actually did |
+|---|---|---|
+| `composer.run` | `succeeded` + successRate | nothing (engine's job) |
+| `expertsPlatform.query` | expert answer | returned a placeholder string |
+| `toolkit.runTests` / `deploy` | pass counts, log transcript | nothing |
+| `qa/drTest` | `passed` against an SLA | slept |
+
+`noFakeVerdict.guard.test.ts` turns that into a build failure: a **simulation
+marker** (a sleep commented `simulate`, a returned placeholder literal) within
+12 lines of a **success claim** (`status: "passed"|"succeeded"|"completed"|
+"healthy"`, `success = true`, `ok: true`) fails the suite. It is deliberately
+narrow — it cannot prove code does real work, only catch the shape that has now
+recurred four times.
+
+It carries a **negative test**: a guard that cannot detect its own target reads
+as assurance while providing none. Replaying the pre-fix `drTest` and
+`expertsPlatform` source through its matcher produces 4 hits, so it would have
+caught both without a manual sweep.
+
+**This is where the "complete the unfinished modules" thread ends usefully.**
+The audit's PARTIAL count is a scoring artifact; the placeholder and
+fake-verdict classes are now closed *and enforced*. The accepted honest
+patterns, for anyone adding code: `queued` until an executor reports
+(`composer`), `not_configured` refusals (`expertsPlatform`, `leadDiscovery`),
+and `*_NOT_IMPLEMENTED` with no derived assertions (`drTest`).
+
 ---
 
 ## 6. Known issues / open work (candidates for continuation)
