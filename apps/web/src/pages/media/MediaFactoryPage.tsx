@@ -10,6 +10,7 @@
  */
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { api, ApiError } from "@/lib/api";
+import { meteringApi, type MediaCostEstimate, MEDIA_USAGE_UNIT_LABEL } from "@/lib/mediaFactory";
 import { publishingApi, type PubJob, type PubPlatformId, type PubPlatformInfo, type PubAuditEvent, type PubUploadRecord, type PubWebhookConfig, type PubWebhookRegistration } from "@/lib/mediaFactory";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -21,8 +22,7 @@ import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Film, Upload, Video, Loader2, CheckCircle2, AlertTriangle, Youtube, Music2,
   Send, Link2, Unlink, RotateCcw, XCircle, ExternalLink, CalendarClock, History,
-  FileUp, Copy, RadioTower, Trash2, Building2,
-} from "lucide-react";
+  FileUp, Copy, RadioTower, Trash2, Building2, Gauge } from "lucide-react";
 
 type Aspect = "16:9"|"9:16"|"1:1";
 interface RenderJob {
@@ -146,6 +146,17 @@ export function MediaFactoryPage() {
       setPubDescription((d) => d || job.script.slice(0, 300));
     }
   }, [job?.status, job?.title, job?.script]);
+
+  // S77.B item 22 — show the projected cost BEFORE the render runs. Refreshes
+  // as the inputs change so the figure always matches what the button will do.
+  const [estimate, setEstimate] = useState<MediaCostEstimate | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    meteringApi.estimateRender({ durationSec: duration, aspect })
+      .then((e) => { if (!cancelled) setEstimate(e); })
+      .catch(() => { if (!cancelled) setEstimate(null); });
+    return () => { cancelled = true; };
+  }, [duration, aspect]);
 
   const render = useCallback(async () => {
     setBusy(true); setErr(null); setJob(null);
@@ -308,6 +319,30 @@ export function MediaFactoryPage() {
                 <Input type="number" min={3} max={60} value={duration} onChange={e=>setDuration(Number(e.target.value))}/>
               </div>
             </div>
+            {estimate && (
+              <div className="rounded-lg border border-white/5 bg-white/[0.02] p-3 text-[11px] space-y-1">
+                <div className="flex items-center gap-1.5 text-text-muted uppercase tracking-wider">
+                  <Gauge className="h-3 w-3"/> Estimated cost before you run this
+                </div>
+                {estimate.lines.map((l) => (
+                  <div key={l.kind} className="flex justify-between gap-3">
+                    <span className="text-text-muted">
+                      {Math.round(l.quantity).toLocaleString()} {MEDIA_USAGE_UNIT_LABEL[l.kind]}
+                      <span className="opacity-60"> · {l.basis}</span>
+                    </span>
+                    <span className={l.unpriced ? "text-text-muted" : "text-white"}>
+                      {l.unpriced ? "not priced" : `${((l.costMicros ?? 0) / 1_000_000).toFixed(4)}`}
+                    </span>
+                  </div>
+                ))}
+                {/* Never present a projection as a quote. */}
+                <div className="pt-1 text-text-muted/70">
+                  Projection ({estimate.confidence} confidence) — actual usage is metered from the
+                  real render once it completes.
+                  {estimate.unpriced && " No MEDIA_RATE_* rates configured, so quantities are shown without cost."}
+                </div>
+              </div>
+            )}
             <Button onClick={render} disabled={busy || !script.trim() || ffmpeg === false} className="gap-2">
               {busy ? <Loader2 className="h-4 w-4 animate-spin"/> : <Video className="h-4 w-4"/>} Render MP4
             </Button>

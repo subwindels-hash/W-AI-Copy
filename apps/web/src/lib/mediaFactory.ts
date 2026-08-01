@@ -78,3 +78,32 @@ async function uploadPublishMedia(file: File): Promise<PubUploadResult> {
   }
   return body.data as PubUploadResult;
 }
+
+/**
+ * S77.B item 22 — usage metering and pre-execution cost estimates.
+ *
+ * `estimate*` returns a projection (isEstimate: true); `summary`/`records`
+ * return measured usage recorded after the work completed. Types come from
+ * @windels/shared/mediaMetering, which the API compiles against too.
+ */
+import type {
+  MediaCostEstimate, MediaUsageSummary, MediaUsageRecord,
+  EstimateRenderInput, EstimatePublishInput,
+} from "@windels/shared/mediaMetering";
+
+export type {
+  MediaCostEstimate, MediaCostEstimateLine, MediaUsageSummary,
+  MediaUsageRecord, MediaUsageKind,
+} from "@windels/shared/mediaMetering";
+export { MEDIA_USAGE_UNIT_LABEL } from "@windels/shared/mediaMetering";
+
+export const meteringApi = {
+  estimateRender: (input: EstimateRenderInput) =>
+    api.post<MediaCostEstimate>("/media-factory/usage/estimate/render", input),
+  estimatePublish: (input: EstimatePublishInput) =>
+    api.post<MediaCostEstimate>("/media-factory/usage/estimate/publish", input),
+  summary: (windowDays = 30) =>
+    api.get<MediaUsageSummary>("/media-factory/usage/summary", { windowDays }),
+  records: (limit = 50) =>
+    api.get<MediaUsageRecord[]>("/media-factory/usage/records", { limit }),
+};

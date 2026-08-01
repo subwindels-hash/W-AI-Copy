@@ -60,6 +60,12 @@ export interface EngineDeps {
   kernelDispatch?: (evt: { kind: string; source: string; payload: Record<string, unknown> }) => Promise<unknown>;
   maxAttempts?: number;
   pollBudgetMs?: number;
+  /**
+   * Usage meter hook (S77.B item 22). Injected so the engine does not take a
+   * hard dependency on the Redis-backed meter — tests supply a no-op, and the
+   * production factory wires MediaMeteringService.recordPublish.
+   */
+  recordUsage?: (oid: string, jobId: string, mediaBytes?: number) => Promise<unknown>;
 }
 
 const K = {
@@ -396,6 +402,15 @@ export function createPublishEngine(deps: EngineDeps) {
       pushHistory(job, "published", job.ownerUserId, outcome.url ?? outcome.postId ?? "published");
       await save(job);
       await audit(oid, "job.published", job.ownerUserId, { jobId: job.id, platform: job.platform, detail: outcome.url ?? outcome.postId ?? "published" });
+      // S77.B item 22 — meter the publish that actually happened. Uses the real
+      // uploaded byte count, and never fails the job it is describing.
+      //
+      // Injected via deps so the engine stays free of a hard dependency on the
+      // Redis-backed meter: a dynamic import() here pulled in the real
+      // db/redis client and hung every test that mocks it.
+      try {
+        await deps.recordUsage?.(oid, job.id, media?.buffer?.byteLength);
+      } catch { /* metering is best-effort; a lost record must not undo a publish */ }
       await dispatch("media.publish.completed", { jobId: job.id, platform: job.platform, postId: outcome.postId });
     } catch (e) {
       const err = e instanceof PlatformPublishError
@@ -459,7 +474,15 @@ export function createPublishEngine(deps: EngineDeps) {
 export type PublishEngine = ReturnType<typeof createPublishEngine>;
 
 /** Default engine bound to the real command client. */
-export const publishEngine = createPublishEngine({ kv: redis as unknown as PublishKv });
+export const publishEngine = createPublishEngine({
+  kv: redis as unknown as PublishKv,
+  // Production wiring for S77.B item 22. Kept out of createPublishEngine's
+  // defaults so unit tests get a meter-free engine by construction.
+  recordUsage: async (oid, jobId, mediaBytes) => {
+    const { MediaMeteringService } = await import("../metering.service.js");
+    return MediaMeteringService.recordPublish(oid, jobId, mediaBytes ? { mediaBytes } : {});
+  },
+});
 
 /* ── Worker ───────────────────────────────────────────────────────── */
 
