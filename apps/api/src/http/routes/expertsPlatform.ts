@@ -6,12 +6,21 @@ import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
 import { z as z_notes } from "zod";
 
-const query = z.object({ q: z.string().min(1) });
+// The web client posts `{ question }`; earlier API consumers used `{ q }`.
+// Accepting either fixes a 400 on every UI call without breaking existing
+// callers. At least one must be present.
+const query = z.object({
+  q: z.string().min(1).max(4000).optional(),
+  question: z.string().min(1).max(4000).optional(),
+}).refine((v) => Boolean(v.q ?? v.question), {
+  message: "Provide a question",
+  path: ["question"],
+});
 
 export function registerExpertsPlatformRoutes(router: Router) {
   router.get("/dashboard/rollup", async (_req, res, next) => { try { res.json({ ok:true, data: await ExpertsPlatformService.dashboard() }); } catch(e){next(e);} });
   router.get("/agents", async (req, res, next) => { try { res.json({ ok:true, data: await ExpertsPlatformService.listAgents(req.query.domain as any) }); } catch(e){next(e);} });
-  router.post("/agents/:id/query", validate({body:query}), async (req, res, next) => { try { res.json({ ok:true, data: await ExpertsPlatformService.query(req.params.id, req.body.q) }); } catch(e){next(e);} });
+  router.post("/agents/:id/query", validate({body:query}), async (req, res, next) => { try { res.json({ ok:true, data: await ExpertsPlatformService.query(req.params.id, (req.body.question ?? req.body.q) as string) }); } catch(e){next(e);} });
   router.get("/courses", async (_req, res, next) => { try { res.json({ ok:true, data: await ExpertsPlatformService.listCourses() }); } catch(e){next(e);} });
   router.get("/packages", async (_req, res, next) => { try { res.json({ ok:true, data: await ExpertsPlatformService.listPackages() }); } catch(e){next(e);} });
 
