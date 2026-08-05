@@ -9,6 +9,8 @@
   },
   "scripts": {
     "dev": "turbo dev --parallel",
+    "prebuild": "node scripts/prisma-preflight.mjs",
+    "pretest": "node scripts/prisma-preflight.mjs",
     "build": "turbo build",
     "test": "turbo test",
     "lint": "turbo lint",

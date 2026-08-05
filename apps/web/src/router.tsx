@@ -25,6 +25,11 @@ const LearnPage = lazy(() => import("./pages/learn/LearnPage").then((m) => ({ de
 const ProjectsPage = lazy(() => import("./pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
 const LeadsPage = lazy(() => import("./pages/leads/LeadsPage").then((m) => ({ default: m.LeadsPage })));
 const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ default: m.FilesPage })));
+const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
+const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
+const MusicVideoPage = lazy(() => import("./pages/media/MusicVideoPage").then((m) => ({ default: m.MusicVideoPage })));
+const BrokerCommandCenterPage = lazy(() => import("./pages/trading/BrokerCommandCenterPage").then((m) => ({ default: m.BrokerCommandCenterPage })));
+const MarketingDashboardPage = lazy(() => import("./pages/marketing/MarketingDashboardPage").then((m) => ({ default: m.MarketingDashboardPage })));
 const EnterprisePage = lazy(() => import("./pages/admin/EnterprisePage"));
 const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
@@ -220,11 +225,16 @@ export const router = createBrowserRouter([
       { path: "flow/:id", element: withSuspense(<WorkflowPage />) },
       { path: "analytics", element: withSuspense(<AnalyticsPage />) },
       { path: "trading", element: withSuspense(<TradingIntelPage />) },
+      { path: "trading/brokers", element: withSuspense(<BrokerCommandCenterPage />) },
+      { path: "marketing", element: withSuspense(<MarketingDashboardPage />) },
       { path: "voice", element: withSuspense(<VoiceStudioPage />) },
       { path: "media", element: withSuspense(<MediaFactoryPage />) },
       { path: "learn", element: withSuspense(<LearnPage />) },
       { path: "projects", element: withSuspense(<ProjectsPage />) },
       { path: "leads", element: withSuspense(<LeadsPage />) },
+      { path: "ads", element: withSuspense(<AdsPage />) },
+      { path: "music", element: withSuspense(<MusicStudioPage />) },
+      { path: "music-video", element: withSuspense(<MusicVideoPage />) },
       { path: "developers", element: withSuspense(<DeveloperPage />) },
       { path: "files", element: withSuspense(<FilesPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },

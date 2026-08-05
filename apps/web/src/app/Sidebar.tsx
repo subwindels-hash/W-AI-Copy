@@ -21,17 +21,26 @@ import {
   BookOpen,
   FolderKanban,
   UsersRound,
+  Megaphone,
+  Music,
+  Clapperboard,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const navItems = [
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/app/trading", icon: TrendingUp, label: "Trading Intel" },
+  { to: "/app/trading/brokers", icon: Landmark, label: "Broker Trading" },
   { to: "/app/voice", icon: Mic, label: "Voice Studio" },
   { to: "/app/media", icon: Film, label: "Media Factory" },
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
   { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },
   { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
+  { to: "/app/marketing", icon: Megaphone, label: "Marketing" },
+  { to: "/app/ads", icon: Megaphone, label: "Advertising" },
+  { to: "/app/music", icon: Music, label: "Music Studio" },
+  { to: "/app/music-video", icon: Clapperboard, label: "Music Video" },
   { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
   { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
   { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },

@@ -198,6 +198,13 @@ export class FakeKv {
     return l.length;
   }
 
+  /** RPOP — remove and return the rightmost element of a list (or null). */
+  async rpop(key: string): Promise<string | null> {
+    const l = this.lists.get(key);
+    if (!l || l.length === 0) return null;
+    return l.pop() ?? null;
+  }
+
   async zremrangebyscore(key: string, min: number | string, max: number | string): Promise<number> {
     const lo = min === "-inf" ? Number.NEGATIVE_INFINITY : Number(min);
     const hi = max === "+inf" ? Number.POSITIVE_INFINITY : Number(max);
