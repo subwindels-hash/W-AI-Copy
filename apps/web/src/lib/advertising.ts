@@ -209,6 +209,27 @@ export const advertisingApi = {
   chooseVariant: (id: string, variantId: string) =>
     api<AdCampaignRecord>(`/advertising/campaigns/${id}/variants/choose`, { method: "POST", json: { variantId } }),
   analytics: () => api<AdPortfolioAnalytics>("/advertising/analytics"),
+  /** Download analytics as a file (csv|json|txt|pdf|docx) as a blob download. */
+  exportFile: async (format: "csv" | "json" | "txt" | "pdf" | "docx"): Promise<void> => {
+    const { useAuthStore } = await import("@/store/auth");
+    const token = useAuthStore.getState().accessToken;
+    const base = import.meta.env.VITE_API_URL ?? "/api/v1";
+    const res = await fetch(`${base}/advertising/export?format=${format}`, {
+      headers: token ? { Authorization: `Bearer ${token}` } : {},
+    });
+    if (!res.ok) throw new Error(`Export failed (${res.status})`);
+    const blob = await res.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const cd = res.headers.get("Content-Disposition") ?? "";
+    const match = cd.match(/filename="?([^";]+)"?/);
+    a.download = match?.[1] ?? `windels-ads-analytics.${format}`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  },
   audiences: () => api<AudienceRecord[]>("/advertising/audiences"),
   createAudience: (input: { name: string; description?: string; criteria: Partial<AudienceCriteria> }) =>
     api<AudienceRecord>("/advertising/audiences", { method: "POST", json: input }),

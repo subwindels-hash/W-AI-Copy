@@ -818,6 +818,41 @@ export const AdvertisingService = {
     return out;
   },
 
+  /* ── Export data ──────────────────────────────────────────── */
+
+  /** Build the analytics payload used by the file export (all real numbers). */
+  async buildExportData(oid: string): Promise<import("./advertisingExport.service.js").AdvertisingExportData> {
+    const [p, campaigns] = await Promise.all([this.portfolioAnalytics(oid), this.list(oid)]);
+    const roas = (s: number, r: number) => (s > 0 ? Number((r / s).toFixed(2)) : null);
+    return {
+      generatedAt: now(),
+      totalCampaigns: p.totalCampaigns,
+      activeCampaigns: p.activeCampaigns,
+      totalSpendMicros: p.totalSpendMicros,
+      totalRevenueMicros: p.totalRevenueMicros,
+      totalConversions: p.totalConversions,
+      totalImpressions: p.totalImpressions,
+      totalClicks: p.totalClicks,
+      roas: p.roas,
+      totalBudgetMicros: p.totalBudgetMicros,
+      campaigns: campaigns.map((c) => ({
+        id: c.id,
+        name: c.name,
+        mode: c.campaignMode,
+        status: c.status,
+        billingMode: c.billingMode,
+        automationLevel: c.automationLevel,
+        impressions: c.metrics.impressions,
+        clicks: c.metrics.clicks,
+        conversions: c.metrics.conversions,
+        spendMicros: c.metrics.spendMicros,
+        revenueMicros: c.metrics.revenueMicros,
+        roas: roas(c.metrics.spendMicros, c.metrics.revenueMicros),
+      })),
+      byMode: p.byMode,
+    };
+  },
+
   /* ── Org-level settings ───────────────────────────────────── */
 
   async setOrgSetting(oid: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {

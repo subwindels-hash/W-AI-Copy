@@ -142,6 +142,22 @@ export function registerAdvertisingRoutes(router: Router) {
     } catch (e) { next(e); }
   });
 
+  // Analytics file export (CSV / JSON / TXT / PDF / DOCX)
+  router.get("/export", validate({ query: z.object({ format: z.enum(["csv", "json", "txt", "pdf", "docx"]).default("csv") }) }), async (req, res, next) => {
+    try {
+      const format = req.query.format as "csv" | "json" | "txt" | "pdf" | "docx";
+      const data = await AdvertisingService.buildExportData(oid(req));
+      const { renderExport, EXPORT_FORMATS } = await import("../../advertising/advertisingExport.service.js");
+      const meta = EXPORT_FORMATS.find((f) => f.value === format)!;
+      const buf = renderExport(data, format);
+      const stamp = new Date().toISOString().slice(0, 10);
+      res.setHeader("Content-Type", meta.mime);
+      res.setHeader("Content-Disposition", `attachment; filename=windels-ads-analytics-${stamp}${meta.ext}`);
+      res.setHeader("Content-Length", String(buf.length));
+      res.send(buf);
+    } catch (e) { next(e); }
+  });
+
   // Audiences & targeting
   router.get("/audiences", async (req, res, next) => {
     try { res.json({ ok: true, data: await AdvertisingService.listAudiences(oid(req)), meta: { requestId: req.requestId } }); }

@@ -68,14 +68,16 @@
       "serviceFile": {
         "file": "advertising.service.ts",
         "path": "/home/user/WIN/apps/api/src/advertising/advertising.service.ts",
-        "sloc": 834,
+        "sloc": 869,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1974,
+      "serviceTotalSloc": 2512,
       "serviceFiles": [
         "advertising.service.ts",
         "advertising.test.ts",
+        "advertisingExport.service.ts",
+        "advertisingExport.test.ts",
         "advertising/advertising.service.ts"
       ],
       "importedServiceFiles": [
@@ -86,10 +88,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/advertising.ts",
-        "sloc": 189,
+        "sloc": 205,
         "counts": {
-          "total": 28,
-          "GET": 6,
+          "total": 29,
+          "GET": 7,
           "POST": 18,
           "PUT": 0,
           "PATCH": 2,
@@ -115,6 +117,7 @@
           "POST /campaigns/:id/variants/:variantId/metrics",
           "POST /campaigns/:id/variants/choose",
           "GET /analytics",
+          "GET /export",
           "GET /audiences",
           "POST /audiences",
           "DELETE /audiences/:id",
@@ -129,7 +132,7 @@
     ],
     "sharedTypes": "packages/shared/src/advertising.ts (334 LOC)",
     "web": {
-      "client": "apps/web/src/lib/advertising.ts (226 LOC)",
+      "client": "apps/web/src/lib/advertising.ts (247 LOC)",
       "pages": []
     },
     "db": {
@@ -143,12 +146,14 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "advertising/advertising.test.ts"
+      "advertising/advertising.test.ts",
+      "advertising/advertisingExport.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
       "OpenAI",
-      "Anthropic"
+      "Anthropic",
+      "Google"
     ],
     "status": "COMPLETE"
   },

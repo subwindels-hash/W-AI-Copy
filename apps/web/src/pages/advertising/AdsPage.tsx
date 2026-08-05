@@ -20,7 +20,7 @@ import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Megaphone, Plus, Loader2, Play, Pause, CheckCircle2, XCircle, Sparkles, Send,
   RefreshCw, Bot, ShieldCheck, TrendingUp, Wallet, Activity, ArrowLeft, Zap,
-  BarChart3, Layers, Flag, Gauge, Copy, Users, Target, LineChart, Trash2,
+  BarChart3, Layers, Flag, Gauge, Copy, Users, Target, LineChart, Trash2, Download,
 } from "lucide-react";
 
 const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
@@ -211,6 +211,13 @@ export function AdsPage() {
     });
   }, [refreshList, run]);
 
+  const exportAnalytics = useCallback(async (format: "csv" | "json" | "txt" | "pdf" | "docx") => {
+    await run(`export-${format}`, async () => {
+      await advertisingApi.exportFile(format);
+      return `Analytics exported as ${format.toUpperCase()}.`;
+    });
+  }, [run]);
+
   const selected = useMemo(() => campaigns.find((c) => c.id === selectedId) ?? null, [campaigns, selectedId]);
 
   return (
@@ -253,6 +260,7 @@ export function AdsPage() {
       ) : (
         <>
           {analytics && <PortfolioPanel analytics={analytics} />}
+          <ExportCard onExport={exportAnalytics} busy={busy} />
           {audiences.length > 0 && <AudienceLibrary audiences={audiences} onCreate={createAudience} busy={busy} />}
         <Card>
           <CardHeader>
@@ -749,6 +757,37 @@ function Dashboard(props: {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+/* ── Analytics export ────────────────────────────────────────────── */
+
+const EXPORT_FORMATS: { value: "csv" | "json" | "txt" | "pdf" | "docx"; label: string }[] = [
+  { value: "csv", label: "CSV" },
+  { value: "json", label: "JSON" },
+  { value: "txt", label: "TXT" },
+  { value: "pdf", label: "PDF" },
+  { value: "docx", label: "Word (DOCX)" },
+];
+
+function ExportCard({ onExport, busy }: { onExport: (f: "csv" | "json" | "txt" | "pdf" | "docx") => void; busy: string | null }) {
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm"><Download className="h-4 w-4" /> Export analytics</CardTitle>
+        <CardDescription>Download your advertising analytics as a file for reports, finance, or sharing.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        <div className="flex flex-wrap gap-2">
+          {EXPORT_FORMATS.map((f) => (
+            <Button key={f.value} size="sm" variant="outline" onClick={() => onExport(f.value)} disabled={busy === `export-${f.value}`}>
+              {busy === `export-${f.value}` ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Download className="h-3 w-3 mr-1" />}
+              {f.label}
+            </Button>
+          ))}
+        </div>
+      </CardContent>
+    </Card>
   );
 }
 
