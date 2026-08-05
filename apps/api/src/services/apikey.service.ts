@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { randomBytes } from "node:crypto";
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 
@@ -9,7 +10,9 @@ export const CreateApiKeySchema = z.object({
 });
 
 export async function createApiKey(userId: string, orgId: string, input: z.infer<typeof CreateApiKeySchema>) {
-  const key = `ak_${Math.random().toString(36).slice(2)}_${Date.now()}`;
+  // API keys are credentials — they must be drawn from the CSPRNG, never
+  // Math.random() (predictable keys would let an attacker forge a valid key).
+  const key = `ak_${randomBytes(32).toString("base64url")}`;
   return prisma.apiKey.create({
     data: {
       userId,

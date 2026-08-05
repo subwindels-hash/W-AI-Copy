@@ -106,6 +106,7 @@ tests/e2e/                # Playwright specs
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |
 | [docs/SESSION_1_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_1_CERTIFICATION_REPORT_2026-08-05.md) | Session 1 re-certification pass (auth foundation) — audit, fixes, validation |
+| [docs/DEMO_CLEANUP_AUDIT.md](./docs/DEMO_CLEANUP_AUDIT.md) | Session 1 repo-wide demo/sample/mock/seed cleanup audit — findings, fixes, classifications |
 | [docs/SESSION_1_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_1_RUNTIME_VALIDATION_CHECKLIST.md) | Session 1 runtime validation checklist (pending target-env execution) |
 | [docs/PRE_EXISTING_TEST_FAILURES.md](./docs/PRE_EXISTING_TEST_FAILURES.md) | Inventory & resolution of the 10 pre-existing failing test files (9 env-only, 1 fixed) |
 | [docs/SESSION_2_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_2_CERTIFICATION_REPORT_2026-08-05.md) | Session 2 re-certification pass (Universal Workspace) — audit, fixes, validation |

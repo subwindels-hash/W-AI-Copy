@@ -78,6 +78,20 @@ const EnvSchema = z.object({
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
 
+  /**
+   * Opt-in in-memory database fallback (dev/test only).
+   *
+   * When the real Postgres connection cannot be initialised, the API *fails
+   * closed* by default — in production a DB failure must abort startup, never
+   * silently swap to a demo database. Set WINDELS_ALLOW_MOCK_DB_FALLBACK=true
+   * ONLY in a non-production environment where an in-memory stand-in (FakePrisma
+   * seeded with demo users/orgs/agents) is acceptable for local work.
+   */
+  WINDELS_ALLOW_MOCK_DB_FALLBACK: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+
   // Web Push (VAPID) — for mobile/browser push notifications (Session 15)
   VAPID_PUBLIC_KEY: z.string().min(60).default("BKwIHmBhWdeXUpnNQ_IGQOnQb0jry-q1Fw0jXO_vi9N4BChQmayUVu1ii4UeVaO4jjrV6CV7EyeFSbJWmxe46e4"),
   VAPID_PRIVATE_KEY: z.string().min(20).default("Tg9wSuR5xpNc8wspnQjuurMbNL0uRlnQLtcCzCoRVIo"),

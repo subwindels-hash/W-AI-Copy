@@ -129,7 +129,16 @@ function createPrismaClient() {
     });
     return withObservability(p);
   } catch (err) {
-    logger.warn("Prisma initialization failed; falling back to FakePrisma", { err });
+    // FAIL CLOSED: a database init failure must never silently swap to an
+    // in-memory demo database (seeded with demo admin/org/agents) — that would
+    // let production run on fake data that looks real. The in-memory FakePrisma
+    // fallback is available ONLY when explicitly enabled and NOT in production.
+    const allowMock = env.WINDELS_ALLOW_MOCK_DB_FALLBACK === true;
+    if (env.NODE_ENV === "production" || !allowMock) {
+      logger.error("Prisma initialization failed — refusing to fall back to the in-memory demo DB. Set WINDELS_ALLOW_MOCK_DB_FALLBACK=true in a non-production environment to permit it.", { err });
+      throw err;
+    }
+    logger.warn("Prisma initialization failed; falling back to FakePrisma (dev/test only)", { err });
     useMock = true;
     const fake = new FakePrisma();
     seedFakeDb(fake);

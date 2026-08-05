@@ -20,7 +20,7 @@
 import { prisma } from "../db/client.js";
 import { resolveUserContext } from "./workspace.service.js";
 import { z } from "zod";
-import { createHash, randomUUID } from "node:crypto";
+import { createHash, randomBytes, randomUUID } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
@@ -96,7 +96,9 @@ function computeAmountCents(plan: PlanId, cycle: "monthly" | "annual", seats: nu
 }
 
 function nextInvoiceNumber() {
-  const random = Math.floor(Math.random() * 99999999).toString().padStart(8, "0");
+  // Use the CSPRNG for the random segment so invoice numbers cannot collide
+  // under load (Math.random() + millisecond timestamp is not collision-safe).
+  const random = randomBytes(4).readUInt32BE(0).toString().padStart(8, "0");
   return `INV-${Date.now().toString(36).toUpperCase()}-${random.slice(0, 4)}`;
 }
 
