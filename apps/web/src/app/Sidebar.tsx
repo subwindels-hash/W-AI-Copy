@@ -23,6 +23,7 @@ import {
   UsersRound,
   Megaphone,
   Music,
+  Clapperboard,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -36,6 +37,7 @@ const navItems = [
   { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },
+  { to: "/app/music-video", icon: Clapperboard, label: "Music Video" },
   { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
   { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
   { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },

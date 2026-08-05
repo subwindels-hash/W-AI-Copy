@@ -105,6 +105,7 @@ import { registerEtlRoutes } from "./routes/etl.js";
 import { registerCameraRoutes } from "./routes/camera.js";
 import { registerAdvertisingRoutes } from "./routes/advertising.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
+import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { logger } from "../observability/logger.js";
 import { observabilityMiddleware } from "./middleware/observability.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -1028,6 +1029,14 @@ export function createApp() {
   v1.use("/music", musicRouter);
   musicRouter.use(authenticate);
   registerMusicGenRoutes(musicRouter);
+
+  // /media-factory/music-video — AI Music Video Generator (integrated into the
+  // Media Studio). Mounted on the same prefix as the media factory so its
+  // /music-video/jobs + rendered-file paths resolve under /api/v1/media-factory.
+  const musicVideoRouter = express.Router();
+  v1.use("/media-factory", musicVideoRouter);
+  musicVideoRouter.use(authenticate);
+  registerMusicVideoRoutes(musicVideoRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

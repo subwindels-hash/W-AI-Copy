@@ -5388,6 +5388,80 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "musicVideo",
+    "title": "musicVideo",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/musicVideo",
+    "backend": {
+      "serviceDir": "apps/api/src/musicVideo",
+      "serviceFile": {
+        "file": "musicVideo.service.ts",
+        "path": "/home/user/WIN/apps/api/src/musicVideo/musicVideo.service.ts",
+        "sloc": 353,
+        "mathRandom": false,
+        "externalFetch": true
+      },
+      "serviceTotalSloc": 1189,
+      "serviceFiles": [
+        "audioAnalysis.ts",
+        "musicVideo.service.ts",
+        "musicVideo.test.ts",
+        "storyboard.ts",
+        "musicVideo/musicVideo.service.ts"
+      ],
+      "importedServiceFiles": [
+        "musicVideo/musicVideo.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/musicVideo.ts",
+        "sloc": 69,
+        "counts": {
+          "total": 7,
+          "GET": 3,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /music-video/jobs",
+          "POST /music-video/jobs",
+          "GET /music-video/jobs/:id",
+          "POST /music-video/jobs/:id/run",
+          "POST /music-video/jobs/:id/cancel",
+          "DELETE /music-video/jobs/:id",
+          "GET /music-video/:file"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/musicVideo.ts (205 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/musicVideo.ts (104 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "musicVideo/musicVideo.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS",
+      "FFmpeg"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "opex",
     "title": "OpEx / Trust / Safety (S73)",
     "sessions": [
