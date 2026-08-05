@@ -4839,14 +4839,14 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/mediaFactory.ts",
-        "sloc": 223,
+        "sloc": 280,
         "counts": {
-          "total": 29,
-          "GET": 16,
-          "POST": 10,
+          "total": 35,
+          "GET": 18,
+          "POST": 12,
           "PUT": 0,
           "PATCH": 1,
-          "DELETE": 2
+          "DELETE": 4
         },
         "endpoints": [
           "GET /dashboard/rollup",
@@ -4873,6 +4873,12 @@
           "POST /publishing/jobs/:id/retry",
           "POST /publishing/jobs/:id/cancel",
           "GET /publishing/audit",
+          "POST /publishing/upload",
+          "GET /publishing/uploads",
+          "DELETE /publishing/uploads/:file",
+          "GET /publishing/webhooks",
+          "POST /publishing/webhooks/:platform/register",
+          "DELETE /publishing/webhooks/:platform",
           "GET /render/:file",
           "GET /notes",
           "POST /notes",

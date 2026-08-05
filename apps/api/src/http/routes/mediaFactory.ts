@@ -12,6 +12,8 @@ import { MediaMeteringService } from "../../mediaFactory/metering.service.js";
 import { EstimateRenderSchema, EstimatePublishSchema } from "@windels/shared/mediaMetering";
 import { authenticate as _authenticate } from "../middleware/auth.js";
 import { z as z_notes } from "zod";
+import { multipartSingle } from "../middleware/multipart.js";
+import { PUB_PLATFORM_IDS } from "../../mediaFactory/publishing/platforms.js";
 
 const genBody = z.object({ type: z.enum(["image","audio","music","video","character","cartoon","lesson","quiz","marketing","podcast"]), channel: z.enum(["web","mobile","social","podcast","audiobook","training","marketing","presentation","navigation","meeting"]), prompt: z.string().min(1).max(5000) });
 const renderBody = z.object({
@@ -153,6 +155,61 @@ export function registerMediaFactoryRoutes(router: Router) {
     try {
       const ctx = await resolveUserContext(req.user!.id);
       res.json({ ok:true, data: await PublishingService.listAudit(ctx.organizationId, Number(req.query.limit) || 100) });
+    } catch(e){next(e);}
+  });
+
+  // ── Upload media (multipart, org-scoped, auth-required) ───────────
+  // S77 completion: browser-side direct upload. 100 MB cap, validated by the
+  // multipart middleware + storageName() MIME/extension allowlist.
+  router.post("/publishing/upload", multipartSingle("file", { maxBytes: 100 * 1024 * 1024 }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      const file = (req as any).file;
+      if (!file || !file.buffer?.length) return res.status(400).json({ ok:false, error:{ code:"EMPTY_FILE", message:"No file uploaded (field name: file)" } });
+      const rec = await PublishingService.saveUpload(ctx.organizationId, req.user!.id, {
+        buffer: file.buffer, mimetype: file.mimetype, originalname: file.originalname, size: file.size,
+      });
+      res.status(201).json({ ok:true, data: rec, meta: { requestId: req.requestId } });
+    } catch(e){next(e);}
+  });
+
+  // ── View uploads (org-scoped only) ────────────────────────────────
+  router.get("/publishing/uploads", validate({ query: z.object({ limit: z.coerce.number().int().min(1).max(200).optional() }) }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      res.json({ ok:true, data: await PublishingService.listUploads(ctx.organizationId, Number(req.query.limit) || 50) });
+    } catch(e){next(e);}
+  });
+
+  // ── Delete upload (removes file + record; guarded against active jobs) ──
+  const uploadFileParam = z.object({ file: z.string().min(1).max(200) });
+  router.delete("/publishing/uploads/:file", validate({ params: uploadFileParam }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      await PublishingService.deleteUpload(ctx.organizationId, req.params.file);
+      res.json({ ok:true, meta: { requestId: req.requestId } });
+    } catch(e){next(e);}
+  });
+
+  // ── Webhook registrations (org-scoped) ────────────────────────────
+  router.get("/publishing/webhooks", async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      res.json({ ok:true, data: await PublishingService.listWebhooks(ctx.organizationId) });
+    } catch(e){next(e);}
+  });
+  router.post("/publishing/webhooks/:platform/register", validate({ params: platformParam }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      const reg = await PublishingService.registerWebhook(ctx.organizationId, req.params.platform as any);
+      res.status(201).json({ ok:true, data: reg, meta: { requestId: req.requestId } });
+    } catch(e){next(e);}
+  });
+  router.delete("/publishing/webhooks/:platform", validate({ params: platformParam }), async (req, res, next) => {
+    try {
+      const ctx = await resolveUserContext(req.user!.id);
+      await PublishingService.deleteWebhook(ctx.organizationId, req.params.platform as any);
+      res.json({ ok:true, meta: { requestId: req.requestId } });
     } catch(e){next(e);}
   });
 

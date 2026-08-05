@@ -107,6 +107,8 @@ import { registerAdvertisingRoutes } from "./routes/advertising.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
+import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
+import { PublishingService } from "../mediaFactory/publishing.service.js";
 import { logger } from "../observability/logger.js";
 import { observabilityMiddleware } from "./middleware/observability.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -596,6 +598,35 @@ export function createApp() {
   // hubs are never rejected by the JWT middleware.
   const pubMfWebhooks = express.Router();
   v1.use("/media-factory/publishing/webhooks", pubMfWebhooks);
+  // Public platform callback (HMAC-verified, no JWT). Resolves the org from
+  // ?oid= or X-Windels-Org, verifies the signature, then syncs the update onto
+  // the matching publish job. Registered per-platform by the org.
+  pubMfWebhooks.post("/:platform/callback", express.json({ limit: "2mb" }), async (req: any, res, next) => {
+    try {
+      const platform = req.params.platform;
+      const oid = resolveCallbackOrgId(req.query, req.headers);
+      if (!oid) return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "Missing org (query ?oid= or X-Windels-Org header)" } });
+      const cfg = await getWebhookConfig(oid, platform);
+      if (!cfg) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "No webhook registered for this platform" } });
+      const raw = req.rawBody ?? Buffer.from(JSON.stringify(req.body));
+      if (!verifySignature(cfg.secret, raw, req.headers)) {
+        return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid webhook signature" } });
+      }
+      const update = {
+        postId: req.body?.postId,
+        videoId: req.body?.videoId,
+        status: req.body?.status,
+        reason: req.body?.reason,
+        availableAt: req.body?.availableAt,
+      };
+      const ref = update.postId ?? update.videoId;
+      if (!ref) return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "Missing postId/videoId" } });
+      const job = await PublishingService.findJobByPlatformRef(oid, platform, ref);
+      if (!job) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "No matching publish job" } });
+      await PublishingService.applyPlatformWebhook(oid, job.id, update);
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  });
 
   // /media-factory — Session 77B: Autonomous AI Media/Content Factory (channels, characters, courses, safety)
   const mfRouter = express.Router();

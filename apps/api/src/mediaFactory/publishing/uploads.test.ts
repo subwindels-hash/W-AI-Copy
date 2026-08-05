@@ -68,3 +68,33 @@ describe("upload persistence", () => {
     expect(listed.map((u) => u.fileName)).toEqual(["b.png", "a.png"]);
   });
 });
+
+describe("org isolation (multi-tenant)", () => {
+  it("Org A cannot see Org B uploads", async () => {
+    const kv = new FakeKv();
+    const dir = await fs.mkdtemp(path.join(os.tmpdir(), "windels-orgiso-"));
+    const deps = { kv: kv as any, dir, now: () => 1_000_000 };
+    await saveUpload("org-A", "u1", { buffer: Buffer.from("a"), mimetype: "image/png", originalname: "a.png", size: 1 }, deps);
+    await saveUpload("org-B", "u2", { buffer: Buffer.from("b"), mimetype: "image/png", originalname: "b.png", size: 1 }, deps);
+    const a = await listUploads("org-A", 10, deps);
+    const b = await listUploads("org-B", 10, deps);
+    expect(a.map((u) => u.fileName)).toEqual(["a.png"]);
+    expect(b.map((u) => u.fileName)).toEqual(["b.png"]);
+    // Deleting from one org never touches the other.
+    await deleteUploadFile("org-A", a[0]!.file, deps);
+    expect((await listUploads("org-B", 10, deps)).map((u) => u.fileName)).toEqual(["b.png"]);
+  });
+
+  it("PublishingService exposes the full expected surface (15+ methods)", async () => {
+    const { PublishingService } = await import("../publishing.service.js");
+    const keys = Object.keys(PublishingService);
+    const required = [
+      "platformsForUser", "orgConnections", "platforms", "startOAuth", "completeOAuth",
+      "disconnect", "status", "isConnected", "createPublishJob", "listJobs", "getJob",
+      "retryJob", "cancelJob", "listAudit", "registerWebhook", "listWebhooks",
+      "deleteWebhook", "saveUpload", "listUploads", "deleteUpload",
+    ];
+    for (const m of required) expect(keys).toContain(m);
+    expect(required.length).toBeGreaterThanOrEqual(15);
+  });
+});
