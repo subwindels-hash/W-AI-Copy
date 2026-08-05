@@ -37,6 +37,7 @@ const navItems = [
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
   { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },
   { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
+  { to: "/app/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },
   { to: "/app/music-video", icon: Clapperboard, label: "Music Video" },

@@ -2232,7 +2232,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1220,
+      "serviceTotalSloc": 1228,
       "serviceFiles": [
         "bootstrap.ts",
         "dataMarketplace.service.ts",
@@ -4686,6 +4686,95 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "marketing",
+    "title": "marketing",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/marketing",
+    "backend": {
+      "serviceDir": "apps/api/src/marketing",
+      "serviceFile": {
+        "file": "marketing.service.ts",
+        "path": "/home/user/WIN/apps/api/src/marketing/marketing.service.ts",
+        "sloc": 412,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 940,
+      "serviceFiles": [
+        "marketing.service.ts",
+        "marketing.test.ts",
+        "marketing/marketing.service.ts"
+      ],
+      "importedServiceFiles": [
+        "marketing/marketing.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/marketing.ts",
+        "sloc": 123,
+        "counts": {
+          "total": 21,
+          "GET": 8,
+          "POST": 10,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /marketing/agents",
+          "POST /marketing/agents/:key/heartbeat",
+          "POST /marketing/agents/:key/run",
+          "GET /marketing/dashboard",
+          "GET /marketing/campaigns",
+          "POST /marketing/campaigns",
+          "GET /marketing/campaigns/:id",
+          "PATCH /marketing/campaigns/:id/status",
+          "POST /marketing/campaigns/:id/metrics",
+          "DELETE /marketing/campaigns/:id",
+          "POST /marketing/copy",
+          "GET /marketing/personas",
+          "POST /marketing/personas",
+          "DELETE /marketing/personas/:id",
+          "GET /marketing/ab-tests",
+          "POST /marketing/ab-tests",
+          "POST /marketing/ab-tests/:id/variants/:variantId/metrics",
+          "POST /marketing/ab-tests/:id/winner",
+          "POST /marketing/recommendations",
+          "GET /marketing/recommendations",
+          "GET /marketing/platforms"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/marketing.ts (212 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/marketing.ts (146 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Agent",
+        "Message",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "marketing/marketing.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "OpenAI",
+      "Anthropic",
+      "Google"
+    ],
     "status": "COMPLETE"
   },
   {
