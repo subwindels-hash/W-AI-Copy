@@ -106,6 +106,7 @@ import { registerCameraRoutes } from "./routes/camera.js";
 import { registerAdvertisingRoutes } from "./routes/advertising.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
+import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { logger } from "../observability/logger.js";
 import { observabilityMiddleware } from "./middleware/observability.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -1037,6 +1038,14 @@ export function createApp() {
   v1.use("/media-factory", musicVideoRouter);
   musicVideoRouter.use(authenticate);
   registerMusicVideoRoutes(musicVideoRouter);
+
+  // /brokers — AI Trading Intelligence Broker Integration Layer (MT5 + others).
+  // Upgrade to the existing trading engine: unified broker accounts, AI trading
+  // modes, trade supervisor, strategies, portfolio intelligence, risk controls.
+  const brokerRouter = express.Router();
+  v1.use("/brokers", brokerRouter);
+  brokerRouter.use(authenticate);
+  registerBrokerIntegrationRoutes(brokerRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

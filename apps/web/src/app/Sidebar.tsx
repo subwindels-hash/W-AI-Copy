@@ -24,12 +24,14 @@ import {
   Megaphone,
   Music,
   Clapperboard,
+  Landmark,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
 const navItems = [
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/app/trading", icon: TrendingUp, label: "Trading Intel" },
+  { to: "/app/trading/brokers", icon: Landmark, label: "Broker Trading" },
   { to: "/app/voice", icon: Mic, label: "Voice Studio" },
   { to: "/app/media", icon: Film, label: "Media Factory" },
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },

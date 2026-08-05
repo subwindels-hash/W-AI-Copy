@@ -1143,6 +1143,88 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "brokerIntegration",
+    "title": "brokerIntegration",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/brokerIntegration",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "brokerIntegration.service.ts",
+        "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
+        "sloc": 487,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 487,
+      "serviceFiles": [
+        "tradingIntel/brokerIntegration.service.ts"
+      ],
+      "importedServiceFiles": [
+        "tradingIntel/brokerIntegration.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/brokerIntegration.ts",
+        "sloc": 126,
+        "counts": {
+          "total": 22,
+          "GET": 9,
+          "POST": 9,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /brokers/connectors",
+          "GET /brokers/accounts",
+          "POST /brokers/accounts",
+          "PATCH /brokers/accounts/:id",
+          "DELETE /brokers/accounts/:id",
+          "POST /brokers/accounts/:id/verify",
+          "GET /brokers/accounts/:id/positions",
+          "GET /brokers/accounts/:id/orders",
+          "POST /brokers/trade",
+          "GET /brokers/executions",
+          "POST /brokers/executions/:id/approve",
+          "POST /brokers/executions/:id/reject",
+          "GET /brokers/strategies",
+          "POST /brokers/strategies",
+          "POST /brokers/strategies/:id/toggle",
+          "POST /brokers/strategies/:id/backtest",
+          "DELETE /brokers/strategies/:id",
+          "GET /brokers/risk",
+          "PATCH /brokers/risk",
+          "POST /brokers/risk/kill-switch",
+          "GET /brokers/portfolio",
+          "GET /brokers/command-center"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/brokerIntegration.ts (270 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/brokerIntegration.ts (128 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "tradingIntel/brokerIntegration.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "camera",
     "title": "camera",
     "sessions": [],
@@ -7006,17 +7088,19 @@
     "backend": {
       "serviceDir": "apps/api/src/tradingIntel",
       "serviceFile": {
-        "file": "tradingIntel.service.ts",
-        "path": "/home/user/WIN/apps/api/src/tradingIntel/tradingIntel.service.ts",
-        "sloc": 421,
+        "file": "brokerIntegration.service.ts",
+        "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
+        "sloc": 487,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 5092,
+      "serviceTotalSloc": 5703,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
         "bootstrap.ts",
+        "brokerIntegration.service.ts",
+        "brokerIntegration.test.ts",
         "derivatives.test.ts",
         "derivatives.ts",
         "derivativesContract.test.ts",
@@ -7094,12 +7178,14 @@
         "User",
         "Organization",
         "Agent",
-        "Message"
+        "Message",
+        "Integration"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "tradingIntel/brokerIntegration.test.ts",
       "tradingIntel/derivatives.test.ts",
       "tradingIntel/derivativesContract.test.ts",
       "tradingIntel/indicators.test.ts",
@@ -7112,7 +7198,8 @@
       "AlphaVantage",
       "TwelveData",
       "Polygon.io",
-      "CoinGecko"
+      "CoinGecko",
+      "FFmpeg"
     ],
     "status": "COMPLETE"
   },

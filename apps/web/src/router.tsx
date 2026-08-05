@@ -28,6 +28,7 @@ const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ de
 const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
 const MusicVideoPage = lazy(() => import("./pages/media/MusicVideoPage").then((m) => ({ default: m.MusicVideoPage })));
+const BrokerCommandCenterPage = lazy(() => import("./pages/trading/BrokerCommandCenterPage").then((m) => ({ default: m.BrokerCommandCenterPage })));
 const EnterprisePage = lazy(() => import("./pages/admin/EnterprisePage"));
 const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
@@ -223,6 +224,7 @@ export const router = createBrowserRouter([
       { path: "flow/:id", element: withSuspense(<WorkflowPage />) },
       { path: "analytics", element: withSuspense(<AnalyticsPage />) },
       { path: "trading", element: withSuspense(<TradingIntelPage />) },
+      { path: "trading/brokers", element: withSuspense(<BrokerCommandCenterPage />) },
       { path: "voice", element: withSuspense(<VoiceStudioPage />) },
       { path: "media", element: withSuspense(<MediaFactoryPage />) },
       { path: "learn", element: withSuspense(<LearnPage />) },
