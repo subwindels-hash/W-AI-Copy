@@ -27,6 +27,32 @@ New guard: **`apps/api/src/demoCleanup.guard.test.ts`** (7 tests) pins the above
 
 ## A2. BOOTSTRAP DEMO-DATA GATING — FIXED
 
+### A2a. `ensureBootstrapped` service seeds — FIXED
+
+A follow-up scan of **`ensureBootstrapped` in `.service.ts` files** (which seed lazily from read
+paths, not just at boot) found **11 more services** that auto-created sample/demo business
+records with `WINDELS_DEMO_DATA` off. All are now gated:
+
+| Service | Sample records seeded (before) | Disposition |
+|---|---|---|
+| `legal` | Sample legal matters ("Windels sample data") | **GATED** |
+| `giftCards` | Sample gift cards + fake balances | **GATED** |
+| `modelFactory` | Sample builder models | **GATED** |
+| `memoryEvolution` | Sample memories | **GATED** |
+| `hybridExec` | Sample models + fake GPU nodes | **GATED** |
+| `expertsPlatform` | Sample expert agents + courses | **GATED** |
+| `uxIntelligence` | Sample design tokens + agents | **GATED** |
+| `voiceFoundry` | Sample voice categories | **GATED** |
+| `voiceOwnership` | Sample consent policies | **GATED** |
+| `mediaFactory` | Sample characters | **GATED** |
+| `mediaGen` | Sample capability catalog | **GATED** |
+
+Production now starts empty for these surfaces too. The `demoCleanup` guard includes a
+repo-wide scan asserting every `.service.ts` that loops over a `*_SEED` array inside
+`ensureBootstrapped` is gated behind `demoDataEnabled()`.
+
+### A2b. Bootstrap (`bootstrap.ts`) seeds — FIXED
+
 A repository-wide **Bootstrap Service Review** found five bootstraps that **directly seeded demo business records** (loading automatically on an empty production DB):
 
 | Bootstrap | Demo records seeded | Disposition |

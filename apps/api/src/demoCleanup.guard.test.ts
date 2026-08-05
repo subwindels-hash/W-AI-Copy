@@ -91,4 +91,29 @@ describe("Bootstrap demo-data gating (fail-closed)", () => {
     const src = await read(path.join("db", "client.ts"));
     expect(src).toMatch(/env\.NODE_ENV === "production" \|\| !allowMock/);
   });
+
+  it("every service that seeds *_SEED records in ensureBootstrapped is gated", async () => {
+    const offenders: string[] = [];
+    const walkSvc = async (dir: string) => {
+      for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) await walkSvc(full);
+        else if (e.name.endsWith(".service.ts")) {
+          const text = await fs.readFile(full, "utf8");
+          const rel = path.relative(SRC_DIR, full);
+          // A service that loops over a *_SEED array inside ensureBootstrapped
+          // must be gated behind demoDataEnabled.
+          const seedsRecords =
+            /for \(const .* of .*SEED\)/.test(text) ||
+            /SEED\.map/.test(text) ||
+            /for \(const .* of .*Seed\)/.test(text);
+          if (seedsRecords && /ensureBootstrapped/.test(text) && !/demoDataEnabled/.test(text)) {
+            offenders.push(rel);
+          }
+        }
+      }
+    };
+    await walkSvc(path.join(SRC_DIR, "..", "src"));
+    expect(offenders).toEqual([]);
+  });
 });

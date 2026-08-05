@@ -9,6 +9,7 @@ import { aiRegistry } from "../services/ai/registry.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../utils/result.js";
 import type { EpExpertAgent, EpCourse, EpExpertPackage, EpDashboard, EpExpertDomain, EpExpertQueryResult } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const K = { agents:"ep:agents", agent:(id:string)=>`ep:agent:${id}`, courses:"ep:courses", course:(id:string)=>`ep:course:${id}`, packs:"ep:packs", pack:(id:string)=>`ep:pack:${id}`, q24:"ep:q24" };
 const j=(s:string)=>JSON.parse(s); const s=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
 
@@ -31,6 +32,7 @@ const COURSE_SEEDS: Array<Omit<EpCourse,"id">> = [
 export const ExpertsPlatformService = {
   async ensureBootstrapped() {
     if (await redis.zcard(K.agents) > 0) return;
+    if (!demoDataEnabled()) return skipDemoSeed("experts-platform");
     for (const seed of EXPERT_SEEDS) {
       const id = uid("ep-");
       const a: EpExpertAgent = { ...seed, id, lastHeartbeat: new Date().toISOString(), queries24h: 0 };

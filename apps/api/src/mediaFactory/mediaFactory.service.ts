@@ -7,6 +7,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { MfDashboard, MfCharacter, MfContentJob, MfContentType, MfChannel, MfCourse } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const K = { jobs:"mf:jobs", job:(id:string)=>`mf:job:${id}`, chars:"mf:chars", char:(id:string)=>`mf:char:${id}`, courses:"mf:courses", course:(id:string)=>`mf:course:${id}`, metrics:{j24:"mf:j24",safeRej:"mf:saferej"} };
 const j=(s:string)=>JSON.parse(s); const s=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
 
@@ -20,6 +21,7 @@ const CHAR_SEEDS: Array<{ name: string; archetype: MfCharacter["archetype"]; emo
 export const MediaFactoryService = {
   async ensureBootstrapped() {
     if (await redis.zcard(K.chars) > 0) return;
+    if (!demoDataEnabled()) return skipDemoSeed("media-factory");
     for (const cs of CHAR_SEEDS) {
       const id = uid("ch-");
       const c: MfCharacter = { id, ...cs, voiceId: undefined };

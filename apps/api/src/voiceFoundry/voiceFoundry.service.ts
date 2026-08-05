@@ -11,6 +11,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import type {
   VfDashboard, VfGeneratedVoice, VfVoiceDesign, VfCategory, VfEvolutionJob, VfEvolutionOp, VfDeployTarget, VfDeployment, VfVoicePack,
 } from "@windels/shared";
@@ -56,6 +57,7 @@ const DEPLOY_TARGETS: VfDeployTarget[] = ["ai-employee","ai-assistant","digital-
 export const VoiceFoundryService = {
   async ensureBootstrapped(logger?: any) {
     if (await redis.zcard(K.voices) > 0) return;
+    if (!demoDataEnabled()) return skipDemoSeed("voice-foundry", logger);
     for (const sd of CATEGORY_SEEDS) {
       const design: VfVoiceDesign = { ...DEFAULT_DESIGN, gender: sd.gender, estimatedAge: sd.age, speakingStyle: sd.style, personality: sd.personality };
       const v: VfGeneratedVoice = {

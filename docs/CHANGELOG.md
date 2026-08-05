@@ -16,7 +16,13 @@ All notable changes, bug fixes, and feature integrations are documented here.
 
 ### Tests / Guards
 *   New `apps/api/src/demoCleanup.guard.test.ts` (7 tests) pins the fail-closed and demo-gating behavior; includes a repo-wide scan asserting every directly-seeding bootstrap is gated.
-*   Full API suite: **933 tests passing, 0 failures**.
+*   Full API suite: **934 tests passing, 0 failures**.
+*   **Service-level demo seeding gated**: `ensureBootstrapped` in 11 more services
+    (`legal`, `giftCards`, `modelFactory`, `memoryEvolution`, `hybridExec`, `expertsPlatform`,
+    `uxIntelligence`, `voiceFoundry`, `voiceOwnership`, `mediaFactory`, `mediaGen`) no longer
+    auto-creates sample/demo records when `WINDELS_DEMO_DATA=false`. Production starts empty
+    for these surfaces too. The `demoCleanup` guard now scans `.service.ts` `*_SEED` loops.
+
 
 ---
 

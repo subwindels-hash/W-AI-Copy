@@ -16,6 +16,7 @@
 import { randomUUID, createHash, randomInt } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import type {
   WmpcGiftCard, GcTransaction, GcFraudFlag, GcLoyaltyProgram,
   GcType, GcStatus,
@@ -80,6 +81,8 @@ async function emitKernel(kind: string, payload: any) {
 export const GiftCardsService = {
   async ensureBootstrapped(logger?: any) {
     if ((await redis.zcard(K.cards)) > 0) return;
+    // Demo/sample records are opt-in; production starts empty (no sample data auto-created).
+    if (!demoDataEnabled()) return skipDemoSeed("giftCards", logger);
     const now = new Date().toISOString();
     for (const seed of CARD_TYPE_SEEDS) {
       const id = uid("gc-");

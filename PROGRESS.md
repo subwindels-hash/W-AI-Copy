@@ -32,7 +32,7 @@
 - **Simulated modules** (robotics, spatial, quantum, biomedical, legal, education, scientific, market data, voice cloning): 🔴 blocked on external providers/credentials; honestly labeled (`docs/SIMULATED_MODULES_INVENTORY.md`).
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **933 tests passing, 0 failures** (51 integration tests auto-skip without a live server).
+- API unit/integration-style suite: **934 tests passing, 0 failures** (51 integration tests auto-skip without a live server).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
 - Web typecheck: clean.
 - Remaining API typecheck errors: 76 env-only (`@prisma/client` generated types require `prisma generate`, which needs the blocked engine download).
