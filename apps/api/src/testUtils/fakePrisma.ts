@@ -156,6 +156,9 @@ export class FakePrisma {
       // this, a `profile: { create: {...} }` write was persisted to a phantom
       // "Profile" table and never read back via userProfile.findUnique.
       profile: "UserProfile",
+      // Named relation `createdById -> User` used by Canvas (and others); the
+      // model name "CreatedBy" does not exist, so map it explicitly.
+      createdBy: "User",
     };
     // Relations whose target is prefixed by the owning model rather than named
     // after the field — e.g. TalkChannel.members holds TalkMember rows, not

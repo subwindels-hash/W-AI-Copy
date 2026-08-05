@@ -114,6 +114,8 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_3_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_3_RUNTIME_VALIDATION_CHECKLIST.md) | Session 3 runtime validation checklist (pending target-env execution) |
 | [docs/SESSION_4_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_4_CERTIFICATION_REPORT_2026-08-05.md) | Session 4 re-certification pass (AI Workforce) — audit, fixes, validation |
 | [docs/SESSION_4_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_4_RUNTIME_VALIDATION_CHECKLIST.md) | Session 4 runtime validation checklist (pending target-env execution) |
+| [docs/SESSION_5_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_5_CERTIFICATION_REPORT_2026-08-05.md) | Session 5 re-certification pass (Canvas) — audit, fixes, validation |
+| [docs/SESSION_5_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_5_RUNTIME_VALIDATION_CHECKLIST.md) | Session 5 runtime validation checklist (pending target-env execution) |
 | [audit/module-inventory.json](./audit/module-inventory.json) | Machine-readable per-module audit (generated) |
 
 > The Advertising Platform (Standard / AI Smart / Performance / Autonomous
