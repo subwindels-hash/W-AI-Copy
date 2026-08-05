@@ -218,7 +218,7 @@ export const router = createBrowserRouter([
       { path: "workforce", element: withSuspense(<AgentsPage />) },
       { path: "canvas", element: withSuspense(<CanvasPage />) },
       { path: "canvas/:id", element: withSuspense(<CanvasPage />) },
-      { path: "workspace", element: placeholder("Universal Workspace (full)", "Session 2 builds the complete dashboard.") },
+      { path: "workspace", element: withSuspense(<UserDashboard />) },
       { path: "chat", element: withSuspense(<ChatPage />) },
       { path: "chat/:id", element: withSuspense(<ChatPage />) },
       { path: "talk", element: withSuspense(<TalkPage />) },
