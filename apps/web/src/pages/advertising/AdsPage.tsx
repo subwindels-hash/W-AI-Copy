@@ -11,7 +11,7 @@
  * Performance billing surfaces its verification / fraud status transparently.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { advertisingApi, CAMPAIGN_MODES, BILLING_MODES, type AdCampaignRecord, type AdCampaignDashboard, type CampaignMode } from "@/lib/advertising";
+import { advertisingApi, CAMPAIGN_MODES, BILLING_MODES, type AdCampaignRecord, type AdCampaignDashboard, type AdPortfolioAnalytics, type CampaignMode } from "@/lib/advertising";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -20,6 +20,7 @@ import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Megaphone, Plus, Loader2, Play, Pause, CheckCircle2, XCircle, Sparkles, Send,
   RefreshCw, Bot, ShieldCheck, TrendingUp, Wallet, Activity, ArrowLeft, Zap,
+  BarChart3, Layers, Flag, Gauge,
 } from "lucide-react";
 
 const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
@@ -40,6 +41,7 @@ const healthColor: Record<string, string> = {
 
 export function AdsPage() {
   const [campaigns, setCampaigns] = useState<AdCampaignRecord[]>([]);
+  const [analytics, setAnalytics] = useState<AdPortfolioAnalytics | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dash, setDash] = useState<AdCampaignDashboard | null>(null);
   const [creating, setCreating] = useState(false);
@@ -58,7 +60,10 @@ export function AdsPage() {
   const [pbPayout, setPbPayout] = useState(""); // dollars per event
 
   const refreshList = useCallback(async () => {
-    try { setCampaigns(await advertisingApi.list()); } catch { /* degrades before server config */ }
+    try {
+      const [c, a] = await Promise.all([advertisingApi.list(), advertisingApi.analytics()]);
+      setCampaigns(c); setAnalytics(a);
+    } catch { /* degrades before server config */ }
   }, []);
 
   const loadDashboard = useCallback(async (id: string) => {
@@ -131,6 +136,34 @@ export function AdsPage() {
     });
   }, [selectedId, loadDashboard, run]);
 
+  const ingest = useCallback(async (input: { impressions?: number; clicks?: number; spendMicros?: number; source?: string }) => {
+    if (!selectedId) return;
+    await run("ingest", async () => {
+      await advertisingApi.ingestMetrics(selectedId, input);
+      await loadDashboard(selectedId);
+      await refreshList();
+      return "Delivery metrics recorded.";
+    });
+  }, [selectedId, loadDashboard, run, refreshList]);
+
+  const addVariant = useCallback(async (input: { name: string; headline?: string }) => {
+    if (!selectedId) return;
+    await run("addVariant", async () => {
+      await advertisingApi.addVariant(selectedId, input);
+      await loadDashboard(selectedId);
+      return `Variant "${input.name}" added for A/B testing.`;
+    });
+  }, [selectedId, loadDashboard, run]);
+
+  const chooseVariant = useCallback(async (variantId: string) => {
+    if (!selectedId) return;
+    await run("choose", async () => {
+      await advertisingApi.chooseVariant(selectedId, variantId);
+      await loadDashboard(selectedId);
+      return "Variant promoted to primary creative.";
+    });
+  }, [selectedId, loadDashboard, run]);
+
   const selected = useMemo(() => campaigns.find((c) => c.id === selectedId) ?? null, [campaigns, selectedId]);
 
   return (
@@ -165,8 +198,10 @@ export function AdsPage() {
           busy={busy} onCreate={createCampaign}
         />
       ) : selected && dash ? (
-        <Dashboard dash={dash} busy={busy} onGen={gen} onAct={act} onConv={reportConv} onBack={() => setSelectedId(null)} />
+        <Dashboard dash={dash} busy={busy} onGen={gen} onAct={act} onConv={reportConv} onIngest={ingest} onAddVariant={addVariant} onChooseVariant={chooseVariant} onBack={() => setSelectedId(null)} />
       ) : (
+        <>
+          {analytics && <PortfolioPanel analytics={analytics} />}
         <Card>
           <CardHeader>
             <CardTitle>Campaigns</CardTitle>
@@ -198,6 +233,7 @@ export function AdsPage() {
             )}
           </CardContent>
         </Card>
+        </>
       )}
     </div>
   );
@@ -326,11 +362,20 @@ function Wizard(props: {
 
 function Dashboard(props: {
   dash: AdCampaignDashboard; busy: string | null;
-  onGen: (ct: string) => void; onAct: (a: string, fn: (id: string) => Promise<unknown>) => void; onConv: () => void; onBack: () => void;
+  onGen: (ct: string) => void; onAct: (a: string, fn: (id: string) => Promise<unknown>) => void; onConv: () => void;
+  onIngest: (input: { impressions?: number; clicks?: number; spendMicros?: number; source?: string }) => void;
+  onAddVariant: (input: { name: string; headline?: string }) => void;
+  onChooseVariant: (variantId: string) => void;
+  onBack: () => void;
 }) {
   const { dash } = props;
   const m = dash.campaign.metrics;
   const ctr = m.impressions > 0 ? ((m.clicks / m.impressions) * 100).toFixed(2) : "0.00";
+  const [imp, setImp] = useState("");
+  const [clicks, setClicks] = useState("");
+  const [spend, setSpend] = useState("");
+  const [vName, setVName] = useState("");
+  const [vHeadline, setVHeadline] = useState("");
   return (
     <div className="space-y-4">
       <button onClick={props.onBack} className="text-sm text-azure-300 hover:underline">← All campaigns</button>
@@ -355,6 +400,58 @@ function Dashboard(props: {
         <Stat label="Conversions" value={m.conversions.toLocaleString()} icon={<CheckCircle2 className="h-4 w-4" />} />
         <Stat label="Spend / ROAS" value={`${usd(m.spendMicros)} / ${dash.revenueAttribution.roas ?? "—"}`} icon={<Wallet className="h-4 w-4" />} />
       </div>
+
+      {/* Budget pacing */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm"><Gauge className="h-4 w-4" /> Budget pacing</CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3 text-sm">
+            <Row label="Budget" value={usd(dash.pacing.totalBudgetMicros)} />
+            <Row label="Spent" value={usd(dash.pacing.spentMicros)} />
+            <Row label="Remaining" value={usd(dash.pacing.remainingMicros)} />
+            <Row label="Pacing" value={dash.pacing.pacing} />
+          </div>
+          <div className="h-2 rounded-full bg-bg-deep/60 overflow-hidden">
+            <div className="h-full bg-azure-500 transition-all" style={{ width: `${Math.round(dash.pacing.spentPct * 100)}%` }} />
+          </div>
+          <div className="text-xs text-text-muted">
+            {dash.pacing.spentPct >= 1
+              ? "Budget fully spent."
+              : `${Math.round(dash.pacing.spentPct * 100)}% of budget spent${dash.pacing.daysLeft !== null ? `, ${dash.pacing.daysLeft} day(s) left` : ""}.`}
+            {dash.pacing.dailyBudgetMicros !== undefined && ` Daily cap: ${usd(dash.pacing.dailyBudgetMicros)}.`}
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Metrics ingestion */}
+      <Card>
+        <CardHeader><CardTitle className="text-sm flex items-center gap-2"><Activity className="h-4 w-4" /> Ingest delivery metrics</CardTitle></CardHeader>
+        <CardContent>
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1">
+              <label className="text-xs text-text-muted">Impressions</label>
+              <Input type="number" value={imp} onChange={(e) => setImp(e.target.value)} className="w-28" placeholder="0" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-text-muted">Clicks</label>
+              <Input type="number" value={clicks} onChange={(e) => setClicks(e.target.value)} className="w-24" placeholder="0" />
+            </div>
+            <div className="space-y-1">
+              <label className="text-xs text-text-muted">Spend (USD)</label>
+              <Input type="number" value={spend} onChange={(e) => setSpend(e.target.value)} className="w-28" placeholder="0.00" />
+            </div>
+            <Button size="sm" variant="outline" onClick={() => {
+              props.onIngest({ impressions: Number(imp) || 0, clicks: Number(clicks) || 0, spendMicros: Math.round((Number(spend) || 0) * 1_000_000), source: "manual" });
+              setImp(""); setClicks(""); setSpend("");
+            }} disabled={props.busy === "ingest"}>
+              {props.busy === "ingest" ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Activity className="h-3 w-3 mr-1" />}
+              Record
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Performance billing + fraud */}
       <div className="grid lg:grid-cols-2 gap-3">
@@ -466,7 +563,108 @@ function Dashboard(props: {
           </CardContent>
         </Card>
       </div>
+
+      {/* A/B creative variants */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm"><Layers className="h-4 w-4" /> A/B creative variants</CardTitle>
+          <CardDescription>Add variants, compare real performance, and promote the winner to your primary creative.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex flex-wrap items-end gap-2">
+            <div className="space-y-1 flex-1 min-w-[160px]">
+              <label className="text-xs text-text-muted">Variant name</label>
+              <Input value={vName} onChange={(e) => setVName(e.target.value)} placeholder="e.g. Headline A" />
+            </div>
+            <div className="space-y-1 flex-1 min-w-[200px]">
+              <label className="text-xs text-text-muted">Headline</label>
+              <Input value={vHeadline} onChange={(e) => setVHeadline(e.target.value)} placeholder="Optional" />
+            </div>
+            <Button size="sm" variant="outline" onClick={() => {
+              if (!vName.trim()) return;
+              props.onAddVariant({ name: vName.trim(), headline: vHeadline.trim() || undefined });
+              setVName(""); setVHeadline("");
+            }} disabled={props.busy === "addVariant"}>
+              <Plus className="h-3 w-3 mr-1" /> Add variant
+            </Button>
+          </div>
+          {dash.variants.length === 0 ? (
+            <p className="text-sm text-text-muted">No variants yet. Add one to start A/B testing.</p>
+          ) : (
+            <div className="grid gap-2">
+              {dash.variants.map((v) => {
+                const vCtr = v.metrics.impressions > 0 ? ((v.metrics.clicks / v.metrics.impressions) * 100).toFixed(1) : "—";
+                const vRoas = v.metrics.spendMicros > 0 ? (v.metrics.revenueMicros / v.metrics.spendMicros).toFixed(2) : "—";
+                return (
+                  <div key={v.id} className="rounded-xl border border-border bg-bg-elevated px-4 py-3">
+                    <div className="flex items-center justify-between">
+                      <div>
+                        <div className="font-medium text-text-bright">{v.name}</div>
+                        {v.headline && <div className="text-xs text-text-muted mt-0.5">{v.headline}</div>}
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Badge variant="outline">{v.metrics.impressions} imp</Badge>
+                        <Badge variant="outline">CTR {vCtr}%</Badge>
+                        <Badge variant="outline">{usd(v.metrics.spendMicros)} / ROAS {vRoas}</Badge>
+                        <Button size="sm" variant="outline" onClick={() => props.onChooseVariant(v.id)} disabled={props.busy === "choose"}>
+                          <Flag className="h-3 w-3 mr-1" /> Promote
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
+  );
+}
+
+/* ── Portfolio / org analytics panel ──────────────────────────────── */
+
+function PortfolioPanel({ analytics }: { analytics: AdPortfolioAnalytics }) {
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm"><BarChart3 className="h-4 w-4" /> Portfolio analytics</CardTitle>
+        <CardDescription>Aggregate across every campaign in your organization.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="grid sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <Stat label="Campaigns" value={`${analytics.totalCampaigns} (${analytics.activeCampaigns} active)`} icon={<Megaphone className="h-4 w-4" />} />
+          <Stat label="Spend" value={usd(analytics.totalSpendMicros)} icon={<Wallet className="h-4 w-4" />} />
+          <Stat label="Revenue / ROAS" value={`${usd(analytics.totalRevenueMicros)} / ${analytics.roas ?? "—"}`} icon={<TrendingUp className="h-4 w-4" />} />
+          <Stat label="Conversions" value={analytics.totalConversions.toLocaleString()} icon={<CheckCircle2 className="h-4 w-4" />} />
+          <Stat label="Impressions / Clicks" value={`${analytics.totalImpressions.toLocaleString()} / ${analytics.totalClicks.toLocaleString()}`} icon={<Activity className="h-4 w-4" />} />
+        </div>
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-2">
+          {(Object.keys(analytics.byMode) as CampaignMode[]).map((md) => {
+            const b = analytics.byMode[md];
+            return (
+              <div key={md} className="rounded-lg border border-border bg-bg-elevated p-2">
+                <Badge className={modeColor[md]}>{md}</Badge>
+                <div className="text-xs text-text-muted mt-1">{b.count} campaign(s) · {usd(b.spendMicros)} · {b.conversions} conv · {usd(b.revenueMicros)} rev</div>
+              </div>
+            );
+          })}
+        </div>
+        {analytics.topCampaigns.length > 0 && (
+          <div>
+            <div className="text-xs text-text-muted mb-1">Top campaigns by spend</div>
+            <div className="grid gap-1">
+              {analytics.topCampaigns.slice(0, 5).map((t) => (
+                <div key={t.id} className="flex items-center justify-between text-xs">
+                  <span className="text-text-bright">{t.name} <span className="text-text-muted">({t.mode})</span></span>
+                  <span className="text-text-muted">{usd(t.spendMicros)} · {t.conversions} conv · ROAS {t.roas ?? "—"}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </CardContent>
+    </Card>
   );
 }
 

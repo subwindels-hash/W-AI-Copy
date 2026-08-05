@@ -151,6 +151,45 @@ export const AutonomousActionSchema = z.object({
   detail: z.string().optional(),
 });
 
+/** Ingest real delivery metrics (impressions/clicks/spend) as deltas. */
+export const IngestMetricsSchema = z.object({
+  impressions: z.number().int().nonnegative().default(0),
+  clicks: z.number().int().nonnegative().default(0),
+  conversions: z.number().int().nonnegative().default(0),
+  spendMicros: z.number().int().nonnegative().default(0),
+  revenueMicros: z.number().int().nonnegative().default(0),
+  /** Optional source/note recorded in the audit log (e.g. "meta-ads-sync"). */
+  source: z.string().max(80).optional(),
+});
+export type IngestMetricsInput = z.input<typeof IngestMetricsSchema>;
+
+/** A creative variant for A/B testing against other variants. */
+export const CreativeVariantSchema = z.object({
+  id: z.string(),
+  name: z.string(),
+  headline: z.string().optional(),
+  body: z.string().optional(),
+  assetUrl: z.string().optional(),
+  aiSource: z.enum(AI_SOURCES).default("demo"),
+  createdAt: z.string(),
+  metrics: AdCampaignMetricsSchema,
+});
+export type CreativeVariant = z.infer<typeof CreativeVariantSchema>;
+
+/** Payload to add a new A/B creative variant to a campaign. */
+export const AddVariantSchema = z.object({
+  name: z.string().min(1).max(120),
+  headline: z.string().max(200).optional(),
+  body: z.string().max(2000).optional(),
+  assetUrl: z.string().max(500).optional(),
+});
+export type AddVariantInput = z.input<typeof AddVariantSchema>;
+
+/** Declare which variant won the A/B test (promote it to the primary creative). */
+export const ChooseVariantSchema = z.object({
+  variantId: z.string().min(1).max(64),
+});
+
 /* ── Record ──────────────────────────────────────────────────────── */
 
 export interface AdCampaignRecord extends CreateCampaignOutput {
@@ -165,9 +204,60 @@ export interface AdCampaignRecord extends CreateCampaignOutput {
   recommendations: Recommendation[];
   autonomousActions: { id: string; at: string; action: string; detail?: string }[];
   auditLog: { id: string; at: string; actorId: string; action: string; detail?: string }[];
-  aiConfigured: boolean; // whether a real AI provider is configured (honest flag)
+  /** A/B creative variants (empty until a variant is added). */
+  variants: CreativeVariant[];
+  /** Whether a real AI provider is configured (honest flag). */
+  aiConfigured: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+/** Budget-pacing / health summary for one campaign. */
+export interface AdBudgetPacing {
+  totalBudgetMicros: number;
+  spentMicros: number;
+  remainingMicros: number;
+  /** spend / budget as a 0..1 ratio (0 if budget is 0). */
+  spentPct: number;
+  dailyBudgetMicros?: number;
+  /** Estimated daily burn (spend since updatedAt, if any). Honest approximation. */
+  estDailyBurnMicros: number;
+  /** days left if endAt set, else null (no hard end). */
+  daysLeft: number | null;
+  /** pacing verdict from real numbers. */
+  pacing: "under" | "on_track" | "over" | "no_budget";
+}
+
+/** Aggregated org-level portfolio analytics across all campaigns. */
+export interface AdPortfolioAnalytics {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalSpendMicros: number;
+  totalRevenueMicros: number;
+  totalConversions: number;
+  totalImpressions: number;
+  totalClicks: number;
+  /** overall ROAS (revenue/spend) or null when spend is 0. */
+  roas: number | null;
+  /** total budget across campaigns (0 if none set). */
+  totalBudgetMicros: number;
+  byMode: Record<CampaignMode, {
+    count: number;
+    spendMicros: number;
+    conversions: number;
+    revenueMicros: number;
+  }>;
+  /** top campaigns by ROAS / spend, sorted by spend desc. */
+  topCampaigns: Array<{
+    id: string;
+    name: string;
+    mode: CampaignMode;
+    status: CampaignStatus;
+    spendMicros: number;
+    conversions: number;
+    revenueMicros: number;
+    roas: number | null;
+  }>;
 }
 
 /** Aggregated dashboard payload for one campaign (extended dashboard, not a second one). */
@@ -183,5 +273,7 @@ export interface AdCampaignDashboard {
   revenueAttribution: { spendMicros: number; revenueMicros: number; roas: number | null; perEvent: Record<string, number> };
   fraudProtection: { enabled: boolean; checksRun: number; blocked: number };
   recommendations: Recommendation[];
+  pacing: AdBudgetPacing;
+  variants: CreativeVariant[];
   aiConfigured: boolean;
 }

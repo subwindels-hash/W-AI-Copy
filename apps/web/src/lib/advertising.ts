@@ -90,7 +90,48 @@ export interface AdCampaignDashboard {
   revenueAttribution: { spendMicros: number; revenueMicros: number; roas: number | null; perEvent: Record<string, number> };
   fraudProtection: { enabled: boolean; checksRun: number; blocked: number };
   recommendations: Recommendation[];
+  pacing: AdBudgetPacing;
+  variants: CreativeVariant[];
   aiConfigured: boolean;
+}
+
+export interface CreativeVariant {
+  id: string;
+  name: string;
+  headline?: string;
+  body?: string;
+  assetUrl?: string;
+  aiSource: AiSource;
+  createdAt: string;
+  metrics: AdCampaignMetrics;
+}
+
+export interface AdBudgetPacing {
+  totalBudgetMicros: number;
+  spentMicros: number;
+  remainingMicros: number;
+  spentPct: number;
+  dailyBudgetMicros?: number;
+  estDailyBurnMicros: number;
+  daysLeft: number | null;
+  pacing: "under" | "on_track" | "over" | "no_budget";
+}
+
+export interface AdPortfolioAnalytics {
+  totalCampaigns: number;
+  activeCampaigns: number;
+  totalSpendMicros: number;
+  totalRevenueMicros: number;
+  totalConversions: number;
+  totalImpressions: number;
+  totalClicks: number;
+  roas: number | null;
+  totalBudgetMicros: number;
+  byMode: Record<CampaignMode, { count: number; spendMicros: number; conversions: number; revenueMicros: number }>;
+  topCampaigns: Array<{
+    id: string; name: string; mode: CampaignMode; status: CampaignStatus;
+    spendMicros: number; conversions: number; revenueMicros: number; roas: number | null;
+  }>;
 }
 
 export const CAMPAIGN_MODES: { value: CampaignMode; label: string; blurb: string }[] = [
@@ -127,6 +168,15 @@ export const advertisingApi = {
   reportConversion: (id: string, event: { eventType: string; valueMicros: number; proof?: string; metadata?: Record<string, any> }) =>
     api<{ recorded: boolean; verificationStatus: AdVerificationStatus; blocked: boolean }>(`/advertising/campaigns/${id}/conversions`, { method: "POST", json: event }),
   dashboard: (id: string) => api<AdCampaignDashboard>(`/advertising/campaigns/${id}/dashboard`),
+  ingestMetrics: (id: string, input: { impressions?: number; clicks?: number; spendMicros?: number; revenueMicros?: number; source?: string }) =>
+    api<AdCampaignRecord>(`/advertising/campaigns/${id}/metrics`, { method: "POST", json: input }),
+  addVariant: (id: string, input: { name: string; headline?: string; body?: string; assetUrl?: string }) =>
+    api<CreativeVariant[]>(`/advertising/campaigns/${id}/variants`, { method: "POST", json: input }),
+  recordVariantMetrics: (id: string, variantId: string, input: { impressions?: number; clicks?: number; conversions?: number; spendMicros?: number; revenueMicros?: number }) =>
+    api<CreativeVariant>(`/advertising/campaigns/${id}/variants/${variantId}/metrics`, { method: "POST", json: input }),
+  chooseVariant: (id: string, variantId: string) =>
+    api<AdCampaignRecord>(`/advertising/campaigns/${id}/variants/choose`, { method: "POST", json: { variantId } }),
+  analytics: () => api<AdPortfolioAnalytics>("/advertising/analytics"),
   settings: () => api<Record<string, unknown>>("/advertising/settings"),
   updateSettings: (patch: Record<string, unknown>) => api<Record<string, unknown>>("/advertising/settings", { method: "PATCH", json: patch }),
 };

@@ -10,6 +10,9 @@ import {
   CampaignIdSchema,
   AiGenerateSchema,
   ConversionEventSchema,
+  IngestMetricsSchema,
+  AddVariantSchema,
+  ChooseVariantSchema,
 } from "@windels/shared/advertising";
 import { AdvertisingService } from "../../advertising/advertising.service.js";
 
@@ -101,6 +104,38 @@ export function registerAdvertisingRoutes(router: Router) {
   router.get("/campaigns/:id/dashboard", validate({ params: campaignParams }), async (req, res, next) => {
     try {
       res.json({ ok: true, data: await AdvertisingService.dashboard(oid(req), req.params.id), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
+  // Metrics ingestion (real delivery data)
+  router.post("/campaigns/:id/metrics", validate({ params: campaignParams, body: IngestMetricsSchema }), async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await AdvertisingService.ingestMetrics(oid(req), req.params.id, uid(req), req.body), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
+  // A/B creative variants
+  router.post("/campaigns/:id/variants", validate({ params: campaignParams, body: AddVariantSchema }), async (req, res, next) => {
+    try {
+      res.status(201).json({ ok: true, data: await AdvertisingService.addVariant(oid(req), req.params.id, uid(req), req.body), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.post("/campaigns/:id/variants/:variantId/metrics", validate({ params: campaignParams, body: IngestMetricsSchema }), async (req, res, next) => {
+    try {
+      const data = await AdvertisingService.recordVariantMetrics(oid(req), req.params.id, req.params.variantId, req.body);
+      res.json({ ok: true, data, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.post("/campaigns/:id/variants/choose", validate({ params: campaignParams, body: ChooseVariantSchema }), async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await AdvertisingService.chooseVariant(oid(req), req.params.id, req.body.variantId, uid(req)), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
+  // Portfolio / org analytics
+  router.get("/analytics", async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await AdvertisingService.portfolioAnalytics(oid(req)), meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
 

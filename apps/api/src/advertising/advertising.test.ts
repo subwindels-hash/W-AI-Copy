@@ -166,5 +166,77 @@ describe("dashboard", () => {
     expect(d.fraudProtection.enabled).toBe(true);
     expect(d.health).toBe("inactive");
     expect(typeof d.revenueAttribution.roas).toBe("object"); // null while no spend
+    expect(d.pacing).toBeDefined();
+    expect(d.variants).toEqual([]);
+  });
+});
+
+describe("metrics ingestion", () => {
+  it("accumulates real deltas and audits them", async () => {
+    const c = await AdvertisingService.create(ORG, USER, { ...base, campaignMode: "standard" });
+    const a = await AdvertisingService.ingestMetrics(ORG, c.id, USER, { impressions: 1000, clicks: 20, spendMicros: 50_000_000, source: "meta-ads" });
+    expect(a.metrics.impressions).toBe(1000);
+    expect(a.metrics.clicks).toBe(20);
+    expect(a.metrics.spendMicros).toBe(50_000_000);
+    const b = await AdvertisingService.ingestMetrics(ORG, c.id, USER, { impressions: 500, clicks: 5, spendMicros: 10_000_000 });
+    expect(b.metrics.impressions).toBe(1500);
+    expect(b.metrics.clicks).toBe(25);
+    expect(b.metrics.spendMicros).toBe(60_000_000);
+    expect(b.auditLog.some((e) => e.action === "metrics.ingested")).toBe(true);
+  });
+});
+
+describe("A/B creative variants", () => {
+  it("adds variants, records per-variant metrics, and promotes a winner", async () => {
+    const c = await AdvertisingService.create(ORG, USER, { ...base, campaignMode: "standard" });
+    const variants = await AdvertisingService.addVariant(ORG, c.id, USER, { name: "Headline A", headline: "Big sale" });
+    await AdvertisingService.addVariant(ORG, c.id, USER, { name: "Headline B", headline: "Save now" });
+    expect(variants.length).toBe(1);
+
+    const a = variants[0]!;
+    const rec = await AdvertisingService.recordVariantMetrics(ORG, c.id, a.id, { impressions: 100, clicks: 8, conversions: 2, spendMicros: 5_000_000, revenueMicros: 20_000_000 });
+    expect(rec.metrics.clicks).toBe(8);
+
+    const chosen = await AdvertisingService.chooseVariant(ORG, c.id, a.id, USER);
+    expect(chosen.creatives[0]).toBe("Headline A");
+    expect(chosen.auditLog.some((e) => e.action === "variant.chosen")).toBe(true);
+  });
+
+  it("404s when promoting an unknown variant", async () => {
+    const c = await AdvertisingService.create(ORG, USER, { ...base, campaignMode: "standard" });
+    await expect(AdvertisingService.chooseVariant(ORG, c.id, "var-nope", USER)).rejects.toThrow(/not found/i);
+  });
+});
+
+describe("portfolio analytics", () => {
+  it("aggregates real metrics across org campaigns, org-scoped", async () => {
+    await AdvertisingService.create(ORG, USER, { ...base, name: "A", campaignMode: "standard" });
+    const b = await AdvertisingService.create(ORG, USER, { ...base, name: "B", campaignMode: "smart", budgetMicros: 2_000_000_000 });
+    await AdvertisingService.ingestMetrics(ORG, b.id, USER, { impressions: 500, clicks: 10, spendMicros: 30_000_000, revenueMicros: 60_000_000 });
+    await AdvertisingService.create("org-other", USER, { ...base, name: "C", campaignMode: "standard" });
+
+    const p = await AdvertisingService.portfolioAnalytics(ORG);
+    expect(p.totalCampaigns).toBe(2);
+    expect(p.totalSpendMicros).toBe(30_000_000);
+    expect(p.totalRevenueMicros).toBe(60_000_000);
+    expect(p.totalImpressions).toBe(500);
+    expect(p.roas).toBe(2); // 60m / 30m
+    expect(p.byMode.standard.count).toBe(1);
+    expect(p.byMode.smart.count).toBe(1);
+    expect(p.totalBudgetMicros).toBe(3_000_000_000);
+    expect(p.topCampaigns[0]?.name).toBe("B");
+  });
+});
+
+describe("budget pacing", () => {
+  it("computes pacing state from real spend numbers", async () => {
+    const c = await AdvertisingService.create(ORG, USER, { ...base, campaignMode: "standard", budgetMicros: 100_000_000, dailyBudgetMicros: 10_000_000, endAt: new Date(Date.now() + 2 * 86_400_000).toISOString() });
+    const before = await AdvertisingService.dashboard(ORG, c.id);
+    expect(before.pacing.pacing).toBe("under");
+    await AdvertisingService.ingestMetrics(ORG, c.id, USER, { spendMicros: 100_000_000 });
+    const after = await AdvertisingService.dashboard(ORG, c.id);
+    expect(after.pacing.pacing).toBe("over");
+    expect(after.pacing.remainingMicros).toBe(0);
+    expect(after.pacing.daysLeft).toBe(2);
   });
 });

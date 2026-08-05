@@ -39,6 +39,11 @@ import type {
   PerformanceBillingConfig,
   OptimizationEntry,
   Recommendation,
+  CreativeVariant,
+  IngestMetricsInput,
+  AddVariantInput,
+  AdBudgetPacing,
+  AdPortfolioAnalytics,
   AiSource,
 } from "@windels/shared/advertising";
 
@@ -141,6 +146,8 @@ export const AdvertisingService = {
       placements: input.placements ?? [],
       creatives: input.creatives ?? [],
       performanceBilling,
+      startAt: input.startAt,
+      endAt: input.endAt,
       verification: {
         status: campaignMode === "performance" ? "pending" : "none",
         eligibilityCheckedAt: campaignMode === "performance" ? nowIso : undefined,
@@ -153,6 +160,7 @@ export const AdvertisingService = {
       recommendations: [],
       autonomousActions: [],
       auditLog: [{ id: randomUUID(), at: nowIso, actorId: userId, action: "campaign.created", detail: `mode=${campaignMode} billing=${billingMode} automation=${automationLevel}` }],
+      variants: [],
       aiConfigured,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -464,6 +472,154 @@ export const AdvertisingService = {
     return rec;
   },
 
+  /* ── Metrics ingestion (real delivery data) ────────────────── */
+
+  /**
+   * Ingest real delivery metrics as deltas (impressions/clicks/spend/revenue).
+   * Metrics only ever move through this or reportConversion — never fabricated.
+   * Every ingestion is recorded in the audit log.
+   */
+  async ingestMetrics(oid: string, campaignId: string, actorId: string, input: IngestMetricsInput): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, campaignId);
+    rec.metrics.impressions += input.impressions ?? 0;
+    rec.metrics.clicks += input.clicks ?? 0;
+    rec.metrics.conversions += input.conversions ?? 0;
+    rec.metrics.spendMicros += input.spendMicros ?? 0;
+    rec.metrics.revenueMicros += input.revenueMicros ?? 0;
+    rec.updatedAt = now();
+    rec.auditLog.push({
+      id: randomUUID(), at: rec.updatedAt, actorId, action: "metrics.ingested",
+      detail: `impressions=${input.impressions ?? 0} clicks=${input.clicks ?? 0} conversions=${input.conversions ?? 0} spend=${input.spendMicros ?? 0} revenue=${input.revenueMicros ?? 0}${input.source ? ` source=${input.source}` : ""}`,
+    });
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return rec;
+  },
+
+  /* ── A/B creative variants ────────────────────────────────── */
+
+  /** Add a new creative variant for A/B testing (metrics start at 0). */
+  async addVariant(oid: string, campaignId: string, actorId: string, input: AddVariantInput): Promise<CreativeVariant[]> {
+    const rec = await this.mustGet(oid, campaignId);
+    const variant: CreativeVariant = {
+      id: `var-${randomUUID()}`,
+      name: input.name,
+      headline: input.headline,
+      body: input.body,
+      assetUrl: input.assetUrl,
+      aiSource: rec.aiConfigured ? "real" : "demo",
+      createdAt: now(),
+      metrics: { impressions: 0, clicks: 0, conversions: 0, spendMicros: 0, revenueMicros: 0 },
+    };
+    rec.variants = [...rec.variants, variant];
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "variant.added", detail: variant.id });
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return rec.variants;
+  },
+
+  /** Log a metric delta against a specific A/B variant. */
+  async recordVariantMetrics(oid: string, campaignId: string, variantId: string, input: IngestMetricsInput): Promise<CreativeVariant> {
+    const rec = await this.mustGet(oid, campaignId);
+    const v = rec.variants.find((x) => x.id === variantId);
+    if (!v) throw new AppError("NOT_FOUND", "Variant not found", 404);
+    v.metrics.impressions += input.impressions ?? 0;
+    v.metrics.clicks += input.clicks ?? 0;
+    v.metrics.spendMicros += input.spendMicros ?? 0;
+    v.metrics.conversions += input.conversions ?? 0;
+    v.metrics.revenueMicros += input.revenueMicros ?? 0;
+    rec.updatedAt = now();
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return v;
+  },
+
+  /** Promote a variant to the primary creative (A/B winner) and record it. */
+  async chooseVariant(oid: string, campaignId: string, variantId: string, actorId: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, campaignId);
+    const v = rec.variants.find((x) => x.id === variantId);
+    if (!v) throw new AppError("NOT_FOUND", "Variant not found", 404);
+    rec.creatives = [v.name, ...rec.creatives.filter((c) => c !== v.name)];
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "variant.chosen", detail: `${variantId} (${v.name}) promoted to primary creative` });
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return rec;
+  },
+
+  /* ── Portfolio / org analytics ────────────────────────────── */
+
+  /** Aggregate real metrics across every campaign in the org. */
+  async portfolioAnalytics(oid: string): Promise<AdPortfolioAnalytics> {
+    const campaigns = await this.list(oid);
+    const byMode: AdPortfolioAnalytics["byMode"] = {
+      standard: { count: 0, spendMicros: 0, conversions: 0, revenueMicros: 0 },
+      smart: { count: 0, spendMicros: 0, conversions: 0, revenueMicros: 0 },
+      performance: { count: 0, spendMicros: 0, conversions: 0, revenueMicros: 0 },
+      autonomous: { count: 0, spendMicros: 0, conversions: 0, revenueMicros: 0 },
+    };
+    let spend = 0, revenue = 0, conv = 0, imp = 0, clicks = 0, budget = 0, active = 0;
+
+    for (const c of campaigns) {
+      spend += c.metrics.spendMicros;
+      revenue += c.metrics.revenueMicros;
+      conv += c.metrics.conversions;
+      imp += c.metrics.impressions;
+      clicks += c.metrics.clicks;
+      budget += c.budgetMicros;
+      if (c.status === "active") active++;
+      const b = byMode[c.campaignMode];
+      b.count++; b.spendMicros += c.metrics.spendMicros; b.conversions += c.metrics.conversions; b.revenueMicros += c.metrics.revenueMicros;
+    }
+
+    const topCampaigns = campaigns
+      .map((c) => ({
+        id: c.id, name: c.name, mode: c.campaignMode, status: c.status,
+        spendMicros: c.metrics.spendMicros, conversions: c.metrics.conversions,
+        revenueMicros: c.metrics.revenueMicros,
+        roas: c.metrics.spendMicros > 0 ? Number((c.metrics.revenueMicros / c.metrics.spendMicros).toFixed(2)) : null,
+      }))
+      .sort((a, b) => b.spendMicros - a.spendMicros)
+      .slice(0, 10);
+
+    return {
+      totalCampaigns: campaigns.length,
+      activeCampaigns: active,
+      totalSpendMicros: spend,
+      totalRevenueMicros: revenue,
+      totalConversions: conv,
+      totalImpressions: imp,
+      totalClicks: clicks,
+      roas: spend > 0 ? Number((revenue / spend).toFixed(2)) : null,
+      totalBudgetMicros: budget,
+      byMode,
+      topCampaigns,
+    };
+  },
+
+  /* ── Budget pacing ────────────────────────────────────────── */
+
+  /** Compute honest budget-pacing state from real spend numbers. */
+  computePacing(rec: AdCampaignRecord): AdBudgetPacing {
+    const spend = rec.metrics.spendMicros;
+    const budget = rec.budgetMicros;
+    const spentPct = budget > 0 ? Math.min(1, spend / budget) : 0;
+    let pacing: AdBudgetPacing["pacing"] = "no_budget";
+    if (budget > 0) {
+      if (spentPct >= 1) pacing = "over";
+      else if (spentPct >= 0.8) pacing = "on_track";
+      else pacing = "under";
+    }
+    const daysLeft = rec.endAt ? Math.max(0, Math.ceil((Date.parse(rec.endAt) - Date.now()) / 86_400_000)) : null;
+    return {
+      totalBudgetMicros: budget,
+      spentMicros: spend,
+      remainingMicros: Math.max(0, budget - spend),
+      spentPct,
+      dailyBudgetMicros: rec.dailyBudgetMicros,
+      estDailyBurnMicros: rec.dailyBudgetMicros ?? (daysLeft ? Math.ceil(spend / Math.max(1, daysLeft)) : 0),
+      daysLeft,
+      pacing,
+    };
+  },
+
   /* ── Dashboard (extends the existing dashboard, not a second one) ── */
 
   async dashboard(oid: string, campaignId: string): Promise<AdCampaignDashboard> {
@@ -500,6 +656,8 @@ export const AdvertisingService = {
         blocked: campaign.auditLog.filter((a) => a.action === "conversion.rejected").length,
       },
       recommendations: campaign.recommendations,
+      pacing: this.computePacing(campaign),
+      variants: campaign.variants,
       aiConfigured: campaign.aiConfigured,
     };
   },
