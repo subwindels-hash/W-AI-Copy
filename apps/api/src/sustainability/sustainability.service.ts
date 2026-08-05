@@ -176,36 +176,33 @@ export const SustainabilityService = {
       scores,
       emissionsTotalTCO2e: total,
       emissionsYtdChangePct,
-      energyRenewablePct: 45, // pre-production grid default
-      waterMl: 1.4,
-      wasteRecycledPct: 62,
+      // Renewables share, water, waste, offsets and a net-zero target all require
+      // attested measurements or a declared commitment; none are recorded, so all
+      // report 0 rather than a plausible default.
+      energyRenewablePct: 0,
+      waterMl: 0,
+      wasteRecycledPct: 0,
       offsetsPurchasedT: 0,
-      netZeroTargetYear: 2035,
+      netZeroTargetYear: 0,
       emissionsBySource,
       energySeries,
-      resources: [
-        { label: "Water usage", waterML: 1.4, wasteT: 0, recycledPct: 0 },
-        { label: "Waste monitoring", waterML: 0, wasteT: 8.5, recycledPct: 62 }
-      ],
-      suppliers: [
-        { id: "sup-1", name: "GreenPower Corp", esgScore: 94, riskLevel: "low", carbonIntensity: 0.12 },
-        { id: "sup-2", name: "Global Logistics", esgScore: 78, riskLevel: "medium", carbonIntensity: 0.45 },
-      ],
-      // Only the fields we actually measure are populated; GPU-hours and an
-      // optimisation percentage are not recorded, so they report 0.
+      resources: [],
+      // Supply-chain ESG ratings are attestation we do not have — report none.
+      suppliers: [],
+      // Only the fields we actually measure are populated; GPU-hours, optimisation
+      // and kwh come only from recorded compute records, so they report 0 unless
+      // a compute record exists.
       greenAi: computeTCO2e
         ? [{
             workload: "recorded compute",
-            gpuHours: 450,
+            gpuHours: 0,
             kwh: Math.round([...kwhByMonth.values()].reduce((a, b) => a + b, 0)),
             co2eKg: Math.round(computeTCO2e * 1000),
-            optimizedPct: 24,
+            optimizedPct: 0,
           }]
         : [],
-      reportingFrameworks: [
-        { name: "GRI (Global Reporting Initiative)", lastReportedAt: `${thisYear}-06-30`, status: "on_track" },
-        { name: "SASB Standards", lastReportedAt: `${thisYear}-05-15`, status: "on_track" },
-      ],
+      // Reporting-framework attestations are not filed by this system — report none.
+      reportingFrameworks: [],
     } satisfies SustainabilityDashboard;
   },
 };

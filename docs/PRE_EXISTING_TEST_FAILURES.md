@@ -83,8 +83,10 @@ Guard suites `noRandomData` / `noFakeVerdict` still pass. API suite total rose f
 
 - The 9 env-only failures should be closed by running the Phase 6 runtime checklist in a
   real environment (`pnpm db:generate` + `pnpm test`); no code change is required.
-- The broader Session 64 sustainability dashboard still contains several **hard-coded**
-  demo fields that are **not** pinned by the current tests and are **not** part of this fix
-  (`energyRenewablePct: 45`, `waterMl: 1.4`, `wasteRecycledPct: 62`, the two seeded
-  `suppliers`, `reportingFrameworks`, `greenAi.gpuHours`/`optimizedPct`). These should be
-  audited and de-faked in a dedicated follow-up, under the same "no invented numbers" rule.
+- **Done (same pass):** the remaining hard-coded demo fields in the Session 64 dashboard
+  were de-faked — `energyRenewablePct: 45`, `waterMl: 1.4`, `wasteRecycledPct: 62`, the two
+  invented `suppliers` (GreenPower Corp / Global Logistics with fabricated ESG ratings), the
+  "on_track" `reportingFrameworks` attestations, `greenAi.gpuHours`/`optimizedPct`, and
+  `netZeroTargetYear: 2035`. All now report 0 / empty arrays unless attested, consistent
+  with the module's "no invented numbers" contract. UI (PlatformPage) renders these fields
+  safely with `||0`/`||[]` and typechecks clean.
