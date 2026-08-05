@@ -110,6 +110,8 @@ tests/e2e/                # Playwright specs
 | [docs/PRE_EXISTING_TEST_FAILURES.md](./docs/PRE_EXISTING_TEST_FAILURES.md) | Inventory & resolution of the 10 pre-existing failing test files (9 env-only, 1 fixed) |
 | [docs/SESSION_2_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_2_CERTIFICATION_REPORT_2026-08-05.md) | Session 2 re-certification pass (Universal Workspace) — audit, fixes, validation |
 | [docs/SESSION_2_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_2_RUNTIME_VALIDATION_CHECKLIST.md) | Session 2 runtime validation checklist (pending target-env execution) |
+| [docs/SESSION_3_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_3_CERTIFICATION_REPORT_2026-08-05.md) | Session 3 re-certification pass (AI Chat) — audit, fixes, validation |
+| [docs/SESSION_3_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_3_RUNTIME_VALIDATION_CHECKLIST.md) | Session 3 runtime validation checklist (pending target-env execution) |
 | [audit/module-inventory.json](./audit/module-inventory.json) | Machine-readable per-module audit (generated) |
 
 > The Advertising Platform (Standard / AI Smart / Performance / Autonomous
