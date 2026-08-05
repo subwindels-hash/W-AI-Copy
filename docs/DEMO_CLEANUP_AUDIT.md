@@ -101,6 +101,9 @@ Production now starts empty for these surfaces and fills from real activity. A g
 | Simulated modules (robotics, spatial/WebXR, quantum, biomedical, legal, education, scientific, non-crypto market data, voice cloning) | Require external providers/credentials (MQTT/cloud quantum/API keys/licenses) or are record-only by scope. Honest-labeled; documented in `docs/SIMULATED_MODULES_INVENTORY.md`. |
 | Real AI inference | Requires `OPENAI_API_KEY` / `ANTHROPIC_API_KEY` / `GEMINI_API_KEY` / `OLLAMA_*`; fail-closed when absent. |
 | Media/voice synthesis | Requires provider credentials; fail-closed (never faked) otherwise. |
+| **FX rates** (`billing/exchangeRates.ts`) | Falls back to **synthetic rates flagged `synthetic: true`** end-to-end (`getRates` + `convert`), never presented as live. Needs a live FX provider/API key. ✅ correctly classified. |
+| **Marketing / Advertising AI copy** (`marketing.service.ts`, `advertising.service.ts`) | Generates AI copy/recommendations flagged `aiSource: "demo"` when no real provider; the **UI shows a demo badge + banner** (`MarketingDashboardPage`, `AdsPage`). ✅ honestly labeled, compliant. |
+| **Music-video placeholder scene** (`musicVideo.service.ts`) | Renders a labeled SVG placeholder only when a render job has no image asset — an explicit fallback, not fake content presented as real. ✅ retained. |
 
 ---
 
