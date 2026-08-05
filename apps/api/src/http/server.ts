@@ -14,6 +14,8 @@ import { registerGoogleAuthRoutes } from "./routes/googleAuth.js";
 import { registerDerivativesRoutes } from "./routes/derivatives.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerMeRoutes } from "./routes/me.js";
+import { registerWebhookRoutes } from "./routes/webhook.js";
+import { registerApiKeyRoutes } from "./routes/apikey.js";
 import { registerProfileRoutes } from "./routes/profile.js";
 import { registerWorkspaceRoutes } from "./routes/workspace.js";
 import { registerConversationRoutes } from "./routes/conversations.js";
@@ -176,6 +178,8 @@ export function createApp() {
   registerDerivativesRoutes(v1);
   registerAdminRoutes(v1);
   registerMeRoutes(v1);
+  registerWebhookRoutes(v1);
+  registerApiKeyRoutes(v1);
   registerProfileRoutes(v1);
   registerAttachmentRoutes(v1);
   registerProjectContinuityRoutes(v1);
