@@ -22,6 +22,10 @@ const EnvSchema = z.object({
 
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
   JWT_ISSUER: z.string().default("windels-ai-os"),
+  // Optional shared secret for inbound platform webhooks (HMAC); falls back to
+  // JWT_SECRET when unset. Not required — only set when you must isolate webhook
+  // credentials from the JWT signing secret.
+  WEBHOOK_SECRET: z.string().min(16).optional(),
   JWT_ACCESS_TTL: z.string().default("15m"),
   JWT_REFRESH_TTL: z.string().default("7d"),
 

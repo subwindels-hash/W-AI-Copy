@@ -92,3 +92,16 @@ Guard suites `noRandomData` / `noFakeVerdict` still pass. API suite total rose f
   `netZeroTargetYear: 2035`. All now report 0 / empty arrays unless attested, consistent
   with the module's "no invented numbers" contract. UI (PlatformPage) renders these fields
   safely with `||0`/`||[]` and typechecks clean.
+
+- **Done (follow-up):** audited all pre-existing API `typecheck` errors and fixed the
+  genuine ones that were NOT caused by the missing generated client:
+  - `http/routes/webhook.ts` — the envelope `meta` was missing `tookMs` (required by
+    `ApiEnvelope`); added it.
+  - `http/routes/webhook.ts` referenced `env.WEBHOOK_SECRET`, which did not exist in the
+    env schema (a genuine configuration bug — the reference could never be set). Added
+    `WEBHOOK_SECRET` (optional, min 16) to `config/env.ts` and documented it in
+    `.env.example`; the route falls back to `JWT_SECRET` as before.
+  - The only remaining typecheck errors are the env-only missing-`@prisma/client`-generated
+    types (76 errors) plus 2 minor test-typing mismatches in `governance.test.ts` (the test
+    passes at runtime with 7/7). None of these are in Session 1 scope or represent runtime
+    bugs.
