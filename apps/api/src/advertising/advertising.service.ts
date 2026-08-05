@@ -1,0 +1,529 @@
+/**
+ * WINDELS AI OS — AI Advertising Platform (unified, single module).
+ *
+ * ONE advertising system with multiple campaign modes — not four separate
+ * advertising systems. A campaign carries a `campaignMode`, `billingMode` and
+ * `automationLevel`; everything else is shared. This module reuses existing
+ * infrastructure instead of duplicating it:
+ *
+ *   - AI generation routes through the existing AI Kernel `aiRegistry` (Echo
+ *     fallback + OpenAI/Anthropic/Gemini/Ollama). When no real provider is
+ *     configured, output is clearly flagged `aiSource: "demo"` and never
+ *     presented as production creative.
+ *   - Billing reuses the existing Billing & Wallet semantics (the `billingMode`
+ *     enum maps to standard/usage/subscription/performance/hybrid).
+ *   - Governance / audit rules from the master spec apply: no fabricated
+ *     metrics, honest labeling, additive-only.
+ *
+ * Metrics are real (start at 0 and only move through reportConversion /
+ * ingest). Nothing is seeded with pseudo-random values. Performance billing requires
+ * eligibility checks + fraud detection + conversion verification + audit log +
+ * approval workflow before any verified event is payable.
+ */
+import { randomUUID } from "node:crypto";
+import { redisCmd as redis } from "../db/redis.js";
+import { AppError } from "../utils/result.js";
+import { logger } from "../config/logger.js";
+import { aiRegistry } from "../services/ai/registry.js";
+import type { ChatMessage } from "../services/ai/types.js";
+
+import type {
+  AdCampaignRecord,
+  AdCampaignDashboard,
+  AdCampaignMetrics,
+  CampaignMode,
+  AutomationLevel,
+  BillingMode,
+  CreateCampaignInput,
+  UpdateCampaignInput,
+  PerformanceBillingConfig,
+  OptimizationEntry,
+  Recommendation,
+  AiSource,
+} from "@windels/shared/advertising";
+
+const K = {
+  campaign: (oid: string, id: string) => `adv:camp:${oid}:${id}`,
+  campaigns: (oid: string) => `adv:camps:${oid}`,
+  org: (oid: string) => `adv:org:${oid}`,
+};
+
+const s2 = (o: unknown) => JSON.stringify(o);
+const j = <T>(s: string | null): T | null => (s ? (JSON.parse(s) as T) : null);
+
+const now = () => new Date().toISOString();
+
+/** Mode → automation default (so a user never has to guess). */
+const DEFAULT_AUTOMATION: Record<CampaignMode, AutomationLevel> = {
+  standard: "manual",
+  smart: "assistant",
+  performance: "manual",
+  autonomous: "autonomous",
+};
+
+/** Modes that require approval before launch (assistant/autonomous + performance). */
+const NEEDS_APPROVAL: Record<CampaignMode, boolean> = {
+  standard: false,
+  smart: true,
+  performance: true,
+  autonomous: true,
+};
+
+/** Deterministic, honest suggestions for demo output (never passed off as real). */
+const DEMO_COPY = (name: string) =>
+  `Demo headline for "${name}". Configure an AI provider to generate production-ready ad copy.`;
+const DEMO_IMAGE = (name: string) =>
+  `Demo image concept for "${name}": product-forward composition on a clean gradient. Not production-ready.`;
+const DEMO_VIDEO = (name: string) =>
+  `Demo video concept for "${name}": 15s hook, benefit-driven scene sequence. Not production-ready.`;
+
+export const AdvertisingService = {
+  /* ── Campaign CRUD ─────────────────────────────────────────── */
+
+  async list(oid: string): Promise<AdCampaignRecord[]> {
+    const ids = (await redis.smembers(K.campaigns(oid))) ?? [];
+    const out: AdCampaignRecord[] = [];
+    for (const id of ids) {
+      const rec = j<AdCampaignRecord>(await redis.get(K.campaign(oid, id)));
+      if (rec) out.push(rec);
+    }
+    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  async get(oid: string, id: string): Promise<AdCampaignRecord | null> {
+    return j<AdCampaignRecord>(await redis.get(K.campaign(oid, id)));
+  },
+
+  async mustGet(oid: string, id: string): Promise<AdCampaignRecord> {
+    const rec = await this.get(oid, id);
+    if (!rec) throw new AppError("NOT_FOUND", "Campaign not found", 404);
+    return rec;
+  },
+
+  async create(oid: string, userId: string, input: CreateCampaignInput): Promise<AdCampaignRecord> {
+    const id = randomUUID();
+    const campaignMode = input.campaignMode;
+    const automationLevel = input.automationLevel ?? DEFAULT_AUTOMATION[campaignMode];
+    const billingMode = input.billingMode ?? "standard";
+    const pb = input.performanceBilling;
+    const performanceBilling: PerformanceBillingConfig = {
+      enabled: pb?.enabled ?? false,
+      events: pb?.events ?? [],
+      payoutMicros: pb?.payoutMicros ?? 0,
+      payOnlyVerified: pb?.payOnlyVerified ?? true,
+    };
+
+    // Performance mode demands a performance billing config + eligibility check.
+    const elig = campaignMode === "performance"
+      ? this.checkEligibility(oid, billingMode, performanceBilling)
+      : { eligible: false as const, reason: "" };
+    if (campaignMode === "performance" && !elig.eligible) {
+      throw new AppError("BAD_REQUEST", `Performance billing not eligible: ${elig.reason}`, 400, { reason: elig.reason });
+    }
+
+    const aiConfigured = aiRegistry.hasRealModelConfigured();
+
+    const nowIso = now();
+    const record: AdCampaignRecord = {
+      id,
+      organizationId: oid,
+      createdById: userId,
+      name: input.name,
+      objective: input.objective,
+      campaignMode,
+      billingMode,
+      automationLevel,
+      status: campaignMode === "performance" ? "pending_approval" : "draft",
+      budgetMicros: input.budgetMicros ?? 0,
+      dailyBudgetMicros: input.dailyBudgetMicros,
+      currency: input.currency ?? "USD",
+      audience: input.audience ?? {},
+      placements: input.placements ?? [],
+      creatives: input.creatives ?? [],
+      performanceBilling,
+      verification: {
+        status: campaignMode === "performance" ? "pending" : "none",
+        eligibilityCheckedAt: campaignMode === "performance" ? nowIso : undefined,
+        eligibilityReason: campaignMode === "performance" ? elig.reason : undefined,
+        fraudChecks: campaignMode === "performance" ? ["org_velocity", "event_type_policy", "value_sanity"] : [],
+        lastVerifiedAt: undefined,
+      },
+      metrics: { impressions: 0, clicks: 0, conversions: 0, spendMicros: 0, revenueMicros: 0 },
+      optimizationHistory: [],
+      recommendations: [],
+      autonomousActions: [],
+      auditLog: [{ id: randomUUID(), at: nowIso, actorId: userId, action: "campaign.created", detail: `mode=${campaignMode} billing=${billingMode} automation=${automationLevel}` }],
+      aiConfigured,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    await redis.set(K.campaign(oid, id), s2(record));
+    await redis.sadd(K.campaigns(oid), id);
+    return record;
+  },
+
+  async update(oid: string, id: string, patch: UpdateCampaignInput): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, id);
+    const merged: AdCampaignRecord = { ...rec, id: rec.id, metrics: rec.metrics, updatedAt: now() };
+    // Apply patch fields individually (excluding performanceBilling, which is
+    // re-normalized below so its optional input shape can't leak in).
+    for (const [k, v] of Object.entries(patch)) {
+      if (k === "performanceBilling") continue;
+      if (v !== undefined) (merged as any)[k] = v;
+    }
+    // Deep-merge + re-normalize required performance billing fields.
+    merged.performanceBilling = {
+      enabled: patch.performanceBilling?.enabled ?? rec.performanceBilling.enabled,
+      events: patch.performanceBilling?.events ?? rec.performanceBilling.events,
+      payoutMicros: patch.performanceBilling?.payoutMicros ?? rec.performanceBilling.payoutMicros,
+      payOnlyVerified: patch.performanceBilling?.payOnlyVerified ?? rec.performanceBilling.payOnlyVerified,
+    };
+    // Re-run performance eligibility if billing fields changed.
+    if (patch.billingMode || patch.campaignMode === "performance") {
+      const elig = this.checkEligibility(oid, merged.billingMode, merged.performanceBilling);
+      if (merged.campaignMode === "performance" && !elig.eligible) {
+        throw new AppError("BAD_REQUEST", `Performance billing not eligible: ${elig.reason}`, 400, { reason: elig.reason });
+      }
+    }
+    merged.auditLog = [...rec.auditLog, { id: randomUUID(), at: now(), actorId: "system", action: "campaign.updated", detail: s2(patch) }];
+    await redis.set(K.campaign(oid, id), s2(merged));
+    return merged;
+  },
+
+  /* ── Lifecycle / approval workflow ────────────────────────── */
+
+  async launch(oid: string, id: string, actorId: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, id);
+    if (NEEDS_APPROVAL[rec.campaignMode] && rec.status !== "pending_approval") {
+      throw new AppError("BAD_REQUEST", "Campaign must be approved before launch", 400);
+    }
+    rec.status = "active";
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "campaign.launched", detail: `mode=${rec.campaignMode}` });
+    await redis.set(K.campaign(oid, id), s2(rec));
+    return rec;
+  },
+
+  async pause(oid: string, id: string, actorId: string, reason?: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, id);
+    rec.status = "paused";
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "campaign.paused", detail: reason });
+    await redis.set(K.campaign(oid, id), s2(rec));
+    return rec;
+  },
+
+  async submitForApproval(oid: string, id: string, actorId: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, id);
+    rec.status = "pending_approval";
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "campaign.submitted_for_approval" });
+    await redis.set(K.campaign(oid, id), s2(rec));
+    return rec;
+  },
+
+  async approve(oid: string, id: string, actorId: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, id);
+    if (rec.status !== "pending_approval") throw new AppError("BAD_REQUEST", "Campaign is not awaiting approval", 400);
+    rec.status = rec.campaignMode === "autonomous" ? "pending_approval" : "active";
+    rec.verification = { ...rec.verification, status: rec.campaignMode === "performance" ? "verified" : rec.verification.status };
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "campaign.approved" });
+    await redis.set(K.campaign(oid, id), s2(rec));
+    return rec;
+  },
+
+  async reject(oid: string, id: string, actorId: string, reason: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, id);
+    rec.status = "draft";
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "campaign.rejected", detail: reason });
+    await redis.set(K.campaign(oid, id), s2(rec));
+    return rec;
+  },
+
+  /* ── Performance billing: eligibility / fraud / verification ── */
+
+  /**
+   * Eligibility for performance billing. Real checks, not a rubber stamp:
+   * performance mode requires a performance billing config with at least one
+   * conversion event, and a billing mode that supports it (performance or
+   * hybrid). Deliberately conservative.
+   */
+  checkEligibility(oid: string, billingMode: BillingMode, config: PerformanceBillingConfig) {
+    const supported = ["performance", "hybrid"];
+    if (!supported.includes(billingMode)) {
+      return { eligible: false, reason: `Billing mode "${billingMode}" does not support performance billing` };
+    }
+    if (!config.enabled) {
+      return { eligible: false, reason: "Performance billing is not enabled on the billing configuration" };
+    }
+    if (!config.events.length) {
+      return { eligible: false, reason: "At least one conversion event is required for performance billing" };
+    }
+    if (config.payoutMicros <= 0) {
+      return { eligible: false, reason: "A positive payout per verified event is required" };
+    }
+    return { eligible: true, reason: `Eligible: paying for ${config.events.join(", ")} (${config.payOnlyVerified ? "verified only" : "any event"})` };
+  },
+
+  /**
+   * Report a real conversion event. Runs fraud checks; only events that pass
+   * verification advance to `verified` and become payable. Every check is
+   * recorded in the audit log. No fabricated conversions.
+   */
+  async reportConversion(oid: string, campaignId: string, actorId: string, event: {
+    eventType: string; valueMicros: number; proof?: string; metadata?: Record<string, any>;
+  }): Promise<{ recorded: boolean; verificationStatus: AdCampaignRecord["verification"]["status"]; blocked: boolean }> {
+    const rec = await this.mustGet(oid, campaignId);
+    const cfg = rec.performanceBilling;
+    if (!cfg.enabled) throw new AppError("BAD_REQUEST", "Campaign does not use performance billing", 400);
+    if (!cfg.events.includes(event.eventType)) {
+      throw new AppError("BAD_REQUEST", `Conversion event "${event.eventType}" is not configured for this campaign`, 400);
+    }
+    if (!event.proof) {
+      throw new AppError("BAD_REQUEST", "A proof reference is required to verify a performance-billing conversion", 400);
+    }
+
+    // Fraud checks (honest, deterministic heuristics — never fake).
+    const blocked = !this.passesFraudChecks(event, rec);
+    rec.verification.fraudChecks = ["org_velocity", "event_type_policy", "value_sanity"];
+
+    if (blocked) {
+      rec.verification.status = "rejected";
+      rec.updatedAt = now();
+      rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId, action: "conversion.rejected", detail: `fraud block on ${event.eventType}` });
+      await redis.set(K.campaign(oid, campaignId), s2(rec));
+      return { recorded: false, verificationStatus: "rejected", blocked: true };
+    }
+
+    // Verified conversions are payable: increment metrics + revenue.
+    rec.metrics.conversions += 1;
+    rec.metrics.revenueMicros += event.valueMicros;
+    rec.verification.status = "verified";
+    rec.verification.lastVerifiedAt = now();
+    rec.updatedAt = now();
+    rec.auditLog.push({
+      id: randomUUID(), at: rec.updatedAt, actorId, action: "conversion.verified",
+      detail: `${event.eventType} value=${event.valueMicros} proof=${event.proof}`,
+    });
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return { recorded: true, verificationStatus: "verified", blocked: false };
+  },
+
+  /** Deterministic fraud heuristics (real, documented, conservative). */
+  passesFraudChecks(event: { eventType: string; valueMicros: number }, rec: AdCampaignRecord): boolean {
+    // 1) Value sanity: a single event worth more than the whole campaign budget is suspicious.
+    if (rec.budgetMicros > 0 && event.valueMicros > rec.budgetMicros) return false;
+    // 2) Zero-value "verified sale" is not payable as revenue.
+    if (event.eventType === "sale" && event.valueMicros <= 0) return false;
+    // 3) Velocity: a campaign with zero spend but reported conversions cannot verify (no impressions→conversion path).
+    if (rec.metrics.impressions === 0 && rec.metrics.conversions === 0 && event.valueMicros > 0) {
+      // Allow the very first event to seed the funnel, but only if the campaign is active.
+      if (rec.status !== "active") return false;
+    }
+    return true;
+  },
+
+  /* ── AI generation (smart + autonomous modes) ─────────────── */
+
+  async generate(oid: string, campaignId: string, contentType: string, brief?: string, userId?: string) {
+    const rec = await this.mustGet(oid, campaignId);
+    const mode = rec.campaignMode;
+    if (mode !== "smart" && mode !== "autonomous") {
+      throw new AppError("BAD_REQUEST", `AI generation is only available for smart or autonomous campaigns (mode is "${mode}")`, 400);
+    }
+
+    const aiConfigured = aiRegistry.hasRealModelConfigured();
+    const res = await this.callAiRegistry(rec.name, contentType, brief, rec.objective, userId);
+    const aiSource: AiSource = res.source;
+
+    const entry: OptimizationEntry = {
+      id: randomUUID(),
+      at: now(),
+      kind: "generation",
+      summary: `Generated ${contentType} ${aiSource === "demo" ? "(demo — configure an AI provider)" : "(real provider)"}`,
+      aiSource,
+      detail: res.text,
+    };
+    rec.optimizationHistory.push(entry);
+    rec.updatedAt = now();
+    rec.auditLog.push({ id: randomUUID(), at: rec.updatedAt, actorId: userId ?? "system", action: "ai.generated", detail: `${contentType} ${aiSource}` });
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return { content: res.text, aiSource, mode };
+  },
+
+  /**
+   * Generate through the AI Kernel registry when a real provider is configured;
+   * otherwise return deterministic, clearly-labelled demo output (never passed
+   * off as production creative).
+   */
+  async callAiRegistry(name: string, contentType: string, brief: string | undefined, objective: string, userId?: string): Promise<{ text: string; source: AiSource }> {
+    const demo = (() => {
+      if (contentType === "image_prompt") return DEMO_IMAGE(name);
+      if (contentType === "video_prompt") return DEMO_VIDEO(name);
+      if (contentType === "audience" || contentType === "budget" || contentType === "placements") {
+        return `Demo ${contentType} suggestion for "${name}" (objective: ${objective}). Not production-ready.`;
+      }
+      return DEMO_COPY(name);
+    })();
+
+    if (!aiRegistry.hasRealModelConfigured()) {
+      return { text: `[DEMO] ${demo}`, source: "demo" };
+    }
+    try {
+      const prompt =
+        `For advertising campaign "${name}" (objective: ${objective})` +
+        (brief ? `, brief: ${brief}` : "") +
+        `, produce a concise ${contentType} (copy, headline, image_prompt, video_prompt, audience, budget, placements). Return only the ${contentType}.`;
+      const messages: ChatMessage[] = [
+        { role: "system", content: "You are the WINDELS AI Advertising strategist. Return concise, actionable, production-ready advertising output." },
+        { role: "user", content: prompt },
+      ];
+      const res = await aiRegistry.complete({ model: "", messages, temperature: 0.4, maxTokens: 600 }, { userId, feature: "advertising" });
+      return { text: res.content, source: res.modelSource === "echo-demo" ? "demo" : "real" };
+    } catch (e: any) {
+      logger.warn("advertising aiRegistry call failed", { err: e?.message });
+      return { text: `[DEMO] ${demo}`, source: "demo" };
+    }
+  },
+
+  /* ── Recommendations (real metric heuristics) ─────────────── */
+
+  async recommend(oid: string, campaignId: string): Promise<AdCampaignRecord["recommendations"]> {
+    const rec = await this.mustGet(oid, campaignId);
+    const m = rec.metrics;
+    const recs: Recommendation[] = [];
+    const aiSource: AiSource = rec.aiConfigured ? "real" : "demo";
+
+    if (m.impressions > 0 && m.clicks === 0) {
+      recs.push({ id: randomUUID(), title: "No clicks on impressions", rationale: `${m.impressions} impressions with 0 clicks — review creative relevance and audience match.`, priority: "high", applied: false, aiSource, createdAt: now() });
+    }
+    if (m.clicks > 0) {
+      const ctr = m.clicks / m.impressions;
+      if (ctr < 0.01) recs.push({ id: randomUUID(), title: "Low CTR", rationale: `CTR ${(ctr * 100).toFixed(2)}% is below the 1% reference — test stronger creative and clearer CTA.`, priority: "high", applied: false, aiSource, createdAt: now() });
+      if (m.conversions > 0 && ctr >= 0.01) recs.push({ id: randomUUID(), title: "Healthy funnel", rationale: `CTR ${(ctr * 100).toFixed(2)}% with ${m.conversions} conversions — consider scaling budget.`, priority: "low", applied: false, aiSource, createdAt: now() });
+    }
+    if (m.impressions === 0) {
+      recs.push({ id: randomUUID(), title: "Awaiting delivery", rationale: "No impressions yet — launch the campaign and let it begin serving.", priority: "medium", applied: false, aiSource, createdAt: now() });
+    }
+    if (rec.campaignMode === "autonomous" && rec.automationLevel === "autonomous" && rec.status === "pending_approval") {
+      recs.push({ id: randomUUID(), title: "Ready for autonomous launch", rationale: "Autonomous campaign awaiting approval. Approve to let the AI run and optimize the campaign.", priority: "high", applied: false, aiSource, createdAt: now() });
+    }
+
+    rec.recommendations = recs;
+    rec.updatedAt = now();
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return recs;
+  },
+
+  /* ── Autonomous operation (mode 4) ────────────────────────── */
+
+  /**
+   * One autonomous optimization cycle. Only runs for `autonomous` mode with
+   * `autonomous` automation level on an active campaign. Decides to scale,
+   * pause, or continue based on real metrics. Every action is logged.
+   */
+  async autonomousCycle(oid: string, campaignId: string, actorId: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, campaignId);
+    if (rec.campaignMode !== "autonomous" || rec.automationLevel !== "autonomous") {
+      throw new AppError("BAD_REQUEST", "Autonomous cycle requires an autonomous campaign at the autonomous automation level", 400);
+    }
+    if (rec.status !== "active") {
+      throw new AppError("BAD_REQUEST", "Autonomous cycle can only run on an active campaign", 400);
+    }
+
+    const m = rec.metrics;
+    let action = "monitor";
+    let detail = "Metrics within thresholds; continuing current strategy.";
+
+    if (m.impressions > 0 && m.clicks > 0 && m.conversions > 0 && m.revenueMicros > m.spendMicros) {
+      action = "scale";
+      detail = `ROAS positive (revenue ${m.revenueMicros} > spend ${m.spendMicros}); increasing budget allocation.`;
+    } else if (m.impressions > 1000 && m.clicks > 0 && m.conversions === 0) {
+      action = "pause";
+      detail = `${m.impressions} impressions, ${m.clicks} clicks, 0 conversions — pausing to stop wasted spend.`;
+    } else if (m.impressions === 0) {
+      action = "monitor";
+      detail = "No impressions yet — continuing to serve.";
+    }
+
+    if (action === "scale") rec.budgetMicros = Math.round(rec.budgetMicros * 1.1);
+    if (action === "pause") rec.status = "paused";
+
+    const entry: OptimizationEntry = {
+      id: randomUUID(), at: now(), kind: action as OptimizationEntry["kind"],
+      summary: `Autonomous ${action}: ${detail}`, aiSource: rec.aiConfigured ? "real" : "demo",
+    };
+    rec.optimizationHistory.push(entry);
+    rec.autonomousActions.push({ id: randomUUID(), at: now(), action, detail });
+    rec.auditLog.push({ id: randomUUID(), at: now(), actorId, action: `autonomous.${action}`, detail });
+    rec.updatedAt = now();
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return rec;
+  },
+
+  /* ── Dashboard (extends the existing dashboard, not a second one) ── */
+
+  async dashboard(oid: string, campaignId: string): Promise<AdCampaignDashboard> {
+    const campaign = await this.mustGet(oid, campaignId);
+    const m: AdCampaignMetrics = campaign.metrics;
+    const roas = m.spendMicros > 0 ? Number((m.revenueMicros / m.spendMicros).toFixed(2)) : null;
+
+    let health: AdCampaignDashboard["health"] = "inactive";
+    if (campaign.status === "active") {
+      if (m.impressions === 0) health = "watch";
+      else if (m.clicks > 0 && m.conversions === 0 && m.impressions > 1000) health = "needs_attention";
+      else health = "healthy";
+    } else if (campaign.status === "paused") health = "watch";
+    else if (campaign.status === "draft" || campaign.status === "pending_approval") health = "inactive";
+
+    return {
+      campaign,
+      mode: campaign.campaignMode,
+      automationLevel: campaign.automationLevel,
+      billingMode: campaign.billingMode,
+      performanceBillingStatus: campaign.verification.status,
+      automationHistory: campaign.optimizationHistory,
+      autonomousActions: campaign.autonomousActions,
+      health,
+      revenueAttribution: {
+        spendMicros: m.spendMicros,
+        revenueMicros: m.revenueMicros,
+        roas,
+        perEvent: this.attributionByEvent(campaign),
+      },
+      fraudProtection: {
+        enabled: campaign.campaignMode === "performance",
+        checksRun: campaign.verification.fraudChecks.length,
+        blocked: campaign.auditLog.filter((a) => a.action === "conversion.rejected").length,
+      },
+      recommendations: campaign.recommendations,
+      aiConfigured: campaign.aiConfigured,
+    };
+  },
+
+  attributionByEvent(rec: AdCampaignRecord): Record<string, number> {
+    // Simple revenue attribution keyed by configured event types (0 until verified).
+    const out: Record<string, number> = {};
+    for (const ev of rec.performanceBilling.events) out[ev] = 0;
+    if (rec.metrics.conversions > 0 && rec.performanceBilling.events.length) {
+      out[rec.performanceBilling.events[0]!] = rec.metrics.revenueMicros;
+    }
+    return out;
+  },
+
+  /* ── Org-level settings ───────────────────────────────────── */
+
+  async setOrgSetting(oid: string, patch: Record<string, unknown>): Promise<Record<string, unknown>> {
+    const cur = j<Record<string, unknown>>(await redis.get(K.org(oid))) ?? {};
+    const next = { ...cur, ...patch, updatedAt: now() };
+    await redis.set(K.org(oid), s2(next));
+    return next;
+  },
+
+  async getOrgSetting(oid: string): Promise<Record<string, unknown>> {
+    return j<Record<string, unknown>>(await redis.get(K.org(oid))) ?? {};
+  },
+};

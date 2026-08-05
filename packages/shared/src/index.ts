@@ -73,3 +73,4 @@ export * from "./etl.js";
 export * from "./security.js";
 export * from "./derivatives.js";
 export * from "./mediaMetering.js";
+export * from "./advertising.js";

@@ -58,6 +58,89 @@
     "status": "PARTIAL"
   },
   {
+    "moduleKey": "advertising",
+    "title": "advertising",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/advertising",
+    "backend": {
+      "serviceDir": "apps/api/src/advertising",
+      "serviceFile": {
+        "file": "advertising.service.ts",
+        "path": "/home/user/WIN/apps/api/src/advertising/advertising.service.ts",
+        "sloc": 530,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1231,
+      "serviceFiles": [
+        "advertising.service.ts",
+        "advertising.test.ts",
+        "advertising/advertising.service.ts"
+      ],
+      "importedServiceFiles": [
+        "advertising/advertising.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/advertising.ts",
+        "sloc": 117,
+        "counts": {
+          "total": 16,
+          "GET": 4,
+          "POST": 10,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /campaigns",
+          "POST /campaigns",
+          "GET /campaigns/:id",
+          "PATCH /campaigns/:id",
+          "POST /campaigns/:id/launch",
+          "POST /campaigns/:id/pause",
+          "POST /campaigns/:id/submit",
+          "POST /campaigns/:id/approve",
+          "POST /campaigns/:id/reject",
+          "POST /campaigns/:id/generate",
+          "POST /campaigns/:id/recommend",
+          "POST /campaigns/:id/autonomous",
+          "POST /campaigns/:id/conversions",
+          "GET /campaigns/:id/dashboard",
+          "GET /settings",
+          "PATCH /settings"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/advertising.ts (188 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/advertising.ts (133 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "AuditLog",
+        "Message",
+        "Workflow"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "advertising/advertising.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "OpenAI",
+      "Anthropic"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "agentComm",
     "title": "Agent Communication",
     "sessions": [],
@@ -1537,14 +1620,15 @@
       "serviceFile": {
         "file": "composer.service.ts",
         "path": "/home/user/WIN/apps/api/src/composer/composer.service.ts",
-        "sloc": 226,
+        "sloc": 284,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1147,
+      "serviceTotalSloc": 1433,
       "serviceFiles": [
         "bootstrap.ts",
         "composer.service.ts",
+        "composer.test.ts",
         "composer/composer.service.ts",
         "services/workflow.service.ts"
       ],
@@ -1557,11 +1641,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/composer.ts",
-        "sloc": 87,
+        "sloc": 100,
         "counts": {
-          "total": 13,
+          "total": 14,
           "GET": 7,
-          "POST": 4,
+          "POST": 5,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
@@ -1574,6 +1658,7 @@
           "GET /workflows/:id/validate",
           "POST /workflows/:id/deploy",
           "POST /workflows/:id/run",
+          "POST /runs/:runId/outcome",
           "GET /runs",
           "GET /library",
           "GET /notes",
@@ -1608,7 +1693,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/composer.ts (127 LOC)",
+    "sharedTypes": "packages/shared/src/composer.ts (147 LOC)",
     "web": {
       "client": "apps/web/src/lib/composer.ts (17 LOC)",
       "pages": []
@@ -1626,6 +1711,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "composer/composer.test.ts",
       "config/moduleGates.test.ts"
     ],
     "syntheticData": [],
@@ -3206,14 +3292,15 @@
       "serviceFile": {
         "file": "expertsPlatform.service.ts",
         "path": "/home/user/WIN/apps/api/src/expertsPlatform/expertsPlatform.service.ts",
-        "sloc": 66,
+        "sloc": 153,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 140,
+      "serviceTotalSloc": 506,
       "serviceFiles": [
         "bootstrap.ts",
         "expertsPlatform.service.ts",
+        "expertsPlatform.test.ts",
         "expertsPlatform/expertsPlatform.service.ts"
       ],
       "importedServiceFiles": [
@@ -3224,7 +3311,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/expertsPlatform.ts",
-        "sloc": 68,
+        "sloc": 77,
         "counts": {
           "total": 9,
           "GET": 5,
@@ -3246,7 +3333,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/expertsPlatform.ts (55 LOC)",
+    "sharedTypes": "packages/shared/src/expertsPlatform.ts (93 LOC)",
     "web": {
       "client": "apps/web/src/lib/expertsPlatform.ts (16 LOC)",
       "pages": []
@@ -3262,10 +3349,14 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions41-76-80.spec.ts"
+      "sessions41-76-80.spec.ts",
+      "expertsPlatform/expertsPlatform.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
+    "externalIntegrations": [
+      "OpenAI",
+      "Anthropic"
+    ],
     "status": "COMPLETE"
   },
   {
@@ -4619,40 +4710,48 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1363,
+      "serviceTotalSloc": 2250,
       "serviceFiles": [
         "bootstrap.ts",
         "mediaFactory.service.ts",
+        "metering.service.ts",
+        "metering.test.ts",
         "pipeline.service.ts",
         "pipeline.test.ts",
         "publishing.service.ts",
         "services/workspace.service.ts",
         "mediaFactory/mediaFactory.service.ts",
         "mediaFactory/pipeline.service.ts",
-        "mediaFactory/publishing.service.ts"
+        "mediaFactory/publishing.service.ts",
+        "mediaFactory/metering.service.ts"
       ],
       "importedServiceFiles": [
         "services/workspace.service.ts",
         "mediaFactory/mediaFactory.service.ts",
         "mediaFactory/pipeline.service.ts",
-        "mediaFactory/publishing.service.ts"
+        "mediaFactory/publishing.service.ts",
+        "mediaFactory/metering.service.ts"
       ],
       "bootstrapFile": "apps/api/src/mediaFactory/bootstrap.ts"
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/mediaFactory.ts",
-        "sloc": 199,
+        "sloc": 223,
         "counts": {
-          "total": 25,
-          "GET": 14,
-          "POST": 8,
+          "total": 29,
+          "GET": 16,
+          "POST": 10,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 2
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "POST /usage/estimate/render",
+          "POST /usage/estimate/publish",
+          "GET /usage/summary",
+          "GET /usage/records",
           "POST /generate",
           "GET /jobs",
           "GET /characters",
@@ -4680,9 +4779,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/mediaFactory.ts (232 LOC)",
+    "sharedTypes": "packages/shared/src/mediaFactory.ts (246 LOC)",
     "web": {
-      "client": "apps/web/src/lib/mediaFactory.ts (81 LOC)",
+      "client": "apps/web/src/lib/mediaFactory.ts (110 LOC)",
       "pages": []
     },
     "db": {
@@ -4701,7 +4800,9 @@
     "tests": [
       "mediaPublishing.spec.ts",
       "sessions41-76-80.spec.ts",
+      "mediaFactory/metering.test.ts",
       "mediaFactory/pipeline.test.ts",
+      "mediaFactory/publishing/childSafety.test.ts",
       "mediaFactory/publishing/platforms.test.ts",
       "mediaFactory/publishing/publishJobs.test.ts",
       "mediaFactory/publishing/tokens.test.ts",
@@ -5847,7 +5948,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1455,
+      "serviceTotalSloc": 1608,
       "serviceFiles": [
         "aiValidation.service.ts",
         "apiTest.service.ts",
@@ -5855,6 +5956,7 @@
         "chaos.service.ts",
         "digitalTwin.service.ts",
         "drTest.service.ts",
+        "drTest.test.ts",
         "securityTest.service.ts",
         "testRunner.service.ts",
         "testRunner.test.ts",
@@ -5905,12 +6007,14 @@
         "User",
         "Agent",
         "Message",
-        "Workflow"
+        "Workflow",
+        "Integration"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "qa/drTest.test.ts",
       "qa/testRunner.test.ts"
     ],
     "syntheticData": [],

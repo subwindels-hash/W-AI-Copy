@@ -21,6 +21,7 @@ import {
   BookOpen,
   FolderKanban,
   UsersRound,
+  Megaphone,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -32,6 +33,7 @@ const navItems = [
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
   { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },
   { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
+  { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
   { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
   { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },

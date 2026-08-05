@@ -103,6 +103,7 @@ import { registerIndustryRoutes } from "./routes/industry.js";
 import { registerHealthEcosystemRoutes } from "./routes/healthEcosystem.js";
 import { registerEtlRoutes } from "./routes/etl.js";
 import { registerCameraRoutes } from "./routes/camera.js";
+import { registerAdvertisingRoutes } from "./routes/advertising.js";
 import { logger } from "../observability/logger.js";
 import { observabilityMiddleware } from "./middleware/observability.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -1012,6 +1013,12 @@ export function createApp() {
   const cameraRouter = express.Router();
   v1.use("/camera", cameraRouter);
   registerCameraRoutes(cameraRouter);
+
+  // /advertising — AI Advertising Platform (unified multi-mode: standard,
+  // smart, performance, autonomous). One module, multiple campaign modes.
+  const advertisingRouter = express.Router();
+  v1.use("/advertising", advertisingRouter);
+  registerAdvertisingRoutes(advertisingRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);
