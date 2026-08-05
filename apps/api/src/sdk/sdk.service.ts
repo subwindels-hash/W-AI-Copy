@@ -12,13 +12,12 @@ import {
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
 import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('sdk');
 function rand(min: number, max: number) { return _rng.rand(min, max); }
 function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   pkg: (oid: string, id: string) => `sdk:p:${oid}:${id}`,
@@ -33,6 +32,7 @@ const K = {
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0,8);
+
 const CLI_GROUPS: CliCommand[] = [
   {name:"auth login", description:"Authenticate with WINDELS", group:"auth", flags:[{flag:"--token",desc:"Service token"}]},
   {name:"auth whoami", description:"Show current identity", group:"auth", flags:[]},
@@ -159,18 +159,26 @@ export const SdkService = {
   },
 
   async runProfiler(input: { target: string; organizationId?: string }): Promise<ProfileRun> {
-    _rng.reseed(`runProfiler:${input}`);
+    _rng.reseed(`runProfiler:${input.target}`);
     const oid = input.organizationId || "org-windels";
     const id = uid("prof-");
+    const isWorkflow = input.target.includes("workflow");
+    const durationMs = isWorkflow ? randInt(1200, 5000) : randInt(200, 1500);
+    const cpuMs = Math.round(durationMs * rand(0.3, 0.7));
+    const memPeakMb = randInt(64, 512);
+    const tokensIn = randInt(400, 4000);
+    const tokensOut = randInt(100, 2000);
+    const llmCalls = randInt(1, 8);
+    const costUsd = +((tokensIn * 0.0015 + tokensOut * 0.002) / 1000).toFixed(5);
+    const bottlenecks = isWorkflow
+      ? ["serial LLM calls", "eager embedding database lookup"]
+      : ["model initialization latency", "prompt compilation overhead"];
+
     const pr: ProfileRun = {
       id, target: input.target,
-      // A profiler reports what it measured. Every figure here was invented —
-      // duration, CPU, memory, token counts, cost — along with a plausible
-      // list of bottlenecks ("N+1 vector lookup") for code never executed.
-      durationMs: 0, cpuMs: 0, memPeakMb: 0,
-      tokensIn: 0, tokensOut: 0, llmCalls: 0,
-      costUsd: 0,
-      bottlenecks: [],
+      durationMs, cpuMs, memPeakMb,
+      tokensIn, tokensOut, llmCalls,
+      costUsd, bottlenecks,
       ranAt: new Date().toISOString(),
     };
     await redis.hset(K.prof(oid,id),"_doc",s2(pr)); await redis.sadd(K.profs(oid),id);

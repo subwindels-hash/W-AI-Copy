@@ -485,8 +485,7 @@ async function main() {
           await runNewBootstraps("org-windels", "user-admin");
           // Also seed for the actual super_admin org if the user exists
           try {
-            const { PrismaClient } = await import("@prisma/client");
-            const pc = new PrismaClient();
+            const { prisma: pc } = await import("./db/client.js");
             const admin = await pc.user.findFirst({ where: { email: "admin@windels.ai" } }) as any;
             if (admin && admin.organizationId && admin.organizationId !== "org-windels") {
               await runNewBootstraps(admin.organizationId, admin.id);

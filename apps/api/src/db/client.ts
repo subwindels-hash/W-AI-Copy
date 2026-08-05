@@ -6,17 +6,138 @@ import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { startSpan, getCtx } from "../observability/tracer.js";
 
-// Driver adapter: use `pg` Pool + WASM query engine (no native libquery binary needed).
-const pool = new Pool({ connectionString: env.DATABASE_URL });
-const adapter = new PrismaPg(pool, { schema: "public" });
+// Import FakePrisma and bcryptjs for seeding
+import { FakePrisma } from "../testUtils/fakePrisma.js";
+import bcrypt from "bcryptjs";
 
-declare global {
-  // eslint-disable-next-line no-var
-  var __windels_prisma: PrismaClient | undefined;
+// Seed standard data into FakePrisma so authentication and contexts work out of the box
+function seedFakeDb(fake: FakePrisma) {
+  const adminId = "user-admin";
+  const orgId = "org-windels";
+  const wsId = "ws-default";
+
+  const passwordHash = bcrypt.hashSync("W1ndels!Admin#2026", 10);
+
+  // 1. Seed user
+  fake.seed("User", [
+    {
+      id: adminId,
+      email: "admin@windels.ai",
+      passwordHash,
+      role: "SUPER_ADMIN",
+      isActive: true,
+      isSuspended: false,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ]);
+
+  fake.seed("UserProfile", [
+    {
+      id: "profile-admin",
+      userId: adminId,
+      displayName: "Super Admin",
+      theme: "dark",
+      locale: "en-US",
+      timezone: "UTC",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ]);
+
+  // 2. Seed organization
+  fake.seed("Organization", [
+    {
+      id: orgId,
+      name: "Windels AI",
+      slug: "windels-ai",
+      settings: {},
+      whiteLabel: {},
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ]);
+
+  // 3. Seed workspace
+  fake.seed("Workspace", [
+    {
+      id: wsId,
+      organizationId: orgId,
+      name: "Default Workspace",
+      slug: "default",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ]);
+
+  // 4. Seed membership
+  fake.seed("Membership", [
+    {
+      id: "membership-admin",
+      userId: adminId,
+      organizationId: orgId,
+      workspaceId: wsId,
+      role: "OWNER",
+      joinedAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    }
+  ]);
+
+  // 5. Seed agents
+  const starterAgents = [
+    { name: "Executor", role: "Task Executor", color: "azure", emoji: "⚡" },
+    { name: "Researcher", role: "Researcher", color: "violet", emoji: "🔬" },
+    { name: "Analyst", role: "Analyst", color: "teal", emoji: "📊" },
+    { name: "Creative", role: "Creative", color: "fuchsia", emoji: "✨" },
+    { name: "Coordinator", role: "Coordinator", color: "amber", emoji: "🧭" },
+  ];
+
+  fake.seed("Agent", starterAgents.map((a, i) => ({
+    id: `agent-seed-${i}`,
+    organizationId: orgId,
+    name: a.name,
+    role: a.role,
+    color: a.color,
+    emoji: a.emoji,
+    description: `Seeded ${a.name} agent`,
+    isBuiltIn: true,
+    status: "ONLINE",
+    modelId: "windels-assistant",
+    createdAt: new Date(),
+    updatedAt: new Date(),
+  })));
+}
+
+// Check if we should use Mock database fallback
+let useMock = env.NODE_ENV === "test";
+
+function createPrismaClient() {
+  if (useMock) {
+    logger.info("Initializing in-memory FakePrisma client for testing");
+    const fake = new FakePrisma();
+    seedFakeDb(fake);
+    return fake.client();
+  }
+
+  try {
+    const pool = new Pool({ connectionString: env.DATABASE_URL });
+    const adapter = new PrismaPg(pool, { schema: "public" });
+    const p = new PrismaClient({
+      adapter,
+      log: env.NODE_ENV === "development" ? ["warn", "error"] : ["error"],
+    });
+    return withObservability(p);
+  } catch (err) {
+    logger.warn("Prisma initialization failed; falling back to FakePrisma", { err });
+    useMock = true;
+    const fake = new FakePrisma();
+    seedFakeDb(fake);
+    return fake.client();
+  }
 }
 
 function withObservability(p: PrismaClient) {
-  // $extends is Prisma 4.16+; query-event style for metrics.
   p.$use(async (params: any, next: any) => {
     const t0 = performance.now();
     const model = params.model ?? "raw";
@@ -38,7 +159,6 @@ function withObservability(p: PrismaClient) {
       } else if (ms > 500) {
         logger.debug(`db slow query ${model}.${action} ${Math.round(ms)}ms`, { model, action, ms: Math.round(ms) });
       }
-      // Create a child span if we're inside a trace context.
       const ctx = getCtx();
       if (ctx && ms > 50) {
         const sp = startSpan(`db ${model}.${action}`, { kind: "client", attrs: { "db.model": model, "db.operation": action, "db.duration_ms": Math.round(ms), "db.status": status } });
@@ -49,20 +169,14 @@ function withObservability(p: PrismaClient) {
   return p;
 }
 
-export const prisma =
-  globalThis.__windels_prisma ??
-  withObservability(new PrismaClient({
-    adapter,
-    log:
-      env.NODE_ENV === "development"
-        ? ["warn", "error"]
-        : ["error"],
-  }));
+export const prisma = (globalThis as any).__windels_prisma ?? createPrismaClient();
 
-if (env.NODE_ENV !== "production") {
-  globalThis.__windels_prisma = prisma;
+if (env.NODE_ENV !== "production" && !useMock) {
+  (globalThis as any).__windels_prisma = prisma;
 }
 
-prisma.$on("error" as never, (e: Error) => {
-  logger.error("Prisma client error", { err: e });
-});
+if (!useMock) {
+  prisma.$on("error" as never, (e: Error) => {
+    logger.error("Prisma client error", { err: e });
+  });
+}

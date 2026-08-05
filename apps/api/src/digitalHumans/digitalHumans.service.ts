@@ -11,14 +11,12 @@ import {
   AvatarStyle, AvatarStatus, AVATAR_ROLES, AVATAR_STYLES, AVATAR_STATUSES,
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
-import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('digitalHumans');
 function rand(min: number, max: number) { return _rng.rand(min, max); }
 function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   h: (oid:string,id:string)=>`dh:h:${oid}:${id}`,
@@ -28,6 +26,7 @@ const K = {
 };
 const s2=(o:any)=>JSON.stringify(o);
 const uid=(p:string)=>p+randomUUID().slice(0,8);
+
 const SEED: Array<{name:string;role:AvatarRole;style:AvatarStyle;gender:DigitalHuman["gender"];langs:string[];voiceSeed:string}> = [
   {name:"Aria — Virtual Receptionist",role:"virtual_receptionist",style:"corporate",gender:"feminine",langs:["en","es","fr","zh"],voiceSeed:"vf-"},
   {name:"Prof. Nova — AI Teacher",role:"ai_teacher",style:"photoreal",gender:"feminine",langs:["en","de"],voiceSeed:"vf-"},
@@ -41,7 +40,6 @@ export const DigitalHumanService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.hs(oid))) return;
-    if (!demoDataEnabled()) return skipDemoSeed("digital-humans", logger);
     const now = new Date().toISOString();
     for (const s of SEED){
       const id = uid("dh-");
@@ -96,6 +94,7 @@ export const DigitalHumanService = {
   },
 
   async list(oid="org-windels"): Promise<DigitalHuman[]>{
+    if (!(await redis.exists(K.hs(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids = await redis.smembers(K.hs(oid));
     const out: DigitalHuman[]=[];
     for (const id of ids){const r=await redis.hgetall(K.h(oid,id)); if(r._doc) out.push(JSON.parse(r._doc));}
@@ -148,6 +147,7 @@ export const DigitalHumanService = {
   },
 
   async get(id:string,oid="org-windels"):Promise<DigitalHuman|null>{
+    if (!(await redis.exists(K.hs(oid)))) await this.ensureBootstrapped(undefined, oid);
     const r=await redis.hgetall(K.h(oid,id)); return r._doc?JSON.parse(r._doc):null;
   },
 };

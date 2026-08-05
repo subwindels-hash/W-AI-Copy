@@ -21,4 +21,10 @@ export function registerSpatialRoutes(router: Router) {
     if (!s) return res.status(404).json({ok:false,error:{code:"NOT_FOUND",message:"session not found"}});
     res.json({ok:true,data:s});
   } catch (e) { next(e); } });
+
+  // Dedicated listing endpoints for other spatial components
+  router.get("/maps", async (req, res, next) => { try { res.json({ ok:true, data: await SpatialService.listMaps((req.user as any).organizationId) }); } catch (e) { next(e); } });
+  router.get("/waypoints", async (req, res, next) => { try { res.json({ ok:true, data: await SpatialService.listWaypoints((req.user as any).organizationId) }); } catch (e) { next(e); } });
+  router.get("/holo-dashboards", async (req, res, next) => { try { res.json({ ok:true, data: await SpatialService.listHoloDashboards((req.user as any).organizationId) }); } catch (e) { next(e); } });
+  router.get("/remote-expert-sessions", async (req, res, next) => { try { res.json({ ok:true, data: await SpatialService.listRemoteExpertSessions((req.user as any).organizationId) }); } catch (e) { next(e); } });
 }

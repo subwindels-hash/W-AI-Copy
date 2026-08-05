@@ -11,4 +11,7 @@ export const dmApi = {
     api<MarketplaceAsset>("/data-marketplace/assets", { method: "POST", json: input }),
   install: (id: string) => api<MarketplaceInstall>(`/data-marketplace/assets/${id}/install`, { method: "POST" }),
   review: (id: string, rating: number, comment?: string) => api<MarketplaceAsset>(`/data-marketplace/assets/${id}/review`, { method: "POST", json: { rating, comment } }),
+  
+  // Shared license and access check
+  checkAccess: (id: string) => api<{ allowed: boolean; reason?: string; licenseModel?: string }>(`/data-marketplace/assets/${id}/access`),
 };

@@ -35,6 +35,13 @@ export function registerDataMarketplaceRoutes(router: Router) {
     if (!a) return res.status(404).json({ok:false,error:{code:"NOT_FOUND",message:"asset not found"}});
     res.json({ok:true,data:a});
   } catch(e){next(e);} });
+  
+  // Shared access control and licensing verification route
+  router.get("/assets/:id/access", async (req, res, next) => { try {
+    const access = await DataMarketplaceService.checkAccess(req.params.id, (req.user as any).organizationId);
+    res.json({ok:true,data:access});
+  } catch(e){next(e);} });
+
   router.post("/assets", validate({body:PublishSchema}), async (req,res,next) => { try {
     res.json({ok:true,data:await DataMarketplaceService.publish({...req.body, organizationId:(req.user as any).organizationId, createdBy:(req.user as any).id})});
   } catch(e){next(e);} });
