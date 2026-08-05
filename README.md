@@ -21,15 +21,17 @@ specification (`uploads/CLAUDE.md`).
 > An earlier pass reported this as green at 84 tests, but that only held on a
 > machine with a git-ignored local `.env`; on a clean checkout 21 of 44 test
 > files aborted before running. That is fixed in tracked config now — see
-> **[BUILD_STATUS.md](./BUILD_STATUS.md)** §7 for the repair, plus the two
-> environment caveats (Prisma engine download, local Postgres/Redis).
+> **[.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md)**
+> and **[docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md)**
+> for the repair, plus the two environment caveats (Prisma engine download, local
+> Postgres/Redis).
 
 > **Status as of 2026-07-21:** All sessions S1–S82 are scaffolded with routes, services,
 > UI tabs, and plausible synthetic/demo data. Core infrastructure (auth, Postgres, Redis,
 > JWT, Kernel event bus, AI provider registry, consent ledger, gift-card ledger, memory
 > service) is **real and tested**. Most session modules return seeded demo data through
-> Math.random()-based fixtures. See **[AUDIT-REPORT.md](./AUDIT-REPORT.md)** for the
-> honest per-module inventory and **[audit/module-inventory.json](./audit/module-inventory.json)**
+> Math.random()-based fixtures. See **[docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md)**
+> for the honest per-module inventory and **[audit/module-inventory.json](./audit/module-inventory.json)**
 > for machine-readable status. Do not assume session dashboards reflect real data.
 
 ## Quick start
@@ -42,7 +44,7 @@ npm i -g pnpm@10.34.5
 pnpm install
 
 # 3. Start Postgres 17 + Redis (local install or Docker)
-#    See DEPLOYMENT.md §Prerequisites for distro packages.
+#    See docs/DEPLOYMENT_ARCHITECTURE.md §Prerequisites for distro packages.
 cp .env.example .env
 # edit .env — set JWT_SECRET and WINDELS_ENCRYPTION_KEY
 
@@ -61,7 +63,7 @@ cd apps/web && npx vite --host
 - API health: http://localhost:4000/healthz
 - Web app:    http://localhost:5173
 - Default admin after first registration: `admin@windels.ai` / first registered password (or `W1ndels!Admin#2026` per spec)
-- Full deployment guide (systemd + nginx + backups): **[DEPLOYMENT.md](./DEPLOYMENT.md)**
+- Full deployment guide (systemd + nginx + backups): **[docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md)**
 
 ## Stack
 
@@ -95,12 +97,19 @@ tests/e2e/                # Playwright specs
 
 | File | Purpose |
 |---|---|
-| [AUDIT-REPORT.md](./AUDIT-REPORT.md) | Honest status of every module, gaps, and what is actually working |
-| [DEPLOYMENT.md](./DEPLOYMENT.md) | Install, build, systemd/nginx deploy, backup, troubleshooting |
-| [ARCHITECTURE.md](./ARCHITECTURE.md) | Four-layer architecture overview |
-| [CONVENTIONS.md](./CONVENTIONS.md) | Code conventions used across monorepo |
-| [PROGRESS.md](./PROGRESS.md) | Session-by-session shipping log (see AUDIT for reality) |
-| [S76-final-validation.md](./S76-final-validation.md) | S76 enterprise integration checklist report |
+| [docs/SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md) | Four-layer architecture overview |
+| [docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md) | Install, build, systemd/nginx deploy, backup, troubleshooting |
+| [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
+| [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |
+| [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
+| [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
+| [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |
+| [audit/module-inventory.json](./audit/module-inventory.json) | Machine-readable per-module audit (generated) |
+
+> The Advertising Platform (Standard / AI Smart / Performance / Autonomous
+> campaign modes) is a single unified module at `apps/api/src/advertising/`,
+> `apps/web/src/pages/advertising/`, and `packages/shared/src/advertising.ts`,
+> exposed at `/app/ads`. See `project-understanding.md` for the S1–S88+ map.
 
 ## Reality check
 
@@ -122,15 +131,18 @@ across the remaining bootstraps is opt-in via `WINDELS_DEMO_DATA` (default off).
 The §2.4 sweep is now complete: every remaining `Math.random()` in live code is
 either legitimate (Monte-Carlo simulation sampling, the `random` agent tool, id
 generation, retry jitter) or inside an explicitly-named QA harness. See
-**[AUDIT-REPORT.md](./AUDIT-REPORT.md) §2.4** for the full per-module record.
+**[docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) §2.4**
+and **[docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md)**
+for the full per-module record.
 
 Do not deploy into production environments handling real patient data, real money,
-or real user content until the remaining gaps in AUDIT-REPORT.md §2.4 are closed.
+or real user content until the remaining gaps in the production-readiness audit §2.4
+are closed.
 
 ## Tests
 
 ```bash
 # Playwright (Chromium) — 57/57 pass on the smoke + session 37-82 suites
-cd /home/user/windels-ai-os
+cd /home/user/WIN
 PLAYWRIGHT_BROWSERS_PATH=$HOME/.cache/ms-playwright npx playwright test tests/e2e/ --project=chromium
 ```
