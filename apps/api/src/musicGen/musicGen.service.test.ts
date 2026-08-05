@@ -59,4 +59,47 @@ describe("MusicService", () => {
     expect((await MusicService.get(ORG, a.id))!.status).toBe("completed");
     expect((await MusicService.get(ORG, b.id))!.status).toBe("completed");
   });
+
+  it("generation honours mood/loop and library defaults", async () => {
+    const rec = await MusicService.generate(ORG, USER, { genre: "lofi", key: "C", tempo: 80, durationSec: 4, mood: "mellow", loop: true });
+    expect(rec.mood).toBe("mellow");
+    expect(rec.loop).toBe(true);
+    expect(rec.favorite).toBe(false);
+    expect(rec.tags).toEqual([]);
+    expect(rec.playCount).toBe(0);
+  });
+
+  it("manages the library: rename, favorite, tags, play, delete", async () => {
+    const rec = await MusicService.generate(ORG, USER, { genre: "pop", key: "G", tempo: 110, durationSec: 2 });
+    await MusicService.renderOne(ORG, rec.id);
+
+    const renamed = await MusicService.rename(ORG, rec.id, "My Track");
+    expect(renamed.title).toBe("My Track");
+
+    const fav = await MusicService.setFavorite(ORG, rec.id, true);
+    expect(fav.favorite).toBe(true);
+
+    const tagged = await MusicService.setTags(ORG, rec.id, ["chill", "branding"]);
+    expect(tagged.tags).toEqual(["chill", "branding"]);
+
+    const played = await MusicService.recordPlay(ORG, rec.id);
+    expect(played.playCount).toBe(1);
+
+    // Delete removes it and the file on disk.
+    const path = (await MusicService.get(ORG, rec.id))!.path;
+    await MusicService.remove(ORG, rec.id);
+    expect(await MusicService.get(ORG, rec.id)).toBeNull();
+    await expect(fs.stat(path!)).rejects.toThrow();
+  });
+
+  it("regenerates a variation with same params but a new id/seed", async () => {
+    const src = await MusicService.generate(ORG, USER, { genre: "edm", key: "A", tempo: 128, durationSec: 3, mood: "energetic" });
+    const varRec = await MusicService.regenerate(ORG, USER, src.id);
+    expect(varRec.id).not.toBe(src.id);
+    expect(varRec.genre).toBe("edm");
+    expect(varRec.key).toBe("A");
+    expect(varRec.tempo).toBe(128);
+    expect(varRec.mood).toBe("energetic");
+    expect(varRec.title).toContain("variation");
+  });
 });

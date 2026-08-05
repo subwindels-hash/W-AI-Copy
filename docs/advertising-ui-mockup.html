@@ -1,0 +1,276 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>WINDELS AI OS — AI Advertising Platform (UI mockup)</title>
+<style>
+  :root{
+    --bg-deep:#0A0F1A; --bg-dark:#0F1525; --bg-card:#131C2E; --bg-elevated:#162033; --bg-hover:#1E2D42;
+    --text-bright:#fff; --text-main:#CBD5E1; --text-muted:#6B7FA0;
+    --azure:#3B82F6; --azure-400:#60a5fa; --azure-200:#bae6fd;
+    --emerald:#10B981; --violet:#8B5CF6; --amber:#F59E0B; --rose:#F43F5E; --slate:#94A3B8;
+    --border:rgba(255,255,255,.08);
+  }
+  *{box-sizing:border-box; margin:0; padding:0}
+  body{background:var(--bg-deep); color:var(--text-main); font-family:-apple-system,'Segoe UI',Inter,Roboto,Helvetica,Arial,sans-serif; line-height:1.5}
+  .wrap{max-width:1200px; margin:0 auto; padding:24px}
+  .top{display:flex; align-items:center; justify-content:space-between; gap:16px; margin-bottom:24px; flex-wrap:wrap}
+  .top h1{font-size:24px; color:var(--text-bright); display:flex; align-items:center; gap:10px; font-weight:700}
+  .top h1 .ic{width:28px;height:28px;border-radius:8px;background:linear-gradient(135deg,var(--azure),var(--violet));display:grid;place-items:center;font-size:14px}
+  .top p{color:var(--text-muted); font-size:14px; margin-top:4px}
+  .btn{background:var(--azure); color:#fff; border:none; padding:8px 14px; border-radius:8px; font-weight:600; cursor:pointer; font-size:14px}
+  .banner{border:1px solid rgba(244,63,94,.3); background:rgba(244,63,94,.1); color:#fecaca; border-radius:8px; padding:10px 14px; font-size:13px; margin-bottom:16px}
+  .card{background:var(--bg-card); border:1px solid var(--border); border-radius:14px; padding:16px; margin-bottom:16px}
+  .card h2{color:var(--text-bright); font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; margin-bottom:6px}
+  .card .sub{color:var(--text-muted); font-size:12px; margin-bottom:12px}
+  .grid{display:grid; gap:12px}
+  .g5{grid-template-columns:repeat(5,1fr)} .g4{grid-template-columns:repeat(4,1fr)} .g3{grid-template-columns:repeat(3,1fr)}
+  .g2{grid-template-columns:repeat(2,1fr)}
+  @media(max-width:900px){.g5,.g4,.g3,.g2{grid-template-columns:repeat(2,1fr)}}
+  .stat{background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:12px; display:flex; gap:12px; align-items:center}
+  .stat .ic{color:var(--azure-400); font-size:18px}
+  .stat .l{font-size:11px; color:var(--text-muted)}
+  .stat .v{font-size:16px; font-weight:600; color:var(--text-bright)}
+  .badge{display:inline-flex; align-items:center; padding:2px 8px; border-radius:999px; font-size:11px; font-weight:600; border:1px solid var(--border)}
+  .b-slate{background:rgba(148,163,184,.15); color:#cbd5e1}
+  .b-violet{background:rgba(139,92,246,.15); color:#c4b5fd}
+  .b-emerald{background:rgba(16,185,129,.15); color:#6ee7b7}
+  .b-azure{background:rgba(59,130,246,.15); color:#93c5fd}
+  .b-green{background:rgba(16,185,129,.15); color:#6ee7b7}
+  .b-amber{background:rgba(245,158,11,.15); color:#fcd34d}
+  .b-rose{background:rgba(244,63,94,.15); color:#fecaca}
+  .b-outline{color:var(--text-main)}
+  .camp{display:flex; align-items:center; justify-content:space-between; background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:12px 14px; margin-bottom:8px; gap:12px; flex-wrap:wrap}
+  .camp .name{color:var(--text-bright); font-weight:500}
+  .camp .obj{color:var(--text-muted); font-size:12px; margin-top:2px}
+  .camp .tags{display:flex; gap:6px; flex-wrap:wrap}
+  .row{display:flex; justify-content:space-between; gap:12px; font-size:13px; padding:2px 0}
+  .row span:first-child{color:var(--text-muted)}
+  .row span:last-child{color:var(--text-bright); font-weight:500}
+  .bar{height:8px; border-radius:99px; background:rgba(255,255,255,.06); overflow:hidden; margin-top:10px}
+  .bar i{display:block; height:100%; background:var(--azure); width:35%}
+  .exportbtns{display:flex; gap:8px; flex-wrap:wrap}
+  .ebtn{background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-main); padding:6px 12px; border-radius:8px; font-size:13px; cursor:pointer}
+  .ebtn:hover{border-color:var(--azure)}
+  .chart{display:flex; align-items:flex-end; gap:4px; height:96px}
+  .chart .c{flex:1; background:rgba(59,130,246,.7); border-radius:3px 3px 0 0; position:relative}
+  .chart .c b{position:absolute; bottom:-16px; left:0; right:0; text-align:center; font-size:9px; color:var(--text-muted); font-weight:400}
+  .pacingbar .bar i{width:78%}
+  .aud{display:flex; justify-content:space-between; align-items:center; background:var(--bg-elevated); border:1px solid var(--border); border-radius:12px; padding:10px 12px; margin-bottom:6px; font-size:13px}
+  .modegrid{display:grid; grid-template-columns:repeat(4,1fr); gap:10px}
+  @media(max-width:900px){.modegrid{grid-template-columns:repeat(2,1fr)}}
+  .mode{border:1px solid var(--border); border-radius:12px; padding:12px; background:var(--bg-elevated)}
+  .mode.sel{border-color:var(--azure); background:rgba(59,130,246,.08)}
+  .mode .t{font-weight:600; color:var(--text-bright); font-size:13px; display:flex; gap:6px; align-items:center}
+  .mode .d{color:var(--text-muted); font-size:11px; margin-top:4px}
+  .dash-head{display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap}
+  .ctrlbtns{display:flex; gap:8px; flex-wrap:wrap}
+  .cbtn{background:var(--bg-elevated); border:1px solid var(--border); color:var(--text-main); padding:6px 11px; border-radius:8px; font-size:12px; cursor:pointer}
+  .cbtn.primary{background:var(--azure); color:#fff; border-color:var(--azure)}
+  .audbtns{display:flex; gap:6px; flex-wrap:wrap; margin-top:8px}
+  .rec{border:1px solid var(--border); background:var(--bg-elevated); border-radius:10px; padding:10px; margin-bottom:8px}
+  .rec .t{font-size:13px; color:var(--text-bright); display:flex; justify-content:space-between; font-weight:500}
+  .rec p{font-size:12px; color:var(--text-muted); margin-top:4px}
+  .hist{font-size:12px; color:var(--text-main); padding:4px 0; border-bottom:1px dashed var(--border)}
+  .hist b{color:var(--text-bright)}
+  .foot{margin-top:24px; text-align:center; color:var(--text-muted); font-size:12px}
+  .tag{font-size:10px; text-transform:uppercase; letter-spacing:.06em; color:var(--text-muted)}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- Header -->
+  <div class="top">
+    <div>
+      <h1><span class="ic">📣</span> AI Advertising Platform</h1>
+      <p>One unified platform — Standard · AI Smart · Performance · Fully Autonomous. Choose the mode that fits, all through the same system.</p>
+    </div>
+    <button class="btn">+ New Campaign</button>
+  </div>
+
+  <div class="banner">⚠️ No real AI provider is configured. Creative generated here is DEMO output and not production-ready.</div>
+
+  <!-- Portfolio analytics -->
+  <div class="card">
+    <h2>📊 Portfolio analytics</h2>
+    <div class="sub">Aggregate across every campaign in your organization.</div>
+    <div class="grid g5" style="margin-bottom:12px">
+      <div class="stat"><span class="ic">📣</span><div><div class="l">Campaigns</div><div class="v">4 (2 active)</div></div></div>
+      <div class="stat"><span class="ic">💰</span><div><div class="l">Spend</div><div class="v">$1,240.00</div></div></div>
+      <div class="stat"><span class="ic">📈</span><div><div class="l">Revenue / ROAS</div><div class="v">$3,800.00 / 3.06</div></div></div>
+      <div class="stat"><span class="ic">✅</span><div><div class="l">Conversions</div><div class="v">48</div></div></div>
+      <div class="stat"><span class="ic">📉</span><div><div class="l">Impressions / Clicks</div><div class="v">48,200 / 1,850</div></div></div>
+    </div>
+    <div class="grid g4">
+      <div class="mode"><div class="t"><span class="badge b-slate">standard</span></div><div class="d">1 campaign · $420 · 12 conv · $1,050 rev</div></div>
+      <div class="mode"><div class="t"><span class="badge b-violet">smart</span></div><div class="d">1 campaign · $380 · 9 conv · $990 rev</div></div>
+      <div class="mode"><div class="t"><span class="badge b-emerald">performance</span></div><div class="d">1 campaign · $240 · 21 conv · $1,060 rev</div></div>
+      <div class="mode"><div class="t"><span class="badge b-azure">autonomous</span></div><div class="d">1 campaign · $200 · 6 conv · $700 rev</div></div>
+    </div>
+  </div>
+
+  <!-- Export analytics -->
+  <div class="card">
+    <h2>⬇️ Export analytics</h2>
+    <div class="sub">Download your advertising analytics as a file for reports, finance, or sharing.</div>
+    <div class="exportbtns">
+      <button class="ebtn">⬇️ CSV</button>
+      <button class="ebtn">⬇️ JSON</button>
+      <button class="ebtn">⬇️ TXT</button>
+      <button class="ebtn">⬇️ PDF</button>
+      <button class="ebtn">⬇️ Word (DOCX)</button>
+    </div>
+  </div>
+
+  <!-- Audience library -->
+  <div class="card">
+    <h2>👥 Audience library</h2>
+    <div class="sub">Saved, reusable targeting segments you can attach to any campaign.</div>
+    <div class="aud"><div><b style="color:var(--text-bright)">Lagos tech professionals</b><div style="color:var(--text-muted);font-size:12px">Lagos · tech, AI · Reach ~60,000</div></div></div>
+    <div class="aud"><div><b style="color:var(--text-bright)">Abuja small businesses</b><div style="color:var(--text-muted);font-size:12px">Abuja · Reach ~50,000</div></div></div>
+    <div class="aud"><div><b style="color:var(--text-bright)">Young consumers 18-24</b><div style="color:var(--text-muted);font-size:12px">mobile · Reach ~100,000</div></div></div>
+  </div>
+
+  <!-- Campaigns list -->
+  <div class="card">
+    <h2>Campaigns</h2>
+    <div class="sub">All modes live in one list. Select a campaign to open its dashboard.</div>
+    <div class="camp">
+      <div><div class="name">Summer Launch</div><div class="obj">Drive qualified signups · USD</div></div>
+      <div class="tags"><span class="badge b-slate">standard</span><span class="badge b-outline">standard</span><span class="badge b-outline">manual</span><span class="badge b-azure">active</span></div>
+    </div>
+    <div class="camp">
+      <div><div class="name">AI Smart Sale</div><div class="obj">Boost online sales · USD</div></div>
+      <div class="tags"><span class="badge b-violet">smart</span><span class="badge b-outline">subscription</span><span class="badge b-outline">assistant</span><span class="badge b-azure">active</span></div>
+    </div>
+    <div class="camp">
+      <div><div class="name">Pay-Per-Result</div><div class="obj">Qualified leads only · USD</div></div>
+      <div class="tags"><span class="badge b-emerald">performance</span><span class="badge b-outline">performance</span><span class="badge b-outline">manual</span><span class="badge b-amber">pending_approval</span></div>
+    </div>
+    <div class="camp">
+      <div><div class="name">Autonomous Team</div><div class="obj">Full AI marketing team · USD</div></div>
+      <div class="tags"><span class="badge b-azure">autonomous</span><span class="badge b-outline">hybrid</span><span class="badge b-outline">autonomous</span><span class="badge b-azure">active</span></div>
+    </div>
+  </div>
+
+  <hr style="border:none;border-top:1px solid var(--border);margin:24px 0">
+
+  <!-- Sample campaign dashboard -->
+  <div style="color:var(--text-azure);font-size:13px;margin-bottom:16px;color:var(--azure-400)">← All campaigns</div>
+
+  <div class="dash-head" style="margin-bottom:16px">
+    <div>
+      <h2 style="font-size:20px">AI Smart Sale</h2>
+      <p style="color:var(--text-muted);font-size:14px">Boost online sales</p>
+    </div>
+    <div class="tags"><span class="badge b-violet">smart mode</span><span class="badge b-outline">Automation: assistant</span><span class="badge b-outline">Billing: subscription</span><span class="badge b-green">healthy</span></div>
+  </div>
+
+  <div class="grid g4" style="margin-bottom:16px">
+    <div class="stat"><span class="ic">📊</span><div><div class="l">Impressions</div><div class="v">18,500</div></div></div>
+    <div class="stat"><span class="ic">📈</span><div><div class="l">Clicks / CTR</div><div class="v">720 (3.89%)</div></div></div>
+    <div class="stat"><span class="ic">✅</span><div><div class="l">Conversions</div><div class="v">9</div></div></div>
+    <div class="stat"><span class="ic">💰</span><div><div class="l">Spend / ROAS</div><div class="v">$380.00 / 2.61</div></div></div>
+  </div>
+
+  <!-- Budget pacing -->
+  <div class="card">
+    <h2>🎚️ Budget pacing</h2>
+    <div class="grid g4">
+      <div class="row"><span>Budget</span><span>$1,000.00</span></div>
+      <div class="row"><span>Spent</span><span>$380.00</span></div>
+      <div class="row"><span>Remaining</span><span>$620.00</span></div>
+      <div class="row"><span>Pacing</span><span>under</span></div>
+    </div>
+    <div class="bar pacingbar"><i style="width:38%"></i></div>
+    <div style="color:var(--text-muted);font-size:12px;margin-top:8px">38% of budget spent, 7 day(s) left. Daily cap: $50.00.</div>
+  </div>
+
+  <!-- Performance history -->
+  <div class="card">
+    <h2>📈 Performance history</h2>
+    <div class="sub">Daily snapshots over time. Use "Record performance snapshot" to capture one.</div>
+    <div class="chart">
+      <div class="c" style="height:30%"><b>05-01</b></div>
+      <div class="c" style="height:42%"><b>05-02</b></div>
+      <div class="c" style="height:36%"><b>05-03</b></div>
+      <div class="c" style="height:55%"><b>05-04</b></div>
+      <div class="c" style="height:48%"><b>05-05</b></div>
+      <div class="c" style="height:70%"><b>05-06</b></div>
+      <div class="c" style="height:64%"><b>05-07</b></div>
+      <div class="c" style="height:82%"><b>05-08</b></div>
+      <div class="c" style="height:76%"><b>05-09</b></div>
+      <div class="c" style="height:100%"><b>05-10</b></div>
+    </div>
+  </div>
+
+  <div class="grid g2">
+    <!-- A/B variants -->
+    <div class="card">
+      <h2>🧩 A/B creative variants</h2>
+      <div class="sub">Add variants, compare real performance, promote the winner.</div>
+      <div class="camp" style="padding:10px">
+        <div><b style="color:var(--text-bright);font-size:14px">Headline A — "Big Sale Now"</b><div style="color:var(--text-muted);font-size:12px">CTR 4.2% · $180 / ROAS 2.9</div></div>
+        <button class="cbtn">🏁 Promote</button>
+      </div>
+      <div class="camp" style="padding:10px">
+        <div><b style="color:var(--text-bright);font-size:14px">Headline B — "Save 40% Today"</b><div style="color:var(--text-muted);font-size:12px">CTR 3.1% · $160 / ROAS 2.2</div></div>
+        <button class="cbtn">🏁 Promote</button>
+      </div>
+      <div class="camp" style="padding:10px">
+        <div><b style="color:var(--text-bright);font-size:14px">Headline C — "Join 10k Users"</b><div style="color:var(--text-muted);font-size:12px">CTR 2.6% · $40 / ROAS 1.8</div></div>
+        <button class="cbtn">🏁 Promote</button>
+      </div>
+    </div>
+
+    <!-- Audiences attached -->
+    <div class="card">
+      <h2>🎯 Audiences & targeting</h2>
+      <div class="sub">Attach saved audience segments to this campaign.</div>
+      <div class="aud"><div><b style="color:var(--text-bright)">Lagos tech professionals</b><div style="color:var(--text-muted);font-size:12px">Lagos · tech, AI · Reach ~60,000</div></div><button class="cbtn">🗑️ Remove</button></div>
+      <div class="aud"><div><b style="color:var(--text-bright)">Young consumers 18-24</b><div style="color:var(--text-muted);font-size:12px">mobile · Reach ~100,000</div></div><button class="cbtn">🗑️ Remove</button></div>
+      <div style="color:var(--text-muted);font-size:12px;margin-top:8px">Attach an audience</div>
+      <div class="audbtns"><button class="ebtn">+ Abuja small businesses</button></div>
+    </div>
+  </div>
+
+  <!-- AI recommendations -->
+  <div class="card">
+    <h2>✨ AI recommendations</h2>
+    <div class="rec"><div class="t">Healthy funnel <span class="badge b-outline">low</span></div><p>CTR 3.89% with 9 conversions — consider scaling budget.</p></div>
+    <div class="rec"><div class="t">Ready for autonomous launch <span class="badge b-outline">high</span></div><p>Smart campaign awaiting approval. Approve to let the AI run and optimize.</p></div>
+  </div>
+
+  <!-- Optimization history -->
+  <div class="card">
+    <h2>⏱️ AI optimization history</h2>
+    <div class="hist"><b>Autonomous scale:</b> ROAS positive; increasing budget allocation. <span class="badge b-azure" style="margin-left:6px">real</span></div>
+    <div class="hist"><b>Generated image_prompt</b> (real provider) — product-forward composition.</div>
+    <div class="hist"><b>Budget suggestion</b> (demo — configure an AI provider).</div>
+    <div class="hist"><b>Audience targeting</b> suggestion generated.</div>
+  </div>
+
+  <div class="card">
+    <h2>⚙️ Campaign controls</h2>
+    <div class="ctrlbtns">
+      <button class="cbtn primary">▶ Launch</button>
+      <button class="cbtn">⏸ Pause</button>
+      <button class="cbtn">Submit for approval</button>
+      <button class="cbtn">✔ Approve</button>
+      <button class="cbtn">🔄 Refresh AI recommendations</button>
+      <button class="cbtn">📈 Record performance snapshot</button>
+      <button class="cbtn">📄 Duplicate campaign</button>
+      <button class="cbtn">✦ Generate copy</button>
+      <button class="cbtn">🖼 Image concept</button>
+      <button class="cbtn">🎬 Video concept</button>
+      <button class="cbtn">💰 Budget suggestion</button>
+      <button class="cbtn">🎯 Audience targeting</button>
+    </div>
+  </div>
+
+  <div class="foot">WINDELS AI OS — AI Advertising Platform · Static UI mockup of the real AdsPage layout · Not connected to live data</div>
+</div>
+</body>
+</html>

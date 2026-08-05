@@ -5316,11 +5316,11 @@
       "serviceFile": {
         "file": "musicGen.service.test.ts",
         "path": "/home/user/WIN/apps/api/src/musicGen/musicGen.service.test.ts",
-        "sloc": 63,
+        "sloc": 106,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1009,
+      "serviceTotalSloc": 1315,
       "serviceFiles": [
         "musicEngine.test.ts",
         "musicEngine.ts",
@@ -5338,14 +5338,14 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/musicGen.ts",
-        "sloc": 65,
+        "sloc": 94,
         "counts": {
-          "total": 6,
+          "total": 12,
           "GET": 4,
-          "POST": 2,
+          "POST": 6,
           "PUT": 0,
-          "PATCH": 0,
-          "DELETE": 0
+          "PATCH": 1,
+          "DELETE": 1
         },
         "endpoints": [
           "GET /music/capabilities",
@@ -5353,13 +5353,19 @@
           "POST /music/tracks",
           "GET /music/tracks/:id",
           "POST /music/tracks/:id/render",
+          "PATCH /music/tracks/:id",
+          "POST /music/tracks/:id/favorite",
+          "POST /music/tracks/:id/tags",
+          "POST /music/tracks/:id/play",
+          "DELETE /music/tracks/:id",
+          "POST /music/tracks/:id/regenerate",
           "GET /music/:file"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/musicGen.ts (68 LOC)",
+    "sharedTypes": "packages/shared/src/musicGen.ts (97 LOC)",
     "web": {
-      "client": "apps/web/src/lib/musicGen.ts (44 LOC)",
+      "client": "apps/web/src/lib/musicGen.ts (63 LOC)",
       "pages": []
     },
     "db": {
@@ -5376,6 +5382,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [
+      "AWS",
       "FFmpeg"
     ],
     "status": "COMPLETE"

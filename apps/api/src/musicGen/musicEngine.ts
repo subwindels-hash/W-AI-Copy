@@ -166,12 +166,29 @@ function encodeWav(l: Fn, r: Fn): Buffer {
 
 /* ── Public render API ────────────────────────────────────────── */
 
+export type MusicMood = "mellow" | "balanced" | "energetic";
+
+/** Per-mood mix multipliers (energy → louder, denser, brighter). */
+const MOOD_MIX: Record<MusicMood, { gain: number; pad: number; bass: number; drums: number; melody: number; hats: boolean }> = {
+  mellow:     { gain: 0.72, pad: 0.14, bass: 0.12, drums: 0.30, melody: 0.04, hats: false },
+  balanced:   { gain: 0.90, pad: 0.10, bass: 0.16, drums: 0.50, melody: 0.05, hats: true },
+  energetic:  { gain: 1.00, pad: 0.09, bass: 0.20, drums: 0.62, melody: 0.07, hats: true },
+};
+
 export interface RenderMusicOptions {
   genre: string;
   key: string;
   tempo: number;       // BPM
   durationSec: number;
   seed?: string;
+  /** Mood/energy preset shaping the mix intensity. */
+  mood?: MusicMood;
+  /** Fade-in ms (smooth attack). */
+  fadeInMs?: number;
+  /** Fade-out ms (0 disables; auto-disabled when looping). */
+  fadeOutMs?: number;
+  /** Snap to whole bars and skip fade-out for clean looping. */
+  loop?: boolean;
 }
 
 export interface RenderedTrack {
@@ -190,13 +207,21 @@ export async function renderMusic(opts: RenderMusicOptions): Promise<RenderedTra
   const { root, isMinor } = rootMidi(opts.key);
   const pent = isMinor ? MINOR_PENT : MAJOR_PENT;
 
+  const mood: MusicMood = opts.mood ?? "balanced";
+  const mix = MOOD_MIX[mood];
+
   const sr = SAMPLE_RATE;
-  const totalSamples = Math.floor(opts.durationSec * sr);
+  const beatSamples = Math.floor((60 / opts.tempo) * sr);
+  const barSamples = beatSamples * 4;
+  // When looping, snap the length to a whole number of bars so the downbeat
+  // aligns at the boundary for a seamless loop.
+  const rawSamples = Math.floor(opts.durationSec * sr);
+  const totalSamples = opts.loop
+    ? Math.max(barSamples, Math.floor(rawSamples / barSamples) * barSamples)
+    : rawSamples;
   const L = new Float32Array(totalSamples);
   const R = new Float32Array(totalSamples);
 
-  const beatSamples = Math.floor((60 / opts.tempo) * sr);
-  const barSamples = beatSamples * 4;
   const bars = Math.max(1, Math.floor(totalSamples / barSamples));
   const barDur = Math.min(barSamples, Math.max(1000, totalSamples));
 
@@ -221,38 +246,35 @@ export async function renderMusic(opts: RenderMusicOptions): Promise<RenderedTra
     const dur = Math.min(barDur, totalSamples - barStart);
     for (const s of ch.semis) {
       const f = midiToFreq(ch.rootMidi + 24 + s); // chord register
-      const pad = tone(f, dur, sr, isMinor ? "triangle" : "sine", 0.10, 1.6);
+      const pad = tone(f, dur, sr, isMinor ? "triangle" : "sine", mix.pad, 1.6);
       addInto(L, pad, barStart); addInto(R, pad, barStart);
     }
 
     // Bass: root note at bass register, one per bar.
     const bassF = midiToFreq(ch.rootMidi);
-    const bass = tone(bassF, dur, sr, "triangle", 0.16, 1.8);
+    const bass = tone(bassF, dur, sr, "triangle", mix.bass, 1.8);
     addInto(L, bass, barStart, 0.9); addInto(R, bass, barStart, 0.9);
 
     // Drums on the 8th-note grid.
     for (let e = 0; e < grid; e++) {
       const t = barStart + Math.floor((e / grid) * barSamples);
       if (t >= totalSamples) break;
-      const isDown = e % 4 === 0;      // beat 1 and 3
-      const isBack = e === 4 || e === 6; // snare on 2 and 4 (8th grid idx 4,6? -> beats 2&4 = e 2,6) see below
-      // kick: four-on-floor for edm, else beat 1 & 3
       const fourFloor = opts.genre === "edm" || opts.genre === "dance";
       const kickOn = fourFloor ? e % 2 === 0 : e === 0 || e === 4;
       if (kickOn) {
-        const k = kick(150, 45, Math.floor(0.12 * sr), sr, 0.5);
+        const k = kick(150, 45, Math.floor(0.12 * sr), sr, mix.drums);
         addInto(L, k, t); addInto(R, k, t);
       }
       // snare on beats 2 and 4 -> e = 2 and 6 in the 8-grid
       if (e === 2 || e === 6) {
-        const sn = noise(Math.floor(0.14 * sr), sr, 0.30, () => rng.next());
+        const sn = noise(Math.floor(0.14 * sr), sr, mix.drums * 0.6, () => rng.next());
         addInto(L, sn, t); addInto(R, sn, t);
-        const snT = tone(180, Math.floor(0.08 * sr), sr, "square", 0.08, 3);
+        const snT = tone(180, Math.floor(0.08 * sr), sr, "square", mix.drums * 0.16, 3);
         addInto(L, snT, t); addInto(R, snT, t);
       }
       // hi-hat on every 8th, quieter on offbeats
-      const hatAmp = e % 2 === 0 ? 0.05 : 0.09;
-      if (opts.genre !== "ambient" && opts.genre !== "cinematic") {
+      const hatAmp = (e % 2 === 0 ? 0.05 : 0.09) * (mix.hats ? 1 : 0);
+      if (mix.hats && opts.genre !== "ambient" && opts.genre !== "cinematic") {
         const hh = noise(Math.floor(0.03 * sr), sr, hatAmp, () => rng.next());
         addInto(L, hh, t); addInto(R, hh, t);
       }
@@ -267,16 +289,31 @@ export async function renderMusic(opts: RenderMusicOptions): Promise<RenderedTra
         if (rng.next() > 0.7) continue;
         const step = pent[Math.floor(rng.next() * pent.length)]!;
         const f = midiToFreq(melBase + step + (rng.next() > 0.8 ? 12 : 0));
-        const note = tone(f, Math.floor(0.28 * beatSamples), sr, "triangle", 0.05, 2.2);
+        const note = tone(f, Math.floor(0.28 * beatSamples), sr, "triangle", mix.melody, 2.2);
         addInto(L, note, t); addInto(R, note, t);
       }
     }
   }
 
   // Mix to stereo with a touch of width (right slightly delayed on melody side).
-  const masterGain = 0.9;
-  const Lg = limit(L, masterGain);
-  const Rg = limit(R, masterGain);
+  const Lg = limit(L, mix.gain);
+  const Rg = limit(R, mix.gain);
+
+  // Apply fades (smooth, avoids clicks). Fade-out is skipped when looping so the
+  // loop boundary stays clean; fade-in still applies to avoid the initial click.
+  const fadeInS = Math.min(Math.floor((opts.fadeInMs ?? 300) / 1000 * sr), Math.floor(totalSamples / 2));
+  const fadeOutS = opts.loop ? 0 : Math.min(Math.floor((opts.fadeOutMs ?? 300) / 1000 * sr), Math.floor(totalSamples / 2));
+  for (let i = 0; i < fadeInS; i++) {
+    const g = i / Math.max(1, fadeInS);
+    Lg[i] *= g; Rg[i] *= g;
+  }
+  if (fadeOutS > 0) {
+    for (let i = 0; i < fadeOutS; i++) {
+      const g = (fadeOutS - i) / fadeOutS;
+      const idx = totalSamples - 1 - i;
+      Lg[idx] *= g; Rg[idx] *= g;
+    }
+  }
 
   await fs.mkdir(MUSIC_CACHE_DIR, { recursive: true });
   const id = `${opts.genre}-${opts.key}-${opts.tempo}-${(opts.seed ?? "t").slice(0, 8)}-${Date.now()}`.replace(/[^a-zA-Z0-9_-]/g, "");
@@ -287,7 +324,7 @@ export async function renderMusic(opts: RenderMusicOptions): Promise<RenderedTra
     path: outPath,
     url: `${MUSIC_PUBLIC_PREFIX}/${id}.wav`,
     bytes: (await fs.stat(outPath)).size,
-    durationSec: opts.durationSec,
+    durationSec: totalSamples / sr, // may be snapped to whole bars when looping
     sampleRate: sr,
     channels: CHANNELS,
     format: "wav",

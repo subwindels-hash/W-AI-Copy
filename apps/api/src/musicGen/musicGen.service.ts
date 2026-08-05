@@ -7,6 +7,7 @@
  * completion yields an actual playable audio file, not a fake asset URL.
  */
 import { randomUUID } from "node:crypto";
+import { promises as fs } from "node:fs";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
 import { logger } from "../config/logger.js";
@@ -15,6 +16,7 @@ import type {
   MusicTrackRecord,
   MusicGenre,
   MusicKey,
+  MusicMood,
   GenerateMusicInput,
   MusicCapability,
 } from "@windels/shared/musicGen";
@@ -60,6 +62,7 @@ export const MusicService = {
     const key = input.key ?? "C";
     const tempo = input.tempo ?? 100;
     const durationSec = input.durationSec ?? 12;
+    const mood = (input.mood ?? "balanced") as MusicMood;
     const rec: MusicTrackRecord = {
       id,
       organizationId: oid,
@@ -69,6 +72,13 @@ export const MusicService = {
       key,
       tempo,
       durationSec,
+      mood,
+      fadeInMs: input.fadeInMs ?? 300,
+      fadeOutMs: input.fadeOutMs ?? 300,
+      loop: input.loop ?? false,
+      favorite: false,
+      tags: [],
+      playCount: 0,
       status: "queued",
       sampleRate: 44100,
       channels: 2,
@@ -99,6 +109,10 @@ export const MusicService = {
         tempo: rec.tempo,
         durationSec: rec.durationSec,
         seed: id,
+        mood: rec.mood,
+        fadeInMs: rec.fadeInMs,
+        fadeOutMs: rec.fadeOutMs,
+        loop: rec.loop,
       });
       rec.status = "completed";
       rec.path = rendered.path;
@@ -106,6 +120,7 @@ export const MusicService = {
       rec.bytes = rendered.bytes;
       rec.sampleRate = rendered.sampleRate;
       rec.channels = rendered.channels;
+      rec.durationSec = rendered.durationSec;
       rec.updatedAt = now();
       await redis.set(K.job(oid, id), s2(rec));
       return rec;
@@ -117,6 +132,75 @@ export const MusicService = {
       logger.warn("music render failed", { id, err: rec.error });
       throw e;
     }
+  },
+
+  /* ── Library management ──────────────────────────────────── */
+
+  async mustGet(oid: string, id: string): Promise<MusicTrackRecord> {
+    const rec = await this.get(oid, id);
+    if (!rec) throw new AppError("NOT_FOUND", "Music track not found", 404);
+    return rec;
+  },
+
+  async rename(oid: string, id: string, title: string): Promise<MusicTrackRecord> {
+    const rec = await this.mustGet(oid, id);
+    rec.title = title;
+    rec.updatedAt = now();
+    await redis.set(K.job(oid, id), s2(rec));
+    return rec;
+  },
+
+  async setFavorite(oid: string, id: string, favorite: boolean): Promise<MusicTrackRecord> {
+    const rec = await this.mustGet(oid, id);
+    rec.favorite = favorite;
+    rec.updatedAt = now();
+    await redis.set(K.job(oid, id), s2(rec));
+    return rec;
+  },
+
+  async setTags(oid: string, id: string, tags: string[]): Promise<MusicTrackRecord> {
+    const rec = await this.mustGet(oid, id);
+    rec.tags = tags.slice(0, 20);
+    rec.updatedAt = now();
+    await redis.set(K.job(oid, id), s2(rec));
+    return rec;
+  },
+
+  async recordPlay(oid: string, id: string): Promise<MusicTrackRecord> {
+    const rec = await this.mustGet(oid, id);
+    rec.playCount = (rec.playCount ?? 0) + 1;
+    rec.updatedAt = now();
+    await redis.set(K.job(oid, id), s2(rec));
+    return rec;
+  },
+
+  async remove(oid: string, id: string): Promise<void> {
+    const rec = await this.mustGet(oid, id);
+    // Delete the rendered WAV from disk if it exists.
+    if (rec.path) {
+      await fs.unlink(rec.path).catch(() => undefined);
+    }
+    await redis.srem(K.jobs(oid), id);
+    await redis.del(K.job(oid, id));
+  },
+
+  /**
+   * Regenerate a variation: same genre/key/tempo/duration/mood, but a new seed
+   * so the groove and melody differ. Returns the new (queued) track.
+   */
+  async regenerate(oid: string, userId: string, sourceId: string): Promise<MusicTrackRecord> {
+    const src = await this.mustGet(oid, sourceId);
+    return this.generate(oid, userId, {
+      genre: src.genre,
+      key: src.key,
+      tempo: src.tempo,
+      durationSec: src.durationSec,
+      mood: src.mood,
+      fadeInMs: src.fadeInMs,
+      fadeOutMs: src.fadeOutMs,
+      loop: src.loop,
+      title: `${src.title} (variation)`,
+    });
   },
 
   /** Worker tick: render up to `limit` queued jobs. */

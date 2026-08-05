@@ -5,11 +5,11 @@ import { validate } from "../middleware/validate.js";
 import { z } from "zod";
 import { promises as fs } from "node:fs";
 import path from "node:path";
-import { GenerateMusicSchema } from "@windels/shared/musicGen";
+import { GenerateMusicSchema, RenameTrackSchema, FavoriteTrackSchema, TagTrackSchema, TrackIdSchema } from "@windels/shared/musicGen";
 import { MusicService } from "../../musicGen/musicGen.service.js";
 import { MUSIC_CACHE_DIR, MUSIC_PUBLIC_PREFIX } from "../../musicGen/musicEngine.js";
 
-const trackParam = z.object({ id: z.string().min(1).max(64) });
+const trackParam = TrackIdSchema;
 
 export function registerMusicGenRoutes(router: Router) {
   router.use(authenticate);
@@ -46,6 +46,35 @@ export function registerMusicGenRoutes(router: Router) {
   router.post("/music/tracks/:id/render", validate({ params: trackParam }), async (req, res, next) => {
     try { res.json({ ok: true, data: await MusicService.renderOne(oid(req), req.params.id), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
+  });
+
+  // Library management
+  router.patch("/music/tracks/:id", validate({ params: trackParam, body: RenameTrackSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await MusicService.rename(oid(req), req.params.id, req.body.title), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.post("/music/tracks/:id/favorite", validate({ params: trackParam, body: FavoriteTrackSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await MusicService.setFavorite(oid(req), req.params.id, req.body.favorite), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.post("/music/tracks/:id/tags", validate({ params: trackParam, body: TagTrackSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await MusicService.setTags(oid(req), req.params.id, req.body.tags), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.post("/music/tracks/:id/play", validate({ params: trackParam }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await MusicService.recordPlay(oid(req), req.params.id), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.delete("/music/tracks/:id", validate({ params: trackParam }), async (req, res, next) => {
+    try { await MusicService.remove(oid(req), req.params.id); res.json({ ok: true, meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.post("/music/tracks/:id/regenerate", validate({ params: trackParam }), async (req, res, next) => {
+    try {
+      const rec = await MusicService.regenerate(oid(req), uid(req), req.params.id);
+      const done = await MusicService.renderOne(oid(req), rec.id);
+      res.status(201).json({ ok: true, data: done, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
   });
 
   // Serve the rendered WAV (path-safe basename, like the media-factory render route).

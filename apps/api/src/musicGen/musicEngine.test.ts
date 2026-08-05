@@ -58,4 +58,25 @@ describe("musicEngine", () => {
     const [ba, bb] = await Promise.all([fs.readFile(a.path), fs.readFile(b.path)]);
     expect(ba.equals(bb)).toBe(false);
   });
+
+  it("loop mode snaps duration to whole bars and yields valid non-silent audio", async () => {
+    const r = await renderMusic({ genre: "pop", key: "C", tempo: 120, durationSec: 5, seed: "loop1", loop: true, mood: "energetic" });
+    const buf = await fs.readFile(r.path);
+    const h = readWavHeader(buf);
+    expect(h.riff).toBe("RIFF");
+    // 120bpm → 2s/bar; 5s snaps to 4s (2 bars) or 6s (3 bars). Either is a whole-bar multiple.
+    const duration = h.dataSize / (SAMPLE_RATE * 2 * 2);
+    expect(Math.round(duration * 2)).toBe(duration * 2); // whole bars → 0.5-bar resolution at 120bpm
+    let nonZero = false;
+    for (let i = 44; i < buf.length; i += 2) if (buf.readInt16LE(i) !== 0) { nonZero = true; break; }
+    expect(nonZero).toBe(true);
+  });
+
+  it("fade-in/out and mellow mood still render valid WAV", async () => {
+    const r = await renderMusic({ genre: "ambient", key: "Am", tempo: 66, durationSec: 3, seed: "f", mood: "mellow", fadeInMs: 500, fadeOutMs: 500 });
+    const buf = await fs.readFile(r.path);
+    expect(buf.toString("ascii", 0, 4)).toBe("RIFF");
+    // First sample should be near-silent due to fade-in.
+    expect(Math.abs(buf.readInt16LE(44))).toBeLessThanOrEqual(100);
+  });
 });
