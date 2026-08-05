@@ -13,7 +13,21 @@ import { logger } from "../config/logger.js";
 // ─── Refresh Token Infrastructure ──────────────────────────────
 // Refresh tokens are opaque random strings stored in Redis with TTL.
 // They are rotated on every use (one-time-use pattern) to prevent replay.
-const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
+//
+// The TTL is read from JWT_REFRESH_TTL (default "7d") so operators can tune it
+// without redeploying. Previously the env var was defined but ignored here.
+function parseDurationToSeconds(value: string | undefined, fallbackDays: number): number {
+  const s = (value ?? "").trim().toLowerCase();
+  const m = s.match(/^(\d+)(d|h|m|s)$/);
+  if (!m) return fallbackDays * 24 * 60 * 60;
+  const n = Number(m[1]);
+  const unit = m[2];
+  if (unit === "d") return n * 24 * 60 * 60;
+  if (unit === "h") return n * 60 * 60;
+  if (unit === "m") return n * 60;
+  return n; // seconds
+}
+const REFRESH_TOKEN_TTL_SECONDS = parseDurationToSeconds(env.JWT_REFRESH_TTL, 7);
 const REFRESH_KEY = (tokenId: string) => `refresh:${tokenId}`;
 const USER_REFRESH_KEY = (userId: string) => `refresh:user:${userId}`;
 

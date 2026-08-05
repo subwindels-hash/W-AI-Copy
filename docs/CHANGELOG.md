@@ -23,6 +23,10 @@ All notable changes, bug fixes, and feature integrations are documented here.
     real create/list/revoke), and the broken service was deleted.
  pins the fail-closed and demo-gating behavior; includes a repo-wide scan asserting every directly-seeding bootstrap is gated.
 *   Full API suite: **934 tests passing, 0 failures**.
+*   **Refresh-token TTL now configurable**: `auth.service.ts` previously hardcoded the
+    refresh-token TTL to 7 days and ignored the `JWT_REFRESH_TTL` env var (which was defined
+    in the schema). It now parses `JWT_REFRESH_TTL` (e.g. `7d`, `12h`) with a 7-day fallback.
+
 *   **Service-level demo seeding gated**: `ensureBootstrapped` in 11 more services
     (`legal`, `giftCards`, `modelFactory`, `memoryEvolution`, `hybridExec`, `expertsPlatform`,
     `uxIntelligence`, `voiceFoundry`, `voiceOwnership`, `mediaFactory`, `mediaGen`) no longer
