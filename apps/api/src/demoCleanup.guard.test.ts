@@ -25,10 +25,12 @@ async function read(rel: string): Promise<string> {
 
 describe("Session 1 demo-cleanup security guards", () => {
   it("API-key generation uses the CSPRNG, not Math.random()", async () => {
-    const src = await read(path.join("services", "apikey.service.ts"));
-    // The key-generation statement must draw from the CSPRNG.
-    expect(src).toMatch(/const key = `ak_\$\{randomBytes\(/);
-    expect(src).not.toMatch(/const key = `ak_\$\{Math\.random/);
+    // The canonical API-key service (publicApi.service.ts) generates keys from
+    // the CSPRNG and hashes them at rest.
+    const src = await read(path.join("publicApi", "publicApi.service.ts"));
+    expect(src).toMatch(/randomBytes\(/);
+    expect(src).not.toMatch(/Math\.random/);
+    expect(src).toMatch(/keyHash/);
   });
 
   it("invoice numbers use the CSPRNG, not Math.random()", async () => {

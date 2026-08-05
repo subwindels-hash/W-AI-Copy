@@ -19,6 +19,7 @@ vi.mock("../db/client.js", () => ({
 }));
 
 const { SecurityGovernanceService } = await import("../security/governance.service.js");
+import type { IncidentStatus } from "../security/governance.service.js";
 
 beforeEach(() => {
   kv.strings.clear(); kv.hashes.clear(); kv.zsets.clear(); kv.lists.clear(); kv.sets.clear();
@@ -62,8 +63,8 @@ describe("incident reporting lifecycle", () => {
   });
 
   it("walks the full incident lifecycle reported→investigating→contained→resolved→postmortem", async () => {
-    const inc = await SecurityGovernanceService.reportIncident("u1", { title: "Breach", description: "d", severity: "critical", area: "security" });
-    const expected = ["reported", "investigating", "contained", "resolved", "postmortem"];
+    const inc = await SecurityGovernanceService.reportIncident("u1", { title: "Breach", description: "d", severity: "critical", area: "auth" });
+    const expected: IncidentStatus[] = ["reported", "investigating", "contained", "resolved", "postmortem"];
     let cur: any = inc;
     for (const status of expected.slice(1)) {
       cur = await SecurityGovernanceService.updateIncident(inc.id, "sec-1", { status, note: `moved to ${status}` });

@@ -16,7 +16,7 @@ SEEDED / DEVELOPMENT-ONLY implementation, with disposition: **fixed**, **intenti
 | # | File | Finding | Disposition |
 |---|---|---|---|
 | 1 | `apps/api/src/db/client.ts` | **Production fail-open:** on any real-Prisma/Postgres init failure, the API silently fell back to an in-memory **FakePrisma DB seeded with a demo super admin** (`admin@windels.ai` / `W1ndels!Admin#2026`), demo org `Windels AI`, demo workspace, and **5 demo AI agents**. Production could run on fake data that looks real, and the demo admin was a live credential. | **FIXED — fail closed.** In production (or when the new flag is off) a DB-init failure now throws and aborts startup. The in-memory fallback is available only when `WINDELS_ALLOW_MOCK_DB_FALLBACK=true` **and** not production. |
-| 2 | `apps/api/src/services/apikey.service.ts` | **API keys (credentials) were generated with `Math.random()`** — predictable, forgeable. | **FIXED — CSPRNG.** Keys are now `ak_` + `randomBytes(32).toString("base64url")`. |
+| 2 | API-key generation | `services/apikey.service.ts` used `Math.random()` (predictable); the `/apikeys` route returned a **fake `ak_${Date.now()}` placeholder** that was never persisted, and the service didn't match the `ApiKey` schema (`keyPrefix`/`keyHash`). | **FIXED — replaced.** The broken service was deleted; `/apikeys` now reuses the canonical, tested `publicApi.service.ts` (CSPRNG `randomBytes`, sha256 `keyHash` at rest) with real create/list/revoke. |
 | 3 | `apps/api/src/services/billing.service.ts` | Invoice-number random segment used `Math.random()` — collision-prone under load. | **FIXED — CSPRNG.** Uses `randomBytes(4).readUInt32BE(0)`. |
 | 4 | `apps/api/src/http/middleware/observability.ts` | Trace/span ids used `Math.random()` — collision-prone under load. | **FIXED — CSPRNG.** Uses `randomBytes`. |
 | 5 | `apps/api/src/config/env.ts` | No explicit control over the demo-DB fallback. | **FIXED — added `WINDELS_ALLOW_MOCK_DB_FALLBACK` (default false)** + `.env.example` docs. |
@@ -109,12 +109,12 @@ Production now starts empty for these surfaces and fills from real activity. A g
 
 ## E. FILES REVIEWED / MODIFIED
 
-**Reviewed:** `db/client.ts`, `config/env.ts`, `services/apikey.service.ts`, `services/billing.service.ts`,
+**Reviewed:** `db/client.ts`, `config/env.ts`, `publicApi/publicApi.service.ts`, `services/billing.service.ts`,
 `http/middleware/observability.ts`, `services/ai/registry.ts`, `enterpriseFoundation/bootstrap.ts`,
 all module `bootstrap.ts` files, `index.ts`, `publicApi.service.ts`, `config/demoData.ts`, `.env.example`,
 and the demo/simulated module inventory.
 
-**Modified:** `db/client.ts`, `config/env.ts`, `services/apikey.service.ts`, `services/billing.service.ts`,
+**Modified:** `db/client.ts`, `config/env.ts`, `http/routes/apikey.ts`, `services/billing.service.ts` (and deleted dead `services/apikey.service.ts`),
 `http/middleware/observability.ts`, `.env.example`, new `demoCleanup.guard.test.ts`.
 
 ## F. ISSUES FOUND / FIXED / REMAINING
