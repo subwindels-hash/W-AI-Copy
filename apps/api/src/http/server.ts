@@ -104,6 +104,7 @@ import { registerHealthEcosystemRoutes } from "./routes/healthEcosystem.js";
 import { registerEtlRoutes } from "./routes/etl.js";
 import { registerCameraRoutes } from "./routes/camera.js";
 import { registerAdvertisingRoutes } from "./routes/advertising.js";
+import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { logger } from "../observability/logger.js";
 import { observabilityMiddleware } from "./middleware/observability.js";
 import { rateLimit } from "./middleware/rateLimit.js";
@@ -1019,6 +1020,14 @@ export function createApp() {
   const advertisingRouter = express.Router();
   v1.use("/advertising", advertisingRouter);
   registerAdvertisingRoutes(advertisingRouter);
+
+  // /music — Music Generation (real WAV synthesis in pure Node). Part of the
+  // media/creative family; no duplicate of mediaGen (that one is the generic
+  // image/audio/video job queue, this one renders actual audible music).
+  const musicRouter = express.Router();
+  v1.use("/music", musicRouter);
+  musicRouter.use(authenticate);
+  registerMusicGenRoutes(musicRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

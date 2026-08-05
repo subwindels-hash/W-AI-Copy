@@ -5289,6 +5289,81 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "musicGen",
+    "title": "musicGen",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/musicGen",
+    "backend": {
+      "serviceDir": "apps/api/src/musicGen",
+      "serviceFile": {
+        "file": "musicGen.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/musicGen/musicGen.service.test.ts",
+        "sloc": 63,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1009,
+      "serviceFiles": [
+        "musicEngine.test.ts",
+        "musicEngine.ts",
+        "musicGen.service.test.ts",
+        "musicGen.service.ts",
+        "musicGen/musicGen.service.ts",
+        "musicGen/musicEngine.ts"
+      ],
+      "importedServiceFiles": [
+        "musicGen/musicGen.service.ts",
+        "musicGen/musicEngine.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/musicGen.ts",
+        "sloc": 65,
+        "counts": {
+          "total": 6,
+          "GET": 4,
+          "POST": 2,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /music/capabilities",
+          "GET /music/tracks",
+          "POST /music/tracks",
+          "GET /music/tracks/:id",
+          "POST /music/tracks/:id/render",
+          "GET /music/:file"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/musicGen.ts (68 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/musicGen.ts (44 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "musicGen/musicEngine.test.ts",
+      "musicGen/musicGen.service.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "FFmpeg"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "opex",
     "title": "OpEx / Trust / Safety (S73)",
     "sessions": [
