@@ -168,6 +168,9 @@ export class FakePrisma {
     const prefixed: Record<string, Record<string, string>> = {
       TalkChannel: { member: "TalkMember", message: "TalkMessage" },
       TalkMessage: { attachment: "MessageAttachment" },
+      // Meeting.participants -> MeetingParticipant (not the shared
+      // ConversationParticipant that `participant` otherwise maps to).
+      Meeting: { participant: "MeetingParticipant" },
     };
     if (parentModel && prefixed[parentModel]?.[singular]) {
       return prefixed[parentModel]![singular]!;

@@ -188,9 +188,11 @@ export async function createMeeting(userId: string, input: z.infer<typeof Create
       },
     },
   });
-  // If this is an instant meeting (no scheduled time), auto-start it.
+  // If this is an instant meeting (no scheduled time), auto-start it and return
+  // the final state (previously the pre-auto-start SCHEDULED object was returned,
+  // so callers saw a stale status even though the row was LIVE).
   if (!input.scheduledStart) {
-    await prisma.meeting.update({
+    return prisma.meeting.update({
       where: { id: m.id },
       data: { status: MeetingStatus.LIVE, startedAt: new Date(), notetakerStatus: notetakerAgentId ? NotetakerStatus.LISTENING : NotetakerStatus.IDLE },
     });
