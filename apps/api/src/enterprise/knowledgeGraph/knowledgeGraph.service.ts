@@ -87,7 +87,11 @@ function seed() {
   relate(api.id, memory.id, "uses");
 }
 
-setTimeout(() => { restore().then(() => { if (!entities.size) { seed(); void persist(); } }); }, 700);
+setTimeout(() => {
+  restore()
+    .then(() => { if (!entities.size) { seed(); void persist(); } })
+    .catch((err) => logger.warn("knowledge graph restore failed (best-effort, continuing)", { err: err instanceof Error ? err.message : String(err) }));
+}, 700);
 
 // ── Public API ─────────────────────────────────────────────────────────
 export const KnowledgeGraphService = {

@@ -155,7 +155,11 @@ async function restore() {
     for (const a of arr) assets.set(a.id, a);
   } catch { /* ignore */ }
 }
-setTimeout(() => { restore().then(() => { if (!assets.size) seed(); }); }, 600);
+setTimeout(() => {
+  restore()
+    .then(() => { if (!assets.size) seed(); })
+    .catch((err) => logger.warn("schema governance restore failed (best-effort, continuing)", { err: err instanceof Error ? err.message : String(err) }));
+}, 600);
 
 // ── Public API ─────────────────────────────────────────────────────────
 export const SchemaGovernanceService = {
