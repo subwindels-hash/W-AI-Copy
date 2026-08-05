@@ -1,7 +1,7 @@
 import bcrypt from "bcryptjs";
 import jwt from "jsonwebtoken";
 import { randomUUID, randomBytes } from "node:crypto";
-import { Prisma, Role as PrismaRole } from "@prisma/client";
+import { Role as PrismaRole } from "@prisma/client";
 import { prisma } from "../db/client.js";
 import { redisCmd as redis } from "../db/redis.js";
 import { env } from "../config/env.js";
@@ -99,17 +99,6 @@ function signToken(payload: TokenPayload) {
   } as jwt.SignOptions);
 }
 
-function signRefreshJwt(payload: TokenPayload) {
-  // This is a signed JWT used only for refresh — it carries the same claims
-  // but with a longer TTL. The opaque random token stored in Redis is the
-  // primary mechanism; this signed JWT is an additional layer for stateless
-  // verification when needed (e.g. offline/mobile).
-  return jwt.sign(payload, env.JWT_SECRET as jwt.Secret, {
-    issuer: env.JWT_ISSUER,
-    expiresIn: env.JWT_REFRESH_TTL as unknown as number,
-  } as jwt.SignOptions);
-}
-
 export async function registerUser(input: {
   email: string;
   password: string;
@@ -185,10 +174,37 @@ export async function loginUser(
     },
   });
   if (!user) throw AppError.unauthorized("Invalid email or password");
-  if (user.isSuspended || !user.isActive) throw AppError.forbidden("Account is suspended");
+  if (user.isSuspended || !user.isActive) {
+    // Security audit trail — record the rejected attempt on a suspended account.
+    prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "user.login.rejected",
+        resourceType: "User",
+        resourceId: user.id,
+        ipAddress: metadata?.ip,
+        metadata: { userAgent: metadata?.ua, reason: "suspended_or_inactive" },
+      },
+    }).catch(() => {});
+    throw AppError.forbidden("Account is suspended");
+  }
 
   const passwordOk = await bcrypt.compare(input.password, user.passwordHash);
-  if (!passwordOk) throw AppError.unauthorized("Invalid email or password");
+  if (!passwordOk) {
+    // Security audit trail — record the failed login (no account-existence leak;
+    // the same generic message is returned for unknown email and wrong password).
+    prisma.auditLog.create({
+      data: {
+        userId: user.id,
+        action: "user.login.failed",
+        resourceType: "User",
+        resourceId: user.id,
+        ipAddress: metadata?.ip,
+        metadata: { userAgent: metadata?.ua, reason: "invalid_password" },
+      },
+    }).catch(() => {});
+    throw AppError.unauthorized("Invalid email or password");
+  }
 
   const primaryMembership = user.memberships[0];
   const publicRole = toPublicRole(user.role);

@@ -152,6 +152,10 @@ export class FakePrisma {
       message: "Message",
       event: "AgentEvent",
       attachment: "MessageAttachment",
+      // User.profile points at UserProfile, not a "Profile" model — without
+      // this, a `profile: { create: {...} }` write was persisted to a phantom
+      // "Profile" table and never read back via userProfile.findUnique.
+      profile: "UserProfile",
     };
     // Relations whose target is prefixed by the owning model rather than named
     // after the field — e.g. TalkChannel.members holds TalkMember rows, not
