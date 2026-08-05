@@ -25,6 +25,7 @@ import {
   Music,
   Clapperboard,
   Landmark,
+  ShieldCheck,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -52,6 +53,7 @@ const navItems = [
   { to: "/app/governance", icon: Shield, label: "Governance" },
   { to: "/app/platform", icon: Globe2, label: "Platform" },
   { to: "/app/security", icon: Lock, label: "Security" },
+  { to: "/app/tenant-isolation", icon: ShieldCheck, label: "Tenant Isolation" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },
