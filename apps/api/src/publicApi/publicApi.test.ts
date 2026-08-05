@@ -17,6 +17,7 @@ import { FakePrisma, cuid } from "../testUtils/fakePrisma.js";
 
 const db = new FakePrisma();
 vi.mock("../db/client.js", () => ({ prisma: db.client() }));
+vi.mock("@prisma/client", async () => ({ ...(await import("../testUtils/prismaClientMock.js")) }));
 
 const apikeys = await import("./publicApi.service.js");
 

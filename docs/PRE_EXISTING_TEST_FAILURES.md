@@ -12,43 +12,45 @@ files" flagged during Session 1 certification.
 
 | Category | Count | Disposition |
 |---|---|---|
-| Environment-only (missing Prisma generated client) | **9** | Not genuine bugs — will pass after `prisma generate` in a real environment. Re-verify at runtime. |
-| Genuine code bug (fabricated sustainability emissions + scores) | **1** | **Fixed** (see below). |
-| **Total** | **10** | 9 pending runtime re-verify · 1 fixed |
+| Environment-only (missing Prisma generated client) | **9** | **Resolved in-repo** via a shared `@prisma/client` mock (see §1). |
+| Genuine code bug (fabricated sustainability emissions + scores) | **1** | **Fixed**. |
+| Genuine code bugs uncovered once the 9 suites could run (demo-data gate not enforced) | **2** | **Fixed** (digital humans, data marketplace). |
+| **Total** | **12** | **All resolved in-repo.** Full API suite: 872 tests passing, 0 failures (51 integration tests auto-skip without a live server). |
 
 ---
 
-## 1. Environment-only failures (9) — NOT genuine bugs
+## 1. Environment-only failures (9) — now RESOLVED in-repo
 
-These test files `import` the generated Prisma client (directly or transitively). In this
-sandbox the Prisma binary engine download is network-blocked, so `.prisma/client` is never
-generated and every one of these files fails to **collect** with:
+These files import the generated Prisma client (directly or transitively). In this sandbox
+the Prisma binary engine download is network-blocked, so `prisma generate` cannot run and
+`.prisma/client` is never produced — every file failed to **collect** with
+`Cannot find module '.prisma/client/default'` (or `/wasm`).
 
-```
-Error: Cannot find module '.prisma/client/default'  (or '.prisma/client/wasm')
-```
+**Resolution (additive, does not weaken runtime checks):** a shared mock
+`apps/api/src/testUtils/prismaClientMock.ts` now stands in for `@prisma/client` enum values
+during tests. It auto-parses every `enum` out of `schema.prisma` at load time (the same
+technique FakePrisma uses for defaults), so it never drifts. Each of the 9 test files gained
+one `vi.mock("@prisma/client", ...)` line (matching the existing `vi.mock("../db/client.js")`
+pattern). The tests still run against the in-memory FakePrisma; nothing is weakened.
 
-| Test file | Root cause |
+| Test file | Result |
 |---|---|
-| `src/agents/agents.test.ts` | imports generated client (no mock) |
-| `src/attachments/attachments.test.ts` | imports generated client |
-| `src/conversations/conversations.test.ts` | imports generated client |
-| `src/promptTemplates/promptTemplates.test.ts` | imports generated client |
-| `src/publicApi/publicApi.test.ts` | imports generated client |
-| `src/services/talk.test.ts` | imports generated client |
-| `src/services/ai/registry.test.ts` | imports generated client |
-| `src/config/seedGate.test.ts` | imports generated client |
-| `src/training/training.test.ts` | imports generated client |
+| `agents`, `attachments`, `conversations`, `promptTemplates`, `publicApi` | ✅ pass |
+| `services/talk.test.ts` (12 tests) | ✅ pass |
+| `services/ai/registry.test.ts` | ✅ pass |
+| `training/training.test.ts` | ✅ pass |
+| `config/seedGate.test.ts` | ✅ pass (after fixes below) |
 
-**Action required at runtime (Phase 6 checklist):** after `pnpm db:generate` succeeds,
-re-run `pnpm test`. These 9 files are expected to collect and pass. If any still fail
-after the client is generated, that is a genuine regression and must be fixed before the
-host session is certified.
+### Two genuine bugs uncovered once `seedGate.test.ts` could run
+`seedGate.test.ts` asserts no module fabricates records when `WINDELS_DEMO_DATA` is off. It
+was blocked from running by the missing client — and once it ran it caught two modules whose
+`ensureBootstrapped` **seeded regardless of the gate**:
+- `digitalHumans.service.ts` — seeded avatars + past sessions unconditionally.
+- `dataMarketplace.service.ts` — seeded marketplace assets unconditionally.
 
-> These also explain the pre-existing `@prisma/client` typecheck errors
-> (`Role` / `Permission` / `Permission` member missing): the generated client is absent, so
-> the type definitions that export those enums do not exist in the sandbox. They are
-> environment-only and resolve after `prisma generate`.
+**Fixed** by adding the repo-standard `demoDataEnabled()` / `skipDemoSeed(...)` gate to each
+(imported from `../config/demoData.js`), matching every other module's `ensureBootstrapped`.
+
 
 ---
 

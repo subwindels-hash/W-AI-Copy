@@ -6,6 +6,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import {
   DigitalHuman, DigitalHumanSession, DigitalHumanDashboard, AvatarRole,
   AvatarStyle, AvatarStatus, AVATAR_ROLES, AVATAR_STYLES, AVATAR_STATUSES,
@@ -40,6 +41,9 @@ export const DigitalHumanService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.hs(oid))) return;
+    // Synthetic seeding is gated by WINDELS_DEMO_DATA (default off) so a fresh
+    // org starts empty and fills from real activity only.
+    if (!demoDataEnabled()) return skipDemoSeed("digital-humans", logger);
     const now = new Date().toISOString();
     for (const s of SEED){
       const id = uid("dh-");

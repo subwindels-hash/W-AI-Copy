@@ -24,6 +24,10 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { FakeKv } from "../mediaFactory/publishing/fakeKv.js";
+import { FakePrisma } from "../testUtils/fakePrisma.js";
+const db = new FakePrisma();
+vi.mock("../db/client.js", () => ({ prisma: db.client() }));
+vi.mock("@prisma/client", async () => ({ ...(await import("../testUtils/prismaClientMock.js")) }));
 
 const kv = new FakeKv();
 vi.mock("../db/redis.js", () => ({
