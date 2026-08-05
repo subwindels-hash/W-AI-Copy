@@ -57,3 +57,38 @@ describe("Session 1 demo-cleanup security guards", () => {
     expect(src).toMatch(/\.default\(false\)/);
   });
 });
+
+describe("Bootstrap demo-data gating (fail-closed)", () => {
+  const SRC_DIR = path.join(SRC);
+
+  it("every bootstrap that directly seeds business records is gated behind demoDataEnabled()", async () => {
+    const offenders: string[] = [];
+    const walkBootstrap = async (dir: string) => {
+      for (const e of await fs.readdir(dir, { withFileTypes: true })) {
+        const full = path.join(dir, e.name);
+        if (e.isDirectory()) await walkBootstrap(full);
+        else if (e.name === "bootstrap.ts") {
+          const text = await fs.readFile(full, "utf8");
+          const rel = path.relative(SRC_DIR, full);
+          // A bootstrap that directly creates/loops-seeds records must be gated.
+          const directlySeeds =
+            /Service\.create\(/.test(text) ||
+            /\.createMany\(/.test(text) ||
+            /\.seed\(/.test(text) ||
+            /for \(const .* of .*SEED/.test(text) ||
+            /SEED\.map/.test(text);
+          if (directlySeeds && !/demoDataEnabled/.test(text)) {
+            offenders.push(rel);
+          }
+        }
+      }
+    };
+    await walkBootstrap(path.join(SRC_DIR, "..", "src"));
+    expect(offenders).toEqual([]);
+  });
+
+  it("the DB in-memory fallback is never allowed in production (fail-closed)", async () => {
+    const src = await read(path.join("db", "client.ts"));
+    expect(src).toMatch(/env\.NODE_ENV === "production" \|\| !allowMock/);
+  });
+});

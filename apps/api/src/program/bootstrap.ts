@@ -2,6 +2,7 @@
  * Session 25 bootstrap — seed AI program management data if empty.
  */
 import { logger } from "../observability/logger.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import { RoadmapService } from "./roadmap.service.js";
 import { SprintService } from "./sprint.service.js";
 import { RequirementsService } from "./requirements.service.js";
@@ -11,6 +12,8 @@ import { ExecReportService } from "./execReport.service.js";
 import type { ReqPriority, ReqStatus, StoryStatus } from "@windels/shared";
 
 export async function bootstrapProgram() {
+  // Demo/reference program data is opt-in; production starts empty.
+  if (!demoDataEnabled()) return skipDemoSeed("program");
   const existing = await RoadmapService.list();
   if (existing.length > 0) {
     const matrix = await RiskService.matrix();

@@ -10,8 +10,11 @@ import { runChaosTest, newChaosCase } from "./chaos.service.js";
 import { runDrTest, newDrCase } from "./drTest.service.js";
 import { runDigitalTwin, newDigitalTwinCase } from "./digitalTwin.service.js";
 import { logger } from "../observability/logger.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 export async function bootstrapQA() {
+  // Seeded reference suites/cases are opt-in; production starts empty.
+  if (!demoDataEnabled()) return skipDemoSeed("qa");
   TestRunnerService.registerRunner("api", runApiTest);
   TestRunnerService.registerRunner("ai-validation", runAiValidation);
   TestRunnerService.registerRunner("workflow", runWorkflowTest);

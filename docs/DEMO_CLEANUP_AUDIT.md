@@ -21,7 +21,25 @@ SEEDED / DEVELOPMENT-ONLY implementation, with disposition: **fixed**, **intenti
 | 4 | `apps/api/src/http/middleware/observability.ts` | Trace/span ids used `Math.random()` — collision-prone under load. | **FIXED — CSPRNG.** Uses `randomBytes`. |
 | 5 | `apps/api/src/config/env.ts` | No explicit control over the demo-DB fallback. | **FIXED — added `WINDELS_ALLOW_MOCK_DB_FALLBACK` (default false)** + `.env.example` docs. |
 
-New guard: **`apps/api/src/demoCleanup.guard.test.ts`** (5 tests) pins the above so they cannot regress.
+New guard: **`apps/api/src/demoCleanup.guard.test.ts`** (7 tests) pins the above (including a repo-wide scan that every directly-seeding bootstrap is gated) so they cannot regress.
+
+---
+
+## A2. BOOTSTRAP DEMO-DATA GATING — FIXED
+
+A repository-wide **Bootstrap Service Review** found five bootstraps that **directly seeded demo business records** (loading automatically on an empty production DB):
+
+| Bootstrap | Demo records seeded | Disposition |
+|---|---|---|
+| `release/bootstrap.ts` | Fake production release history + fake changelogs ("Fixes multi-region failover race") | **GATED** behind `WINDELS_DEMO_DATA` |
+| `program/bootstrap.ts` | Fake roadmaps, programs, requirements, risks | **GATED** |
+| `devportal/bootstrap.ts` | Seeded SDK/CLI/environment reference catalog | **GATED** |
+| `qa/bootstrap.ts` | Seeded reference test suites/cases | **GATED** |
+| `enterprise/agentComm/bootstrap.ts` | Default "Operations Pod" team + default escalation policies | **GATED** |
+
+Production now starts empty for these surfaces and fills from real activity. A guard test scans every `bootstrap.ts` and asserts that any bootstrap which directly calls `Service.create()` / `.createMany()` / `.seed()` / loops over a `SEED` array is gated behind `demoDataEnabled()`.
+
+**Verified already-fail-closed (retained):** graceful shutdown (SIGINT/SIGTERM + `server.close`), `/health` + `/health/deep` return **503** when DB/Redis are down (not false-healthy), AI provider registry strict-mode (never Echo in production), DB-init fail-closed.
 
 ---
 
