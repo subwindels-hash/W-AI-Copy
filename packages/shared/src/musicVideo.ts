@@ -43,6 +43,7 @@ export type MvAspect = (typeof MV_ASPECTS)[number];
 export const MV_STYLES = [
   "cinematic",
   "hyper_realistic",
+  "realistic",
   "music_video",
   "anime",
   "cartoon",
@@ -58,9 +59,21 @@ export const MV_STYLES = [
   "scifi",
   "afrofuturism",
   "historical",
+  "story_mode",
+  "dance",
+  "performance",
+  "lyric_video",
   "custom",
 ] as const;
 export type MvStyle = (typeof MV_STYLES)[number];
+
+/** Export container formats the render pipeline can produce. */
+export const MV_EXPORT_FORMATS = ["mp4", "mov", "webm"] as const;
+export type MvExportFormat = (typeof MV_EXPORT_FORMATS)[number];
+
+/** Supported input image/audio extensions for the upload endpoint. */
+export const MV_UPLOAD_IMAGE_EXT = ["jpg", "jpeg", "png", "webp", "tiff", "tif"] as const;
+export const MV_UPLOAD_AUDIO_EXT = ["mp3", "wav", "flac", "aac", "ogg", "m4a"] as const;
 
 /** Image/audio file formats the studio accepts (validated on the client + server). */
 export const MV_IMAGE_TYPES = ["jpg", "jpeg", "png", "webp", "svg", "heic"] as const;
@@ -142,6 +155,22 @@ export interface MvStoryboard {
   aiGenerated: boolean;
 }
 
+/** Per-job render controls (user-tunable). */
+export interface MvRenderSettings {
+  /** 1 (subtle) .. 10 (extreme). */
+  animationStrength: number;
+  cameraMotion: "subtle" | "moderate" | "dynamic" | "cinematic";
+  sceneMotion: "none" | "slow" | "medium" | "fast";
+  characterMotion: "none" | "subtle" | "animated";
+  lighting: "natural" | "dramatic" | "neon" | "golden_hour" | "studio" | "dark";
+  effects: string[];
+  durationSec: number;
+  aspect: MvAspect;
+  frameRate: number;
+  resolution: "720p" | "1080p" | "1440p" | "4k";
+  exportFormat: MvExportFormat;
+}
+
 /* ── Job record ──────────────────────────────────────────────── */
 
 export interface MvRenderJob {
@@ -153,6 +182,7 @@ export interface MvRenderJob {
   style: MvStyle;
   aspect: MvAspect;
   status: MvStatus;
+  settings: MvRenderSettings;
   images: MvImageAsset[];
   audio?: MvAudioAsset;
   /** Optional reference to an AI music generator track id. */
@@ -162,6 +192,9 @@ export interface MvRenderJob {
   /** Output file (when rendered). */
   outputUrl?: string;
   outputPath?: string;
+  /** Preview (low-res / thumbnail) URL when available. */
+  previewUrl?: string;
+  thumbnailUrl?: string;
   sizeBytes?: number;
   error?: string;
   progressPct: number;
@@ -177,6 +210,21 @@ export interface MvRenderJob {
 }
 
 /* ── Requests ────────────────────────────────────────────────── */
+
+/** User-tunable render settings (subset — full list in MvRenderSettings). */
+export const MvRenderSettingsSchema = z.object({
+  animationStrength: z.number().int().min(1).max(10).default(5),
+  cameraMotion: z.enum(["subtle", "moderate", "dynamic", "cinematic"]).default("cinematic"),
+  sceneMotion: z.enum(["none", "slow", "medium", "fast"]).default("medium"),
+  characterMotion: z.enum(["none", "subtle", "animated"]).default("subtle"),
+  lighting: z.enum(["natural", "dramatic", "neon", "golden_hour", "studio", "dark"]).default("dramatic"),
+  effects: z.array(z.string()).default([]),
+  durationSec: z.number().int().min(3).max(120).optional(),
+  aspect: z.enum(MV_ASPECTS).optional(),
+  frameRate: z.number().int().min(24).max(60).default(30),
+  resolution: z.enum(["720p", "1080p", "1440p", "4k"]).default("1080p"),
+  exportFormat: z.enum(MV_EXPORT_FORMATS).default("mp4"),
+});
 
 export const CreateMusicVideoSchema = z.object({
   title: z.string().min(1).max(120),
@@ -198,7 +246,47 @@ export const CreateMusicVideoSchema = z.object({
   customStyle: z.string().max(500).optional(),
   /** For full_ai mode: a prompt describing the desired video. */
   prompt: z.string().max(2000).optional(),
+  /** User render controls (defaults applied when absent). */
+  settings: MvRenderSettingsSchema.optional(),
 });
 export type CreateMusicVideoInput = z.input<typeof CreateMusicVideoSchema>;
 
 export const MvJobIdSchema = z.object({ id: z.string().min(1).max(64) });
+
+/* ── Upload requests ─────────────────────────────────────────── */
+
+export const UPLOAD_RESPONSE_SCHEMA = z.object({
+  ok: z.boolean(),
+  data: z.object({
+    url: z.string(),
+    name: z.string(),
+    kind: z.enum(["image", "audio"]),
+    size: z.number(),
+  }),
+  meta: z.object({ requestId: z.string() }).optional(),
+});
+
+/* ── AI music video agents (chat-routable workforce) ─────────── */
+
+export type MvAgentKey =
+  | "ai-director"
+  | "ai-storyboard"
+  | "ai-image-gen"
+  | "ai-video-gen"
+  | "ai-motion"
+  | "ai-music-analysis"
+  | "ai-audio"
+  | "ai-quality-control"
+  | "ai-rendering";
+
+export interface MvAgent {
+  key: MvAgentKey;
+  name: string;
+  description: string;
+  routable: true;
+  status: "online" | "paused";
+  lastHeartbeat: string;
+  runs24h: number;
+  decisions24h: number;
+  blocked24h: number;
+}

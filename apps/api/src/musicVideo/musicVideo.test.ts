@@ -118,4 +118,54 @@ describe("MusicVideoService", () => {
     await expect(MusicVideoService.get(OTHER, job.id)).resolves.toBeNull();
     expect(await MusicVideoService.list(OTHER)).toEqual([]);
   });
+
+  it("applies default render settings when none provided", async () => {
+    const job = await MusicVideoService.create(ORG, USER, {
+      title: "Defaults", mode: "single_image", style: "cinematic", aspect: "16:9",
+      images: [{ url: "x", name: "a", sortOrder: 0 }], audioUrl: "y",
+    });
+    expect(job.settings.exportFormat).toBe("mp4");
+    expect(job.settings.frameRate).toBe(30);
+    expect(job.settings.resolution).toBe("1080p");
+    expect(job.settings.animationStrength).toBe(5);
+  });
+
+  it("honours user render settings (style/export/aspect/resolution)", async () => {
+    const job = await MusicVideoService.create(ORG, USER, {
+      title: "Tuned", mode: "single_image", style: "lyric_video", aspect: "9:16",
+      images: [{ url: "x", name: "a", sortOrder: 0 }], audioUrl: "y",
+      settings: { exportFormat: "webm", resolution: "4k", frameRate: 60, animationStrength: 9, lighting: "neon" },
+    });
+    expect(job.style).toBe("lyric_video");
+    expect(job.settings.exportFormat).toBe("webm");
+    expect(job.settings.resolution).toBe("4k");
+    expect(job.settings.frameRate).toBe(60);
+    expect(job.settings.animationStrength).toBe(9);
+    expect(job.settings.lighting).toBe("neon");
+  });
+
+  it("saves an image upload and rejects unsupported types", async () => {
+    const rec = await MusicVideoService.saveUpload(ORG, "image", Buffer.from("png"), "cover.png", "image/png");
+    expect(rec.url).toContain("/media-factory/render/");
+    expect(rec.kind).toBe("image");
+    await expect(MusicVideoService.saveUpload(ORG, "image", Buffer.from("x"), "bad.exe", "application/octet-stream")).rejects.toThrow(/Unsupported/);
+    await expect(MusicVideoService.saveUpload(ORG, "audio", Buffer.from("x"), "bad.exe", "application/octet-stream")).rejects.toThrow(/Unsupported/);
+  });
+
+  it("seeds chat-routable AI agents and runs real decisions", async () => {
+    const agents = await MusicVideoService.listAgents(ORG);
+    const keys = agents.map((a) => a.key);
+    expect(keys).toContain("ai-director");
+    expect(keys).toContain("ai-music-analysis");
+    expect(keys).toContain("ai-quality-control");
+    expect(agents.every((a) => a.routable === true)).toBe(true);
+
+    const job = await MusicVideoService.create(ORG, USER, {
+      title: "T", mode: "single_image", style: "cinematic", aspect: "16:9",
+      images: [{ url: "x", name: "a", sortOrder: 0 }], audioUrl: "y",
+    });
+    const res = await MusicVideoService.runAgent(ORG, "ai-quality-control", { jobId: job.id });
+    expect(res.verdict).toBe("queued");
+    expect(res.agent).toContain("Quality Control");
+  });
 });

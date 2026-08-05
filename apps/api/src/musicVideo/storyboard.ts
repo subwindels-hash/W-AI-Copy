@@ -33,11 +33,12 @@ const EFFECTS = ["lens_flare", "bloom", "motion_blur", "film_grain", "glow", "ne
 const TRANSITIONS = ["cut", "fade", "crossfade", "zoom", "slide", "wipe", "glitch", "dissolve"];
 
 const STYLE_GRADE: Record<MvStyle, string> = {
-  cinematic: "teal_orange_lut", hyper_realistic: "neutral_hdr", music_video: "vibrant_pop",
+  cinematic: "teal_orange_lut", hyper_realistic: "neutral_hdr", realistic: "true_lut", music_video: "vibrant_pop",
   anime: "sakura_wash", cartoon: "bold_toon", children: "bright_soft", "3d": "depth_render",
   motion_graphics: "flat_vector", documentary: "natural", abstract: "surreal", luxury: "gold_black",
   corporate: "clean_corp", fantasy: "enchanted", horror: "cold_underlit", scifi: "neon_teal_cyan",
-  afrofuturism: "sunset_ebony_gold", historical: "sepia_aged", custom: "custom_lut",
+  afrofuturism: "sunset_ebony_gold", historical: "sepia_aged", story_mode: "narrative_grade",
+  dance: "pulse_energy", performance: "stage_live", lyric_video: "typography_clean", custom: "custom_lut",
 };
 
 /** Intensity of a camera motion 0..1 (drives how pronounced it looks). */

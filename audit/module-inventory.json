@@ -1153,11 +1153,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 487,
+        "sloc": 608,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 487,
+      "serviceTotalSloc": 608,
       "serviceFiles": [
         "tradingIntel/brokerIntegration.service.ts"
       ],
@@ -1169,11 +1169,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/brokerIntegration.ts",
-        "sloc": 126,
+        "sloc": 141,
         "counts": {
-          "total": 22,
-          "GET": 9,
-          "POST": 9,
+          "total": 25,
+          "GET": 10,
+          "POST": 11,
           "PUT": 0,
           "PATCH": 2,
           "DELETE": 2
@@ -1200,13 +1200,16 @@
           "PATCH /brokers/risk",
           "POST /brokers/risk/kill-switch",
           "GET /brokers/portfolio",
-          "GET /brokers/command-center"
+          "GET /brokers/command-center",
+          "GET /brokers/agents",
+          "POST /brokers/agents/:key/heartbeat",
+          "POST /brokers/agents/:key/run"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/brokerIntegration.ts (270 LOC)",
+    "sharedTypes": "packages/shared/src/brokerIntegration.ts (306 LOC)",
     "web": {
-      "client": "apps/web/src/lib/brokerIntegration.ts (128 LOC)",
+      "client": "apps/web/src/lib/brokerIntegration.ts (144 LOC)",
       "pages": []
     },
     "db": {
@@ -5480,11 +5483,11 @@
       "serviceFile": {
         "file": "musicVideo.service.ts",
         "path": "/home/user/WIN/apps/api/src/musicVideo/musicVideo.service.ts",
-        "sloc": 353,
+        "sloc": 522,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1189,
+      "serviceTotalSloc": 1578,
       "serviceFiles": [
         "audioAnalysis.ts",
         "musicVideo.service.ts",
@@ -5500,11 +5503,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/musicVideo.ts",
-        "sloc": 69,
+        "sloc": 98,
         "counts": {
-          "total": 7,
-          "GET": 3,
-          "POST": 3,
+          "total": 11,
+          "GET": 4,
+          "POST": 6,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 1
@@ -5516,18 +5519,23 @@
           "POST /music-video/jobs/:id/run",
           "POST /music-video/jobs/:id/cancel",
           "DELETE /music-video/jobs/:id",
+          "POST /music-video/upload/:kind",
+          "GET /music-video/agents",
+          "POST /music-video/agents/:key/heartbeat",
+          "POST /music-video/agents/:key/run",
           "GET /music-video/:file"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/musicVideo.ts (205 LOC)",
+    "sharedTypes": "packages/shared/src/musicVideo.ts (293 LOC)",
     "web": {
-      "client": "apps/web/src/lib/musicVideo.ts (104 LOC)",
+      "client": "apps/web/src/lib/musicVideo.ts (180 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Agent",
         "Message"
       ],
       "migrations": [],
@@ -7090,11 +7098,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 487,
+        "sloc": 608,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 5703,
+      "serviceTotalSloc": 5858,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
@@ -7178,6 +7186,7 @@
         "User",
         "Organization",
         "Agent",
+        "Activity",
         "Message",
         "Integration"
       ],

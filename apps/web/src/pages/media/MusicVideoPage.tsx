@@ -10,7 +10,7 @@
  * driven by the real audio analysis.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { musicVideoApi, MV_MODES, MV_STYLES, MV_ASPECTS, type MvMode, type MvStyle, type MvAspect, type MvRenderJob } from "@/lib/musicVideo";
+import { musicVideoApi, MV_MODES, MV_STYLES, MV_ASPECTS, MV_EXPORT_FORMATS, MV_RESOLUTIONS, MV_LIGHTINGS, MV_EFFECTS, uploadMusicVideoFile, type MvMode, type MvStyle, type MvAspect, type MvRenderJob, type MvRenderSettings, type MvAgent, type MvExportFormat } from "@/lib/musicVideo";
 import { musicApi, type MusicTrackRecord } from "@/lib/musicGen";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -19,7 +19,7 @@ import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { DataBanner } from "@/components/ui/DataBanner";
 import {
-  Clapperboard, Loader2, Plus, Trash2, Play, Download, Image as ImageIcon, Music, Sparkles, Film, Gauge,
+  Clapperboard, Loader2, Plus, Trash2, Play, Download, Image as ImageIcon, Music, Sparkles, Film, Gauge, Upload, Bot, Settings2,
 } from "lucide-react";
 
 const statusColor: Record<string, string> = {
@@ -36,6 +36,7 @@ const statusColor: Record<string, string> = {
 export function MusicVideoPage() {
   const [jobs, setJobs] = useState<MvRenderJob[]>([]);
   const [tracks, setTracks] = useState<MusicTrackRecord[]>([]);
+  const [agents, setAgents] = useState<MvAgent[]>([]);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -48,18 +49,29 @@ export function MusicVideoPage() {
   const [aspect, setAspect] = useState<MvAspect>("16:9");
   const [customStyle, setCustomStyle] = useState("");
   const [prompt, setPrompt] = useState("");
-  // images: allow one "sample" entry to represent an upload/AI image
+  // images: uploaded file URLs or image URLs
   const [imageUrls, setImageUrls] = useState<string[]>([]);
   const [imageInput, setImageInput] = useState("");
-  // audio: pick from generated music tracks or an audio URL
+  // audio: pick from generated music tracks or an uploaded audio URL
   const [audioUrl, setAudioUrl] = useState("");
   const [audioName, setAudioName] = useState("");
   const [audioTrackId, setAudioTrackId] = useState<string | undefined>(undefined);
+  // render settings
+  const [animationStrength, setAnimationStrength] = useState(5);
+  const [cameraMotion, setCameraMotion] = useState<MvRenderSettings["cameraMotion"]>("cinematic");
+  const [sceneMotion, setSceneMotion] = useState<MvRenderSettings["sceneMotion"]>("medium");
+  const [characterMotion, setCharacterMotion] = useState<MvRenderSettings["characterMotion"]>("subtle");
+  const [lighting, setLighting] = useState<MvRenderSettings["lighting"]>("dramatic");
+  const [effects, setEffects] = useState<string[]>([]);
+  const [durationSec, setDurationSec] = useState(12);
+  const [frameRate, setFrameRate] = useState(30);
+  const [resolution, setResolution] = useState<MvRenderSettings["resolution"]>("1080p");
+  const [exportFormat, setExportFormat] = useState<MvExportFormat>("mp4");
 
   const refresh = useCallback(async () => {
     try {
-      const [j, t] = await Promise.all([musicVideoApi.jobs(), musicApi.tracks()]);
-      setJobs(j); setTracks(t);
+      const [j, t, ag] = await Promise.all([musicVideoApi.jobs(), musicApi.tracks(), musicVideoApi.agents()]);
+      setJobs(j); setTracks(t); setAgents(ag);
     } catch { /* degrades before server config */ }
   }, []);
 
@@ -83,6 +95,28 @@ export function MusicVideoPage() {
     setImageInput("");
   }, [imageInput]);
 
+  const uploadImage = useCallback(async (file: File) => {
+    await run("upload-img", async () => {
+      const rec = await uploadMusicVideoFile("image", file, file.name);
+      setImageUrls((u) => [...u, rec.url]);
+      return `Uploaded image "${file.name}".`;
+    });
+  }, [run]);
+
+  const uploadAudio = useCallback(async (file: File) => {
+    await run("upload-audio", async () => {
+      const rec = await uploadMusicVideoFile("audio", file, file.name);
+      setAudioUrl(rec.url);
+      setAudioName(file.name);
+      setAudioTrackId(undefined);
+      return `Uploaded audio "${file.name}".`;
+    });
+  }, [run]);
+
+  const toggleEffect = useCallback((e: string) => {
+    setEffects((cur) => cur.includes(e) ? cur.filter((x) => x !== e) : [...cur, e]);
+  }, []);
+
   const pickTrack = useCallback((t: MusicTrackRecord) => {
     setAudioUrl(t.url ?? "");
     setAudioName(`${t.title} (${t.genre})`);
@@ -105,12 +139,16 @@ export function MusicVideoPage() {
         audioTrackId,
         customStyle: style === "custom" ? customStyle : undefined,
         prompt: mode === "full_ai" ? prompt : undefined,
+        settings: {
+          animationStrength, cameraMotion, sceneMotion, characterMotion, lighting,
+          effects, durationSec, aspect, frameRate, resolution, exportFormat,
+        },
       });
       setCreating(false);
       setTitle(""); setImageUrls([]); setAudioUrl(""); setAudioName(""); setAudioTrackId(undefined); setPrompt("");
-      return `Music video job created (${job.status}). ${job.status === "requires_config" ? "Install ffmpeg to render the MP4 — the scene plan is ready." : ""}`;
+      return `Music video job created (${job.status}). ${job.status === "requires_config" ? "Install ffmpeg to render — the scene plan is ready." : ""}`;
     });
-  }, [title, mode, style, customStyle, aspect, imageUrls, audioUrl, audioName, audioTrackId, prompt, run]);
+  }, [title, mode, style, customStyle, aspect, imageUrls, audioUrl, audioName, audioTrackId, prompt, run, animationStrength, cameraMotion, sceneMotion, characterMotion, lighting, effects, durationSec, frameRate, resolution, exportFormat]);
 
   return (
     <div className="max-w-6xl">
@@ -137,12 +175,22 @@ export function MusicVideoPage() {
           title={title} setTitle={setTitle} mode={mode} setMode={setMode} style={style} setStyle={setStyle}
           aspect={aspect} setAspect={setAspect} customStyle={customStyle} setCustomStyle={setCustomStyle}
           prompt={prompt} setPrompt={setPrompt} imageUrls={imageUrls} setImageUrls={setImageUrls}
-          imageInput={imageInput} setImageInput={setImageInput} addImage={addImage}
+          imageInput={imageInput} setImageInput={setImageInput} addImage={addImage} uploadImage={uploadImage}
           audioUrl={audioUrl} setAudioUrl={setAudioUrl} audioName={audioName} setAudioName={setAudioName}
-          audioTrackId={audioTrackId} tracks={tracks} pickTrack={pickTrack} busy={busy} onCreate={createJob}
+          audioTrackId={audioTrackId} tracks={tracks} pickTrack={pickTrack} uploadAudio={uploadAudio}
+          animationStrength={animationStrength} setAnimationStrength={setAnimationStrength}
+          cameraMotion={cameraMotion} setCameraMotion={setCameraMotion} sceneMotion={sceneMotion} setSceneMotion={setSceneMotion}
+          characterMotion={characterMotion} setCharacterMotion={setCharacterMotion} lighting={lighting} setLighting={setLighting}
+          effects={effects} toggleEffect={toggleEffect} durationSec={durationSec} setDurationSec={setDurationSec}
+          frameRate={frameRate} setFrameRate={setFrameRate} resolution={resolution} setResolution={setResolution}
+          exportFormat={exportFormat} setExportFormat={setExportFormat}
+          busy={busy} onCreate={createJob}
         />
       ) : (
-        <JobsList jobs={jobs} busy={busy} run={run} onRefresh={refresh} />
+        <>
+          <JobsList jobs={jobs} busy={busy} run={run} onRefresh={refresh} />
+          <AgentsPanel agents={agents} busy={busy} run={run} jobs={jobs} />
+        </>
       )}
     </div>
   );
@@ -152,9 +200,20 @@ function Creator(props: {
   title: string; setTitle: (s: string) => void; mode: MvMode; setMode: (m: MvMode) => void;
   style: MvStyle; setStyle: (s: MvStyle) => void; aspect: MvAspect; setAspect: (a: MvAspect) => void;
   customStyle: string; setCustomStyle: (s: string) => void; prompt: string; setPrompt: (s: string) => void;
-  imageUrls: string[]; setImageUrls: (u: string[]) => void; imageInput: string; setImageInput: (s: string) => void; addImage: () => void;
+  imageUrls: string[]; setImageUrls: (u: string[]) => void; imageInput: string; setImageInput: (s: string) => void; addImage: () => void; uploadImage: (f: File) => void;
   audioUrl: string; setAudioUrl: (s: string) => void; audioName: string; setAudioName: (s: string) => void;
-  audioTrackId?: string; tracks: MusicTrackRecord[]; pickTrack: (t: MusicTrackRecord) => void; busy: string | null; onCreate: () => void;
+  audioTrackId?: string; tracks: MusicTrackRecord[]; pickTrack: (t: MusicTrackRecord) => void; uploadAudio: (f: File) => void;
+  animationStrength: number; setAnimationStrength: (n: number) => void;
+  cameraMotion: MvRenderSettings["cameraMotion"]; setCameraMotion: (v: MvRenderSettings["cameraMotion"]) => void;
+  sceneMotion: MvRenderSettings["sceneMotion"]; setSceneMotion: (v: MvRenderSettings["sceneMotion"]) => void;
+  characterMotion: MvRenderSettings["characterMotion"]; setCharacterMotion: (v: MvRenderSettings["characterMotion"]) => void;
+  lighting: MvRenderSettings["lighting"]; setLighting: (v: MvRenderSettings["lighting"]) => void;
+  effects: string[]; toggleEffect: (e: string) => void;
+  durationSec: number; setDurationSec: (n: number) => void;
+  frameRate: number; setFrameRate: (n: number) => void;
+  resolution: MvRenderSettings["resolution"]; setResolution: (v: MvRenderSettings["resolution"]) => void;
+  exportFormat: MvExportFormat; setExportFormat: (v: MvExportFormat) => void;
+  busy: string | null; onCreate: () => void;
 }) {
   return (
     <div className="space-y-4">
@@ -218,12 +277,16 @@ function Creator(props: {
       <Card>
         <CardHeader>
           <CardTitle className="text-sm flex items-center gap-2"><ImageIcon className="h-4 w-4" /> Images</CardTitle>
-          <CardDescription>Uploaded, AI-generated or image URLs. Add one or many (scenes in order).</CardDescription>
+          <CardDescription>Upload images (JPG/PNG/WEBP/TIFF) or paste URLs. Add one or many (scenes in order).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <label className="cursor-pointer flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-bg-deep/40 p-4 text-sm text-text-muted hover:border-azure-500/50">
+            <Upload className="h-4 w-4" /> Upload image(s) — drag &amp; drop or click
+            <input type="file" accept="image/*" multiple className="hidden" onChange={(e) => { Array.from(e.target.files ?? []).forEach((f) => props.uploadImage(f)); e.target.value = ""; }} />
+          </label>
           <div className="flex items-end gap-2">
             <div className="space-y-1 flex-1">
-              <label className="text-xs text-text-muted">Image URL (JPG/PNG/WEBP/SVG)</label>
+              <label className="text-xs text-text-muted">…or paste an image URL</label>
               <Input value={props.imageInput} onChange={(e) => props.setImageInput(e.target.value)} placeholder="https://…/image.png" />
             </div>
             <Button size="sm" variant="outline" onClick={props.addImage}><Plus className="h-3 w-3 mr-1" /> Add</Button>
@@ -251,10 +314,15 @@ function Creator(props: {
           <CardDescription>Uploaded audio, or pick a track from the AI Music Generator.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <label className="cursor-pointer flex items-center justify-center gap-2 rounded-xl border-2 border-dashed border-border bg-bg-deep/40 p-4 text-sm text-text-muted hover:border-azure-500/50">
+            <Upload className="h-4 w-4" /> Upload music (MP3/WAV/FLAC/AAC/OGG)
+            <input type="file" accept="audio/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) props.uploadAudio(f); e.target.value = ""; }} />
+          </label>
           <div className="space-y-1">
-            <label className="text-xs text-text-muted">Audio URL (MP3/WAV/OGG…) or use generated music below</label>
+            <label className="text-xs text-text-muted">…or paste an audio URL, or use generated music below</label>
             <Input value={props.audioUrl} onChange={(e) => props.setAudioUrl(e.target.value)} placeholder="https://…/audio.wav" />
           </div>
+          {props.audioName && <div className="text-xs text-azure-300">Selected: {props.audioName}</div>}
           {props.tracks.length > 0 && (
             <div>
               <div className="text-xs text-text-muted mb-1">From your Music Studio library:</div>
@@ -268,6 +336,50 @@ function Creator(props: {
               </div>
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Render settings */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><Settings2 className="h-4 w-4" /> Render settings</CardTitle>
+          <CardDescription>Tune animation strength, camera/scene/character motion, lighting, effects, duration, aspect, FPS, resolution and export format.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="space-y-1">
+            <label className="text-xs text-text-muted">Animation strength: {props.animationStrength}/10</label>
+            <input type="range" min={1} max={10} value={props.animationStrength} onChange={(e) => props.setAnimationStrength(Number(e.target.value))} className="w-full accent-azure-500" />
+          </div>
+          <div className="grid sm:grid-cols-2 gap-3">
+            <div className="space-y-1"><label className="text-xs text-text-muted">Camera motion</label>
+              <Select value={props.cameraMotion} onChange={(e) => props.setCameraMotion(e.target.value as MvRenderSettings["cameraMotion"])}><option value="subtle">Subtle</option><option value="moderate">Moderate</option><option value="dynamic">Dynamic</option><option value="cinematic">Cinematic</option></Select></div>
+            <div className="space-y-1"><label className="text-xs text-text-muted">Scene motion</label>
+              <Select value={props.sceneMotion} onChange={(e) => props.setSceneMotion(e.target.value as MvRenderSettings["sceneMotion"])}><option value="none">None</option><option value="slow">Slow</option><option value="medium">Medium</option><option value="fast">Fast</option></Select></div>
+            <div className="space-y-1"><label className="text-xs text-text-muted">Character motion</label>
+              <Select value={props.characterMotion} onChange={(e) => props.setCharacterMotion(e.target.value as MvRenderSettings["characterMotion"])}><option value="none">None</option><option value="subtle">Subtle</option><option value="animated">Animated</option></Select></div>
+            <div className="space-y-1"><label className="text-xs text-text-muted">Lighting</label>
+              <Select value={props.lighting} onChange={(e) => props.setLighting(e.target.value as MvRenderSettings["lighting"])}>{MV_LIGHTINGS.map((l) => <option key={l.value} value={l.value}>{l.label}</option>)}</Select></div>
+            <div className="space-y-1"><label className="text-xs text-text-muted">Export format</label>
+              <Select value={props.exportFormat} onChange={(e) => props.setExportFormat(e.target.value as MvExportFormat)}>{MV_EXPORT_FORMATS.map((f) => <option key={f.value} value={f.value}>{f.label}</option>)}</Select></div>
+            <div className="space-y-1"><label className="text-xs text-text-muted">Resolution</label>
+              <Select value={props.resolution} onChange={(e) => props.setResolution(e.target.value as MvRenderSettings["resolution"])}>{MV_RESOLUTIONS.map((r) => <option key={r.value} value={r.value}>{r.label}</option>)}</Select></div>
+          </div>
+          <div className="grid sm:grid-cols-3 gap-3">
+            <div className="space-y-1"><label className="text-xs text-text-muted">Duration (s)</label><Input type="number" min={3} max={120} value={props.durationSec} onChange={(e) => props.setDurationSec(Number(e.target.value))} /></div>
+            <div className="space-y-1"><label className="text-xs text-text-muted">Frame rate (FPS)</label><Input type="number" min={24} max={60} value={props.frameRate} onChange={(e) => props.setFrameRate(Number(e.target.value))} /></div>
+            <div className="space-y-1"><label className="text-xs text-text-muted">Aspect</label><Select value={props.aspect} onChange={(e) => props.setAspect(e.target.value as MvAspect)}>{MV_ASPECTS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}</Select></div>
+          </div>
+          <div>
+            <div className="text-xs text-text-muted mb-1">Visual effects</div>
+            <div className="flex flex-wrap gap-2">
+              {MV_EFFECTS.map((e) => (
+                <button key={e} onClick={() => props.toggleEffect(e)}
+                  className={`rounded-lg border px-2.5 py-1 text-xs ${props.effects.includes(e) ? "border-azure-500 bg-azure-500/10 text-azure-200" : "border-border text-text-muted"}`}>
+                  {e.replace(/_/g, " ")}
+                </button>
+              ))}
+            </div>
+          </div>
         </CardContent>
       </Card>
 
@@ -351,6 +463,47 @@ function JobsList({ jobs, busy, run, onRefresh }: {
                 </div>
               );
             })}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
+
+function AgentsPanel({ agents, busy, run, jobs }: {
+  agents: MvAgent[]; busy: string | null; run: (a: string, fn: () => Promise<unknown>) => void; jobs: MvRenderJob[];
+}) {
+  const latest = jobs[0];
+  return (
+    <Card className="mt-4">
+      <CardHeader>
+        <CardTitle className="text-sm flex items-center gap-2"><Bot className="h-4 w-4" /> AI music video agents (chat-routable workforce)</CardTitle>
+        <CardDescription>Specialized agents in the AI Workforce — run one to get a real, deterministic decision.</CardDescription>
+      </CardHeader>
+      <CardContent>
+        {agents.length === 0 ? (
+          <p className="text-sm text-text-muted">No music video agents loaded.</p>
+        ) : (
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+            {agents.map((a) => (
+              <div key={a.key} className="rounded-xl border border-border bg-bg-elevated px-4 py-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium text-text-bright">{a.name}</span>
+                  <Badge className="bg-emerald-500/15 text-emerald-300">{a.status}</Badge>
+                </div>
+                <p className="text-xs text-text-muted mt-1">{a.description}</p>
+                <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
+                  <span>{a.decisions24h ?? 0} decisions</span>
+                  <Button size="sm" variant="outline" onClick={() => void run(`mvagent-${a.key}`, async () => {
+                    const r = await musicVideoApi.runAgent(a.key, latest ? { jobId: latest.id } : undefined);
+                    return `${r.agent}: ${r.verdict} — ${r.detail}`;
+                  })} disabled={busy === `mvagent-${a.key}`}>
+                    {busy === `mvagent-${a.key}` ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Bot className="h-3 w-3 mr-1" />}
+                    Run
+                  </Button>
+                </div>
+              </div>
+            ))}
           </div>
         )}
       </CardContent>

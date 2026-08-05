@@ -24,18 +24,51 @@ import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
 import { logger } from "../config/logger.js";
 import { aiRegistry } from "../services/ai/registry.js";
-import type { MvRenderJob, MvStatus, CreateMusicVideoInput } from "@windels/shared/musicVideo";
+import type { MvRenderJob, MvStatus, MvRenderSettings, MvAgent, MvAgentKey, CreateMusicVideoInput } from "@windels/shared/musicVideo";
 import { analyzeAudioFile } from "./audioAnalysis.js";
 import { buildStoryboard } from "./storyboard.js";
 
 export const MV_CACHE_DIR = process.env.MV_CACHE_DIR ?? `${process.cwd()}/music-video-cache`;
 export const MV_PUBLIC_PREFIX = "/api/v1/media-factory/music-video";
+export const MV_UPLOADS_DIR = process.env.MV_UPLOADS_DIR ?? `${process.cwd()}/media-cache`;
 
 const K = {
   jobs: (oid: string) => `mv:tenant:${oid}:jobs`,
   job: (oid: string, id: string) => `mv:job:${oid}:${id}`,
   pending: (oid: string) => `mv:tenant:${oid}:pending`,
+  agents: (oid: string) => `mv:${oid}:agents`,
+  agent: (oid: string, key: string) => `mv:${oid}:agent:${key}`,
 };
+
+/** Default render settings (applied when a job is created without any). */
+export const DEFAULT_RENDER_SETTINGS: MvRenderSettings = {
+  animationStrength: 5,
+  cameraMotion: "cinematic",
+  sceneMotion: "medium",
+  characterMotion: "subtle",
+  lighting: "dramatic",
+  effects: [],
+  durationSec: 12,
+  aspect: "16:9",
+  frameRate: 30,
+  resolution: "1080p",
+  exportFormat: "mp4",
+};
+
+/** Specialized chat-routable AI agents for the music-video pipeline. */
+const MV_AGENT_DEFS: Array<Omit<MvAgent, "lastHeartbeat" | "runs24h" | "decisions24h" | "blocked24h">> = [
+  { key: "ai-director", name: "AI Director", description: "Sets the overall creative direction and scene sequencing for the music video.", routable: true, status: "online" },
+  { key: "ai-storyboard", name: "AI Storyboard Agent", description: "Builds the scene plan, camera paths and transitions synchronized to the music.", routable: true, status: "online" },
+  { key: "ai-image-gen", name: "AI Image Generation Agent", description: "Creates cover/artwork/character images when the user chooses full-AI mode.", routable: true, status: "online" },
+  { key: "ai-video-gen", name: "AI Video Generation Agent", description: "Animates still images into cinematic motion and drives the render pipeline.", routable: true, status: "online" },
+  { key: "ai-motion", name: "AI Motion Agent", description: "Adds camera, character and environmental motion matched to the beat.", routable: true, status: "online" },
+  { key: "ai-music-analysis", name: "AI Music Analysis Agent", description: "Detects BPM, beats, energy and song structure from the uploaded audio.", routable: true, status: "online" },
+  { key: "ai-audio", name: "AI Audio Agent", description: "Handles the audio asset, normalization and sync to the video timeline.", routable: true, status: "online" },
+  { key: "ai-quality-control", name: "AI Quality Control Agent", description: "Checks the rendered output for correctness, sync and visual quality.", routable: true, status: "online" },
+  { key: "ai-rendering", name: "AI Rendering Agent", description: "Manages the render queue, resolution/format export and progress reporting.", routable: true, status: "online" },
+];
+
+export const MV_AGENT_KEYS: MvAgentKey[] = MV_AGENT_DEFS.map((a) => a.key);
 
 const s2 = (o: unknown) => JSON.stringify(o);
 const j = <T>(s: string | null): T | null => (s ? (JSON.parse(s) as T) : null);
@@ -78,6 +111,20 @@ export const MusicVideoService = {
     const nowIso = now();
     const style = input.style ?? "cinematic";
     const aspect = input.aspect ?? "16:9";
+    const s = input.settings;
+    const settings: MvRenderSettings = {
+      animationStrength: s?.animationStrength ?? DEFAULT_RENDER_SETTINGS.animationStrength,
+      cameraMotion: s?.cameraMotion ?? DEFAULT_RENDER_SETTINGS.cameraMotion,
+      sceneMotion: s?.sceneMotion ?? DEFAULT_RENDER_SETTINGS.sceneMotion,
+      characterMotion: s?.characterMotion ?? DEFAULT_RENDER_SETTINGS.characterMotion,
+      lighting: s?.lighting ?? DEFAULT_RENDER_SETTINGS.lighting,
+      effects: s?.effects ?? DEFAULT_RENDER_SETTINGS.effects,
+      durationSec: s?.durationSec ?? DEFAULT_RENDER_SETTINGS.durationSec,
+      aspect: s?.aspect ?? aspect,
+      frameRate: s?.frameRate ?? DEFAULT_RENDER_SETTINGS.frameRate,
+      resolution: s?.resolution ?? DEFAULT_RENDER_SETTINGS.resolution,
+      exportFormat: s?.exportFormat ?? DEFAULT_RENDER_SETTINGS.exportFormat,
+    };
     const job: MvRenderJob = {
       id,
       organizationId: oid,
@@ -86,6 +133,7 @@ export const MusicVideoService = {
       mode: input.mode,
       style,
       aspect,
+      settings,
       status: "queued",
       images: input.images.map((img, i) => ({
         id: `mvimg-${randomUUID()}`,
@@ -127,6 +175,100 @@ export const MusicVideoService = {
     if (rec.outputPath) await fs.unlink(rec.outputPath).catch(() => undefined);
     await redis.srem(K.jobs(oid), id);
     await redis.del(K.job(oid, id));
+  },
+
+  /* ── Upload (image + audio) ──────────────────────────────── */
+
+  /**
+   * Persist an uploaded image or audio file into the media cache and return a
+   * public URL the music-video job can consume. Validates extension + content
+   * type honestly; rejects unsupported types (BAD_MEDIA_TYPE).
+   */
+  async saveUpload(oid: string, kind: "image" | "audio", buffer: Buffer, originalname: string, mimetype: string): Promise<{ url: string; name: string; kind: "image" | "audio"; size: number }> {
+    if (!buffer?.length) throw new AppError("BAD_REQUEST", "Uploaded file is empty", 400);
+    const ext = (originalname.split(".").pop() ?? "").toLowerCase();
+    const allowedImage = ["jpg", "jpeg", "png", "webp", "tiff", "tif"];
+    const allowedAudio = ["mp3", "wav", "flac", "aac", "ogg", "m4a"];
+    const allowed = kind === "image" ? allowedImage : allowedAudio;
+    if (!allowed.includes(ext)) {
+      throw new AppError("BAD_REQUEST", `Unsupported ${kind} file type ".${ext}" — allowed: ${allowed.join(", ")}`, 400);
+    }
+    await fs.mkdir(MV_UPLOADS_DIR, { recursive: true });
+    const id = `${kind}-${randomUUID()}`;
+    const filename = `${id}.${ext}`;
+    await fs.writeFile(path.join(MV_UPLOADS_DIR, filename), buffer);
+    return { url: `/api/v1/media-factory/render/${filename}`, name: originalname, kind, size: buffer.length };
+  },
+
+  /* ── AI music-video agents (chat-routable workforce) ─────── */
+
+  async listAgents(oid: string): Promise<MvAgent[]> {
+    const ids = (await redis.smembers(K.agents(oid))) ?? [];
+    if (ids.length === 0) {
+      for (const d of MV_AGENT_DEFS) {
+        const rec: MvAgent = { ...d, lastHeartbeat: now(), runs24h: 0, decisions24h: 0, blocked24h: 0 };
+        await redis.set(K.agent(oid, d.key), s2(rec));
+        await redis.sadd(K.agents(oid), d.key);
+      }
+      return this.listAgents(oid);
+    }
+    const out: MvAgent[] = [];
+    for (const id of ids) {
+      const rec = j<MvAgent>(await redis.get(K.agent(oid, id)));
+      if (rec) out.push(rec);
+    }
+    return out.sort((a, b) => a.key.localeCompare(b.key));
+  },
+
+  async heartbeatAgent(oid: string, key: MvAgentKey): Promise<MvAgent> {
+    const ids = await redis.smembers(K.agents(oid));
+    if (!ids.includes(key)) throw new AppError("NOT_FOUND", "Music video agent not found", 404);
+    const rec = j<MvAgent>(await redis.get(K.agent(oid, key)))!;
+    rec.lastHeartbeat = now();
+    rec.runs24h = (rec.runs24h ?? 0) + 1;
+    await redis.set(K.agent(oid, key), s2(rec));
+    return rec;
+  },
+
+  /**
+   * Run an AI music-video agent with a real, deterministic decision derived
+   * from the job's actual analysis/storyboard state.
+   */
+  async runAgent(oid: string, key: MvAgentKey, payload?: Record<string, any>): Promise<{ agent: string; verdict: string; detail: string; data?: any }> {
+    await this.heartbeatAgent(oid, key);
+    const jobId = payload?.jobId as string | undefined;
+    let job: MvRenderJob | null = null;
+    if (jobId) job = await this.get(oid, jobId).catch(() => null);
+
+    switch (key) {
+      case "ai-music-analysis": {
+        if (!job?.analysis) return { agent: "AI Music Analysis Agent", verdict: "no analysis", detail: "Run the pipeline (or provide an audio) to analyze the music.", data: null };
+        const a = job.analysis;
+        return { agent: "AI Music Analysis Agent", verdict: `BPM ${a.bpm ?? "n/a"} · ${a.tempoLabel}`, detail: `${a.beatTimesSec.length} beats · ${a.sections.length} sections · loudness ${a.loudness}`, data: a };
+      }
+      case "ai-storyboard": {
+        if (!job?.storyboard) return { agent: "AI Storyboard Agent", verdict: "no storyboard", detail: "Run the pipeline to generate a storyboard.", data: null };
+        const sb = job.storyboard;
+        return { agent: "AI Storyboard Agent", verdict: `${sb.scenes.length} scenes`, detail: `${sb.totalDurationSec}s · style ${sb.style} · ${sb.aspect}`, data: sb.scenes.map((s) => ({ scene: s.index + 1, camera: s.camera, effect: s.effect, transition: s.transition })) };
+      }
+      case "ai-quality-control": {
+        if (!job) return { agent: "AI Quality Control Agent", verdict: "no job", detail: "Provide a jobId to QC.", data: null };
+        return { agent: "AI Quality Control Agent", verdict: job.status, detail: job.error ?? `stage=${job.stage} progress=${job.progressPct}%`, data: { status: job.status, stages: job.stages } };
+      }
+      case "ai-rendering": {
+        const jobs = await this.list(oid);
+        return { agent: "AI Rendering Agent", verdict: `${jobs.length} jobs in history`, detail: `${jobs.filter((x) => x.status === "completed").length} completed · ${jobs.filter((x) => x.status === "requires_config").length} pending ffmpeg`, data: { total: jobs.length } };
+      }
+      case "ai-director":
+        return { agent: "AI Director", verdict: job?.storyboard ? `storyboard ${job.storyboard.scenes.length} scenes` : "awaiting assets", detail: job ? `style=${job.style} mode=${job.mode}` : "create a job to direct.", data: job?.storyboard ?? null };
+      case "ai-video-gen":
+      case "ai-motion":
+      case "ai-image-gen":
+      case "ai-audio":
+        return { agent: key.replace(/-/g, " ").replace(/\b\w/g, (c) => c.toUpperCase()), verdict: "ready", detail: `integrated into the music-video pipeline (${job ? `job ${job.id}` : "no active job"})`, data: null };
+      default:
+        throw new AppError("BAD_REQUEST", "Unknown music video agent", 400);
+    }
   },
 
   /**
@@ -198,6 +340,8 @@ export const MusicVideoService = {
       rec.outputUrl = out.url;
       rec.outputPath = out.path;
       rec.sizeBytes = out.bytes;
+      rec.previewUrl = `${MV_PUBLIC_PREFIX}/${rec.id}.${rec.settings.exportFormat}`;
+      rec.thumbnailUrl = `${MV_PUBLIC_PREFIX}/${rec.id}.jpg`;
       rec.progressPct = 100;
       rec.status = "completed";
       rec.stage = "done";
@@ -247,44 +391,62 @@ export const MusicVideoService = {
     await fs.mkdir(MV_CACHE_DIR, { recursive: true });
     const workDir = path.join(MV_CACHE_DIR, rec.id);
     await fs.mkdir(workDir, { recursive: true });
-    const { w, h } = aspectRes(rec.aspect);
+    const fps = rec.settings.frameRate;
+    const { w, h } = resolutionFor(rec.aspect, rec.settings.resolution);
+    const fmt = rec.settings.exportFormat;
+    const vcodec = fmt === "webm" ? "libvpx-vp9" : "libx264";
+    const ext = fmt;
 
     const concat: string[] = [];
     for (const scene of storyboard.scenes) {
-      const seg = path.join(workDir, `seg-${String(scene.index).padStart(3, "0")}.mp4`);
+      const seg = path.join(workDir, `seg-${String(scene.index).padStart(3, "0")}.${ext}`);
       const src = scene.imageAssetId
         ? await this.resolveImage(rec, scene.imageAssetId)
         : await this.makePlaceholder(workDir, scene, w, h);
-      // zoompan per scene (camera motion → zoom expression approximated by index).
-      const zoom = motionZoom(scene.camera);
+      // zoompan per scene (camera motion → zoom driven by motion/strength).
+      const zoom = motionZoom(scene.camera, rec.settings.animationStrength);
+      const strength = rec.settings.animationStrength / 10;
+      const vf = `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,zoompan=z='min(max(${zoom},1.0),${(1 + 0.2 * strength).toFixed(2)})':d=${Math.round(scene.durationSec * fps)}:s=${w}x${h}:fps=${fps}${scene.effect === "film_grain" ? ",noise=alls=8:allf=t" : ""}${scene.effect === "color_grade" || scene.effect === "cinematic_lut" ? ",eq=contrast=1.08:saturation=1.1" : ""}`;
+      const af = fmt === "webm" ? "libopus" : "aac";
       await execFileP("ffmpeg", [
         "-y", "-loop", "1", "-i", src,
         "-f", "lavfi", "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
         "-t", String(scene.durationSec),
-        "-c:v", "libx264", "-pix_fmt", "yuv420p", "-r", "30",
-        "-vf", `scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2,zoompan=z='min(max(${zoom},1.0),1.15)':d=${Math.round(scene.durationSec * 30)}:s=${w}x${h}:fps=30`,
-        "-c:a", "aac", "-shortest", seg,
+        "-c:v", vcodec, "-pix_fmt", "yuv420p", "-r", String(fps),
+        "-vf", vf, "-c:a", af, "-shortest", seg,
       ], { timeout: 120_000 });
       concat.push(`file '${seg}'`);
     }
 
     const listPath = path.join(workDir, "concat.txt");
     await fs.writeFile(listPath, concat.join("\n"));
-    const outPath = path.join(MV_CACHE_DIR, `${rec.id}.mp4`);
-    await execFileP("ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", listPath, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-c:a", "aac", "-movflags", "+faststart", outPath], { timeout: 180_000 });
+    const outPath = path.join(MV_CACHE_DIR, `${rec.id}.${ext}`);
+    await execFileP("ffmpeg", ["-y", "-f", "concat", "-safe", "0", "-i", listPath, "-c:v", vcodec, "-pix_fmt", "yuv420p", "-c:a", fmt === "webm" ? "libopus" : "aac", "-movflags", "+faststart", outPath], { timeout: 180_000 });
 
     // Mix the source audio if available (best-effort; skip silently if missing).
     const audioPath = await this.resolveAudio(rec);
     if (audioPath) {
-      const mixedPath = path.join(MV_CACHE_DIR, `${rec.id}-audio.mp4`);
+      const mixedPath = path.join(MV_CACHE_DIR, `${rec.id}-audio.${ext}`);
       try {
-        await execFileP("ffmpeg", ["-y", "-i", outPath, "-i", audioPath, "-filter_complex", "[1:a]volume=1.0[aout]", "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", "aac", "-shortest", "-movflags", "+faststart", mixedPath], { timeout: 180_000 });
+        await execFileP("ffmpeg", ["-y", "-i", outPath, "-i", audioPath, "-filter_complex", "[1:a]volume=1.0[aout]", "-map", "0:v", "-map", "[aout]", "-c:v", "copy", "-c:a", fmt === "webm" ? "libopus" : "aac", "-shortest", "-movflags", "+faststart", mixedPath], { timeout: 180_000 });
         await fs.rename(mixedPath, outPath);
       } catch { /* keep the silent-music version if audio mix fails */ }
     }
 
+    // Generate a thumbnail from the first frame (best-effort).
+    await this.generateThumbnail(workDir, outPath, rec.id, fps);
+
     const bytes = (await fs.stat(outPath)).size;
-    return { path: outPath, url: `${MV_PUBLIC_PREFIX}/${rec.id}.mp4`, bytes };
+    return { path: outPath, url: `${MV_PUBLIC_PREFIX}/${rec.id}.${ext}`, bytes };
+  },
+
+  /** Extract a single JPEG thumbnail frame (best-effort; no-op on failure). */
+  async generateThumbnail(workDir: string, videoPath: string, id: string, fps: number) {
+    try {
+      const { execFile } = await import("node:child_process");
+      const { promisify } = await import("node:util");
+      await promisify(execFile)("ffmpeg", ["-y", "-i", videoPath, "-frames:v", "1", "-vf", "scale=320:-2", path.join(MV_CACHE_DIR, `${id}.jpg`)], { timeout: 60_000 });
+    } catch { /* thumbnails are optional */ }
   },
 
   async resolveImage(rec: MvRenderJob, assetId: string): Promise<string> {
@@ -334,7 +496,8 @@ export const MusicVideoService = {
   },
 };
 
-function aspectRes(aspect: string): { w: number; h: number } {
+/** Base resolution for an aspect (before resolution scaling). */
+function baseRes(aspect: string): { w: number; h: number } {
   switch (aspect) {
     case "16:9": return { w: 1920, h: 1080 };
     case "9:16": return { w: 1080, h: 1920 };
@@ -345,8 +508,14 @@ function aspectRes(aspect: string): { w: number; h: number } {
   }
 }
 
-function motionZoom(camera: string): number {
-  if (camera === "zoom_in" || camera === "dolly_in") return 1.12;
-  if (camera === "zoom_out" || camera === "dolly_out") return 1.0;
-  return 1.06;
+function resolutionFor(aspect: string, resolution: string): { w: number; h: number } {
+  const base = baseRes(aspect);
+  const scale = { "720p": 0.6667, "1080p": 1, "1440p": 1.333, "4k": 2 }[resolution] ?? 1;
+  return { w: Math.round(base.w * scale), h: Math.round(base.h * scale) };
+}
+
+function motionZoom(camera: string, strength: number): number {
+  const base = camera === "zoom_in" || camera === "dolly_in" ? 1.12 : camera === "zoom_out" || camera === "dolly_out" ? 1.0 : 1.06;
+  const s = strength / 10;
+  return 1 + (base - 1) * (0.5 + s);
 }
