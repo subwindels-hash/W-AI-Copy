@@ -112,6 +112,7 @@ export const CreateCampaignSchema = z.object({
   dailyBudgetMicros: z.number().int().nonnegative().optional(),
   currency: z.string().default("USD"),
   audience: z.record(z.any()).default({}),
+  audienceIds: z.array(z.string()).default([]),
   placements: z.array(z.string()).default([]),
   creatives: z.array(z.string()).default([]),
   performanceBilling: PerformanceBillingConfigSchema.optional(),
@@ -190,6 +191,53 @@ export const ChooseVariantSchema = z.object({
   variantId: z.string().min(1).max(64),
 });
 
+/* ── Audiences & targeting ────────────────────────────────────── */
+
+/** Criteria that define an audience segment. All fields optional; empty = broad. */
+export const AudienceCriteriaSchema = z.object({
+  locations: z.array(z.string()).default([]),
+  ageRange: z.enum(["18-24", "25-34", "35-44", "45-54", "55-64", "65+"]).optional(),
+  interests: z.array(z.string()).default([]),
+  devices: z.array(z.enum(["mobile", "desktop", "tablet"])).default([]),
+  languages: z.array(z.string()).default([]),
+}).default({});
+export type AudienceCriteria = z.infer<typeof AudienceCriteriaSchema>;
+
+export const CreateAudienceSchema = z.object({
+  name: z.string().min(1).max(120),
+  description: z.string().max(500).optional(),
+  criteria: AudienceCriteriaSchema,
+});
+export type CreateAudienceInput = z.input<typeof CreateAudienceSchema>;
+
+/** A saved, reusable audience segment. */
+export interface AudienceRecord {
+  id: string;
+  organizationId: string;
+  createdById: string;
+  name: string;
+  description?: string;
+  criteria: AudienceCriteria;
+  /** Estimated reach — honest, derived (or 0 when unknown), never fabricated. */
+  sizeEstimate: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/* ── Performance history (time-series) ──────────────────────────── */
+
+/** One daily performance snapshot for a campaign. */
+export interface MetricsSnapshot {
+  day: string; // YYYY-MM-DD
+  at: string;  // ISO timestamp
+  metrics: AdCampaignMetrics;
+}
+
+/** Clone an existing campaign into a new draft (same settings, zero metrics). */
+export const DuplicateCampaignSchema = z.object({
+  name: z.string().min(1).max(120).optional(),
+});
+
 /* ── Record ──────────────────────────────────────────────────────── */
 
 export interface AdCampaignRecord extends CreateCampaignOutput {
@@ -206,6 +254,10 @@ export interface AdCampaignRecord extends CreateCampaignOutput {
   auditLog: { id: string; at: string; actorId: string; action: string; detail?: string }[];
   /** A/B creative variants (empty until a variant is added). */
   variants: CreativeVariant[];
+  /** Saved audiences targeted by this campaign. */
+  audiences: AudienceRecord[];
+  /** Daily performance history (snapshots recorded over time). */
+  history: MetricsSnapshot[];
   /** Whether a real AI provider is configured (honest flag). */
   aiConfigured: boolean;
   createdAt: string;
@@ -275,5 +327,7 @@ export interface AdCampaignDashboard {
   recommendations: Recommendation[];
   pacing: AdBudgetPacing;
   variants: CreativeVariant[];
+  audiences: AudienceRecord[];
+  history: MetricsSnapshot[];
   aiConfigured: boolean;
 }

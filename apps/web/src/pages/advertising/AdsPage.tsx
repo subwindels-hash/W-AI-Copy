@@ -11,7 +11,7 @@
  * Performance billing surfaces its verification / fraud status transparently.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { advertisingApi, CAMPAIGN_MODES, BILLING_MODES, type AdCampaignRecord, type AdCampaignDashboard, type AdPortfolioAnalytics, type CampaignMode } from "@/lib/advertising";
+import { advertisingApi, CAMPAIGN_MODES, BILLING_MODES, type AdCampaignRecord, type AdCampaignDashboard, type AdPortfolioAnalytics, type AudienceRecord, type CampaignMode } from "@/lib/advertising";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -20,7 +20,7 @@ import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Megaphone, Plus, Loader2, Play, Pause, CheckCircle2, XCircle, Sparkles, Send,
   RefreshCw, Bot, ShieldCheck, TrendingUp, Wallet, Activity, ArrowLeft, Zap,
-  BarChart3, Layers, Flag, Gauge,
+  BarChart3, Layers, Flag, Gauge, Copy, Users, Target, LineChart, Trash2,
 } from "lucide-react";
 
 const usd = (micros: number) => `$${(micros / 1_000_000).toFixed(2)}`;
@@ -42,6 +42,7 @@ const healthColor: Record<string, string> = {
 export function AdsPage() {
   const [campaigns, setCampaigns] = useState<AdCampaignRecord[]>([]);
   const [analytics, setAnalytics] = useState<AdPortfolioAnalytics | null>(null);
+  const [audiences, setAudiences] = useState<AudienceRecord[]>([]);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [dash, setDash] = useState<AdCampaignDashboard | null>(null);
   const [creating, setCreating] = useState(false);
@@ -61,8 +62,8 @@ export function AdsPage() {
 
   const refreshList = useCallback(async () => {
     try {
-      const [c, a] = await Promise.all([advertisingApi.list(), advertisingApi.analytics()]);
-      setCampaigns(c); setAnalytics(a);
+      const [c, a, au] = await Promise.all([advertisingApi.list(), advertisingApi.analytics(), advertisingApi.audiences()]);
+      setCampaigns(c); setAnalytics(a); setAudiences(au);
     } catch { /* degrades before server config */ }
   }, []);
 
@@ -164,6 +165,52 @@ export function AdsPage() {
     });
   }, [selectedId, loadDashboard, run]);
 
+  const duplicateCampaign = useCallback(async () => {
+    if (!selectedId) return;
+    await run("dup", async () => {
+      const dup = await advertisingApi.duplicate(selectedId);
+      await refreshList();
+      setSelectedId(dup.id);
+      return `Campaign duplicated → "${dup.name}" (draft).`;
+    });
+  }, [selectedId, refreshList, run]);
+
+  const takeSnapshot = useCallback(async () => {
+    if (!selectedId) return;
+    await run("snap", async () => {
+      const s = await advertisingApi.snapshot(selectedId);
+      await loadDashboard(selectedId);
+      return `Performance snapshot recorded for ${s.day}.`;
+    });
+  }, [selectedId, loadDashboard, run]);
+
+  const attachAudience = useCallback(async (audienceId: string) => {
+    if (!selectedId) return;
+    await run("attachAud", async () => {
+      await advertisingApi.addAudienceToCampaign(selectedId, audienceId);
+      await loadDashboard(selectedId);
+      return "Audience attached to campaign.";
+    });
+  }, [selectedId, loadDashboard, run]);
+
+  const detachAudience = useCallback(async (audienceId: string) => {
+    if (!selectedId) return;
+    await run("detachAud", async () => {
+      await advertisingApi.removeAudienceFromCampaign(selectedId, audienceId);
+      await loadDashboard(selectedId);
+      return "Audience removed from campaign.";
+    });
+  }, [selectedId, loadDashboard, run]);
+
+  const createAudience = useCallback(async (name: string) => {
+    if (!name.trim()) return;
+    await run("createAud", async () => {
+      await advertisingApi.createAudience({ name: name.trim(), criteria: {} });
+      await refreshList();
+      return `Audience "${name.trim()}" created.`;
+    });
+  }, [refreshList, run]);
+
   const selected = useMemo(() => campaigns.find((c) => c.id === selectedId) ?? null, [campaigns, selectedId]);
 
   return (
@@ -198,10 +245,15 @@ export function AdsPage() {
           busy={busy} onCreate={createCampaign}
         />
       ) : selected && dash ? (
-        <Dashboard dash={dash} busy={busy} onGen={gen} onAct={act} onConv={reportConv} onIngest={ingest} onAddVariant={addVariant} onChooseVariant={chooseVariant} onBack={() => setSelectedId(null)} />
+        <Dashboard
+          dash={dash} busy={busy} onGen={gen} onAct={act} onConv={reportConv} onIngest={ingest} onAddVariant={addVariant} onChooseVariant={chooseVariant}
+          onDuplicate={duplicateCampaign} onSnapshot={takeSnapshot} onAttachAudience={attachAudience} onDetachAudience={detachAudience}
+          audiences={audiences} onBack={() => setSelectedId(null)}
+        />
       ) : (
         <>
           {analytics && <PortfolioPanel analytics={analytics} />}
+          {audiences.length > 0 && <AudienceLibrary audiences={audiences} onCreate={createAudience} busy={busy} />}
         <Card>
           <CardHeader>
             <CardTitle>Campaigns</CardTitle>
@@ -366,6 +418,9 @@ function Dashboard(props: {
   onIngest: (input: { impressions?: number; clicks?: number; spendMicros?: number; source?: string }) => void;
   onAddVariant: (input: { name: string; headline?: string }) => void;
   onChooseVariant: (variantId: string) => void;
+  onDuplicate: () => void; onSnapshot: () => void;
+  onAttachAudience: (audienceId: string) => void; onDetachAudience: (audienceId: string) => void;
+  audiences: AudienceRecord[];
   onBack: () => void;
 }) {
   const { dash } = props;
@@ -376,6 +431,10 @@ function Dashboard(props: {
   const [spend, setSpend] = useState("");
   const [vName, setVName] = useState("");
   const [vHeadline, setVHeadline] = useState("");
+  const attachedIds = new Set(dash.audiences.map((a) => a.id));
+  const availableAudiences = props.audiences.filter((a) => !attachedIds.has(a.id));
+  const history = dash.history;
+  const maxSpend = Math.max(...history.map((h) => h.metrics.spendMicros), 1);
   return (
     <div className="space-y-4">
       <button onClick={props.onBack} className="text-sm text-azure-300 hover:underline">← All campaigns</button>
@@ -503,6 +562,12 @@ function Dashboard(props: {
           <Button size="sm" variant="outline" onClick={() => props.onAct("recommend", (id) => advertisingApi.recommend(id))} disabled={props.busy === "recommend"}>
             <RefreshCw className="h-3 w-3 mr-1" /> Refresh AI recommendations
           </Button>
+          <Button size="sm" variant="outline" onClick={props.onSnapshot} disabled={props.busy === "snap"}>
+            <LineChart className="h-3 w-3 mr-1" /> Record performance snapshot
+          </Button>
+          <Button size="sm" variant="outline" onClick={props.onDuplicate} disabled={props.busy === "dup"}>
+            <Copy className="h-3 w-3 mr-1" /> Duplicate campaign
+          </Button>
           {dash.mode === "autonomous" && (
             <Button size="sm" variant="outline" onClick={() => props.onAct("autonomous", (id) => advertisingApi.autonomousCycle(id))} disabled={props.busy === "autonomous"}>
               <Bot className="h-3 w-3 mr-1" /> Run autonomous cycle
@@ -591,6 +656,7 @@ function Dashboard(props: {
           {dash.variants.length === 0 ? (
             <p className="text-sm text-text-muted">No variants yet. Add one to start A/B testing.</p>
           ) : (
+
             <div className="grid gap-2">
               {dash.variants.map((v) => {
                 const vCtr = v.metrics.impressions > 0 ? ((v.metrics.clicks / v.metrics.impressions) * 100).toFixed(1) : "—";
@@ -614,6 +680,70 @@ function Dashboard(props: {
                   </div>
                 );
               })}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Performance history (time-series) */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm"><LineChart className="h-4 w-4" /> Performance history</CardTitle>
+          <CardDescription>Daily snapshots over time. Use "Record performance snapshot" to capture one.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {history.length === 0 ? (
+            <p className="text-sm text-text-muted">No snapshots yet. Record one to build a trend.</p>
+          ) : (
+            <div className="flex items-end gap-1 h-32">
+              {history.map((h) => (
+                <div key={h.day} className="flex flex-col items-center gap-1 flex-1 min-w-0" title={`${h.day}: ${usd(h.metrics.spendMicros)} spend, ${h.metrics.conversions} conv`}>
+                  <div className="w-full rounded-t bg-azure-500/70" style={{ height: `${Math.max(4, (h.metrics.spendMicros / maxSpend) * 100)}%` }} />
+                  <span className="text-[9px] text-text-muted truncate w-full text-center">{h.day.slice(5)}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+
+      {/* Audiences & targeting */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-sm"><Target className="h-4 w-4" /> Audiences & targeting</CardTitle>
+          <CardDescription>Attach saved audience segments to this campaign for targeting.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          {dash.audiences.length === 0 && (
+            <p className="text-sm text-text-muted">No audiences attached yet.</p>
+          )}
+          <div className="grid gap-2">
+            {dash.audiences.map((a) => (
+              <div key={a.id} className="rounded-xl border border-border bg-bg-elevated px-4 py-3 flex items-center justify-between">
+                <div>
+                  <div className="font-medium text-text-bright flex items-center gap-2"><Users className="h-3 w-3" /> {a.name}</div>
+                  <div className="text-xs text-text-muted mt-0.5">
+                    {a.criteria.locations.length ? `${a.criteria.locations.join(", ")} · ` : ""}
+                    {a.criteria.interests.length ? `${a.criteria.interests.join(", ")} · ` : ""}
+                    Reach ~{a.sizeEstimate ? a.sizeEstimate.toLocaleString() : "unknown"}
+                  </div>
+                </div>
+                <Button size="sm" variant="outline" onClick={() => props.onDetachAudience(a.id)} disabled={props.busy === "detachAud"}>
+                  <Trash2 className="h-3 w-3 mr-1" /> Remove
+                </Button>
+              </div>
+            ))}
+          </div>
+          {availableAudiences.length > 0 && (
+            <div>
+              <div className="text-xs text-text-muted mb-1">Attach an audience</div>
+              <div className="flex flex-wrap gap-2">
+                {availableAudiences.map((a) => (
+                  <Button key={a.id} size="sm" variant="outline" onClick={() => props.onAttachAudience(a.id)} disabled={props.busy === "attachAud"}>
+                    <Plus className="h-3 w-3 mr-1" /> {a.name}
+                  </Button>
+                ))}
+              </div>
             </div>
           )}
         </CardContent>
@@ -663,6 +793,45 @@ function PortfolioPanel({ analytics }: { analytics: AdPortfolioAnalytics }) {
             </div>
           </div>
         )}
+      </CardContent>
+    </Card>
+  );
+}
+
+/* ── Audience library (campaigns list view) ───────────────────────── */
+
+function AudienceLibrary({ audiences, onCreate, busy }: { audiences: AudienceRecord[]; onCreate: (name: string) => void; busy: string | null }) {
+  const [name, setName] = useState("");
+  return (
+    <Card className="mb-6">
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-sm"><Users className="h-4 w-4" /> Audience library</CardTitle>
+        <CardDescription>Saved, reusable targeting segments you can attach to any campaign.</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-3">
+        <div className="flex flex-wrap items-end gap-2">
+          <div className="space-y-1 flex-1 min-w-[200px]">
+            <label className="text-xs text-text-muted">New audience name</label>
+            <Input value={name} onChange={(e) => setName(e.target.value)} placeholder="e.g. Lagos tech professionals" />
+          </div>
+          <Button size="sm" variant="outline" onClick={() => { if (name.trim()) { onCreate(name); setName(""); } }} disabled={busy === "createAud"}>
+            <Plus className="h-3 w-3 mr-1" /> Create audience
+          </Button>
+        </div>
+        <div className="grid gap-2">
+          {audiences.map((a) => (
+            <div key={a.id} className="rounded-xl border border-border bg-bg-elevated px-4 py-2 flex items-center justify-between">
+              <div>
+                <div className="text-sm font-medium text-text-bright">{a.name}</div>
+                <div className="text-xs text-text-muted">
+                  {a.criteria.locations.length ? `${a.criteria.locations.join(", ")} · ` : ""}
+                  {a.criteria.interests.length ? `${a.criteria.interests.join(", ")} · ` : ""}
+                  Reach ~{a.sizeEstimate ? a.sizeEstimate.toLocaleString() : "unknown"}
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
       </CardContent>
     </Card>
   );

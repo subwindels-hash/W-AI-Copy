@@ -73,9 +73,39 @@ export interface AdCampaignRecord {
   recommendations: Recommendation[];
   autonomousActions: { id: string; at: string; action: string; detail?: string }[];
   auditLog: { id: string; at: string; actorId: string; action: string; detail?: string }[];
+  variants: CreativeVariant[];
+  audienceIds: string[];
+  audiences: AudienceRecord[];
+  history: MetricsSnapshot[];
   aiConfigured: boolean;
   createdAt: string;
   updatedAt: string;
+}
+
+export interface AudienceCriteria {
+  locations: string[];
+  ageRange?: string;
+  interests: string[];
+  devices: string[];
+  languages: string[];
+}
+
+export interface AudienceRecord {
+  id: string;
+  organizationId: string;
+  createdById: string;
+  name: string;
+  description?: string;
+  criteria: AudienceCriteria;
+  sizeEstimate: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface MetricsSnapshot {
+  day: string;
+  at: string;
+  metrics: AdCampaignMetrics;
 }
 
 export interface AdCampaignDashboard {
@@ -92,6 +122,8 @@ export interface AdCampaignDashboard {
   recommendations: Recommendation[];
   pacing: AdBudgetPacing;
   variants: CreativeVariant[];
+  audiences: AudienceRecord[];
+  history: MetricsSnapshot[];
   aiConfigured: boolean;
 }
 
@@ -177,6 +209,17 @@ export const advertisingApi = {
   chooseVariant: (id: string, variantId: string) =>
     api<AdCampaignRecord>(`/advertising/campaigns/${id}/variants/choose`, { method: "POST", json: { variantId } }),
   analytics: () => api<AdPortfolioAnalytics>("/advertising/analytics"),
+  audiences: () => api<AudienceRecord[]>("/advertising/audiences"),
+  createAudience: (input: { name: string; description?: string; criteria: Partial<AudienceCriteria> }) =>
+    api<AudienceRecord>("/advertising/audiences", { method: "POST", json: input }),
+  deleteAudience: (id: string) => api<void>(`/advertising/audiences/${id}`, { method: "DELETE" }),
+  addAudienceToCampaign: (campaignId: string, audienceId: string) =>
+    api<AdCampaignRecord>(`/advertising/campaigns/${campaignId}/audiences/${audienceId}`, { method: "POST" }),
+  removeAudienceFromCampaign: (campaignId: string, audienceId: string) =>
+    api<AdCampaignRecord>(`/advertising/campaigns/${campaignId}/audiences/${audienceId}`, { method: "DELETE" }),
+  snapshot: (id: string) => api<MetricsSnapshot>(`/advertising/campaigns/${id}/snapshot`, { method: "POST" }),
+  duplicate: (id: string, name?: string) =>
+    api<AdCampaignRecord>(`/advertising/campaigns/${id}/duplicate`, { method: "POST", json: name ? { name } : undefined }),
   settings: () => api<Record<string, unknown>>("/advertising/settings"),
   updateSettings: (patch: Record<string, unknown>) => api<Record<string, unknown>>("/advertising/settings", { method: "PATCH", json: patch }),
 };

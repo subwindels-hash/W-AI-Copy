@@ -68,11 +68,11 @@
       "serviceFile": {
         "file": "advertising.service.ts",
         "path": "/home/user/WIN/apps/api/src/advertising/advertising.service.ts",
-        "sloc": 688,
+        "sloc": 834,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1619,
+      "serviceTotalSloc": 1974,
       "serviceFiles": [
         "advertising.service.ts",
         "advertising.test.ts",
@@ -86,14 +86,14 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/advertising.ts",
-        "sloc": 152,
+        "sloc": 189,
         "counts": {
-          "total": 21,
-          "GET": 5,
-          "POST": 14,
+          "total": 28,
+          "GET": 6,
+          "POST": 18,
           "PUT": 0,
           "PATCH": 2,
-          "DELETE": 0
+          "DELETE": 2
         },
         "endpoints": [
           "GET /campaigns",
@@ -115,14 +115,21 @@
           "POST /campaigns/:id/variants/:variantId/metrics",
           "POST /campaigns/:id/variants/choose",
           "GET /analytics",
+          "GET /audiences",
+          "POST /audiences",
+          "DELETE /audiences/:id",
+          "POST /campaigns/:id/audiences/:audienceId",
+          "DELETE /campaigns/:id/audiences/:audienceId",
+          "POST /campaigns/:id/snapshot",
+          "POST /campaigns/:id/duplicate",
           "GET /settings",
           "PATCH /settings"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/advertising.ts (280 LOC)",
+    "sharedTypes": "packages/shared/src/advertising.ts (334 LOC)",
     "web": {
-      "client": "apps/web/src/lib/advertising.ts (183 LOC)",
+      "client": "apps/web/src/lib/advertising.ts (226 LOC)",
       "pages": []
     },
     "db": {

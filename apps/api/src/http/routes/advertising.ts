@@ -4,6 +4,7 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
+import { z } from "zod";
 import {
   CreateCampaignSchema,
   UpdateCampaignSchema,
@@ -13,6 +14,8 @@ import {
   IngestMetricsSchema,
   AddVariantSchema,
   ChooseVariantSchema,
+  CreateAudienceSchema,
+  DuplicateCampaignSchema,
 } from "@windels/shared/advertising";
 import { AdvertisingService } from "../../advertising/advertising.service.js";
 
@@ -137,6 +140,40 @@ export function registerAdvertisingRoutes(router: Router) {
     try {
       res.json({ ok: true, data: await AdvertisingService.portfolioAnalytics(oid(req)), meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
+  });
+
+  // Audiences & targeting
+  router.get("/audiences", async (req, res, next) => {
+    try { res.json({ ok: true, data: await AdvertisingService.listAudiences(oid(req)), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.post("/audiences", validate({ body: CreateAudienceSchema }), async (req, res, next) => {
+    try { res.status(201).json({ ok: true, data: await AdvertisingService.createAudience(oid(req), uid(req), req.body), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.delete("/audiences/:id", validate({ params: z.object({ id: z.string().min(1).max(64) }) }), async (req, res, next) => {
+    try { await AdvertisingService.deleteAudience(oid(req), req.params.id, uid(req)); res.json({ ok: true, meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.post("/campaigns/:id/audiences/:audienceId", validate({ params: campaignParams }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await AdvertisingService.addAudienceToCampaign(oid(req), req.params.id, req.params.audienceId, uid(req)), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.delete("/campaigns/:id/audiences/:audienceId", validate({ params: campaignParams }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await AdvertisingService.removeAudienceFromCampaign(oid(req), req.params.id, req.params.audienceId, uid(req)), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+
+  // Performance history (time-series)
+  router.post("/campaigns/:id/snapshot", validate({ params: campaignParams }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await AdvertisingService.snapshotMetrics(oid(req), req.params.id), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+
+  // Duplicate a campaign
+  router.post("/campaigns/:id/duplicate", validate({ params: campaignParams, body: DuplicateCampaignSchema.optional() }), async (req, res, next) => {
+    try { res.status(201).json({ ok: true, data: await AdvertisingService.duplicateCampaign(oid(req), req.params.id, uid(req), req.body?.name), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
   });
 
   // Org-level advertising settings

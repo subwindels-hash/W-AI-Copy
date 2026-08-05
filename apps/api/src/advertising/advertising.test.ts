@@ -240,3 +240,66 @@ describe("budget pacing", () => {
     expect(after.pacing.daysLeft).toBe(2);
   });
 });
+
+describe("audiences & targeting", () => {
+  it("creates, lists, attaches, detaches and deletes audiences org-scoped", async () => {
+    const a = await AdvertisingService.createAudience(ORG, USER, { name: "Lagos devs", criteria: { locations: ["Lagos"], interests: ["tech", "AI"] } });
+    expect(a.sizeEstimate).toBeGreaterThan(0);
+    const c = await AdvertisingService.create(ORG, USER, { ...base, campaignMode: "standard" });
+
+    await AdvertisingService.addAudienceToCampaign(ORG, c.id, a.id, USER);
+    const d1 = await AdvertisingService.dashboard(ORG, c.id);
+    expect(d1.audiences.length).toBe(1);
+    expect(d1.audiences[0]!.name).toBe("Lagos devs");
+
+    await AdvertisingService.removeAudienceFromCampaign(ORG, c.id, a.id, USER);
+    const d2 = await AdvertisingService.dashboard(ORG, c.id);
+    expect(d2.audiences.length).toBe(0);
+
+    // Org scoping: other org cannot see or attach this audience.
+    await expect(AdvertisingService.addAudienceToCampaign("org-other", c.id, a.id, USER)).rejects.toThrow(/not found/i);
+
+    await AdvertisingService.deleteAudience(ORG, a.id, USER);
+    expect(await AdvertisingService.listAudiences(ORG)).toEqual([]);
+  });
+
+  it("estimates reach as 0 when no locations are given (honest unknown)", async () => {
+    const a = await AdvertisingService.createAudience(ORG, USER, { name: "Broad", criteria: {} });
+    expect(a.sizeEstimate).toBe(0);
+  });
+});
+
+describe("performance history (time-series)", () => {
+  it("records daily snapshots and updates the same day idempotently", async () => {
+    const c = await AdvertisingService.create(ORG, USER, { ...base, campaignMode: "standard" });
+    await AdvertisingService.ingestMetrics(ORG, c.id, USER, { impressions: 100, spendMicros: 5_000_000 });
+    const s1 = await AdvertisingService.snapshotMetrics(ORG, c.id);
+    expect(s1.metrics.impressions).toBe(100);
+    await AdvertisingService.ingestMetrics(ORG, c.id, USER, { impressions: 50, spendMicros: 2_000_000 });
+    const s2 = await AdvertisingService.snapshotMetrics(ORG, c.id);
+    const d = await AdvertisingService.dashboard(ORG, c.id);
+    // same day → replaced, not duplicated
+    expect(d.history.length).toBe(1);
+    expect(d.history[0]!.metrics.impressions).toBe(150);
+  });
+});
+
+describe("duplicate campaign", () => {
+  it("clones settings into a fresh draft with zero metrics/history", async () => {
+    const c = await AdvertisingService.create(ORG, USER, { ...base, name: "Original", campaignMode: "autonomous", budgetMicros: 9_000_000 });
+    await AdvertisingService.ingestMetrics(ORG, c.id, USER, { impressions: 500, spendMicros: 1_000_000 });
+    await AdvertisingService.addVariant(ORG, c.id, USER, { name: "Var A" });
+
+    const dup = await AdvertisingService.duplicateCampaign(ORG, c.id, USER, "My copy");
+    expect(dup.name).toBe("My copy");
+    expect(dup.id).not.toBe(c.id);
+    expect(dup.status).toBe("draft");
+    expect(dup.campaignMode).toBe("autonomous");
+    expect(dup.budgetMicros).toBe(9_000_000);
+    expect(dup.metrics.impressions).toBe(0);
+    expect(dup.history).toEqual([]);
+    expect(dup.variants.length).toBe(1); // variants copied but reset
+    expect(dup.variants[0]!.metrics.impressions).toBe(0);
+    expect(dup.auditLog.some((e) => e.action === "campaign.duplicated")).toBe(true);
+  });
+});

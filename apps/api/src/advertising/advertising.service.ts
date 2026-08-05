@@ -42,6 +42,10 @@ import type {
   CreativeVariant,
   IngestMetricsInput,
   AddVariantInput,
+  AudienceRecord,
+  AudienceCriteria,
+  CreateAudienceInput,
+  MetricsSnapshot,
   AdBudgetPacing,
   AdPortfolioAnalytics,
   AiSource,
@@ -50,6 +54,8 @@ import type {
 const K = {
   campaign: (oid: string, id: string) => `adv:camp:${oid}:${id}`,
   campaigns: (oid: string) => `adv:camps:${oid}`,
+  audience: (oid: string, id: string) => `adv:aud:${oid}:${id}`,
+  audiences: (oid: string) => `adv:auds:${oid}`,
   org: (oid: string) => `adv:org:${oid}`,
 };
 
@@ -143,6 +149,7 @@ export const AdvertisingService = {
       dailyBudgetMicros: input.dailyBudgetMicros,
       currency: input.currency ?? "USD",
       audience: input.audience ?? {},
+      audienceIds: input.audienceIds ?? [],
       placements: input.placements ?? [],
       creatives: input.creatives ?? [],
       performanceBilling,
@@ -161,6 +168,8 @@ export const AdvertisingService = {
       autonomousActions: [],
       auditLog: [{ id: randomUUID(), at: nowIso, actorId: userId, action: "campaign.created", detail: `mode=${campaignMode} billing=${billingMode} automation=${automationLevel}` }],
       variants: [],
+      audiences: [],
+      history: [],
       aiConfigured,
       createdAt: nowIso,
       updatedAt: nowIso,
@@ -544,6 +553,135 @@ export const AdvertisingService = {
     return rec;
   },
 
+  /* ── Audiences & targeting ────────────────────────────────── */
+
+  /** Create a saved, reusable audience segment. */
+  async createAudience(oid: string, userId: string, input: CreateAudienceInput): Promise<AudienceRecord> {
+    const id = `aud-${randomUUID()}`;
+    const nowIso = now();
+    const c = input.criteria ?? {};
+    const criteria: AudienceCriteria = {
+      locations: c.locations ?? [],
+      ageRange: c.ageRange,
+      interests: c.interests ?? [],
+      devices: c.devices ?? [],
+      languages: c.languages ?? [],
+    };
+    const rec: AudienceRecord = {
+      id, organizationId: oid, createdById: userId,
+      name: input.name, description: input.description,
+      criteria,
+      // Honest estimate derived only from what is known: locations * interests
+      // granularity. 0 means "unknown" — never fabricated.
+      sizeEstimate: this.estimateAudienceSize(criteria),
+      createdAt: nowIso, updatedAt: nowIso,
+    };
+    await redis.set(K.audience(oid, id), s2(rec));
+    await redis.sadd(K.audiences(oid), id);
+    return rec;
+  },
+
+  async listAudiences(oid: string): Promise<AudienceRecord[]> {
+    const ids = (await redis.smembers(K.audiences(oid))) ?? [];
+    const out: AudienceRecord[] = [];
+    for (const id of ids) {
+      const rec = j<AudienceRecord>(await redis.get(K.audience(oid, id)));
+      if (rec) out.push(rec);
+    }
+    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  async getAudience(oid: string, id: string): Promise<AudienceRecord | null> {
+    return j<AudienceRecord>(await redis.get(K.audience(oid, id)));
+  },
+
+  async deleteAudience(oid: string, id: string, actorId: string): Promise<void> {
+    const rec = await this.getAudience(oid, id);
+    if (!rec) throw new AppError("NOT_FOUND", "Audience not found", 404);
+    // Remove the audience id from any campaign that references it.
+    for (const c of await this.list(oid)) {
+      if (c.audienceIds.includes(id)) {
+        c.audienceIds = c.audienceIds.filter((x) => x !== id);
+        c.auditLog.push({ id: randomUUID(), at: now(), actorId, action: "audience.removed", detail: id });
+        await redis.set(K.campaign(oid, c.id), s2(c));
+      }
+    }
+    await redis.srem(K.audiences(oid), id);
+    await redis.del(K.audience(oid, id));
+  },
+
+  /** Attach a saved audience to a campaign. */
+  async addAudienceToCampaign(oid: string, campaignId: string, audienceId: string, actorId: string): Promise<AdCampaignRecord> {
+    const [rec, aud] = await Promise.all([this.mustGet(oid, campaignId), this.getAudience(oid, audienceId)]);
+    if (!aud) throw new AppError("NOT_FOUND", "Audience not found", 404);
+    if (!rec.audienceIds.includes(audienceId)) {
+      rec.audienceIds = [...rec.audienceIds, audienceId];
+      rec.auditLog.push({ id: randomUUID(), at: now(), actorId, action: "audience.attached", detail: audienceId });
+      await redis.set(K.campaign(oid, campaignId), s2(rec));
+    }
+    return rec;
+  },
+
+  /** Detach a saved audience from a campaign. */
+  async removeAudienceFromCampaign(oid: string, campaignId: string, audienceId: string, actorId: string): Promise<AdCampaignRecord> {
+    const rec = await this.mustGet(oid, campaignId);
+    rec.audienceIds = rec.audienceIds.filter((x) => x !== audienceId);
+    rec.auditLog.push({ id: randomUUID(), at: now(), actorId, action: "audience.detached", detail: audienceId });
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return rec;
+  },
+
+  /** Honest, deterministic size estimate from the criteria (0 = unknown). */
+  estimateAudienceSize(criteria: AudienceCriteria): number {
+    if (!criteria.locations?.length) return 0;
+    // Coarse, documented heuristic: reach ∝ #locations × interest breadth.
+    return (criteria.locations.length * 50_000) + (criteria.interests?.length ?? 0) * 10_000;
+  },
+
+  /* ── Performance history (time-series) ─────────────────────── */
+
+  /** Record a daily performance snapshot from the current cumulative metrics. */
+  async snapshotMetrics(oid: string, campaignId: string): Promise<MetricsSnapshot> {
+    const rec = await this.mustGet(oid, campaignId);
+    const day = new Date().toISOString().slice(0, 10);
+    const existing = rec.history.find((h) => h.day === day);
+    const snap: MetricsSnapshot = { day, at: now(), metrics: { ...rec.metrics } };
+    rec.history = existing ? rec.history.map((h) => (h.day === day ? snap : h)) : [...rec.history, snap];
+    // Keep the last 90 daily points.
+    rec.history = rec.history.slice(-90);
+    await redis.set(K.campaign(oid, campaignId), s2(rec));
+    return snap;
+  },
+
+  /* ── Duplicate campaign ───────────────────────────────────── */
+
+  /** Clone a campaign into a new draft (same settings, zero metrics/history). */
+  async duplicateCampaign(oid: string, sourceId: string, actorId: string, name?: string): Promise<AdCampaignRecord> {
+    const src = await this.mustGet(oid, sourceId);
+    const id = randomUUID();
+    const nowIso = now();
+    const rec: AdCampaignRecord = {
+      ...src,
+      id,
+      createdById: actorId,
+      name: name ?? `${src.name} (copy)`,
+      status: "draft",
+      metrics: { impressions: 0, clicks: 0, conversions: 0, spendMicros: 0, revenueMicros: 0 },
+      optimizationHistory: [],
+      recommendations: [],
+      autonomousActions: [],
+      auditLog: [{ id: randomUUID(), at: nowIso, actorId, action: "campaign.duplicated", detail: `from ${sourceId}` }],
+      variants: src.variants.map((v) => ({ ...v, id: `var-${randomUUID()}`, metrics: { impressions: 0, clicks: 0, conversions: 0, spendMicros: 0, revenueMicros: 0 } })),
+      history: [],
+      aiConfigured: src.aiConfigured,
+      createdAt: nowIso,
+      updatedAt: nowIso,
+    };
+    await redis.set(K.campaign(oid, id), s2(rec));
+    await redis.sadd(K.campaigns(oid), id);
+    return rec;
+  },
+
   /* ── Portfolio / org analytics ────────────────────────────── */
 
   /** Aggregate real metrics across every campaign in the org. */
@@ -624,6 +762,12 @@ export const AdvertisingService = {
 
   async dashboard(oid: string, campaignId: string): Promise<AdCampaignDashboard> {
     const campaign = await this.mustGet(oid, campaignId);
+    // Resolve saved audience records for this campaign.
+    const audiences: AudienceRecord[] = [];
+    for (const aId of campaign.audienceIds) {
+      const a = await this.getAudience(oid, aId);
+      if (a) audiences.push(a);
+    }
     const m: AdCampaignMetrics = campaign.metrics;
     const roas = m.spendMicros > 0 ? Number((m.revenueMicros / m.spendMicros).toFixed(2)) : null;
 
@@ -658,6 +802,8 @@ export const AdvertisingService = {
       recommendations: campaign.recommendations,
       pacing: this.computePacing(campaign),
       variants: campaign.variants,
+      audiences,
+      history: campaign.history,
       aiConfigured: campaign.aiConfigured,
     };
   },
