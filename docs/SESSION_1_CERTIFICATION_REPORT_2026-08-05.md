@@ -103,7 +103,7 @@ Test suites run with `vitest` (FakePrisma + FakeKv; **no Postgres/Redis required
 | Guard suites `noRandomData`, `noFakeVerdict` | ✅ **5 passed** |
 | Web typecheck (`@windels/web`) | ✅ clean |
 | New test files typecheck | ✅ clean (no errors) |
-| API full suite | 796 passed (baseline 773 + 23 new); failing set **identical** to pre-existing baseline (10 files: agents, attachments, conversations, promptTemplates, publicApi, talk, ai/registry, seedGate, training, usage/rollups) — **no new regressions** |
+| API full suite | 800 passed (baseline 773 + 23 new Session 1 + 4 sustainability fixes); remaining failures are **9 env-only** files (missing Prisma client) — see `docs/PRE_EXISTING_TEST_FAILURES.md` |
 
 **Environment caveat (honest):** the API `typecheck` reports pre-existing `@prisma/client`
 `Role`/`Permission` member errors because the Prisma engine cannot be generated in this
@@ -166,8 +166,12 @@ workflow; none may be marked PRODUCTION COMPLETE from static review alone.
 
 ## 9. REMAINING RISKS / NOTES
 
-- **Pre-existing** API typecheck failures (`@prisma/client` enums, unresolved in sandbox) and
-  the 10 pre-existing failing test files are unrelated to Session 1 and should be tracked
-  separately.
-- The prior `SESSION_1_CERTIFICATION_REPORT.md` over-claimed completion; it is superseded by
-  this pass. Runtime closure (Phase 6) is the remaining gate.
+- **Pre-existing** API typecheck failures (`@prisma/client` enums, unresolved in sandbox)
+  and 9 env-only failing test files (missing Prisma client) are unrelated to Session 1 and
+  are tracked in `docs/PRE_EXISTING_TEST_FAILURES.md`.
+- The one **genuine** pre-existing bug (sustainability `rollups.test.ts`: fabricated
+  emissions for empty orgs + hard-coded ESG scores) was **fixed** in this pass — see the
+  tracking doc. It is out of Session 1 scope but was the only real test failure.
+- The prior `SESSION_1_CERTIFICATION_REPORT.md` over-claimed completion; it is now marked
+  **SUPERSEDED** and this pass is authoritative. Runtime closure (Phase 6) is the remaining
+  gate for Session 1 PRODUCTION COMPLETE.

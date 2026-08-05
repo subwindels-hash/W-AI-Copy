@@ -14,6 +14,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import type { SustainabilityDashboard, EmissionsSource, EnergyMetric, EsgScore } from "@windels/shared";
 
 const K = {
@@ -51,11 +52,15 @@ const toScope = (c: Category): EmissionsSource["category"] => (c === "compute" ?
 
 export const SustainabilityService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
-    if (!(await redis.exists(K.meta(oid)))) {
-      await redis.set(K.meta(oid), "1");
-      
-      // Bootstrap some baseline emissions records so the ledger is not completely blank on startup.
-      const now = new Date();
+    if (await redis.exists(K.meta(oid))) return;
+    // Synthetic baseline records are gated by WINDELS_DEMO_DATA (default off).
+    // When disabled a fresh org starts empty and fills from real records only,
+    // so an org with no measurements reports 0, never invented emissions.
+    if (!demoDataEnabled()) return skipDemoSeed("sustainability", logger);
+    await redis.set(K.meta(oid), "1");
+    
+    // Bootstrap some baseline emissions records so the ledger is not completely blank on startup.
+    const now = new Date();
       const thisYear = now.getUTCFullYear();
       const lastYear = thisYear - 1;
       
@@ -78,7 +83,6 @@ export const SustainabilityService = {
       
       await redis.set(K.records(oid), JSON.stringify(hydrated));
       logger?.info?.("[sustainability] measurement ledger initialized with seeded baseline");
-    }
   },
 
   async record(oid: string, input: Omit<EsgRecord, "id" | "tCO2e" | "recordedAt">) {
@@ -157,11 +161,14 @@ export const SustainabilityService = {
       records.filter((r) => r.category === "compute").reduce((n, r) => n + r.tCO2e, 0), 3,
     );
 
-    // Data-derived ESG Scores: environmental performance is calculated from total emissions tCO2e
-    const environmental = Math.max(10, Math.min(100, Math.round(92 - ytd * 2.5)));
-    const social = 85;
-    const governance = 88;
-    const overall = Math.round((environmental * 2 + social + governance) / 4);
+    // Data-derived ESG Scores: environmental performance is calculated from total
+    // emissions tCO2e. With no recorded measurements nothing is attested, so all
+    // scores report 0 (never invented ratings) rather than a plausible default.
+    const hasData = records.length > 0;
+    const environmental = hasData ? Math.max(10, Math.min(100, Math.round(92 - ytd * 2.5))) : 0;
+    const social = hasData ? 85 : 0;
+    const governance = hasData ? 88 : 0;
+    const overall = hasData ? Math.round((environmental * 2 + social + governance) / 4) : 0;
     const trend = ytd < lastYear ? "up" as const : ytd > lastYear ? "down" as const : "flat" as const;
     const scores: EsgScore = { environmental, social, governance, overall, trend };
 

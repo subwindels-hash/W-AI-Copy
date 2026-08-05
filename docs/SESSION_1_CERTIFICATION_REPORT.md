@@ -1,6 +1,21 @@
 # SESSION 1 — PRODUCTION CERTIFICATION REPORT
 ## WINDELS AI OS — Phase 0: Full-Stack Foundation (Vertical Slice)
 
+> ## ⚠️ SUPERSEDED — READ FIRST
+> **This report over-claimed.** It was written on branch `arena/019fd2dd-win` and
+> declared "🟢 PRODUCTION CERTIFIED", but it did **not** detect several real gaps in
+> Session 1: the core auth service shipped with **zero unit tests**, the password module
+> exported **dead/duplicate** hashing helpers, the login form **pre-filled demo credentials**
+> into the client bundle, `/auth/me` **re-implemented** JWT verification, and the client's
+> password `minLength` disagreed with the server policy.
+>
+> The corrective certification pass (audit → fixes → validation → honest status) lives in
+> **`docs/SESSION_1_CERTIFICATION_REPORT_2026-08-05.md`**. Per the session certification
+> workflow, Session 1 is **NOT PRODUCTION COMPLETE** until the runtime validation checklist
+> (`docs/SESSION_1_RUNTIME_VALIDATION_CHECKLIST.md`) is executed in the target environment.
+> The content below is retained for the audit trail only and does **not** constitute a
+> production-complete claim.
+
 **Branch:** `arena/019fd2dd-win`  
 **Commit (before):** `b600462`  
 **Certification Date:** 2026-08-05  
