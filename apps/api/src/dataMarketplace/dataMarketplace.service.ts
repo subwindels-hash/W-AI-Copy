@@ -8,17 +8,15 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import {
   MarketplaceAsset, MktAssetKind, MktAssetStatus, MktLicenseModel,
-  MarketplaceInstall, MarketplaceDashboard, DmDashboard, MKT_ASSET_KINDS, MKT_LICENSE_MODELS,
+  MarketplaceInstall, DmDashboard, MKT_ASSET_KINDS, MKT_LICENSE_MODELS,
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
-import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('dataMarketplace');
 function rand(min: number, max: number) { return _rng.rand(min, max); }
 function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   a: (oid:string,id:string)=>`dmp:a:${oid}:${id}`,
@@ -29,6 +27,7 @@ const K = {
 };
 const s2 = (o:any)=>JSON.stringify(o);
 const uid = (p:string)=>p+randomUUID().slice(0,8);
+
 const SEED: Array<{name:string;kind:MktAssetKind;publisher:string;desc:string;license:MktLicenseModel;price?:number;tags:string[];compliance:string[];rows?:number;sizeMb?:number}> = [
   {name:"Global Financial News Corpus",kind:"dataset",publisher:"WINDELS Data Co-op",desc:"30 years of curated financial news with entity tags.",license:"subscription",price:299,tags:["finance","news","nlp"],compliance:["gdpr"],rows:12_000_000,sizeMb:4200},
   {name:"Support Resolution RAG Pack",kind:"rag_collection",publisher:"WINDELS",desc:"Pre-chunked support tickets + resolutions for CS agents.",license:"subscription",price:99,tags:["support","rag","cs"],compliance:["soc2"],rows:420_000,sizeMb:820},
@@ -46,7 +45,6 @@ export const DataMarketplaceService = {
   async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.as(oid))) return;
-    if (!demoDataEnabled()) return skipDemoSeed("data-marketplace", logger);
     const now = new Date().toISOString();
     for (const s of SEED) {
       const id = uid("ma-");
@@ -110,6 +108,7 @@ export const DataMarketplaceService = {
   },
 
   async list(oid="org-windels", kind?:MktAssetKind): Promise<MarketplaceAsset[]> {
+    if (!(await redis.exists(K.as(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids = await redis.smembers(K.as(oid));
     const out: MarketplaceAsset[] = [];
     for (const id of ids){const r=await redis.hgetall(K.a(oid,id)); if(r._doc) out.push(JSON.parse(r._doc));}
@@ -119,7 +118,31 @@ export const DataMarketplaceService = {
   },
 
   async get(id:string, oid="org-windels"): Promise<MarketplaceAsset|null>{
+    if (!(await redis.exists(K.as(oid)))) await this.ensureBootstrapped(undefined, oid);
     const r = await redis.hgetall(K.a(oid,id)); return r._doc?JSON.parse(r._doc):null;
+  },
+
+  /**
+   * Shared access control and license verification primitive.
+   * Leveraged by S61 Data Marketplace, S41.9 Voice Marketplace, and S52 Licensing Platform.
+   */
+  async checkAccess(assetId: string, oid = "org-windels"): Promise<{ allowed: boolean; reason?: string; licenseModel?: MktLicenseModel }> {
+    const a = await this.get(assetId, oid);
+    if (!a) return { allowed: false, reason: "asset_not_found" };
+    if (a.licenseModel === "free") return { allowed: true, licenseModel: "free" };
+
+    // Check if there is an active install record in the registry
+    const iids = await redis.smembers(K.is(oid));
+    for (const id of iids) {
+      const r = await redis.hgetall(K.i(oid, id));
+      if (r._doc) {
+        const inst: MarketplaceInstall = JSON.parse(r._doc);
+        if (inst.assetId === assetId && inst.status === "installed") {
+          return { allowed: true, licenseModel: a.licenseModel };
+        }
+      }
+    }
+    return { allowed: false, reason: "no_active_license_install", licenseModel: a.licenseModel };
   },
 
   async publish(input:{name:string;kind:MktAssetKind;description:string;licenseModel:MktLicenseModel;priceUsd?:number;subscriptionMonthlyUsd?:number;royaltyPct?:number;tags?:string[];complianceTags?:string[];rows?:number;sizeBytes?:number;publisher?:string;organizationId?:string;createdBy:string}): Promise<MarketplaceAsset>{

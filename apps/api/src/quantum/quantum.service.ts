@@ -8,14 +8,12 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { QuantumDashboard, CryptoInventoryEntry, QuantumOptimizationJob, QuantumConnector, PQ_ALGORITHMS, QuantumReadiness } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
-import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
 const _rng = makeRng('quantum');
 function rand(min: number, max: number) { return _rng.rand(min, max); }
 function randInt(min: number, max: number) { return _rng.randInt(min, max); }
-
-
 
 const K = {
   inv: (oid:string,id:string)=>`q:inv:${oid}:${id}`, invs:(oid:string)=>`q:invs:${oid}`,
@@ -40,18 +38,20 @@ export const QuantumService = {
   async ensureBootstrapped(logger?:any, oid="org-windels"){
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.meta(oid))) return;
-    if (!demoDataEnabled()) return skipDemoSeed("quantum", logger);
     const now = new Date().toISOString();
+    let migratedCount = 0;
     // inventory
     for (const sys of SYSTEMS){
       const algo = VULNERABLE[randInt(0,VULNERABLE.length-1)];
       const vulnerable = VULNERABLE.includes(algo);
       const statuses: CryptoInventoryEntry["migrationStatus"][] = ["identified","planned","in_progress","migrated","deferred"];
+      const status = vulnerable?statuses[randInt(0,3)]:"migrated";
+      if (status === "migrated") migratedCount++;
       const id = uid("inv-");
       const e: CryptoInventoryEntry = {
         id, system: sys, algorithm: algo, keyBits: algo.startsWith("RSA")?2048:256, quantumVulnerable: vulnerable,
         replacement: vulnerable?PQ_MAP[algo]||"CRYSTALS-Kyber":undefined,
-        migrationStatus: vulnerable?statuses[randInt(0,3)]:"migrated",
+        migrationStatus: status,
         targetDate: vulnerable?new Date(Date.now()+randInt(60,540)*86400000).toISOString():undefined,
         owner: ["Security","Platform","Infra","IT"][randInt(0,3)],
       };
@@ -77,13 +77,12 @@ export const QuantumService = {
       };
       await redis.hset(K.job(oid,id),"_doc",s2(j)); await redis.sadd(K.jobs(oid),id);
     }
-    const inv = await this.inventory(oid);
-    const migrated = inv.filter(e=>e.migrationStatus==="migrated").length;
-    const readiness: QuantumReadiness = migrated/inv.length > 0.75 ? "hybrid" : migrated/inv.length>0.3? "migrating":"planning";
+    const readiness: QuantumReadiness = migratedCount/SYSTEMS.length > 0.75 ? "hybrid" : migratedCount/SYSTEMS.length>0.3? "migrating":"planning";
     await redis.hset(K.meta(oid),"readiness",readiness);
     logger?.info?.("[quantum] bootstrap complete",{systems:SYSTEMS.length});
   },
   async inventory(oid="org-windels"):Promise<CryptoInventoryEntry[]>{
+    if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids=await redis.smembers(K.invs(oid)); const out:CryptoInventoryEntry[]=[];
     for (const id of ids){const r=await redis.hgetall(K.inv(oid,id)); if(r._doc) out.push(JSON.parse(r._doc));}
     return out;
@@ -97,6 +96,7 @@ export const QuantumService = {
     }));
   },
   async jobs(oid="org-windels"):Promise<QuantumOptimizationJob[]>{
+    if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids=await redis.smembers(K.jobs(oid)); const out:QuantumOptimizationJob[]=[];
     for (const id of ids){const r=await redis.hgetall(K.job(oid,id)); if(r._doc) out.push(JSON.parse(r._doc));}
     return out.sort((a,b)=>(b.completedAt||b.startedAt||"").localeCompare(a.completedAt||a.startedAt||""));

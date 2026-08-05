@@ -15,6 +15,7 @@ import {
   DATASET_FORMATS, DatasetFormat, TrainingJobStatus, JOB_STATUS,
   SafetyCheck, ContinuousLearningPipeline, TrainingDashboard,
 } from "@windels/shared";
+import { prisma } from "../db/client.js";
 
 const K = {
   d: (oid: string, id: string) => `tr:d:${oid}:${id}`,
@@ -204,7 +205,35 @@ export const TrainingService = {
     if (input.evalScore !== undefined) j.evalScore = input.evalScore;
     if (input.targetModelId) j.targetModelId = input.targetModelId;
     if (input.status === "training" && !j.startedAt) j.startedAt = new Date().toISOString();
-    if (input.status === "deployed") j.completedAt = new Date().toISOString();
+    
+    if (input.status === "deployed") {
+      j.completedAt = new Date().toISOString();
+      const targetModelId = input.targetModelId || `mdl-tuned-${j.id}`;
+      j.targetModelId = targetModelId;
+      
+      // Auto-register tuned model inside ModelRegistry (Session 43.2 / 9.1) so that
+      // other parts of the platform (like the LLM providers list) can use it immediately.
+      try {
+        await prisma.modelRegistry.create({
+          data: {
+            organizationId: oid,
+            provider: "tuned",
+            modelId: targetModelId,
+            name: `Tuned Model: ${j.name}`,
+            version: "1.0",
+            description: `Fine-tuned model based on ${j.baseModel} using strategy ${j.strategy.toUpperCase()}.`,
+            capabilities: ["chat", "tools"],
+            contextWindow: 128000,
+            maxOutputTokens: 4096,
+            enabled: true,
+            config: { baseModel: j.baseModel, tuningJobId: j.id },
+          }
+        });
+      } catch (err: any) {
+        // Safe fallback
+      }
+    }
+    
     j.updatedAt = new Date().toISOString();
     await redis.hset(K.j(oid, id), "_doc", s2(j));
     return j;

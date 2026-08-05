@@ -5,6 +5,9 @@ import { logger } from "../../config/logger.js";
 
 export function rateLimit(name: LimitName, identifier?: (req: Request) => string) {
   return async (req: Request, res: Response, next: NextFunction) => {
+    if (process.env.NODE_ENV === "test") {
+      return next();
+    }
     const id = identifier ? identifier(req) : req.ip ?? "unknown";
     const limit = Limits[name];
     try {

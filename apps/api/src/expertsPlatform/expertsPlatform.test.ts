@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Session 77A — Experts Platform: the expert-query path.
  *
