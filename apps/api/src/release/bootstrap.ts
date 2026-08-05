@@ -2,6 +2,7 @@
  * Session 24 bootstrap — seed releases if empty.
  */
 import { logger } from "../observability/logger.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import { PipelineService } from "./pipeline.service.js";
 import { ApprovalService } from "./approval.service.js";
 import { ImprovementService } from "./improvement.service.js";
@@ -27,6 +28,8 @@ const SEED: Array<{
 ];
 
 export async function bootstrapReleases() {
+  // Demo/reference release history is opt-in; production starts empty.
+  if (!demoDataEnabled()) return skipDemoSeed("release");
   const existing = await PipelineService.list(1);
   if (existing.length > 0) {
     const m = await ImprovementService.metrics();

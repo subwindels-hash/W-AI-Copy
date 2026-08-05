@@ -12,8 +12,8 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const [email, setEmail] = useState("admin@windels.ai");
-  const [password, setPassword] = useState("ChangeMe!234");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [mfaChallenge, setMfaChallenge] = useState<MfaChallenge>(null);

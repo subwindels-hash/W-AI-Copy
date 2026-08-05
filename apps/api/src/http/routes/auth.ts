@@ -10,7 +10,7 @@ import { authenticate } from "../middleware/auth.js";
 const registerSchema = {
   body: z.object({
     email: z.string().email(),
-    password: z.string().min(8).max(200).refine((pw) => assessPassword(pw).meetsPolicy, (pw) => ({ message: "Password does not meet policy: " + assessPassword(pw).issues.join(", ") })),
+    password: z.string().min(10).max(200).refine((pw) => assessPassword(pw).meetsPolicy, (pw) => ({ message: "Password does not meet policy: " + assessPassword(pw).issues.join(", ") })),
     displayName: z.string().min(1).max(100),
     organizationName: z.string().min(1).max(100),
   }),
@@ -125,22 +125,15 @@ export function registerAuthRoutes(router: Router) {
     }
   });
 
-  router.get("/auth/me", async (req, res, next) => {
+  // /auth/me uses the shared `authenticate` middleware for a single JWT
+  // verification path (previously this handler re-implemented Bearer parsing
+  // and JWT verification inline). It is also used by the Google OAuth fragment
+  // flow, which passes the token via the Authorization header.
+  router.get("/auth/me", authenticate, async (req, res, next) => {
     try {
-      const header = req.headers.authorization;
-      const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
-      if (!token) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const jwtMod = await import("jsonwebtoken");
-      const { env } = await import("../../config/env.js");
-      let payload: any;
-      try {
-        payload = jwtMod.default.verify(token, env.JWT_SECRET, { issuer: env.JWT_ISSUER });
-      } catch {
-        return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      }
       const { prisma } = await import("../../db/client.js");
       const user = await prisma.user.findUnique({
-        where: { id: payload.id },
+        where: { id: req.user!.id },
         include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true },
       });
       if (!user) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND" } });

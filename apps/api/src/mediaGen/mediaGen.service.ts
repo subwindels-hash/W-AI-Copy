@@ -28,6 +28,7 @@ import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
 import type { MgJob as SharedMgJob, MgCapability, MgDashboard, MgImageOp, MgAudioOp, MgVideoOp } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const _rng = makeRng("mediaGen:mediaGen");
 
 export type MgStatus = "pending" | "running" | "completed" | "failed" | "cancelled" | "rejected";
@@ -130,6 +131,7 @@ async function saveJob(job: MgJob) {
 export const MediaGenService = {
   async ensureBootstrapped(loggerArg?: { info: (msg: string, meta?: unknown) => void }) {
     if ((await redis.scard(K.caps)) > 0) return;
+    if (!demoDataEnabled()) return skipDemoSeed("media-gen", logger);
     for (const c of CAP_SEEDS) await redis.sadd(K.caps, s2(c));
     loggerArg?.info("[media-gen] bootstrap complete", { capabilities: CAP_SEEDS.length });
   },

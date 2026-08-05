@@ -7,6 +7,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { UxDashboard, UxToken, UxComponent, UxAccessibilityFinding, UxAgent, UxBrandProfile, UxDeviceClass } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 const K = { tokens:"ux:tokens", token:(ns:string,n:string)=>`ux:tok:${ns}:${n}`, components:"ux:components", component:(id:string)=>`ux:comp:${id}`, findings:"ux:findings", finding:(id:string)=>`ux:find:${id}`, agents:"ux:agents", agent:(id:string)=>`ux:agent:${id}`, brands:"ux:brands", brand:(id:string)=>`ux:brand:${id}`, metrics:{reviews24:"ux:r24"} };
 const j=(s:string)=>JSON.parse(s); const s=(o:any)=>JSON.stringify(o); const uid=(p:string)=>p+randomUUID().slice(0,8);
 
@@ -30,6 +31,7 @@ const AGENTS_SEED: Omit<UxAgent,"id">[] = [
 export const UxIntelligenceService = {
   async ensureBootstrapped() {
     if (await redis.zcard(K.components) > 0) return;
+    if (!demoDataEnabled()) return skipDemoSeed("ux-intelligence");
     for (const t of TOKENS_SEED) { await redis.hset(K.token(t.namespace,t.name), "_doc", s({ ...t, lastUpdated: new Date().toISOString() })); await redis.zadd(K.tokens,0,`${t.namespace}:${t.name}`); }
     const comps = ["Button","Card","Input","Tabs","Badge","Modal","Dialog","Dropdown","Toast","Avatar","Skeleton","Toggle"];
     for (let i=0;i<comps.length;i++){const id = uid("c-"); const c: UxComponent = { id, name: comps[i], category:(["input","display","feedback","navigation","layout"] as const)[i%5], sourcePath:`@/components/ui/${comps[i]}`, wcagAA:true, version:"1.0.0" }; await redis.zadd(K.components,0,id); await redis.hset(K.component(id),"_doc",s(c));}

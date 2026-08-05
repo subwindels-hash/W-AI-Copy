@@ -34,6 +34,7 @@ const EnterprisePage = lazy(() => import("./pages/admin/EnterprisePage"));
 const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
+const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -217,7 +218,7 @@ export const router = createBrowserRouter([
       { path: "workforce", element: withSuspense(<AgentsPage />) },
       { path: "canvas", element: withSuspense(<CanvasPage />) },
       { path: "canvas/:id", element: withSuspense(<CanvasPage />) },
-      { path: "workspace", element: placeholder("Universal Workspace (full)", "Session 2 builds the complete dashboard.") },
+      { path: "workspace", element: withSuspense(<UserDashboard />) },
       { path: "chat", element: withSuspense(<ChatPage />) },
       { path: "chat/:id", element: withSuspense(<ChatPage />) },
       { path: "talk", element: withSuspense(<TalkPage />) },
@@ -242,6 +243,7 @@ export const router = createBrowserRouter([
       { path: "governance", element: withSuspense(<GovernancePage />) },
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
+      { path: "tenant-isolation", element: withSuspense(<TenantIsolationPage />) },
     ],
   },
   {

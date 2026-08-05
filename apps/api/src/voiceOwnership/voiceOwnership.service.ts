@@ -11,6 +11,7 @@
 import { randomUUID, createHash } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { VoAuditEntry, VoDashboard, VoPolicy, VoVoiceOwner } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const K = {
   owners: "vo:owners", owner: (id: string) => `vo:owner:${id}`,
@@ -41,6 +42,7 @@ async function emitKernel(kind: string, payload: any) {
 export const VoiceOwnershipService = {
   async ensureBootstrapped(logger?: any) {
     if (await redis.zcard(K.policies) > 0) return;
+    if (!demoDataEnabled()) return skipDemoSeed("voice-ownership", logger);
     for (const sd of POLICY_SEEDS) {
       const p: VoPolicy = { id: uid("pol-"), ...sd };
       await redis.zadd(K.policies, 0, p.id);

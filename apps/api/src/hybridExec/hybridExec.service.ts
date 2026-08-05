@@ -10,6 +10,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { HxDashboard, HxExecutionMode, HxGpuNode, HxModel, HxRouteDecision } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const K = {
   models: "hx:models", model: (id: string) => `hx:model:${id}`,
@@ -47,6 +48,8 @@ async function emitKernel(kind: string, payload: any) {
 export const HybridExecService = {
   async ensureBootstrapped(logger?: any) {
     if (await redis.zcard(K.models) > 0) return;
+    // Demo/sample records are opt-in; production starts empty (no sample data auto-created).
+    if (!demoDataEnabled()) return skipDemoSeed("hybridExec", logger);
     for (const sd of MODEL_SEEDS) {
       const m: HxModel = { id: uid("mdl-"), registeredAt: new Date().toISOString(), ...sd };
       await redis.zadd(K.models, 0, m.id);

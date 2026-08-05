@@ -152,6 +152,13 @@ export class FakePrisma {
       message: "Message",
       event: "AgentEvent",
       attachment: "MessageAttachment",
+      // User.profile points at UserProfile, not a "Profile" model — without
+      // this, a `profile: { create: {...} }` write was persisted to a phantom
+      // "Profile" table and never read back via userProfile.findUnique.
+      profile: "UserProfile",
+      // Named relation `createdById -> User` used by Canvas (and others); the
+      // model name "CreatedBy" does not exist, so map it explicitly.
+      createdBy: "User",
     };
     // Relations whose target is prefixed by the owning model rather than named
     // after the field — e.g. TalkChannel.members holds TalkMember rows, not
@@ -161,6 +168,9 @@ export class FakePrisma {
     const prefixed: Record<string, Record<string, string>> = {
       TalkChannel: { member: "TalkMember", message: "TalkMessage" },
       TalkMessage: { attachment: "MessageAttachment" },
+      // Meeting.participants -> MeetingParticipant (not the shared
+      // ConversationParticipant that `participant` otherwise maps to).
+      Meeting: { participant: "MeetingParticipant" },
     };
     if (parentModel && prefixed[parentModel]?.[singular]) {
       return prefixed[parentModel]![singular]!;

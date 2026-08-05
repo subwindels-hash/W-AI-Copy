@@ -17,6 +17,7 @@ import { FakePrisma } from "../../testUtils/fakePrisma.js";
  */
 const db = new FakePrisma();
 vi.mock("../../db/client.js", () => ({ prisma: db.client() }));
+vi.mock("@prisma/client", async () => ({ ...(await import("../../testUtils/prismaClientMock.js")) }));
 
 // Imported dynamically, after the mock is registered — `vi.mock` is hoisted
 // above module initialisation, so a static import of the registry would pull in

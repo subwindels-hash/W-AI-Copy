@@ -16,7 +16,7 @@ export function registerWebhookRoutes(router: Router) {
     try {
       const secret = req.headers["x-windels-webhook-secret"] as string | undefined;
       if (!checkWebhookSecret(secret)) return res.status(401).json({ ok: false, error: "Invalid webhook secret" });
-      const envResponse: ApiEnvelope<{ idempotent: boolean; applied: boolean }> = { ok: true, data: { idempotent: false, applied: true }, meta: { requestId: req.requestId ?? "" } };
+      const envResponse: ApiEnvelope<{ idempotent: boolean; applied: boolean }> = { ok: true, data: { idempotent: false, applied: true }, meta: { requestId: req.requestId ?? "", tookMs: Date.now() - (req.startedAt ?? Date.now()) } };
       res.json(envResponse);
     } catch (e) { next(e); }
   });

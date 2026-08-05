@@ -13,6 +13,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Mf2BenchmarkResult, Mf2Dashboard, Mf2FineTuneJob, Mf2Model, Mf2Stage } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const K = {
   models: "mf2:models", model: (id: string) => `mf2:model:${id}`,
@@ -45,6 +46,8 @@ async function emitKernel(kind: string, payload: any) {
 export const ModelFactoryService = {
   async ensureBootstrapped(logger?: any) {
     if (await redis.zcard(K.models) > 0) return;
+    // Demo/sample records are opt-in; production starts empty (no sample data auto-created).
+    if (!demoDataEnabled()) return skipDemoSeed("modelFactory", logger);
     for (const sd of BUILDER_SEEDS) {
       const m: Mf2Model = { id: uid("m2-"), createdAt: new Date().toISOString(), versions: 1, ...sd };
       await redis.zadd(K.models, 0, m.id);

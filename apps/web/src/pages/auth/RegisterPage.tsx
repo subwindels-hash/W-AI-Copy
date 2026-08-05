@@ -66,7 +66,10 @@ export function RegisterPage() {
           </div>
           <div>
             <label className="text-xs text-text-muted mb-1.5 block">Password</label>
-            <Input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} required minLength={8} />
+            <Input type="password" value={form.password} onChange={(e) => update("password", e.target.value)} required minLength={10} />
+            <p className="text-[11px] text-text-muted mt-1">
+              At least 10 characters, with upper &amp; lower case letters, a digit, and a symbol.
+            </p>
           </div>
 
           {error && (

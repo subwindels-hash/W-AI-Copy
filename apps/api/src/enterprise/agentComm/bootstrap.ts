@@ -7,11 +7,15 @@
  */
 import { prisma } from "../../db/client.js";
 import { logger } from "../../observability/logger.js";
+import { demoDataEnabled, skipDemoSeed } from "../../config/demoData.js";
 import { AgentIdentityService } from "./agentIdentity.service.js";
 import { CollaborationService } from "./collaboration.service.js";
 import { EscalationService } from "./escalation.service.js";
 
 export async function bootstrapAgentComm() {
+  // Seeded default team/policies are opt-in; production starts empty (agent
+  // identities for persisted agents are still ensured on demand elsewhere).
+  if (!demoDataEnabled()) return skipDemoSeed("agent-comm");
   try {
     // Ensure identities for every persisted agent.
     const agents = await prisma.agent.findMany({ select: { id: true, name: true, department: true, capabilities: true } });

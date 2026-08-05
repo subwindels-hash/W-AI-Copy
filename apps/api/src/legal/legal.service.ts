@@ -19,6 +19,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { LegalDashboard, LegalMatter, RegulatoryUpdate, Contract, LegalResearchItem, LegalComplianceCheck } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const K = {
   m: (oid: string, id: string) => `leg:m:${oid}:${id}`, ms: (oid: string) => `leg:ms:${oid}`,
@@ -64,6 +65,8 @@ const FRAMEWORK_CONTROLS: Record<string, string[]> = {
 export const LegalService = {
   async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
     if (await redis.exists(K.ms(oid))) return;
+    // Demo/sample records are opt-in; production starts empty (no sample data auto-created).
+    if (!demoDataEnabled()) return skipDemoSeed("legal", logger);
     const now = new Date().toISOString();
     const baseAgo = Date.now() - 30 * 86_400_000;
     for (const m of MATTER_SEED) {

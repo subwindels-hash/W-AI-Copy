@@ -44,14 +44,6 @@ export const PasswordSchema = z.string().min(MIN_LENGTH).max(200).refine(
   (pw) => ({ message: "Password does not meet policy: " + assessPassword(pw).issues.join(", ") })
 );
 
-export function hashPassword(pw: string): Promise<string> {
-  return BunHash(pw);
-}
-export function verifyPassword(pw: string, hash: string): Promise<boolean> {
-  return BunVerify(pw, hash);
-}
-
-// We use bcryptjs (already used elsewhere? check) — fall back to a safe hash wrapper.
-import bcrypt from "bcryptjs";
-async function BunHash(pw: string) { return bcrypt.hash(pw, 12); }
-async function BunVerify(pw: string, hash: string) { return bcrypt.compare(pw, hash); }
+// NOTE: Password hashing/verification intentionally lives in auth.service.ts
+// (bcryptjs, cost 12) so there is exactly one hashing path for the platform.
+// This module owns policy only — do not add a second hash implementation here.

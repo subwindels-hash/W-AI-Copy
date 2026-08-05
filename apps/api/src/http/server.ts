@@ -106,6 +106,7 @@ import { registerHealthEcosystemRoutes } from "./routes/healthEcosystem.js";
 import { registerEtlRoutes } from "./routes/etl.js";
 import { registerCameraRoutes } from "./routes/camera.js";
 import { registerAdvertisingRoutes } from "./routes/advertising.js";
+import { registerTenantIsolationRoutes } from "./routes/tenantIsolation.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1088,6 +1089,13 @@ export function createApp() {
   v1.use("/marketing", marketingRouter);
   marketingRouter.use(authenticate);
   registerMarketingRoutes(marketingRouter);
+
+  // /tenant-isolation — Session 89: Tenant Isolation & Cross-Tenant Data
+  // Governance (per-org isolation policies, namespace audit, cross-tenant
+  // self-tests, export gate).
+  const tenantIsolationRouter = express.Router();
+  v1.use("/tenant-isolation", tenantIsolationRouter);
+  registerTenantIsolationRoutes(tenantIsolationRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

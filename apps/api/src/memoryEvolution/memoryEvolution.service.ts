@@ -12,6 +12,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type { MeConsolidationJob, MeDashboard, MeMemory, MeMemoryType } from "@windels/shared";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 const K = {
   memories: "me:mems", mem: (id: string) => `me:mem:${id}`,
@@ -48,6 +49,8 @@ async function emitKernel(kind: string, payload: any) {
 export const MemoryEvolutionService = {
   async ensureBootstrapped(logger?: any) {
     if (await redis.zcard(K.memories) > 0) return;
+    // Demo/sample records are opt-in; production starts empty (no sample data auto-created).
+    if (!demoDataEnabled()) return skipDemoSeed("memoryEvolution", logger);
     const now = new Date().toISOString();
     for (const sd of TYPE_SEEDS) {
       const id = uid("mem-");

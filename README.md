@@ -101,9 +101,25 @@ tests/e2e/                # Playwright specs
 | [docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md) | Install, build, systemd/nginx deploy, backup, troubleshooting |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |
+| [docs/SESSION_89_SPECIFICATION.md](./docs/SESSION_89_SPECIFICATION.md) | Session 89 — Tenant Isolation & Cross-Tenant Data Governance (per-org isolation policies, namespace audit, cross-tenant self-tests, export gate) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |
+| [docs/SESSION_1_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_1_CERTIFICATION_REPORT_2026-08-05.md) | Session 1 re-certification pass (auth foundation) — audit, fixes, validation |
+| [docs/DEMO_CLEANUP_AUDIT.md](./docs/DEMO_CLEANUP_AUDIT.md) | Session 1 repo-wide demo/sample/mock/seed cleanup audit — findings, fixes, classifications |
+| [PROGRESS.md](./PROGRESS.md) | Session-by-session certification state (single source of truth) |
+| [docs/SESSION_1_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_1_RUNTIME_VALIDATION_CHECKLIST.md) | Session 1 runtime validation checklist (pending target-env execution) |
+| [docs/PRE_EXISTING_TEST_FAILURES.md](./docs/PRE_EXISTING_TEST_FAILURES.md) | Inventory & resolution of the 10 pre-existing failing test files (9 env-only, 1 fixed) |
+| [docs/SESSION_2_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_2_CERTIFICATION_REPORT_2026-08-05.md) | Session 2 re-certification pass (Universal Workspace) — audit, fixes, validation |
+| [docs/SESSION_2_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_2_RUNTIME_VALIDATION_CHECKLIST.md) | Session 2 runtime validation checklist (pending target-env execution) |
+| [docs/SESSION_3_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_3_CERTIFICATION_REPORT_2026-08-05.md) | Session 3 re-certification pass (AI Chat) — audit, fixes, validation |
+| [docs/SESSION_3_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_3_RUNTIME_VALIDATION_CHECKLIST.md) | Session 3 runtime validation checklist (pending target-env execution) |
+| [docs/SESSION_4_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_4_CERTIFICATION_REPORT_2026-08-05.md) | Session 4 re-certification pass (AI Workforce) — audit, fixes, validation |
+| [docs/SESSION_4_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_4_RUNTIME_VALIDATION_CHECKLIST.md) | Session 4 runtime validation checklist (pending target-env execution) |
+| [docs/SESSION_5_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_5_CERTIFICATION_REPORT_2026-08-05.md) | Session 5 re-certification pass (Canvas) — audit, fixes, validation |
+| [docs/SESSION_5_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_5_RUNTIME_VALIDATION_CHECKLIST.md) | Session 5 runtime validation checklist (pending target-env execution) |
+| [docs/SESSION_6_CERTIFICATION_REPORT_2026-08-05.md](./docs/SESSION_6_CERTIFICATION_REPORT_2026-08-05.md) | Session 6 re-certification pass (Talk) — audit, fixes, validation |
+| [docs/SESSION_6_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_6_RUNTIME_VALIDATION_CHECKLIST.md) | Session 6 runtime validation checklist (pending target-env execution) |
 | [audit/module-inventory.json](./audit/module-inventory.json) | Machine-readable per-module audit (generated) |
 
 > The Advertising Platform (Standard / AI Smart / Performance / Autonomous

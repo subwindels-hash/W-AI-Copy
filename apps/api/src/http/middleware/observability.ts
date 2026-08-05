@@ -5,6 +5,7 @@
  * Complements (does not replace) the `requestId()` middleware which already sets
  * req.requestId + X-Request-Id response header.
  */
+import { randomBytes } from "node:crypto";
 import type { Request, Response, NextFunction } from "express";
 import { contextFromTraceparent, makeTraceparent, runInCtx, startSpan, setCtx } from "../../observability/tracer.js";
 import { Metrics } from "../../observability/metrics.js";
@@ -79,8 +80,6 @@ function normalizeRoute(url: string) {
 }
 
 function randomHex(n: number) {
-  const chars = "0123456789abcdef";
-  let s = "";
-  for (let i = 0; i < n; i++) s += chars[Math.floor(Math.random() * 16)];
-  return s;
+  // Trace/span ids must be unique under load; draw from the CSPRNG.
+  return randomBytes(Math.ceil(n / 2)).toString("hex").slice(0, n);
 }

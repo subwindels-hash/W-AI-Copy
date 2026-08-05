@@ -51,6 +51,14 @@ export class FakeKv {
       this.lists.has(key) || this.sets.has(key) ? 1 : 0;
   }
 
+  /** EXPIRE — set/adjust a string key's TTL (used by the auth refresh-token store). */
+  async expire(key: string, seconds: number): Promise<number> {
+    const entry = this.strings.get(key);
+    if (!entry) return 0;
+    entry.expiresAt = Date.now() + seconds * 1000;
+    return 1;
+  }
+
   async sadd(key: string, ...members: string[]): Promise<number> {
     const s = this.sets.get(key) ?? new Set<string>();
     let added = 0;

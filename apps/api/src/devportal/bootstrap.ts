@@ -2,12 +2,15 @@
  * Session 27 bootstrap — seed developer portal data if empty.
  */
 import { logger } from "../observability/logger.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import { SDKRegistryService } from "./sdkRegistry.service.js";
 import { CLIService } from "./cli.service.js";
 import { EnvironmentService } from "./environment.service.js";
 import { ToolkitService } from "./toolkit.service.js";
 
 export async function bootstrapDevPortal() {
+  // Seeded SDK/CLI/environment reference catalog is opt-in; production starts empty.
+  if (!demoDataEnabled()) return skipDemoSeed("devportal");
   const existing = await SDKRegistryService.list();
   if (existing.length > 0) {
     const cli = await CLIService.list();

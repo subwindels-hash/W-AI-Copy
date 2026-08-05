@@ -22,6 +22,10 @@ const EnvSchema = z.object({
 
   JWT_SECRET: z.string().min(16, "JWT_SECRET must be at least 16 characters"),
   JWT_ISSUER: z.string().default("windels-ai-os"),
+  // Optional shared secret for inbound platform webhooks (HMAC); falls back to
+  // JWT_SECRET when unset. Not required — only set when you must isolate webhook
+  // credentials from the JWT signing secret.
+  WEBHOOK_SECRET: z.string().min(16).optional(),
   JWT_ACCESS_TTL: z.string().default("15m"),
   JWT_REFRESH_TTL: z.string().default("7d"),
 
@@ -70,6 +74,20 @@ const EnvSchema = z.object({
    * environment where anyone might mistake the output for real data.
    */
   WINDELS_DEMO_DATA: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+
+  /**
+   * Opt-in in-memory database fallback (dev/test only).
+   *
+   * When the real Postgres connection cannot be initialised, the API *fails
+   * closed* by default — in production a DB failure must abort startup, never
+   * silently swap to a demo database. Set WINDELS_ALLOW_MOCK_DB_FALLBACK=true
+   * ONLY in a non-production environment where an in-memory stand-in (FakePrisma
+   * seeded with demo users/orgs/agents) is acceptable for local work.
+   */
+  WINDELS_ALLOW_MOCK_DB_FALLBACK: z
     .union([z.boolean(), z.enum(["true", "false"])])
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
