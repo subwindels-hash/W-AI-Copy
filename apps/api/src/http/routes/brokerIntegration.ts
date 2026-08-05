@@ -7,7 +7,7 @@ import {
   CreateBrokerAccountSchema, UpdateBrokerAccountSchema, TradeSignalSchema,
   CreateStrategySchema, UpdateRiskControlsSchema, BrokerIdSchema, StrategyIdSchema,
 } from "@windels/shared/brokerIntegration";
-import { BrokerIntegrationService, CONNECTOR_CATALOG } from "../../tradingIntel/brokerIntegration.service.js";
+import { BrokerIntegrationService, CONNECTOR_CATALOG, BROKER_AGENT_KEYS } from "../../tradingIntel/brokerIntegration.service.js";
 
 const brokerId = BrokerIdSchema;
 const strategyId = StrategyIdSchema;
@@ -120,6 +120,21 @@ export function registerBrokerIntegrationRoutes(router: Router) {
   // Command center
   router.get("/brokers/command-center", async (req, res, next) => {
     try { res.json({ ok: true, data: await BrokerIntegrationService.commandCenter(oid(req)), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+
+  // AI Broker Trading agents (chat-routable workforce)
+  router.get("/brokers/agents", async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.listAgents(oid(req)), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  const agentKey = z.object({ key: z.enum(BROKER_AGENT_KEYS as unknown as [string, ...string[]]) });
+  router.post("/brokers/agents/:key/heartbeat", validate({ params: agentKey }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.heartbeatAgent(oid(req), (req.params as any).key), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.post("/brokers/agents/:key/run", validate({ params: agentKey, body: z.record(z.any()).optional() }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.runAgent(oid(req), (req.params as any).key, req.body), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
   });
 }

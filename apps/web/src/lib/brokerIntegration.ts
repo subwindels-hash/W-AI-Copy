@@ -81,6 +81,20 @@ export interface TradingCommandCenter {
   systemHealth: { brokerConnected: number; brokerTotal: number; ffmpeg: boolean; lastSyncAt?: string };
 }
 
+export type BrokerAgentKey = "trade-execution-supervisor" | "strategy-optimizer" | "portfolio-risk" | "broker-connectivity" | "trade-validator" | "trading-compliance";
+
+export interface BrokerTradingAgent {
+  key: BrokerAgentKey;
+  name: string;
+  description: string;
+  routable: true;
+  status: "online" | "paused";
+  lastHeartbeat: string;
+  runs24h: number;
+  decisions24h: number;
+  blocked24h: number;
+}
+
 export const BROKER_TYPES: { value: BrokerType; label: string }[] = [
   { value: "mt5", label: "MetaTrader 5" },
   { value: "mt4", label: "MetaTrader 4" },
@@ -124,4 +138,6 @@ export const brokerApi = {
   killSwitch: (active: boolean) => api<BrokerRiskControls>("/brokers/risk/kill-switch", { method: "POST", json: { active } }),
   portfolio: (accountId?: string) => api<PortfolioIntelligence>("/brokers/portfolio", accountId ? { params: { accountId } } : {}),
   commandCenter: () => api<TradingCommandCenter>("/brokers/command-center"),
+  agents: () => api<BrokerTradingAgent[]>("/brokers/agents"),
+  runAgent: (key: string, payload?: Record<string, any>) => api<{ agent: string; verdict: string; detail: string; data?: any }>(`/brokers/agents/${key}/run`, { method: "POST", json: payload ?? {} }),
 };

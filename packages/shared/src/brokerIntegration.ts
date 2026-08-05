@@ -263,6 +263,42 @@ export interface TradingCommandCenter {
   systemHealth: { brokerConnected: number; brokerTotal: number; ffmpeg: boolean; lastSyncAt?: string };
 }
 
+/* ── AI Broker Trading agents (chat-routable workforce) ────────── */
+
+export type BrokerAgentKey =
+  | "trade-execution-supervisor"
+  | "strategy-optimizer"
+  | "portfolio-risk"
+  | "broker-connectivity"
+  | "trade-validator"
+  | "trading-compliance";
+
+export interface BrokerTradingAgent {
+  key: BrokerAgentKey;
+  name: string;
+  description: string;
+  /** Chat-routable: the agent can be invoked with a natural-language/structured task. */
+  routable: true;
+  status: "online" | "paused";
+  lastHeartbeat: string;
+  runs24h: number;
+  decisions24h: number;
+  blocked24h: number;
+}
+
+/** Structured input for the supervisor agent's signal validation. */
+export const SupervisorValidateSchema = z.object({
+  accountId: z.string().min(1).max(64),
+  symbol: z.string().min(1).max(40),
+  side: z.enum(["long", "short"]),
+  volume: z.number().positive(),
+  source: z.string().max(80).default("agent"),
+  strategyId: z.string().optional(),
+  confidence: z.number().min(0).max(1).default(0.5),
+  stopLoss: z.number().optional(),
+  takeProfit: z.number().optional(),
+});
+
 /* ── Id params ─────────────────────────────────────────────────── */
 
 export const BrokerIdSchema = z.object({ id: z.string().min(1).max(64) });

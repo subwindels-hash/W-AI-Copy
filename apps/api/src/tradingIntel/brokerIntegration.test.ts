@@ -121,3 +121,37 @@ describe("risk controls + command center", () => {
     expect(Array.isArray(cc.aiRecommendations)).toBe(true);
   });
 });
+
+describe("AI broker trading agents (chat-routable workforce)", () => {
+  it("seeds and lists the specialized agents", async () => {
+    const agents = await BrokerIntegrationService.listAgents(ORG);
+    const keys = agents.map((a) => a.key);
+    expect(keys).toContain("trade-execution-supervisor");
+    expect(keys).toContain("strategy-optimizer");
+    expect(keys).toContain("portfolio-risk");
+    expect(agents.every((a) => a.routable === true)).toBe(true);
+  });
+
+  it("supervisor agent validates a signal and records the decision", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "semi_autonomous" });
+    const res = await BrokerIntegrationService.runAgent(ORG, "trade-execution-supervisor", { accountId: a.id, symbol: "EURUSD", side: "long", volume: 0.1 });
+    expect(["approved", "submitted"]).toContain(res.verdict);
+    expect(res.agent).toContain("Supervisor");
+    const agent = await BrokerIntegrationService.getAgent(ORG, "trade-execution-supervisor");
+    expect(agent.decisions24h).toBeGreaterThanOrEqual(1);
+  });
+
+  it("strategy optimizer agent backtests and recommends the best strategy", async () => {
+    await BrokerIntegrationService.createStrategy(ORG, USER, { name: "A", type: "rule", logic: { maxTrades: 20, winRate: 0.6 } });
+    await BrokerIntegrationService.createStrategy(ORG, USER, { name: "B", type: "rule", logic: { maxTrades: 10, winRate: 0.4 } });
+    const res = await BrokerIntegrationService.runAgent(ORG, "strategy-optimizer");
+    expect(res.verdict).toContain("recommend");
+    expect(res.data.length).toBe(2);
+  });
+
+  it("portfolio-risk agent reports concentration breaches", async () => {
+    const res = await BrokerIntegrationService.runAgent(ORG, "portfolio-risk");
+    expect(res.agent).toContain("Risk");
+    expect(res.data).toHaveProperty("diversificationScore");
+  });
+});

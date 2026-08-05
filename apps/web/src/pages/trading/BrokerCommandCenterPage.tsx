@@ -12,14 +12,14 @@
  * enforced regardless.
  */
 import { useCallback, useEffect, useState } from "react";
-import { brokerApi, BROKER_TYPES, TRADING_MODES, type BrokerAccount, type BrokerType, type TradingMode, type TradingStrategy, type TradeExecution, type BrokerRiskControls, type PortfolioIntelligence, type TradingCommandCenter } from "@/lib/brokerIntegration";
+import { brokerApi, BROKER_TYPES, TRADING_MODES, type BrokerAccount, type BrokerType, type TradingMode, type TradingStrategy, type TradeExecution, type BrokerRiskControls, type PortfolioIntelligence, type TradingCommandCenter, type BrokerTradingAgent } from "@/lib/brokerIntegration";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { DataBanner } from "@/components/ui/DataBanner";
-import { Activity, Plus, Loader2, Trash2, ShieldAlert, Power, LineChart, Briefcase, CheckCircle2, XCircle, TrendingUp, Wallet, Layers, Target } from "lucide-react";
+import { Activity, Plus, Loader2, Trash2, ShieldAlert, Power, LineChart, Briefcase, CheckCircle2, XCircle, TrendingUp, Wallet, Layers, Target, Bot } from "lucide-react";
 
 const usd = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const modeColor: Record<string, string> = {
@@ -39,6 +39,7 @@ export function BrokerCommandCenterPage() {
   const [cc, setCc] = useState<TradingCommandCenter | null>(null);
   const [portfolio, setPortfolio] = useState<PortfolioIntelligence | null>(null);
   const [strategies, setStrategies] = useState<TradingStrategy[]>([]);
+  const [agents, setAgents] = useState<BrokerTradingAgent[]>([]);
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -63,8 +64,8 @@ export function BrokerCommandCenterPage() {
 
   const refresh = useCallback(async () => {
     try {
-      const [c, p, s] = await Promise.all([brokerApi.commandCenter(), brokerApi.portfolio(), brokerApi.strategies()]);
-      setCc(c); setPortfolio(p); setStrategies(s);
+      const [c, p, s, ag] = await Promise.all([brokerApi.commandCenter(), brokerApi.portfolio(), brokerApi.strategies(), brokerApi.agents()]);
+      setCc(c); setPortfolio(p); setStrategies(s); setAgents(ag);
     } catch { /* degrades before server config */ }
   }, []);
 
@@ -223,6 +224,41 @@ export function BrokerCommandCenterPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* AI Broker Trading agents */}
+      <Card className="mt-4">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><Bot className="h-4 w-4" /> AI trading agents (chat-routable workforce)</CardTitle>
+          <CardDescription>Specialized agents in the AI Workforce — run one to get a real, deterministic decision.</CardDescription>
+        </CardHeader>
+        <CardContent>
+          {agents.length === 0 ? (
+            <p className="text-sm text-text-muted">No broker trading agents loaded.</p>
+          ) : (
+            <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-2">
+              {agents.map((a) => (
+                <div key={a.key} className="rounded-xl border border-border bg-bg-elevated px-4 py-3">
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium text-text-bright">{a.name}</span>
+                    <Badge className="bg-emerald-500/15 text-emerald-300">{a.status}</Badge>
+                  </div>
+                  <p className="text-xs text-text-muted mt-1">{a.description}</p>
+                  <div className="mt-2 flex items-center justify-between text-xs text-text-muted">
+                    <span>{a.decisions24h ?? 0} decisions · {a.blocked24h ?? 0} blocked</span>
+                    <Button size="sm" variant="outline" onClick={() => void run(`agent-${a.key}`, async () => {
+                      const r = await brokerApi.runAgent(a.key, a.key === "trade-execution-supervisor" && cc?.accounts.length ? { accountId: cc.accounts[0]!.id, symbol: "EURUSD", side: "long", volume: 0.1 } : undefined);
+                      return `${r.agent}: ${r.verdict} — ${r.detail}`;
+                    })} disabled={busy === `agent-${a.key}`}>
+                      {busy === `agent-${a.key}` ? <Loader2 className="h-3 w-3 mr-1 animate-spin" /> : <Bot className="h-3 w-3 mr-1" />}
+                      Run
+                    </Button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       {/* Portfolio + strategies + risk */}
       <div className="grid lg:grid-cols-3 gap-4 mt-4">
