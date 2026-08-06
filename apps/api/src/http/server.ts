@@ -53,6 +53,7 @@ import { registerReleaseRoutes } from "./routes/release.js";
 import { registerProgramRoutes } from "./routes/program.js";
 import { registerEngineeringRoutes } from "./routes/engineering.js";
 import { registerAiEngineeringRoutes } from "./routes/aiEngineering.js";
+import { registerIdentityKnowledgeRoutes } from "./routes/identityKnowledge.js";
 import { registerDevPortalRoutes } from "./routes/devPortal.js";
 import { registerExtensionRoutes } from "./routes/extensions.js";
 import { registerPlatformServicesRoutes } from "./routes/platformServices.js";
@@ -391,6 +392,15 @@ export function createApp() {
   v1.use("/ai-engineering", aiEngRouter);
   aiEngRouter.use(authenticate);
   registerAiEngineeringRoutes(aiEngRouter);
+
+  // /identity-knowledge — Session 125: Super Admin Biography, Identity
+  // Memory & AI Knowledge System. Record management is super-admin-only
+  // (requireSuperAdmin per route); reads are classification-aware; the AI
+  // response engine answers only from approved knowledge.
+  const ikRouter = express.Router();
+  v1.use("/identity-knowledge", ikRouter);
+  ikRouter.use(authenticate);
+  registerIdentityKnowledgeRoutes(ikRouter);
 
   // /dev-portal — Session 27: Enterprise Developer Platform (SDKs, CLI, local/sandbox/emulator envs, testing + deployment toolkit)
   const dpRouter = express.Router();

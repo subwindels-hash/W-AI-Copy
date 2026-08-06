@@ -95,7 +95,7 @@ export const EnterpriseSearchService = {
    * Load real records for one entity type and score them against the terms.
    * Returns candidates (score > 0) sorted stably.
    */
-  async scanType(org: string, type: EsEntityType, termsList: string[]): Promise<Candidate[]> {
+  async scanType(org: string, type: EsEntityType, termsList: string[], viewer: { id: string; role: string | null } = { id: "", role: null }): Promise<Candidate[]> {
     const now = Date.now();
     const out: Candidate[] = [];
     const push = (hit: Omit<Candidate, "type" | "score" | "snippet">, fields: Array<[string, number]>) => {
@@ -254,12 +254,26 @@ export const EnterpriseSearchService = {
         }
         break;
       }
+      case "knowledge": {
+        // Session 125 — approved identity-knowledge records (Super Admin
+        // biography, company/organization profiles, brand, mission, FAQs…).
+        // Permission-aware: the search viewer sees only records their
+        // classification allows (private records are never indexed).
+        const { IdentityKnowledgeService } = await import("../identityKnowledge/identityKnowledge.service.js");
+        for (const r of await IdentityKnowledgeService.listSearchable(org, viewer)) {
+          push(
+            { id: r.id, title: r.title, updatedAt: r.updatedAt, meta: `${r.classification} · ${r.tags.join(" ")}` },
+            [[r.title, 3], [r.body, 2], [r.tags.join(" "), 2]]
+          );
+        }
+        break;
+      }
     }
     return out.sort((a, b) => b.score - a.score || (a.id < b.id ? -1 : 1));
   },
 
   /** Run a search across the requested (or all) entity types. */
-  async search(org: string, query: EsSearchQuery): Promise<EsSearchResult> {
+  async search(org: string, query: EsSearchQuery, viewer: { id: string; role: string | null } = { id: "", role: null }): Promise<EsSearchResult> {
     const started = Date.now();
     const termsList = terms(query.q);
     const types = query.types?.length ? query.types : ([...ES_ENTITY_TYPES] as EsEntityType[]);
@@ -268,7 +282,7 @@ export const EnterpriseSearchService = {
     const all: Candidate[] = [];
     const facetMap = new Map<EsEntityType, number>();
     for (const type of types) {
-      const hits = await this.scanType(org, type, termsList);
+      const hits = await this.scanType(org, type, termsList, viewer);
       if (hits.length) facetMap.set(type, hits.length);
       all.push(...hits);
     }
@@ -335,7 +349,7 @@ export const EnterpriseSearchService = {
 
   /** Live counts per entity type — reads the real module stores. */
   async indexedCounts(org: string): Promise<Record<EsEntityType, number>> {
-    const [crm, erp, email, social, hd, ab, bi] = await Promise.all([
+    const [crm, erp, email, social, hd, ab, bi, ik] = await Promise.all([
       import("../crm/crm.service.js"),
       import("../erp/erp.service.js"),
       import("../emailIntel/emailIntel.service.js"),
@@ -343,6 +357,7 @@ export const EnterpriseSearchService = {
       import("../helpdesk/helpdesk.service.js"),
       import("../appBuilder/appBuilder.service.js"),
       import("../businessIntelligence/businessIntelligence.service.js"),
+      import("../identityKnowledge/identityKnowledge.service.js"),
     ]);
     const [contacts, companies, deals, products, suppliers, pos, sos, messages, posts, comments, tickets, tasks, projects, artifacts, reports] = await Promise.all([
       crm.CrmService.listContacts(org),
@@ -377,6 +392,9 @@ export const EnterpriseSearchService = {
       project: projects.length,
       artifact: artifacts.length,
       report: reports.length,
+      // Session 125 — approved identity-knowledge records (counted for the
+      // search viewer's own permissions via the service's public list).
+      knowledge: (await ik.IdentityKnowledgeService.listSearchable(org, { id: "", role: null })).length,
     };
   },
 

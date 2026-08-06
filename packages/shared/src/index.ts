@@ -71,6 +71,7 @@ export * from "./promptTemplates.js";
 export * from "./publicApi.js";
 export * from "./talk.js";
 export * from "./aiEngineering.js";
+export * from "./identityKnowledge.js";
 export * from "./industry.js";
 export * from "./healthEcosystem.js";
 export * from "./projectContinuity.js";

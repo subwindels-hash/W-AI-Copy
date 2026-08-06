@@ -399,6 +399,7 @@
     },
     "tests": [
       "extensions.spec.ts",
+      "identityKnowledge.spec.ts",
       "publicApi.spec.ts",
       "sessions41-76-80.spec.ts",
       "agents/agents.test.ts",
@@ -1143,6 +1144,7 @@
       "extensions.spec.ts",
       "googleAuth.spec.ts",
       "governance.spec.ts",
+      "identityKnowledge.spec.ts",
       "infrastructure.spec.ts",
       "leadPipeline.spec.ts",
       "marketplace.spec.ts",
@@ -4054,11 +4056,11 @@
       "serviceFile": {
         "file": "enterpriseSearch.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
-        "sloc": 394,
+        "sloc": 412,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1049,
+      "serviceTotalSloc": 1085,
       "serviceFiles": [
         "bootstrap.ts",
         "enterpriseSearch.service.ts",
@@ -5302,6 +5304,98 @@
     },
     "tests": [
       "sessions42-47.spec.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "identityKnowledge",
+    "title": "identityKnowledge",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/identityKnowledge",
+    "backend": {
+      "serviceDir": "apps/api/src/identityKnowledge",
+      "serviceFile": {
+        "file": "identityKnowledge.service.ts",
+        "path": "/home/user/WIN/apps/api/src/identityKnowledge/identityKnowledge.service.ts",
+        "sloc": 655,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1812,
+      "serviceFiles": [
+        "identityKnowledge.service.ts",
+        "identityKnowledge.test.ts",
+        "identityKnowledge/identityKnowledge.service.ts",
+        "attachments/attachments.service.ts"
+      ],
+      "importedServiceFiles": [
+        "identityKnowledge/identityKnowledge.service.ts",
+        "attachments/attachments.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/identityKnowledge.ts",
+        "sloc": 248,
+        "counts": {
+          "total": 22,
+          "GET": 8,
+          "POST": 11,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /records",
+          "POST /records",
+          "GET /records/:id",
+          "PATCH /records/:id",
+          "DELETE /records/:id",
+          "POST /records/:id/approve",
+          "POST /records/:id/publish",
+          "POST /records/:id/archive",
+          "GET /records/:id/versions",
+          "POST /records/:id/grants",
+          "DELETE /records/:id/grants/:userId",
+          "POST /records/:id/relations",
+          "POST /sync",
+          "POST /ask",
+          "GET /agents",
+          "POST /agents/:agentId/run",
+          "GET /dashboard",
+          "GET /graph",
+          "GET /activity",
+          "POST /documents",
+          "POST /import",
+          "GET /export"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/identityKnowledge.ts (239 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/identityKnowledge.ts (89 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "AuditLog",
+        "Agent",
+        "Activity",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "identityKnowledge.spec.ts",
+      "identityKnowledge/identityKnowledge.test.ts",
+      "attachments/attachments.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -8699,11 +8793,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 506,
+        "sloc": 511,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1188,
+      "serviceTotalSloc": 1198,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

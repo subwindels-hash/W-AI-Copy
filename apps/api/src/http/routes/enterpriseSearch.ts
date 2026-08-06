@@ -32,7 +32,7 @@ export function registerEnterpriseSearchRoutes(router: Router) {
       const types = rawTypes.filter((t) => VALID_TYPES.has(t)) as any;
       const rawLimit = Number(req.query.limit ?? 25);
       const limit = Number.isFinite(rawLimit) ? Math.min(100, Math.max(1, Math.round(rawLimit))) : 25;
-      const data = await EnterpriseSearchService.search(orgOf(req), { q, types, limit });
+      const data = await EnterpriseSearchService.search(orgOf(req), { q, types, limit }, { id: req.user!.id, role: req.user!.role ?? null });
       res.json({ ok: true, data, meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });

@@ -74,6 +74,7 @@ const navItems = [
   { to: "/app/sustainability", icon: Leaf, label: "Sustainability" },
   { to: "/app/usage", icon: BarChart3, label: "Usage" },
   { to: "/app/ai-engineering", icon: Workflow, label: "AI Engineering" },
+  { to: "/app/identity-knowledge", icon: ShieldCheck, label: "Identity Knowledge" },
   { to: "/app/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },

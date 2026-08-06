@@ -1087,3 +1087,40 @@
   key is `aew:<entity>:<org>:…` with the org in the segment straight after
   the prefix (the `esg` shape); per-repo knowledge graphs and teams live
   under the org that owns the repo.
+
+## Session 125 — Decisions Logged (Super Admin Biography, Identity Memory & AI Knowledge)
+
+- **Module prefix:** `Ik*` types in `packages/shared/src/identityKnowledge.ts`,
+  **`ik:` Redis keys** (org in the segment straight after the prefix — the
+  `esg`/`aew` shape, catalogued org-scoped in the S89 sweep),
+  `/api/v1/identity-knowledge` route prefix, `apps/web/src/lib/identityKnowledge.ts`
+  client, `/app/identity-knowledge` route + sidebar label "Identity Knowledge".
+- **The Super Admin is an authority boundary, enforced twice.** Every
+  mutating route carries `requireSuperAdmin` AND the service re-checks
+  `superAdminOnly(actor)`, so a mis-wired route still cannot bypass the
+  rule. This is the pattern for any future "single trusted authority"
+  capability: route middleware is convenience, the service check is the
+  guarantee.
+- **Approval gates AI usage; publish = verified.** A record answers the AI
+  engine once it is `approved`; `verified` (highest confidence) is set ONLY
+  by a Super Admin `publish`. Editing a published record returns it to
+  `pending_approval` and clears verification — nothing reaches the AI
+  without a fresh approval.
+- **AI answers carry their receipts.** Every answer returns `sources[]`
+  (record id/title/kind/classification/verified/usedIn) and labels the
+  AI-generated summary as such; an answer with no approved match says "I do
+  not have sufficient approved knowledge" — never a guess. Restricted
+  records are included only for authorized viewers.
+- **Synchronization goes through the existing fabric, never a parallel
+  store.** Published records are written with `MemoryEvolutionService.add`
+  (the fabric deduplicates by content+scope, so re-syncs cannot duplicate)
+  and announced via `KernelService.dispatch` — the same integration points
+  the memory and orchestrator modules use.
+- **Search integration is additive and permission-aware.** A new
+  `knowledge` entity type in `ES_ENTITY_TYPES` + a `scanType` case; the
+  search service threads the viewer through `search`/`scanType` and private
+  records are never indexed.
+- **Reuse, don't re-implement:** AuditLog (Prisma), attachments uploads,
+  `hasPermission`, `requireSuperAdmin`, the Kernel event bus and the Memory
+  Fabric are all reused — the module owns only its governed records and the
+  rules around them.

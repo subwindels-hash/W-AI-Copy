@@ -5,6 +5,22 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 125 — Super Admin Biography, Identity Memory & AI Knowledge System] — 2026-08-06
+
+### WINDELS AI OS becomes an intelligent digital representative — governed, traceable, Super-Admin-owned
+*   `packages/shared/src/identityKnowledge.ts` (new, 239 LOC) — the capability's contract: 37 record kinds (personal/professional/executive/founder/public/official biographies, founder & leadership profiles, brand story, mission/vision/values, career, education, awards, publications, interviews, press releases, announcements, contact/websites/social, FAQs, statements, company/organization profiles, products, services, projects, industries, documents), classifications (`private | organization | public`), the lifecycle (`draft → pending_approval → approved → published | archived`), versions, grants, the answer type with labelled sections + `sources[]` traceability, 8 knowledge agents, graph/dashboard/activity and Zod for every body.
+*   **Only the Super Admin is the authority.** Every mutating route carries `requireSuperAdmin` AND the service re-checks `superAdminOnly` — create/edit/approve/publish/archive/delete/grant/import/export/sync all answer **403** for any other user, even an org admin. `verified` can only be set by a Super Admin publish; editing a published record returns it to `pending_approval` and clears verification until re-approved.
+*   **AI response engine** (`POST /ask`) — answers only from records the caller may see with status `approved`/`published` (approval gates AI usage; publish = verified = highest confidence). Labelled sections: Verified Facts · Super Admin Approved · Organization Information · AI-Generated Summary (explicitly labelled) · Unknown. Every answer returns its `sources[]` (record, kind, classification, verified, usedIn) for full auditability, and says "I do not have sufficient approved knowledge" rather than fabricating. Private records are included only for Super Admin/granted viewers.
+*   **Continuous Memory Synchronization** — every publish (and `POST /sync`) writes the record into the Enterprise Memory Fabric via `MemoryEvolutionService.add` (the fabric content-deduplicates, so re-syncs never duplicate) and dispatches `identity-knowledge.*` events through the Kernel (God-Node). Every mutation is audit-logged into the existing Prisma `AuditLog` table.
+*   **Enterprise Search integration** — new `knowledge` entity type: the unified search indexes published records the caller may see (private records are never indexed); the search service threads the viewer through `scanType`/`search`.
+*   **Knowledge agents** (AI Workforce) — 8 deterministic roles (biography, organization knowledge, company profile, verification, curator, synchronization [super-admin-gated], memory manager, public information), each run audit-logged and kernel-dispatched, labelled `aiGenerated: false`.
+*   **Knowledge graph** — Super Admin-defined relations between records, exposed permission-aware via `GET /graph`.
+*   **Documents** — `POST /documents` reuses the attachments infrastructure (multipart, 25 MB, sha256) and records document metadata as a governed record; bulk import/export included.
+*   Storage: `ik:*` org-scoped keys (records, versions, grants, activity) catalogued in the Session 89 sweep; IAM via role + `hasPermission(ORG_ADMIN)` + per-record grants.
+*   Web: `apps/web/src/lib/identityKnowledge.ts` + the `/app/identity-knowledge` console — Super Admin sees the Biography Manager (records + versions, Approval Center, Document Upload, Knowledge Graph, Activity) and everyone sees the Library and AI Knowledge Insights (ask with source traceability, agent runs, bulk import/export).
+*   Tests: `identityKnowledge/identityKnowledge.test.ts` (22) + `tests/e2e/identityKnowledge.spec.ts` (5). Full suite **1775 passing, 51 skipped, 0 failures** (119 → 120 files).
+*   **Inventory: new module `identityKnowledge` COMPLETE — 108 modules, 105 COMPLETE / 0 PARTIAL / 2 STUB-by-design / 1 DEMO DATA.** Runtime validation remains pending; Session 125 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 124 — AI Software Engineering Workforce] — 2026-08-06
 
 ### An autonomous engineering department, not a coding agent

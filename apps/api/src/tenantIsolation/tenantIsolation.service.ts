@@ -214,6 +214,11 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // (`aew:repo:<org>:<id>`), connections, engineer assignments, tasks, intel
   // nodes, memory entries and the activity ledger alike.
   { prefix: "aew", scope: "org_scoped" },
+  // Super Admin Biography / Identity Knowledge system (Session 125). Every key
+  // is `ik:<entity>:<org>:…` — the org sits in the segment straight after the
+  // prefix (index 1), so the sweep's org-segment derivation holds for records
+  // (`ik:rec:<org>:<id>`), versions, grants, and the activity ledger alike.
+  { prefix: "ik", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A
