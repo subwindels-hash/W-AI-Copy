@@ -1038,13 +1038,14 @@
       "serviceFile": {
         "file": "autonomous.service.ts",
         "path": "/home/user/WIN/apps/api/src/autonomous/autonomous.service.ts",
-        "sloc": 82,
+        "sloc": 188,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 167,
+      "serviceTotalSloc": 498,
       "serviceFiles": [
         "autonomous.service.ts",
+        "autonomous.test.ts",
         "bootstrap.ts",
         "autonomous/autonomous.service.ts"
       ],
@@ -1056,40 +1057,46 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/autonomous.ts",
-        "sloc": 15,
+        "sloc": 42,
         "counts": {
-          "total": 3,
-          "GET": 1,
+          "total": 6,
+          "GET": 3,
           "POST": 2,
           "PUT": 0,
           "PATCH": 0,
-          "DELETE": 0
+          "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "GET /decisions",
           "POST /decisions",
-          "POST /decisions/:id/resolve"
+          "GET /decisions/:id",
+          "POST /decisions/:id/resolve",
+          "DELETE /decisions/:id"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/autonomous.ts (70 LOC)",
+    "sharedTypes": "packages/shared/src/autonomous.ts (106 LOC)",
     "web": {
-      "client": "apps/web/src/lib/autonomous.ts (8 LOC)",
+      "client": "apps/web/src/lib/autonomous.ts (15 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Organization",
+        "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "autonomous/autonomous.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "benchmarks",
@@ -8156,11 +8163,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 376,
+        "sloc": 379,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 928,
+      "serviceTotalSloc": 934,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8201,6 +8208,7 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Membership",
         "Agent",
         "Task",

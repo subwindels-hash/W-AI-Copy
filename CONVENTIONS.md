@@ -30,6 +30,22 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 106 — Decisions Logged (Autonomous Organization Approval Register Completion)
+
+- **Shared contract prefix:** `Aut` contracts and Zod schemas remain in
+  `packages/shared/src/autonomous.ts`.
+- **Approval-first boundary:** proposals are real records but this module never
+  executes an autonomous action. `awaiting_human` is the default state and only
+  authenticated admin decisions produce `approved`/`rejected` outcomes.
+- **Ledger storage:** decisions use `aut:decision:i:<org>:<id>` records and an
+  organization index; old JSON blobs are migration inputs only.
+- **Honest metrics:** review rate is labeled as human review, empty governance
+  evidence is zero, and approved impact is labeled an estimate rather than
+  realized savings. Plans, budgets and executive seats stay empty until real
+  ledgers exist.
+- **UI:** `/app/autonomous` is a dedicated approval console; non-admins see
+  read-only data and no fake execution controls.
+
 ## Session 105 — Decisions Logged (Message Attachments Completion)
 
 - **Shared contract prefix:** `Att` types and Zod contracts live in

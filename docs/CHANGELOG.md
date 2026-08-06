@@ -5,6 +5,16 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 106 — Autonomous Organization Approval Register Completion] — 2026-08-05
+
+### Approval-first autonomous organization completed
+*   `packages/shared/src/autonomous.ts` — `Aut` proposal, resolution, list/filter and dashboard honesty contracts.
+*   `apps/api/src/autonomous/autonomous.service.ts` — individual org-scoped decision records, safe legacy migration, human resolution, pending deletion, deterministic department/guardrail rollups and honest empty/approved-estimate states.
+*   Routes: `/api/v1/autonomous` now supports decision list/detail/propose/resolve/delete with admin-protected mutations; Session 89 audits `aut:meta` and `aut:decision` namespaces.
+*   Web: typed approval client, dedicated `/app/autonomous` console, admin proposal/approve/reject controls and read-only non-admin state. Existing PlatformPage tab remains compatible.
+*   Tests: `autonomous.test.ts` (10) plus existing rollup coverage — isolation, filters, human decisions, migration, blocked pending state, determinism and contracts.
+*   Runtime validation against live Redis remains pending; Session 106 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 105 — Message Attachments Completion] — 2026-08-05
 
 ### Attachment metadata and mobile parity completed

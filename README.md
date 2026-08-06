@@ -124,6 +124,8 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_104_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_104_RUNTIME_VALIDATION_CHECKLIST.md) | Session 104 runtime validation (hash-at-rest, bearer verification, expiry/revocation and tenant isolation) |
 | [docs/SESSION_105_SPECIFICATION.md](./docs/SESSION_105_SPECIFICATION.md) | Session 105 — Message Attachments completion (normalized metadata, checksum storage, scoped bytes and mobile uploads) |
 | [docs/SESSION_105_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_105_RUNTIME_VALIDATION_CHECKLIST.md) | Session 105 runtime validation (MIME/size, checksum, byte/meta isolation, deletion and mobile multipart uploads) |
+| [docs/SESSION_106_SPECIFICATION.md](./docs/SESSION_106_SPECIFICATION.md) | Session 106 — Autonomous Organization approval-register completion (human decisions, scoped records, honest governance metrics and UI) |
+| [docs/SESSION_106_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_106_RUNTIME_VALIDATION_CHECKLIST.md) | Session 106 runtime validation (RBAC, approval isolation, legacy migration and no-autonomous-execution gate) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |

@@ -50,6 +50,7 @@ const EnterpriseFinOpsPage = lazy(() => import("./pages/finops/EnterpriseFinOpsP
 const AiEconomyPage = lazy(() => import("./pages/aiEconomy/AiEconomyPage").then((m) => ({ default: m.AiEconomyPage })));
 const ApiKeysPage = lazy(() => import("./pages/apikey/ApiKeyPage").then((m) => ({ default: m.ApiKeyPage })));
 const AttachmentsPage = lazy(() => import("./pages/attachments/AttachmentsPage").then((m) => ({ default: m.AttachmentsPage })));
+const AutonomousPage = lazy(() => import("./pages/autonomous/AutonomousPage").then((m) => ({ default: m.AutonomousPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -273,6 +274,7 @@ export const router = createBrowserRouter([
       { path: "ai-economy", element: withSuspense(<AiEconomyPage />) },
       { path: "api-keys", element: withSuspense(<ApiKeysPage />) },
       { path: "attachments", element: withSuspense(<AttachmentsPage />) },
+      { path: "autonomous", element: withSuspense(<AutonomousPage />) },
     ],
   },
   {

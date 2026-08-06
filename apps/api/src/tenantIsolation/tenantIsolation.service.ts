@@ -121,6 +121,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "eco:usage", scope: "org_scoped" },
   { prefix: "eco:allocation", scope: "org_scoped" },
   { prefix: "eco:offer", scope: "org_scoped" },
+  // Autonomous Organization approval register (Session 106)
+  { prefix: "aut:meta", scope: "org_scoped" },
+  { prefix: "aut:decision", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];
