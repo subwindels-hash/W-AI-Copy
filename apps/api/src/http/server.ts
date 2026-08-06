@@ -115,6 +115,7 @@ import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
 import { registerHelpdeskRoutes } from "./routes/helpdesk.js";
 import { registerAppBuilderRoutes } from "./routes/appBuilder.js";
 import { registerBusinessIntelligenceRoutes } from "./routes/businessIntelligence.js";
+import { registerEnterpriseSearchRoutes } from "./routes/enterpriseSearch.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1160,6 +1161,12 @@ export function createApp() {
   const businessIntelRouter = express.Router();
   v1.use("/bi", businessIntelRouter);
   registerBusinessIntelligenceRoutes(businessIntelRouter);
+
+  // /search — Session 98: Enterprise Search (unified org-scoped search over
+  // the real module records with deterministic relevance ranking + facets).
+  const enterpriseSearchRouter = express.Router();
+  v1.use("/search", enterpriseSearchRouter);
+  registerEnterpriseSearchRoutes(enterpriseSearchRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

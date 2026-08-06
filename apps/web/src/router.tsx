@@ -43,6 +43,7 @@ const SocialPlatformPage = lazy(() => import("./pages/socialPlatform/SocialPlatf
 const HelpdeskPage = lazy(() => import("./pages/helpdesk/HelpdeskPage").then((m) => ({ default: m.HelpdeskPage })));
 const SoftwareFactoryPage = lazy(() => import("./pages/appBuilder/SoftwareFactoryPage").then((m) => ({ default: m.SoftwareFactoryPage })));
 const BusinessIntelligencePage = lazy(() => import("./pages/bi/BusinessIntelligencePage").then((m) => ({ default: m.BusinessIntelligencePage })));
+const EnterpriseSearchPage = lazy(() => import("./pages/search/EnterpriseSearchPage").then((m) => ({ default: m.EnterpriseSearchPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -260,6 +261,7 @@ export const router = createBrowserRouter([
       { path: "helpdesk", element: withSuspense(<HelpdeskPage />) },
       { path: "app-builder", element: withSuspense(<SoftwareFactoryPage />) },
       { path: "bi", element: withSuspense(<BusinessIntelligencePage />) },
+      { path: "search", element: withSuspense(<EnterpriseSearchPage />) },
     ],
   },
   {

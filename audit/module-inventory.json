@@ -3672,6 +3672,79 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "enterpriseSearch",
+    "title": "enterpriseSearch",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/enterpriseSearch",
+    "backend": {
+      "serviceDir": "apps/api/src/enterpriseSearch",
+      "serviceFile": {
+        "file": "enterpriseSearch.service.ts",
+        "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
+        "sloc": 394,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1049,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "enterpriseSearch.service.ts",
+        "enterpriseSearch.test.ts",
+        "enterpriseSearch/enterpriseSearch.service.ts"
+      ],
+      "importedServiceFiles": [
+        "enterpriseSearch/enterpriseSearch.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/enterpriseSearch/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/enterpriseSearch.ts",
+        "sloc": 61,
+        "counts": {
+          "total": 5,
+          "GET": 3,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /query",
+          "GET /history",
+          "DELETE /history",
+          "DELETE /history/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/enterpriseSearch.ts (68 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/enterpriseSearch.ts (52 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Task",
+        "Message",
+        "Invoice"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "enterpriseSearch/enterpriseSearch.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "Whisper"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "erp",
     "title": "erp",
     "sessions": [],
@@ -7908,11 +7981,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 359,
+        "sloc": 361,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 894,
+      "serviceTotalSloc": 898,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

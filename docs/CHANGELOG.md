@@ -5,6 +5,40 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 98 — Enterprise Search] — 2026-08-05
+
+### New module: Unified Organization Search
+*   `packages/shared/src/enterpriseSearch.ts` — Zod contracts + types for
+    search queries, hits, facets, recent searches and rollup (prefixed `Es`);
+    15 searchable entity types across the application suite.
+*   `apps/api/src/enterpriseSearch/enterpriseSearch.service.ts` — the search
+    index is **computed, never stored**: every query scans the real
+    org-scoped module records through each module service and ranks matches
+    with a deterministic relevance score (field weights, prefix bonus,
+    7-day recency), returning grouped facets. No separate index to drift, no
+    fabricated hits; cross-tenant isolation inherited from every module's
+    fail-closed reads.
+*   Stable ordering (score desc, id asc) — identical store + query ⇒
+    identical results.
+*   Org-scoped recent-search history (case-insensitive dedupe, newest-first,
+    capped at 20, single-entry removal + clear).
+*   Rollup computes live `indexedCounts` per entity type from the module
+    stores.
+*   Routes: `apps/api/src/http/routes/enterpriseSearch.ts` mounted at
+    `/api/v1/search` (5 endpoints). Session 89 catalog gains the
+    `es:history` namespace as `org_scoped`.
+*   Web: `apps/web/src/lib/enterpriseSearch.ts` client + `pages/search/
+    EnterpriseSearchPage.tsx` (search bar, live results with type badges +
+    scores, facets, recent-search history), `/app/search` route + sidebar.
+*   Tests: `apps/api/src/enterpriseSearch/enterpriseSearch.test.ts` (11) —
+    live search across CRM/ERP/Email/Helpdesk records, deterministic ranking,
+    type filters + limit, history dedupe/cap/remove/clear, rollup,
+    cross-tenant isolation, demo-seed idempotency, schema contracts.
+*   Demo seed (`apps/api/src/enterpriseSearch/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA` — seeds history only; the index is always live.
+*   **104 modules** in the inventory (77 COMPLETE).
+*   Spec: `docs/SESSION_98_SPECIFICATION.md`.
+
 ## [Session 97 — Enterprise Business Intelligence] — 2026-08-05
 
 ### New module: Business Intelligence & Report Builder (Phase-4 Analytics)

@@ -104,6 +104,8 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "bi:source", scope: "org_scoped" },
   { prefix: "bi:kpi", scope: "org_scoped" },
   { prefix: "bi:report", scope: "org_scoped" },
+  // Enterprise Search (Session 98)
+  { prefix: "es:history", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

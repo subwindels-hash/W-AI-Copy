@@ -30,6 +30,27 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 98 — Decisions Logged (Enterprise Search)
+
+- **Module prefix:** `Es` types, `es:history:<org>` Redis key (the only
+  stored data — the index itself is computed), `/api/v1/search` route
+  prefix, `apps/web/src/lib/enterpriseSearch.ts` client, `/app/search` route
+  + sidebar label "Search".
+- **The index is computed, never stored:** every query scans the real
+  org-scoped module records through each module service and ranks matches
+  with a deterministic relevance score (title/name/email/sku ×3, tags ×2,
+  body ×1, prefix bonus +1, 7-day recency +0.5). No separate index to drift,
+  no fabricated hits; cross-tenant isolation is inherited from every module's
+  fail-closed reads.
+- **Stable ordering:** score desc, then id asc — identical store + query ⇒
+  identical ordering.
+- **Recent-search history** is org-scoped, case-insensitively deduped,
+  newest-first, capped at 20; stored with Redis list ops (`lpush` must be
+  oldest-first so the list ends newest-first).
+- **Rollup:** `indexedCounts` are live counts read from the module stores;
+  nothing invented.
+- **Demo seed:** idempotent, seeds `org-demo-es` history only.
+
 ## Session 97 — Decisions Logged (Enterprise Business Intelligence)
 
 - **Module prefix:** `Bi` types, `bi:*` Redis keys, `/api/v1/bi` route

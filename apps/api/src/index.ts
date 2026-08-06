@@ -363,6 +363,14 @@ async function main() {
         } catch (e) { logger.warn("bi bootstrap failed", { err: e }); }
       }, 27000);
 
+      // Session 98 — Enterprise Search (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapEnterpriseSearch } = await import("./enterpriseSearch/bootstrap.js");
+          await bootstrapEnterpriseSearch(logger);
+        } catch (e) { logger.warn("enterprise-search bootstrap failed", { err: e }); }
+      }, 28000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {
