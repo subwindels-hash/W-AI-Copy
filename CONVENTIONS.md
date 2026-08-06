@@ -878,3 +878,53 @@
 - **Deals require a company** (no orphan deals); contacts may be company-less.
 - **Kernel events:** every write emits `crm.<entity>.<action>` via
   `KernelService.dispatch` (best effort — never fails the write).
+
+## Session 119 — Decisions Logged (Prompt Templates Completion)
+
+- **Module prefix:** `PromptTemplate*` types in `packages/shared/src/promptTemplates.ts`,
+  **`pt:*` Redis keys**, the existing `/api/v1/prompt-templates` route prefix
+  (unchanged; the sub-router became literal path declarations on the same
+  router, so absolute paths are identical), `apps/web/src/lib/promptTemplates.ts`
+  client (types now re-exported from the shared contract), `/app/prompt-templates`
+  route + sidebar label "Prompt Templates".
+- **`pt:` namespaces are catalogued individually — a bare `pt` entry must
+  never be added.** Each key (`pt:use:<org>`, `pt:recent:<org>`,
+  `pt:day:<org>:<yyyy-mm-dd>`, `pt:since:<org>`) carries the org id in the
+  segment straight after the prefix. A shorter `pt` entry would make the
+  Session 89 sweep expect the org one segment earlier and read the literal
+  `use` as an organization id — the same prefix-length constraint that made
+  Session 118 choose `opx:` over `opex:`.
+- **The renderer is a shared pure function, and holes are reported, not
+  hidden.** `renderPromptTemplate(content, vars)` lives in the shared package
+  (tested identically on both sides of the wire), tolerates whitespace around
+  the pipe (`{{var | default}}`), and returns `missing` — surfaced to clients
+  as `unresolved: string[]` on `POST /:id/use`. The empty-string substitution
+  for a missing variable is Session 23's pinned behaviour and is kept; the
+  caller is simply told what happened. Malformed placeholders (`{{ }}`, single
+  braces) are left raw and are not reported as missing.
+- **Best-effort analytics ledger; the durable counter is the write that
+  matters.** `recordTemplateUse` never throws; a Redis outage cannot block a
+  template use. Statistics never mix sources: lifetime totals come from the
+  database `usageCount`, window numbers come only from the ledger, and the
+  payload carries `ledgerAvailable` so an empty ledger is distinguishable from
+  a measured zero.
+- **Days before the ledger began are not zero-use days.** `daily` contains
+  only days with recorded events; `avgUsesPerDay` divides by
+  `ledgerCoveredDays` (max of ledger start and window start through today) and
+  is `null` when the ledger covers no day. The `pt:since` marker is written
+  with `NX` so the cap-500 event list can never corrupt the ledger-start
+  answer.
+- **Deletion does not erase history.** A template deleted after its uses were
+  recorded keeps its id and count in window aggregates with `title: null` —
+  the title is not invented.
+- **Icon length counts Unicode code points**, not UTF-16 units: a family emoji
+  (11 units, 4 code points) is one glyph and validates. Rates/averages are
+  floored; an empty denominator is `null`.
+- **Built-in templates stay immutable; duplication is the correction path.**
+  `POST /:id/duplicate` copies any template into an ordinary editable user
+  template (`isBuiltIn: false`, `"<title> (copy)"` truncated to 200 chars or an
+  explicit override) — the console hides Edit/Delete on built-ins and offers
+  Duplicate instead.
+- **Route literal paths precede parameterized ones.** `/prompt-templates/stats`
+  is declared before `/prompt-templates/:id` so the literal segment is not
+  captured by the cuid-validated parameter (which would answer 400, not 404).

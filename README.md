@@ -3,11 +3,11 @@
 The AI-Native Enterprise Operating System. Built session-by-session per the master
 specification (`uploads/CLAUDE.md`).
 
-> **Build status as of 2026-08-01:** the monorepo builds, typechecks, and tests
-> green end-to-end **on a fresh clone** — `pnpm build` (4/4), `pnpm typecheck`
-> (5/5), `pnpm test` (7/7, **652 unit tests passing** across 57 files, 3
-> integration suites auto-skipped without a live server). No `.env`, Postgres,
-> or Redis required:
+> **Build status as of 2026-08-06:** the monorepo builds, typechecks, and tests
+> green end-to-end **on a fresh clone** — `pnpm build`, `pnpm typecheck`, and
+> `pnpm test` (**1 618 tests passing** across 111 files, 51 integration tests
+> auto-skipped without a live server, 0 failures). No `.env`, Postgres, or
+> Redis required:
 >
 > ```bash
 > pnpm install && make verify
@@ -138,6 +138,8 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_115_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_115_RUNTIME_VALIDATION_CHECKLIST.md) | Session 115 runtime validation (Session 85 route compatibility, `lead:*` isolation, duplicate keeper ordering over real Redis, 10k-lead scan latency, spreadsheet formula guard verified in Excel and Sheets) |
 | [docs/SESSION_118_SPECIFICATION.md](./docs/SESSION_118_SPECIFICATION.md) | Session 118 — Operational Excellence / Responsible AI completion (a durable per-finding safety register replacing one JSON blob in one Redis string, real acknowledgement and resolution timestamps so "mitigations in the last 24 hours" counts closures instead of filings, floored rates, `null` instead of `0` for every unmeasured dimension including the `hallucination_risk` that read as "no risk", operator assessments that require their method, a reopen path with append-only history, an advisory policy, and a provenance block naming the seven declared-but-unimplemented rollup sections) |
 | [docs/SESSION_118_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_118_RUNTIME_VALIDATION_CHECKLIST.md) | Session 118 runtime validation (Session 73 endpoint compatibility, the filing-vs-resolution-time fix proved in both directions, concurrent files across two API instances, legacy blob adoption over real Redis, floored reliability against real `AiRequest` rows, `null`-not-zero on an organization with no traffic, `opex`/`opx:*` isolation, and the `trust.trust > 0` assertion in the existing Session 73 E2E) |
+| [docs/SESSION_119_SPECIFICATION.md](./docs/SESSION_119_SPECIFICATION.md) | Session 119 — Prompt Templates completion (the module's first shared contract, a renderer that resolves `{{var \| default}}` and reports `unresolved` holes instead of hiding them, P2025 → 404 instead of a 500 on the check-then-act race, code-point icon validation, single-fetch + built-in duplicate correction paths, an org-scoped best-effort usage ledger (`pt:*`) and `GET /prompt-templates/stats` whose window numbers come only from the ledger and lifetime totals only from the database, with `null`/absence instead of invented zeros) |
+| [docs/SESSION_119_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_119_RUNTIME_VALIDATION_CHECKLIST.md) | Session 119 runtime validation (Session 23 endpoint compatibility, the whitespace-pipe render fix, unresolved reporting, the P2025 race over real Postgres, `pt:*` keyspace shape + 500-event cap + TTL over real Redis, Session 89 sweep conformance, statistics honesty on fresh/active organizations, and the `/app/prompt-templates` console) |
 | [docs/SESSION_117_SPECIFICATION.md](./docs/SESSION_117_SPECIFICATION.md) | Session 117 — Mobile App / PWA completion (a durable offline queue that stores and never executes, per-action receipts with `retainLocally`, replay ordered by server receipt time, expiry reported as expiry, device-ownership assertion with secret-free views, a per-device PIN throttle and PIN removal, push health by endpoint host with retirement recorded, an advisory organization policy, an eighteen-kind ledger, and the client-side fix that stops IndexedDB deleting work the server never took) |
 | [docs/SESSION_117_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_117_RUNTIME_VALIDATION_CHECKLIST.md) | Session 117 runtime validation (Session 21 endpoint compatibility and the still-public `/mobile/config`, a real handset losing and regaining signal, queue semantics and cross-instance durability, replay ordering against a deliberately wrong device clock, `mob:*` isolation, PIN lockout over real Redis TTLs, push retirement against a real push service, the committed VAPID pair as a production blocker) |
 | [docs/SESSION_116_SPECIFICATION.md](./docs/SESSION_116_SPECIFICATION.md) | Session 116 — Multi-Factor Authentication completion (per-principal attempt throttle, RFC 6238 §5.2 replay guard, confirmed-enrolment lifecycle with an abandon path, organization policy with a self-lockout guard, member coverage, documented exemptions, a fifteen-kind audit ledger, an environment-only configuration report, and the 401-not-500 authentication fix on the original six endpoints) |

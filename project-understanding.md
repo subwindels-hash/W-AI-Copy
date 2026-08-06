@@ -38,9 +38,9 @@ For each module, in strict order:
 Current counts that confirm the pattern is uniform (2026-08-06):
 - **124** route files (`apps/api/src/http/routes/*.ts`)
 - **118** web API clients/helpers at the top level of `apps/web/src/lib/*.ts` (**123** including the module subdirectories such as `lib/mobile/`)
-- **109** API test files; **33** Playwright specs in `tests/e2e/`
+- **111** API test files; **35** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S117)
+## 4. The session-by-session arc (S1 → S119)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -154,6 +154,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 
 | **118** | `opex` | **Operational Excellence / Responsible AI completion** — Session 73's three endpoints keep their paths, bodies, status codes and response shapes; what was wrong is that several of their numbers were false, and two were false in the direction that makes a system look safer than it is. **The whole safety register was one JSON array in one Redis string**, so every file was a read-modify-write and two administrators filing at the same instant silently lost one of them. **There was no resolution timestamp at all** — the record stored only the filing time — so `mitigations24h` filtered on `at` and counted *filings*: a finding filed three days ago and closed a minute ago did **not** count, while one filed two hours ago and closed ninety minutes ago **did**. `reliability` used `Math.round`, so **999 successes out of 1 000 reported 100 %**; `dataFreshnessHours` was `0` when nothing had ever run, and 0 hours old is the value for *perfectly fresh*; `humanApprovalRate` divided last-30-days completions by every open task ever created. Five trust dimensions (`alignment`, `compliance`, `transparency`, `explainability`, `hallucinationRisk`) were the **literal number 0** — on a 0-100 scale a score, not a gap, and `hallucinationRisk: 0` on a *risk* dimension reads as "this system does not hallucinate". One signal was published under three names, the closure rate was labelled "safety pass rate", and **a resolved finding could never be reopened**. This session appended ~690 LOC to the shared contract around `OpexMeasure` (`value: number | null` plus the basis it was obtained on), added a durable one-key-per-finding register with an append-only index and transition history, adopted the legacy blob **once** with `null` transition times rather than inventing them, floored every rate and returned `null` on an empty denominator, published `compositeScore: null` as a typed literal with the reason, added operator assessments that require their method, a reopen path that appends and never erases, an advisory policy, a provenance block naming the seven declared-but-unimplemented rollup sections, and the `/app/opex` console. New keys use `opx:` rather than `opex:` because the S89 sweep derives the org segment from the prefix length (`docs/SESSION_118_SPECIFICATION.md`) |
 
+| **119** | `promptTemplates` | **Prompt Templates completion** — Session 23's five endpoints keep their paths, bodies, status codes and response shapes; what was wrong is that the renderer leaked placeholders and hid holes. **`{{var | default}}` — a space around the pipe — rendered as literal text inside the prompt sent to the model**, because the Session 23 pattern required the pipe immediately after the name. **A missing variable was substituted silently**: `{{lang}}` with no value produced a prompt with an invisible gap and the response said nothing. **A check-then-act race answered 500 instead of 404** when a row vanished between the org-scoped lookup and the `where: { id }` mutation (Prisma P2025 escaped). **Icon length was counted in UTF-16 units**, rejecting the single-glyph family emoji. There was **no single-template fetch and no correction path for read-only built-ins**, and `usageCount` had **no time dimension**. This session added the module's first shared contract (319 LOC: Zod + types + pure `renderPromptTemplate`/`extractTemplateVars`/`extractTemplateDefaults`, floored rates that are `null` on an empty denominator), a renderer that reports `unresolved` holes while keeping Session 23's empty-string substitution, P2025→404 mapping, code-point icon validation, `GET /:id` and `POST /:id/duplicate` (the built-in correction path), an org-scoped best-effort usage ledger (`pt:since` NX marker · `pt:use` list capped at 500 · `pt:recent` zset · `pt:day` TTL hashes), and `GET /prompt-templates/stats` whose window numbers come only from the ledger (`ledgerStart`, `daily` with only recorded days, `avgUsesPerDay` `null` when the ledger covers no day, deleted templates keep id+count with `title: null`) and whose lifetime totals come only from the database counter — never mixed, `ledgerAvailable: false` on a Redis failure. Routes 5 → 8; new `/app/prompt-templates` console; 81 unit tests + 9 Playwright cases; `pt:*` namespaces audited by S89 as org-scoped (a bare `pt` entry is never added — the same prefix-length constraint as `opx:`) (`docs/SESSION_119_SPECIFICATION.md`) |
 ## 5. What's actually real vs simulated vs missing (honest state)
 
 **Real & tested core:** auth/JWT/RBAC, MFA/TOTP, Google OAuth, Postgres+Prisma,
@@ -217,13 +218,12 @@ milestone"):**
 **Priority C — verification & hardening:**
 3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
    repository-wide test/module counts in `PROGRESS.md`. Current audit
-   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 98 COMPLETE,
-   5 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 99 COMPLETE,
+   4 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
    Remaining PARTIAL modules, in the one-by-one completion order:
-   `promptTemplates`, `publicApi`,
-   `sustainability`, `talk`, `usage`.
-   **Next module to complete: `promptTemplates`.**
-4. Run the S1–S6 and S89–S118 runtime-validation tracks in a target
+   `publicApi`, `sustainability`, `talk`, `usage`.
+   **Next module to complete: `publicApi`.**
+4. Run the S1–S6 and S89–S119 runtime-validation tracks in a target
    environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
    any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 

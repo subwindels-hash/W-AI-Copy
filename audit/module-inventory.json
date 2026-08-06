@@ -1013,6 +1013,7 @@
       "opexAssurance.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
+      "promptTemplates.spec.ts",
       "qa.spec.ts",
       "release.spec.ts",
       "sessions37-40.spec.ts",
@@ -7309,40 +7310,53 @@
       "serviceFile": {
         "file": "promptTemplates.service.ts",
         "path": "/home/user/WIN/apps/api/src/promptTemplates/promptTemplates.service.ts",
-        "sloc": 95,
+        "sloc": 208,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 301,
+      "serviceTotalSloc": 1741,
       "serviceFiles": [
         "bootstrap.ts",
+        "promptTemplates.completion.test.ts",
         "promptTemplates.service.ts",
         "promptTemplates.test.ts",
-        "promptTemplates/promptTemplates.service.ts"
+        "promptTemplatesUsage.service.ts",
+        "promptTemplates/promptTemplates.service.ts",
+        "promptTemplates/promptTemplatesUsage.service.ts"
       ],
       "importedServiceFiles": [
-        "promptTemplates/promptTemplates.service.ts"
+        "promptTemplates/promptTemplates.service.ts",
+        "promptTemplates/promptTemplatesUsage.service.ts"
       ],
       "bootstrapFile": "apps/api/src/promptTemplates/bootstrap.ts"
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/promptTemplates.ts",
-        "sloc": 65,
+        "sloc": 152,
         "counts": {
-          "total": 5,
-          "GET": 1,
-          "POST": 2,
+          "total": 8,
+          "GET": 3,
+          "POST": 3,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
         },
-        "endpoints": []
+        "endpoints": [
+          "GET /prompt-templates",
+          "POST /prompt-templates",
+          "GET /prompt-templates/stats",
+          "GET /prompt-templates/:id",
+          "POST /prompt-templates/:id/use",
+          "POST /prompt-templates/:id/duplicate",
+          "PATCH /prompt-templates/:id",
+          "DELETE /prompt-templates/:id"
+        ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/promptTemplates.ts (319 LOC)",
     "web": {
-      "client": "apps/web/src/lib/promptTemplates.ts (42 LOC)",
+      "client": "apps/web/src/lib/promptTemplates.ts (55 LOC)",
       "pages": []
     },
     "db": {
@@ -7359,11 +7373,13 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "promptTemplates.spec.ts",
+      "promptTemplates/promptTemplates.completion.test.ts",
       "promptTemplates/promptTemplates.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "publicApi",
@@ -8518,11 +8534,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 467,
+        "sloc": 478,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1110,
+      "serviceTotalSloc": 1132,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
