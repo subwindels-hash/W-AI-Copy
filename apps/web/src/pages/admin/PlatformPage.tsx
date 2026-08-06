@@ -7058,7 +7058,18 @@ function UsageTab() {
       <div className="text-xs text-text-muted">Executive analytics: utilization, automation, productivity, cost savings, ROI, GPU/storage, carbon impact.</div></div>
     </CardContent></Card>
     <div className="grid md:grid-cols-4 gap-3">
-      {data.metrics.map(m=>(<Stat key={m.label} label={m.label} value={`${m.unit==="USD"?"$":""}${fmt(m.value)}${m.unit==="%"?"%":m.unit==="USD"?"":m.unit==="hrs"?"h":m.unit==="kg CO2e"?"kg":""}`} tone={m.trend==="up"?"emerald":m.trend==="down"?"crimson":"slate"} sub={`${m.deltaPct>=0?"+":""}${m.deltaPct}%`}/>))}
+      {/* Session 123 — value/delta/trend are null-safe: an unmeasured metric
+          prints "not recorded" and a missing baseline prints "no baseline"
+          instead of a fabricated 0. */}
+      {data.metrics.map(m=>(
+        <Stat
+          key={m.label}
+          label={m.label}
+          value={m.value === null ? "not recorded" : `${m.unit==="USD"?"$":""}${fmt(m.value)}${m.unit==="%"?"%":m.unit==="USD"?"":m.unit==="hrs"?"h":m.unit==="kg CO2e"?"kg":""}`}
+          tone={m.trend==="up"?"emerald":m.trend==="down"?"crimson":"slate"}
+          sub={m.deltaPct === null ? "no baseline" : `${m.deltaPct>=0?"+":""}${m.deltaPct}%`}
+        />
+      ))}
     </div>
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Department Utilization</CardTitle></CardHeader>

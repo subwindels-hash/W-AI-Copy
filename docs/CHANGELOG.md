@@ -5,6 +5,21 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 123 — Usage Intelligence Completion] — 2026-08-06
+
+### Deltas were placeholder zeros, empty denominators were zero, and per-module metrics were blank
+*   `packages/shared/src/usage.ts` (84 → 168 LOC, widened + appended) — `UsageMetric.value`/`deltaPct` are `number | null`, `trend` is nullable; `UsageByModule.p95LatencyMs`/`errorRate` are `number | null` and `users` is the measured count; `UsageTimeSeriesPoint.latencyMs`/`automationTasks` are `number | null`; `automationRate`/`adoptionPct` are `number | null`. New `UsageLedgerSummary` (with the 100-event `note`), `UsageProvenance` + note, and the event schemas moved from the route file (`UsageEventSchema`, `UsageEventsQuerySchema`).
+*   **`deltaPct` returned `0` without a prior baseline** — 0 reads as "no change" — and **the AI metrics' deltas were hardcoded `0`/`"flat"`** because the prior 30-day AI window was never even queried. The prior window (requests, tokens, latency, error rate) is now queried and the deltas are measured; without a baseline they are `null`.
+*   **Empty denominators reported 0.** No AI requests → `Avg AI latency: 0` (the *perfectly fast* reading) and `AI error rate: 0` (the *no failures* reading); no workflow runs → `automationRate: 0`; no members → `adoptionPct: 0`. All are now `null`.
+*   **Per-module `p95LatencyMs`, `errorRate` and `users` were hardcoded `0`** even though `durationMs`/`status`/`userId` sat on every AiRequest row. A single window fetch now drives the daily series, the by-module breakdown (requests · distinct users · nearest-rank p95 · error rate · share) and the per-model rollup — all measured, `null` where a module has no requests.
+*   **The 30-day series never carried tokens** (the field existed but the row fetch never selected token counts — it was always 0) and empty days reported `latencyMs: 0`. Tokens are now real per-day sums; empty days report `latencyMs: null`, `automationTasks: null`.
+*   **Routes 3 → 5**: `GET /usage-intel/events/:id` (single event, org-scoped) and `DELETE /usage-intel/events/:id` (admin — the correction path for a mis-recorded event). All five handlers refuse a no-organization session with 403 instead of building a key containing `undefined`; `GET /events` clamps `?limit` to 1–1000; the rollup's `ledger` block gains a `note` stating its counts cover the most recent 100 events.
+*   **`usg:evt` catalogued** in the Session 89 sweep as org-scoped (the tenantStore shape, same convention as the CRM/AppBuilder stores).
+*   Web: `usageApi` gains `events`/`event`/`recordEvent`/`removeEvent`; new `/app/usage` console (sidebar "Usage") — measured stat cards with "no baseline"/"not recorded", a 30-day request chart, by-module p95/error/users, top models, automation/adoption, structural-zeros card, provenance card, ledger card. The PlatformPage S55 tab was made null-safe. **No `?? 0` in any value position.**
+*   Tests: `usage/usage.completion.test.ts` (21) — null-baseline deltas, real prior-window AI deltas in both directions, null empty denominators (latency/error/adoption/automation) + measured values when data exists, per-module p95/error/users, series tokens + null empty days, provenance, org isolation, shared schemas. Plus `tests/e2e/usage.spec.ts` (6 Playwright cases) incl. the event correction path. The rollups empty-org assertions were updated to the honest null shape.
+*   **Inventory: `usage` PARTIAL → COMPLETE — the last PARTIAL module. Repository totals: 103 COMPLETE / 0 PARTIAL / 2 STUB-by-design / 1 DEMO DATA across 106 modules.** Repository suite: **1725 passing, 51 skipped, 0 failures** (114 → 115 files).
+*   Runtime validation against live PostgreSQL 17/Redis 8 remains pending; Session 123 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 122 — Talk Completion] — 2026-08-06
 
 ### Unread counts were a lie, members could come from anywhere, and a meeting could be resurrected

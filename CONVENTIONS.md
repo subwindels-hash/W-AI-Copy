@@ -1017,3 +1017,37 @@
   services re-export them, so route files and tests keep compiling untouched.
   Caller-facing input types use `z.input`, not `z.infer`, so defaulted fields
   stay optional exactly as the same-file inference behaved.
+
+## Session 123 — Decisions Logged (Usage Intelligence Completion — the last PARTIAL)
+
+- **Module prefix:** `Usage*`/`Usg*` types in `packages/shared/src/usage.ts`
+  (widened, appended), `usg:evt` Redis keys (tenantStore shape, unchanged),
+  the existing `/api/v1/usage-intel` route prefix (three endpoints unchanged;
+  `GET`/`DELETE /events/:id` added), `apps/web/src/lib/usage.ts` client
+  (appended), `/app/usage` route + sidebar label "Usage".
+- **A hardcoded delta is a placeholder, not a measurement.** The AI metrics'
+  `deltaPct: 0, trend: "flat"` were never computed — the prior window wasn't
+  queried. Every delta is now computed against a real prior window or is
+  `null` (no baseline → no trend). Same rule as S121's same-period changes:
+  *a percentage change without a baseline is null, never 0.*
+- **An empty denominator is `null`, and the direction of falseness matters.**
+  0 ms latency is the *perfectly fast* reading, 0 % error the *no failures*
+  reading, 0 % adoption the *nobody uses it* reading — all false compliments
+  (or accusations) for an org with no data. Third module to pin this rule
+  after S118/S121.
+- **A field that exists but is never populated is a structural zero wearing
+  a measured name.** `series[].tokens` was always 0 because the row fetch
+  never selected token counts. If the code can compute it, compute it; if it
+  cannot, say so (provenance) — never leave a 0 field that looks measured.
+- **tenantStore modules are catalogued by their two-segment prefix**
+  (`usg:evt` → org in the segment after the index marker), matching the
+  CRM/AppBuilder/Helpdesk convention; the S89 sweep's shallow check passes
+  for this shape, and the comment states the org's position.
+- **Literal routes precede parameterized ones** (`/events/:id` after
+  `/events`, matching the `/usage`-style guidance from S120).
+- **The completion track is done.** Sessions 119–123 moved
+  promptTemplates, publicApi, sustainability, talk and usage from PARTIAL to
+  COMPLETE; the inventory now reads 103 COMPLETE / 0 PARTIAL / 2 STUB-by-design
+  (`events`, `webhook`) / 1 DEMO DATA (`quantum`). The two stubs are
+  by-design (SSE channel + webhook receiver) and the demo module is labelled
+  as such; the remaining work is the runtime-validation track.

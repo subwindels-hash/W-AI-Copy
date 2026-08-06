@@ -1038,6 +1038,7 @@
       "sustainability.spec.ts",
       "talk.spec.ts",
       "tenantIsolation.spec.ts",
+      "usage.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
     ],
@@ -4218,6 +4219,7 @@
       "mfaAssurance.spec.ts",
       "mobileSync.spec.ts",
       "opexAssurance.spec.ts",
+      "usage.spec.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
@@ -8567,11 +8569,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 494,
+        "sloc": 500,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1164,
+      "serviceTotalSloc": 1176,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8929,14 +8931,15 @@
       "serviceFile": {
         "file": "usage.service.ts",
         "path": "/home/user/WIN/apps/api/src/usage/usage.service.ts",
-        "sloc": 168,
+        "sloc": 273,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 623,
+      "serviceTotalSloc": 1112,
       "serviceFiles": [
         "bootstrap.ts",
         "rollups.test.ts",
+        "usage.completion.test.ts",
         "usage.service.ts",
         "usage/usage.service.ts"
       ],
@@ -8948,25 +8951,27 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/usage.ts",
-        "sloc": 64,
+        "sloc": 127,
         "counts": {
-          "total": 3,
-          "GET": 2,
+          "total": 5,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 0,
-          "DELETE": 0
+          "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
           "POST /events",
-          "GET /events"
+          "GET /events",
+          "GET /events/:id",
+          "DELETE /events/:id"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/usage.ts (84 LOC)",
+    "sharedTypes": "packages/shared/src/usage.ts (168 LOC)",
     "web": {
-      "client": "apps/web/src/lib/usage.ts (9 LOC)",
+      "client": "apps/web/src/lib/usage.ts (49 LOC)",
       "pages": []
     },
     "db": {
@@ -8991,11 +8996,15 @@
     "tests": [
       "publicApi.spec.ts",
       "sessions54-60.spec.ts",
-      "usage/rollups.test.ts"
+      "usage.spec.ts",
+      "usage/rollups.test.ts",
+      "usage/usage.completion.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "PARTIAL"
+    "externalIntegrations": [
+      "OpenAI"
+    ],
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "uxIntelligence",

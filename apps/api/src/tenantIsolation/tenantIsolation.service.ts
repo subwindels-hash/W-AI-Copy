@@ -202,6 +202,12 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // `esg:<org>:imported`, the index `esg:<org>:idx` and the per-record keys
   // `esg:<org>:rec:<id>` alike.
   { prefix: "esg", scope: "org_scoped" },
+  // Usage Intelligence event ledger (Session 55, completed by Session 123).
+  // tenantStore shape: `usg:evt:idx:<org>` (zset) and `usg:evt:i:<org>:<id>`
+  // (per-event hash) — the same shape the CRM/AppBuilder/Helpdesk stores use,
+  // catalogued by their two-segment prefix with the org in the segment after
+  // the index marker.
+  { prefix: "usg:evt", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A
