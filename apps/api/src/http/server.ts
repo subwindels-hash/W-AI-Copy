@@ -41,6 +41,7 @@ import { registerWorkflowRoutes } from "./routes/workflows.js";
 import { registerDeveloperRoutes } from "./routes/developers.js";
 import { registerBillingRoutes } from "./routes/billing.js";
 import { registerPaymentsRoutes } from "./routes/payments.js";
+import { registerGeoBillingRoutes } from "./routes/geoBilling.js";
 import { registerEnterpriseRoutes } from "./routes/enterprise.js";
 import { registerDataPlatformRoutes } from "./routes/dataPlatform.js";
 import { registerGovernanceRoutes } from "./routes/governance.js";
@@ -296,6 +297,7 @@ export function createApp() {
   v1.use("/billing", billingRouter);
   registerBillingRoutes(billingRouter);
   registerPaymentsRoutes(v1);
+  registerGeoBillingRoutes(v1);
 
   // /enterprise (models, AI monitoring, plugins, integrations, SSO, org/white-label, + Session 18 governance/discovery/events/api-governance)
   const enterpriseRouter = express.Router();

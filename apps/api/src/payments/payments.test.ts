@@ -183,10 +183,12 @@ describe("Multi-Provider Payment Gateways & Crypto Checkout (Session 128)", () =
     const txA = await PaymentGatewaysService.initiateCheckout(orgA, {
       provider: "paystack",
       amount: 100,
+      currency: "NGN",
     });
     await PaymentGatewaysService.initiateCheckout(orgB, {
       provider: "paypal",
       amount: 200,
+      currency: "USD",
     });
 
     const listA = await PaymentGatewaysService.listTransactions(orgA);

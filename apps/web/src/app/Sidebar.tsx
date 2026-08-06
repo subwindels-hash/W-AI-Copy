@@ -111,6 +111,7 @@ const navItems = [
   { to: "/app/autonomous", icon: Crown, label: "Autonomous Org" },
   { to: "/app/billing", icon: CreditCard, label: "Billing" },
   { to: "/app/payments", icon: CreditCard, label: "Payment Gateways" },
+  { to: "/app/geo-billing", icon: Globe2, label: "Geo-Billing Engine" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },
   { to: "/app/cognitive", icon: Brain, label: "Cognitive / World Model" },
   { to: "/app/command", icon: Radar, label: "Global Command Center" },

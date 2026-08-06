@@ -54,7 +54,7 @@ export const PaymentCheckoutRequestSchema = z.object({
   cryptoNetwork: z.enum(CRYPTO_NETWORKS).optional(),
 });
 
-export type PaymentCheckoutRequestInput = z.infer<typeof PaymentCheckoutRequestSchema>;
+export type PaymentCheckoutRequestInput = z.input<typeof PaymentCheckoutRequestSchema>;
 
 export const PaymentVerificationSchema = z.object({
   provider: z.enum(PAYMENT_PROVIDERS),
@@ -72,4 +72,4 @@ export const CryptoAddressRequestSchema = z.object({
   description: z.string().optional(),
 });
 
-export type CryptoAddressRequestInput = z.infer<typeof CryptoAddressRequestSchema>;
+export type CryptoAddressRequestInput = z.input<typeof CryptoAddressRequestSchema>;

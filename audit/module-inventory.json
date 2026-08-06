@@ -1143,6 +1143,7 @@
       "enterpriseFoundation.spec.ts",
       "events-webhook.spec.ts",
       "extensions.spec.ts",
+      "geoBilling.spec.ts",
       "googleAuth.spec.ts",
       "governance.spec.ts",
       "identityKnowledge.spec.ts",
@@ -4660,6 +4661,69 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "geoBilling",
+    "title": "geoBilling",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/geoBilling",
+    "backend": {
+      "serviceDir": "apps/api/src/geoBilling",
+      "serviceFile": {
+        "file": "geoBilling.service.ts",
+        "path": "/home/user/WIN/apps/api/src/geoBilling/geoBilling.service.ts",
+        "sloc": 595,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1338,
+      "serviceFiles": [
+        "geoBilling.service.ts",
+        "geoBilling.test.ts",
+        "geoBilling/geoBilling.service.ts"
+      ],
+      "importedServiceFiles": [
+        "geoBilling/geoBilling.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/geoBilling.ts",
+        "sloc": 167,
+        "counts": {
+          "total": 9,
+          "GET": 4,
+          "POST": 4,
+          "PUT": 1,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/geoBilling.ts (156 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/geoBilling.ts (115 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "geoBilling/geoBilling.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "Stripe"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "giftCards",
     "title": "Gift Cards WMPC (S79)",
     "sessions": [
@@ -7138,7 +7202,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 2079,
+      "serviceTotalSloc": 2081,
       "serviceFiles": [
         "crypto.service.ts",
         "flutterwave.service.ts",
@@ -8875,11 +8939,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 516,
+        "sloc": 518,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1208,
+      "serviceTotalSloc": 1212,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -9860,6 +9924,7 @@
     },
     "tests": [
       "events-webhook.spec.ts",
+      "geoBilling.spec.ts",
       "webhook/webhookReceiver.test.ts"
     ],
     "syntheticData": [],

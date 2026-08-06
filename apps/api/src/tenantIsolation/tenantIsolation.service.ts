@@ -224,6 +224,8 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "whk:inbox", scope: "org_scoped" },
   // Session 128 multi-provider payments: transaction ledger (pay:tx)
   { prefix: "pay:tx", scope: "org_scoped" },
+  // Session 129 geo-billing profiles (geob:profile)
+  { prefix: "geob:profile", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A
