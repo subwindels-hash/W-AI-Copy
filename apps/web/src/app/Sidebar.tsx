@@ -36,6 +36,7 @@ import {
   Layers,
   WalletCards,
   UserCog,
+  Coins,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -75,6 +76,7 @@ const navItems = [
   { to: "/app/search", icon: Search, label: "Search" },
   { to: "/app/software-factory", icon: Layers, label: "Factory Studios" },
   { to: "/app/finops", icon: WalletCards, label: "Enterprise FinOps" },
+  { to: "/app/ai-economy", icon: Coins, label: "AI Economy" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },

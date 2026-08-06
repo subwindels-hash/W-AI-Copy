@@ -5,6 +5,16 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 103 — AI Economy & GPU Capacity Ledger Completion] — 2026-08-05
+
+### AI Economy completed as an honest org-scoped capacity ledger
+*   `packages/shared/src/aiEconomy.ts` — expanded shared contracts and Zod schemas for usage observations, GPU allocations, compute offers and dashboard projection labeling.
+*   `apps/api/src/aiEconomy/aiEconomy.service.ts` — individual CSPRNG-keyed org-scoped Redis records for usage, allocations and offers; deterministic spend/department/capacity rollups; safe migration from legacy organization blobs; revenue/marketplace zeros remain honest until real ledgers exist.
+*   Routes: `/api/v1/ai-economy` now supports usage, allocation and compute-offer list/create/update/delete paths with admin-protected writes. Session 89 catalogs `eco:meta`, `eco:usage`, `eco:allocation` and `eco:offer` as org-scoped.
+*   Web: typed `ecoApi`, dedicated `/app/ai-economy` page, sidebar entry, administrator forms and read-only non-admin view. Existing PlatformPage AI Economy tab remains compatible.
+*   Tests: `apps/api/src/aiEconomy/aiEconomy.test.ts` (12) plus the existing usage rollup suite — ledger isolation, offer/allocation CRUD, migration, dashboard math, deterministic values, honesty guards and contracts.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending; Session 103 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 102 — AI Workforce / Agent Framework Completion] — 2026-08-05
 
 ### Agent Framework completed as a shared, scoped vertical slice

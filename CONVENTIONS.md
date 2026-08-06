@@ -30,6 +30,25 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 103 — Decisions Logged (AI Economy & GPU Capacity Ledger Completion)
+
+- **Shared contract prefix:** `AiEconomy*` types/schemas remain in
+  `packages/shared/src/aiEconomy.ts`; `ecoApi` and the dedicated page consume
+  those contracts.
+- **Ledger storage:** usage, allocation and compute-offer observations are
+  individual Redis hash records under `eco:<entity>:i:<org>:<id>` with
+  organization indexes. The old per-org JSON blobs are migration inputs only;
+  new writes never append to a blob.
+- **Provider honesty:** capacity offers are administrator-recorded
+  observations, not a static/generated provider catalog. Empty organizations
+  show no offers. Revenue, earnings, margin and marketplace volume remain zero
+  without their real ledgers.
+- **Projection labeling:** the only forecast is a straight-line projection of
+  observed 30-day spend and is labeled `forecastKind: observed_run_rate`;
+  no forecast is emitted for an empty ledger.
+- **RBAC:** dashboard reads are authenticated; usage, allocation and offer
+  mutations require admin role. Cross-tenant operations fail closed.
+
 ## Session 102 — Decisions Logged (AI Workforce / Agent Framework Completion)
 
 - **Shared contract prefix:** `Ag` types and Zod schemas in

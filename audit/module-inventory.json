@@ -424,13 +424,14 @@
       "serviceFile": {
         "file": "aiEconomy.service.ts",
         "path": "/home/user/WIN/apps/api/src/aiEconomy/aiEconomy.service.ts",
-        "sloc": 53,
+        "sloc": 258,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 109,
+      "serviceTotalSloc": 683,
       "serviceFiles": [
         "aiEconomy.service.ts",
+        "aiEconomy.test.ts",
         "bootstrap.ts",
         "aiEconomy/aiEconomy.service.ts"
       ],
@@ -442,40 +443,51 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/aiEconomy.ts",
-        "sloc": 15,
+        "sloc": 71,
         "counts": {
-          "total": 3,
-          "GET": 1,
-          "POST": 2,
+          "total": 11,
+          "GET": 4,
+          "POST": 3,
           "PUT": 0,
-          "PATCH": 0,
-          "DELETE": 0
+          "PATCH": 1,
+          "DELETE": 3
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "GET /usage",
           "POST /usage",
-          "POST /allocations"
+          "DELETE /usage/:id",
+          "GET /allocations",
+          "POST /allocations",
+          "DELETE /allocations/:id",
+          "GET /offers",
+          "POST /offers",
+          "PATCH /offers/:id",
+          "DELETE /offers/:id"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/aiEconomy.ts (61 LOC)",
+    "sharedTypes": "packages/shared/src/aiEconomy.ts (125 LOC)",
     "web": {
-      "client": "apps/web/src/lib/aiEconomy.ts (8 LOC)",
+      "client": "apps/web/src/lib/aiEconomy.ts (29 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Organization",
+        "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "aiEconomy/aiEconomy.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "aiEcosystem",
@@ -8140,11 +8152,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 371,
+        "sloc": 376,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 918,
+      "serviceTotalSloc": 928,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

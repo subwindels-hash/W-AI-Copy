@@ -118,6 +118,8 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_101_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_101_RUNTIME_VALIDATION_CHECKLIST.md) | Session 101 runtime validation (RBAC, organization isolation and audited admin actions) |
 | [docs/SESSION_102_SPECIFICATION.md](./docs/SESSION_102_SPECIFICATION.md) | Session 102 — AI Workforce / Agent Framework completion (shared contracts, scoped lifecycle, tests and mobile parity) |
 | [docs/SESSION_102_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_102_RUNTIME_VALIDATION_CHECKLIST.md) | Session 102 runtime validation (agent isolation, lifecycle Redis keys, model validation and UI parity) |
+| [docs/SESSION_103_SPECIFICATION.md](./docs/SESSION_103_SPECIFICATION.md) | Session 103 — AI Economy & GPU capacity ledger completion (usage, allocations, offers and honest projections) |
+| [docs/SESSION_103_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_103_RUNTIME_VALIDATION_CHECKLIST.md) | Session 103 runtime validation (RBAC, org-scoped ledgers, migration, capacity and honest economics) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |

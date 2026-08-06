@@ -47,6 +47,7 @@ const BusinessIntelligencePage = lazy(() => import("./pages/bi/BusinessIntellige
 const EnterpriseSearchPage = lazy(() => import("./pages/search/EnterpriseSearchPage").then((m) => ({ default: m.EnterpriseSearchPage })));
 const StudiosPage = lazy(() => import("./pages/softwareFactory/StudiosPage").then((m) => ({ default: m.StudiosPage })));
 const EnterpriseFinOpsPage = lazy(() => import("./pages/finops/EnterpriseFinOpsPage").then((m) => ({ default: m.EnterpriseFinOpsPage })));
+const AiEconomyPage = lazy(() => import("./pages/aiEconomy/AiEconomyPage").then((m) => ({ default: m.AiEconomyPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -267,6 +268,7 @@ export const router = createBrowserRouter([
       { path: "search", element: withSuspense(<EnterpriseSearchPage />) },
       { path: "software-factory", element: withSuspense(<StudiosPage />) },
       { path: "finops", element: withSuspense(<EnterpriseFinOpsPage />) },
+      { path: "ai-economy", element: withSuspense(<AiEconomyPage />) },
     ],
   },
   {
