@@ -5,6 +5,44 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 96 — AI Software Factory / Application Builder] — 2026-08-05
+
+### New module: implements docs/AI_APPLICATION_BUILDER_SPECIFICATION.md V3.0 (core)
+*   `packages/shared/src/appBuilder.ts` — Zod contracts + types for
+    projects, tasks, build runs, artifacts, approvals and rollup (prefixed
+    `Ab`); the 6 functional workforce clusters + 17 personas (spec §6);
+    pinned SBOM dependency catalog.
+*   `apps/api/src/appBuilder/appBuilder.service.ts` — org-scoped Redis-backed:
+    projects (target type, tech stack, system prompt), AI-workforce tasks
+    (assignedAgent + functional group, honest completion, AI code generation
+    via the ProviderRegistry labeled `generationSource: manual|real|echo-demo`),
+    and the **build farm state machine** (QUEUED → GENERATING_CODE → TESTING →
+    COMPILING → SIGNING → SUCCEEDED | FAILED via explicit advance; real
+    log entries; retry from FAILED; duplicate versions rejected).
+*   **Immutable artifact registry:** every SUCCEEDED run finalizes an
+    artifact with a **real SHA-256** (node:crypto), **real byte size**, and a
+    **real SBOM** derived from the declared tech stack (pinned versions or
+    labeled "declared (unpinned)"); no update endpoint, version-gated.
+*   **Human Decision Inbox gate (spec §7):** artifacts start unpublished;
+    `request-release` → `decide` (approve/deny, audited) → `release` only
+    when approved — never automatic.
+*   Routes: `apps/api/src/http/routes/appBuilder.ts` mounted at
+    `/api/v1/builder` (24 endpoints, matching the spec's §10 paths). Session
+    89 catalog gains the five `ab:*` namespaces as `org_scoped`.
+*   Web: `apps/web/src/lib/appBuilder.ts` client + `pages/appBuilder/
+    SoftwareFactoryPage.tsx` (agent registry, projects, task board with code
+    generation, build farm with advance controls + live logs, artifact
+    registry with SHA-256/SBOM, Human Decision Inbox with approve/deny),
+    `/app/app-builder` route + sidebar entry.
+*   Tests: `apps/api/src/appBuilder/appBuilder.test.ts` (15) — CRUD, SBOM
+    determinism, state machine + real artifact SHA-256, release gate,
+    generation labeling, rollup determinism, cross-tenant isolation,
+    demo-seed idempotency, schema contracts.
+*   Demo seed (`apps/api/src/appBuilder/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA`; production starts empty.
+*   **102 modules** in the inventory (75 COMPLETE).
+*   Spec: `docs/SESSION_96_SPECIFICATION.md`.
+
 ## [Session 95 — Enterprise Helpdesk & Customer Support] — 2026-08-05
 
 ### New module: Enterprise Helpdesk (customer support desk)

@@ -347,6 +347,14 @@ async function main() {
         } catch (e) { logger.warn("helpdesk bootstrap failed", { err: e }); }
       }, 25000);
 
+      // Session 96 — AI Software Factory / Application Builder (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapAppBuilder } = await import("./appBuilder/bootstrap.js");
+          await bootstrapAppBuilder(logger);
+        } catch (e) { logger.warn("app-builder bootstrap failed", { err: e }); }
+      }, 26000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

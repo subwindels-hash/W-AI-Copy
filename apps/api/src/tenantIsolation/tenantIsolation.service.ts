@@ -94,6 +94,12 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // Enterprise Helpdesk (Session 95)
   { prefix: "hd:ticket", scope: "org_scoped" },
   { prefix: "hd:comment", scope: "org_scoped" },
+  // AI Software Factory / Application Builder (Session 96)
+  { prefix: "ab:project", scope: "org_scoped" },
+  { prefix: "ab:task", scope: "org_scoped" },
+  { prefix: "ab:run", scope: "org_scoped" },
+  { prefix: "ab:artifact", scope: "org_scoped" },
+  { prefix: "ab:approval", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

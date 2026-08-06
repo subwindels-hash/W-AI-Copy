@@ -646,6 +646,95 @@
     "status": "PARTIAL"
   },
   {
+    "moduleKey": "appBuilder",
+    "title": "appBuilder",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/appBuilder",
+    "backend": {
+      "serviceDir": "apps/api/src/appBuilder",
+      "serviceFile": {
+        "file": "appBuilder.service.ts",
+        "path": "/home/user/WIN/apps/api/src/appBuilder/appBuilder.service.ts",
+        "sloc": 603,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1530,
+      "serviceFiles": [
+        "appBuilder.service.ts",
+        "appBuilder.test.ts",
+        "bootstrap.ts",
+        "appBuilder/appBuilder.service.ts"
+      ],
+      "importedServiceFiles": [
+        "appBuilder/appBuilder.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/appBuilder/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/appBuilder.ts",
+        "sloc": 219,
+        "counts": {
+          "total": 24,
+          "GET": 11,
+          "POST": 9,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /agents",
+          "GET /projects",
+          "POST /projects",
+          "GET /projects/:id",
+          "PATCH /projects/:id",
+          "DELETE /projects/:id",
+          "GET /projects/:projectId/tasks",
+          "POST /projects/:projectId/tasks",
+          "GET /tasks/:id",
+          "PATCH /tasks/:id",
+          "POST /tasks/:id/generate",
+          "DELETE /tasks/:id",
+          "GET /projects/:projectId/builds",
+          "POST /projects/:projectId/builds",
+          "GET /builds/:id",
+          "POST /builds/:id/advance",
+          "POST /builds/:id/retry",
+          "GET /artifacts",
+          "GET /artifacts/:id",
+          "POST /artifacts/:id/request-release",
+          "POST /artifacts/:id/release",
+          "GET /approvals",
+          "POST /approvals/:id/decide"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/appBuilder.ts (200 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/appBuilder.ts (164 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Agent",
+        "Task",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "appBuilder/appBuilder.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "architecture",
     "title": "Architecture / ESI (S37)",
     "sessions": [
@@ -7737,11 +7826,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 349,
+        "sloc": 355,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 874,
+      "serviceTotalSloc": 886,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -7783,6 +7872,7 @@
       "prismaModels": [
         "User",
         "Membership",
+        "Task",
         "Activity",
         "Message"
       ],

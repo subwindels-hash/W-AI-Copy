@@ -30,6 +30,34 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 96 — Decisions Logged (AI Software Factory / Application Builder)
+
+- **Module prefix:** `Ab` types, `ab:*` Redis keys, `/api/v1/builder` route
+  prefix (matches the authoritative V3.0 spec exactly), `apps/web/src/lib/
+  appBuilder.ts` client, `/app/app-builder` route + sidebar label
+  "Software Factory".
+- **Builds are an honest state machine:** runs follow the spec's
+  `BuildStatus` chain (QUEUED → GENERATING_CODE → TESTING → COMPILING →
+  SIGNING → SUCCEEDED | FAILED) via explicit `advance` calls; every log
+  entry records a real transition (step + timestamp + actor). SUCCEEDED
+  finalizes and creates the artifact. `retry` only from FAILED; duplicate
+  versions rejected.
+- **Artifacts are real, not simulated:** the manifest embeds the project
+  snapshot + real build logs + a real SBOM (pinned dependency catalog, else
+  labeled "declared (unpinned)"); `sha256` is a real node:crypto hash and
+  `sizeBytes` a real byte count. No update endpoint → immutable.
+- **Human Decision Inbox gate (spec §7):** artifacts start unpublished;
+  `request-release` → `decide` (approve/deny, audited) → `release` only when
+  approved. Never automatic.
+- **AI workforce registry:** the 6 functional clusters + 17 personas are a
+  static real catalog; tasks carry `assignedAgent` + `group`.
+- **AI task generation** carries `generationSource: manual | real |
+  echo-demo` via the ProviderRegistry (demo banner in the UI when echo).
+- **Rollup:** computed per read (counts, runs-by-status, avg build time from
+  real startedAt→finalizedAt); deterministic across reads.
+- **Demo seed:** idempotent, seeds `org-demo-ab`, gated behind
+  `WINDELS_DEMO_DATA`.
+
 ## Session 95 — Decisions Logged (Enterprise Helpdesk & Customer Support)
 
 - **Module prefix:** `Hd` types, `hd:*` Redis keys, `/api/v1/helpdesk` route

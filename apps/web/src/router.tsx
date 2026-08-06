@@ -41,6 +41,7 @@ const ErpPage = lazy(() => import("./pages/erp/ErpPage").then((m) => ({ default:
 const WebsiteBuilderPage = lazy(() => import("./pages/websiteBuilder/WebsiteBuilderPage").then((m) => ({ default: m.WebsiteBuilderPage })));
 const SocialPlatformPage = lazy(() => import("./pages/socialPlatform/SocialPlatformPage").then((m) => ({ default: m.SocialPlatformPage })));
 const HelpdeskPage = lazy(() => import("./pages/helpdesk/HelpdeskPage").then((m) => ({ default: m.HelpdeskPage })));
+const SoftwareFactoryPage = lazy(() => import("./pages/appBuilder/SoftwareFactoryPage").then((m) => ({ default: m.SoftwareFactoryPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -256,6 +257,7 @@ export const router = createBrowserRouter([
       { path: "website-builder", element: withSuspense(<WebsiteBuilderPage />) },
       { path: "social", element: withSuspense(<SocialPlatformPage />) },
       { path: "helpdesk", element: withSuspense(<HelpdeskPage />) },
+      { path: "app-builder", element: withSuspense(<SoftwareFactoryPage />) },
     ],
   },
   {

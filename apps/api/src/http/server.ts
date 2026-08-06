@@ -113,6 +113,7 @@ import { registerErpRoutes } from "./routes/erp.js";
 import { registerWebsiteBuilderRoutes } from "./routes/websiteBuilder.js";
 import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
 import { registerHelpdeskRoutes } from "./routes/helpdesk.js";
+import { registerAppBuilderRoutes } from "./routes/appBuilder.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1143,6 +1144,14 @@ export function createApp() {
   const helpdeskRouter = express.Router();
   v1.use("/helpdesk", helpdeskRouter);
   registerHelpdeskRoutes(helpdeskRouter);
+
+  // /builder — Session 96: Enterprise AI Software Factory & Application
+  // Builder (implements docs/AI_APPLICATION_BUILDER_SPECIFICATION.md V3.0
+  // core: projects, AI-workforce tasks, build-farm state machine, immutable
+  // artifact registry with real SHA-256/SBOM, Human Decision Inbox gate).
+  const appBuilderRouter = express.Router();
+  v1.use("/builder", appBuilderRouter);
+  registerAppBuilderRoutes(appBuilderRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);
