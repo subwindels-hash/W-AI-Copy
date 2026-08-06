@@ -35,6 +35,16 @@ const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
+const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
+const EmailIntelPage = lazy(() => import("./pages/emailIntel/EmailIntelPage").then((m) => ({ default: m.EmailIntelPage })));
+const ErpPage = lazy(() => import("./pages/erp/ErpPage").then((m) => ({ default: m.ErpPage })));
+const WebsiteBuilderPage = lazy(() => import("./pages/websiteBuilder/WebsiteBuilderPage").then((m) => ({ default: m.WebsiteBuilderPage })));
+const SocialPlatformPage = lazy(() => import("./pages/socialPlatform/SocialPlatformPage").then((m) => ({ default: m.SocialPlatformPage })));
+const HelpdeskPage = lazy(() => import("./pages/helpdesk/HelpdeskPage").then((m) => ({ default: m.HelpdeskPage })));
+const SoftwareFactoryPage = lazy(() => import("./pages/appBuilder/SoftwareFactoryPage").then((m) => ({ default: m.SoftwareFactoryPage })));
+const BusinessIntelligencePage = lazy(() => import("./pages/bi/BusinessIntelligencePage").then((m) => ({ default: m.BusinessIntelligencePage })));
+const EnterpriseSearchPage = lazy(() => import("./pages/search/EnterpriseSearchPage").then((m) => ({ default: m.EnterpriseSearchPage })));
+const StudiosPage = lazy(() => import("./pages/softwareFactory/StudiosPage").then((m) => ({ default: m.StudiosPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -244,6 +254,16 @@ export const router = createBrowserRouter([
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
       { path: "tenant-isolation", element: withSuspense(<TenantIsolationPage />) },
+      { path: "crm", element: withSuspense(<CrmPage />) },
+      { path: "email-intel", element: withSuspense(<EmailIntelPage />) },
+      { path: "erp", element: withSuspense(<ErpPage />) },
+      { path: "website-builder", element: withSuspense(<WebsiteBuilderPage />) },
+      { path: "social", element: withSuspense(<SocialPlatformPage />) },
+      { path: "helpdesk", element: withSuspense(<HelpdeskPage />) },
+      { path: "app-builder", element: withSuspense(<SoftwareFactoryPage />) },
+      { path: "bi", element: withSuspense(<BusinessIntelligencePage />) },
+      { path: "search", element: withSuspense(<EnterpriseSearchPage />) },
+      { path: "software-factory", element: withSuspense(<StudiosPage />) },
     ],
   },
   {

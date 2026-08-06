@@ -102,6 +102,16 @@ tests/e2e/                # Playwright specs
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |
 | [docs/SESSION_89_SPECIFICATION.md](./docs/SESSION_89_SPECIFICATION.md) | Session 89 — Tenant Isolation & Cross-Tenant Data Governance (per-org isolation policies, namespace audit, cross-tenant self-tests, export gate) |
+| [docs/SESSION_90_SPECIFICATION.md](./docs/SESSION_90_SPECIFICATION.md) | Session 90 — Enterprise CRM (org-scoped contacts/companies/deal pipeline/activity ledger + deterministic rollup) |
+| [docs/SESSION_91_SPECIFICATION.md](./docs/SESSION_91_SPECIFICATION.md) | Session 91 — Enterprise Email Intelligence (mailboxes, threaded messages, outbox + real SMTP connector, AI draft/summarize/triage) |
+| [docs/SESSION_92_SPECIFICATION.md](./docs/SESSION_92_SPECIFICATION.md) | Session 92 — Enterprise ERP (products, inventory ledger, suppliers, purchase/sales orders, CRM won-deal hook) |
+| [docs/SESSION_93_SPECIFICATION.md](./docs/SESSION_93_SPECIFICATION.md) | Session 93 — Website Builder (sites, typed block pages, deterministic renderer, publish snapshots, AI copy) |
+| [docs/SESSION_94_SPECIFICATION.md](./docs/SESSION_94_SPECIFICATION.md) | Session 94 — Social Platform (feed, posts, comments, reactions ledger → computed engagement) |
+| [docs/SESSION_95_SPECIFICATION.md](./docs/SESSION_95_SPECIFICATION.md) | Session 95 — Enterprise Helpdesk (tickets, honest lifecycle, deterministic SLA, comment timeline, CRM integration) |
+| [docs/SESSION_96_SPECIFICATION.md](./docs/SESSION_96_SPECIFICATION.md) | Session 96 — AI Software Factory (implements the V3.0 Application Builder spec core) |
+| [docs/SESSION_97_SPECIFICATION.md](./docs/SESSION_97_SPECIFICATION.md) | Session 97 — Business Intelligence (live KPI values, report builder, CSV export) |
+| [docs/SESSION_98_SPECIFICATION.md](./docs/SESSION_98_SPECIFICATION.md) | Session 98 — Enterprise Search (unified search over module records, facets, history) |
+| [docs/SESSION_99_SPECIFICATION.md](./docs/SESSION_99_SPECIFICATION.md) | Session 99 — Factory Studios & Build Farm (completes the V3.0 spec §3–§4) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |

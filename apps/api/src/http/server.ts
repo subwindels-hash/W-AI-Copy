@@ -107,6 +107,16 @@ import { registerEtlRoutes } from "./routes/etl.js";
 import { registerCameraRoutes } from "./routes/camera.js";
 import { registerAdvertisingRoutes } from "./routes/advertising.js";
 import { registerTenantIsolationRoutes } from "./routes/tenantIsolation.js";
+import { registerCrmRoutes } from "./routes/crm.js";
+import { registerEmailIntelRoutes } from "./routes/emailIntel.js";
+import { registerErpRoutes } from "./routes/erp.js";
+import { registerWebsiteBuilderRoutes } from "./routes/websiteBuilder.js";
+import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
+import { registerHelpdeskRoutes } from "./routes/helpdesk.js";
+import { registerAppBuilderRoutes } from "./routes/appBuilder.js";
+import { registerBusinessIntelligenceRoutes } from "./routes/businessIntelligence.js";
+import { registerSoftwareFactoryRoutes } from "./routes/softwareFactory.js";
+import { registerEnterpriseSearchRoutes } from "./routes/enterpriseSearch.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1096,6 +1106,75 @@ export function createApp() {
   const tenantIsolationRouter = express.Router();
   v1.use("/tenant-isolation", tenantIsolationRouter);
   registerTenantIsolationRoutes(tenantIsolationRouter);
+
+  // /crm — Session 90: Enterprise CRM (contacts, companies, deal pipeline,
+  // activity ledger, deterministic dashboard rollup). Org-scoped Redis keys.
+  const crmRouter = express.Router();
+  v1.use("/crm", crmRouter);
+  registerCrmRoutes(crmRouter);
+
+  // /email-intel — Session 91: Enterprise Email Intelligence (mailboxes,
+  // threaded messages, outbox + real SMTP connector, AI draft/summarize/
+  // triage with honest provider labeling, deterministic inbox analytics).
+  const emailIntelRouter = express.Router();
+  v1.use("/email-intel", emailIntelRouter);
+  registerEmailIntelRoutes(emailIntelRouter);
+
+  // /erp — Session 92: Enterprise ERP (product catalog, inventory +
+  // movements ledger, suppliers, purchase/sales orders with honest
+  // lifecycles, CRM won-deal hook, deterministic operations rollup).
+  const erpRouter = express.Router();
+  v1.use("/erp", erpRouter);
+  registerErpRoutes(erpRouter);
+
+  // /website-builder — Session 93: Website Builder (org-scoped sites, pages
+  // + typed blocks, deterministic block→HTML renderer, publish pipeline with
+  // real snapshots, AI copy with honest provider labeling).
+  const websiteBuilderRouter = express.Router();
+  v1.use("/website-builder", websiteBuilderRouter);
+  registerWebsiteBuilderRoutes(websiteBuilderRouter);
+
+  // /social-platform — Session 94: Social Platform (org-scoped feed, posts,
+  // comments, reactions ledger → computed engagement, hashtag extraction,
+  // deterministic rollup).
+  const socialPlatformRouter = express.Router();
+  v1.use("/social-platform", socialPlatformRouter);
+  registerSocialPlatformRoutes(socialPlatformRouter);
+
+  // /helpdesk — Session 95: Enterprise Helpdesk & Customer Support (tickets
+  // with honest lifecycle + deterministic SLA, comment timeline, assignment,
+  // CRM activity integration, computed rollup).
+  const helpdeskRouter = express.Router();
+  v1.use("/helpdesk", helpdeskRouter);
+  registerHelpdeskRoutes(helpdeskRouter);
+
+  // /builder — Session 96: Enterprise AI Software Factory & Application
+  // Builder (implements docs/AI_APPLICATION_BUILDER_SPECIFICATION.md V3.0
+  // core: projects, AI-workforce tasks, build-farm state machine, immutable
+  // artifact registry with real SHA-256/SBOM, Human Decision Inbox gate).
+  const appBuilderRouter = express.Router();
+  v1.use("/builder", appBuilderRouter);
+  registerAppBuilderRoutes(appBuilderRouter);
+
+  // /builder (extended) — Session 99: Software Factory Studios & Build Farm
+  // (five-studio catalog + org-scoped studio plans + project coverage +
+  // per-run compilation targets derived honestly from run state).
+  const softwareFactoryRouter = express.Router();
+  v1.use("/builder", softwareFactoryRouter);
+  registerSoftwareFactoryRoutes(softwareFactoryRouter);
+
+  // /bi — Session 97: Enterprise Business Intelligence & Report Builder
+  // (data sources, live KPI values computed from the real module stores,
+  // report builder + deterministic evaluation + real CSV export).
+  const businessIntelRouter = express.Router();
+  v1.use("/bi", businessIntelRouter);
+  registerBusinessIntelligenceRoutes(businessIntelRouter);
+
+  // /search — Session 98: Enterprise Search (unified org-scoped search over
+  // the real module records with deterministic relevance ranking + facets).
+  const enterpriseSearchRouter = express.Router();
+  v1.use("/search", enterpriseSearchRouter);
+  registerEnterpriseSearchRoutes(enterpriseSearchRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

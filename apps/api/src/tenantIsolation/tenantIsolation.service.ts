@@ -68,6 +68,46 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "ti:policy", scope: "org_scoped" },
   { prefix: "ti:run", scope: "org_scoped" },
   { prefix: "ti:runs", scope: "org_scoped" },
+  // Enterprise CRM (Session 90)
+  { prefix: "crm:contact", scope: "org_scoped" },
+  { prefix: "crm:company", scope: "org_scoped" },
+  { prefix: "crm:deal", scope: "org_scoped" },
+  { prefix: "crm:activity", scope: "org_scoped" },
+  // Enterprise Email Intelligence (Session 91)
+  { prefix: "ei:mailbox", scope: "org_scoped" },
+  { prefix: "ei:message", scope: "org_scoped" },
+  { prefix: "ei:thread", scope: "org_scoped" },
+  // Enterprise ERP (Session 92)
+  { prefix: "erp:product", scope: "org_scoped" },
+  { prefix: "erp:warehouse", scope: "org_scoped" },
+  { prefix: "erp:movement", scope: "org_scoped" },
+  { prefix: "erp:supplier", scope: "org_scoped" },
+  { prefix: "erp:po", scope: "org_scoped" },
+  { prefix: "erp:so", scope: "org_scoped" },
+  // Website Builder (Session 93)
+  { prefix: "wb:site", scope: "org_scoped" },
+  { prefix: "wb:page", scope: "org_scoped" },
+  // Social Platform (Session 94)
+  { prefix: "sp:post", scope: "org_scoped" },
+  { prefix: "sp:comment", scope: "org_scoped" },
+  { prefix: "sp:reaction", scope: "org_scoped" },
+  // Enterprise Helpdesk (Session 95)
+  { prefix: "hd:ticket", scope: "org_scoped" },
+  { prefix: "hd:comment", scope: "org_scoped" },
+  // AI Software Factory / Application Builder (Session 96)
+  { prefix: "ab:project", scope: "org_scoped" },
+  { prefix: "ab:task", scope: "org_scoped" },
+  { prefix: "ab:run", scope: "org_scoped" },
+  { prefix: "ab:artifact", scope: "org_scoped" },
+  { prefix: "ab:approval", scope: "org_scoped" },
+  // Business Intelligence (Session 97)
+  { prefix: "bi:source", scope: "org_scoped" },
+  { prefix: "bi:kpi", scope: "org_scoped" },
+  { prefix: "bi:report", scope: "org_scoped" },
+  // Enterprise Search (Session 98)
+  { prefix: "es:history", scope: "org_scoped" },
+  // Software Factory Studios (Session 99)
+  { prefix: "sf:plan", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

@@ -299,6 +299,86 @@ async function main() {
         } catch (e) { logger.warn("gift cards bootstrap failed", { err: e }); }
       }, 16000);
 
+      // Session 90 — Enterprise CRM (demo seed is gated behind WINDELS_DEMO_DATA)
+      setTimeout(async () => {
+        try {
+          const { bootstrapCrm } = await import("./crm/bootstrap.js");
+          await bootstrapCrm(logger);
+        } catch (e) { logger.warn("crm bootstrap failed", { err: e }); }
+      }, 20000);
+
+      // Session 91 — Enterprise Email Intelligence (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapEmailIntel } = await import("./emailIntel/bootstrap.js");
+          await bootstrapEmailIntel(logger);
+        } catch (e) { logger.warn("email-intel bootstrap failed", { err: e }); }
+      }, 21000);
+
+      // Session 92 — Enterprise ERP (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapErp } = await import("./erp/bootstrap.js");
+          await bootstrapErp(logger);
+        } catch (e) { logger.warn("erp bootstrap failed", { err: e }); }
+      }, 22000);
+
+      // Session 93 — Website Builder (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapWebsiteBuilder } = await import("./websiteBuilder/bootstrap.js");
+          await bootstrapWebsiteBuilder(logger);
+        } catch (e) { logger.warn("website-builder bootstrap failed", { err: e }); }
+      }, 23000);
+
+      // Session 94 — Social Platform (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapSocialPlatform } = await import("./socialPlatform/bootstrap.js");
+          await bootstrapSocialPlatform(logger);
+        } catch (e) { logger.warn("social-platform bootstrap failed", { err: e }); }
+      }, 24000);
+
+      // Session 95 — Enterprise Helpdesk (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapHelpdesk } = await import("./helpdesk/bootstrap.js");
+          await bootstrapHelpdesk(logger);
+        } catch (e) { logger.warn("helpdesk bootstrap failed", { err: e }); }
+      }, 25000);
+
+      // Session 96 — AI Software Factory / Application Builder (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapAppBuilder } = await import("./appBuilder/bootstrap.js");
+          await bootstrapAppBuilder(logger);
+        } catch (e) { logger.warn("app-builder bootstrap failed", { err: e }); }
+      }, 26000);
+
+      // Session 97 — Enterprise Business Intelligence (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapBusinessIntelligence } = await import("./businessIntelligence/bootstrap.js");
+          await bootstrapBusinessIntelligence(logger);
+        } catch (e) { logger.warn("bi bootstrap failed", { err: e }); }
+      }, 27000);
+
+      // Session 98 — Enterprise Search (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapEnterpriseSearch } = await import("./enterpriseSearch/bootstrap.js");
+          await bootstrapEnterpriseSearch(logger);
+        } catch (e) { logger.warn("enterprise-search bootstrap failed", { err: e }); }
+      }, 28000);
+
+      // Session 99 — Software Factory Studios & Build Farm (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapSoftwareFactory } = await import("./softwareFactory/bootstrap.js");
+          await bootstrapSoftwareFactory(logger);
+        } catch (e) { logger.warn("software-factory bootstrap failed", { err: e }); }
+      }, 29000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {
