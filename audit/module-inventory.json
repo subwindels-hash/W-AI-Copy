@@ -993,6 +993,7 @@
       "aiEcosystem.spec.ts",
       "auth.spec.ts",
       "collaboration.spec.ts",
+      "conversations.spec.ts",
       "dataPlatform.spec.ts",
       "devPortal.spec.ts",
       "engineering.spec.ts",
@@ -2237,26 +2238,43 @@
     "backend": {
       "serviceDir": "apps/api/src/conversations",
       "serviceFile": {
-        "file": "conversations.service.ts",
-        "path": "/home/user/WIN/apps/api/src/conversations/conversations.service.ts",
-        "sloc": 146,
+        "file": "conversationOps.service.ts",
+        "path": "/home/user/WIN/apps/api/src/conversations/conversationOps.service.ts",
+        "sloc": 869,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 621,
+      "serviceTotalSloc": 2794,
       "serviceFiles": [
+        "conversationOps.service.ts",
+        "conversationOps.test.ts",
         "conversations.service.ts",
         "conversations.test.ts",
+        "conversations/conversationOps.service.ts",
         "conversations/conversations.service.ts",
         "services/message.service.ts"
       ],
       "importedServiceFiles": [
+        "conversations/conversationOps.service.ts",
         "conversations/conversations.service.ts",
         "services/message.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
+      {
+        "file": "apps/api/src/http/routes/conversationOps.ts",
+        "sloc": 216,
+        "counts": {
+          "total": 15,
+          "GET": 9,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": []
+      },
       {
         "file": "apps/api/src/http/routes/conversations.ts",
         "sloc": 77,
@@ -2287,14 +2305,15 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/conversations.ts (348 LOC)",
     "web": {
-      "client": "apps/web/src/lib/chat.ts (86 LOC, serves /conversations)",
+      "client": "apps/web/src/lib/conversations.ts (94 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "UserProfile",
         "Organization",
         "Workspace",
         "Membership",
@@ -2307,12 +2326,14 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "conversations.spec.ts",
+      "conversations/conversationOps.test.ts",
       "conversations/conversations.test.ts",
       "services/message.service.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "coreIntegration",

@@ -5,6 +5,25 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 112 — Conversations / Messaging Completion] — 2026-08-05
+
+### Sessions 2–4 completed additively — the thread was done, everything around it was not
+*   `packages/shared/src/conversations.ts` (new) — the module had **no shared contract at all**: `apps/web/src/lib/chat.ts` re-declared its own `Conversation`/`ChatMessage` interfaces, so client and API could drift silently. `Conv*` participant, read-state, message, statistics, search, transcript and digest types plus Zod input schemas now sit in one place.
+*   `apps/api/src/conversations/conversationOps.service.ts` (new) — operations over the existing Prisma rows, with fail-closed org checks and participant-gated access on every path. Nothing in `conversations.service.ts` / `message.service.ts` was rewritten.
+*   **`ConversationParticipant.lastReadAt` is finally written.** The column shipped in Session 2 and no code path ever set it, so an unread count was not computable. `POST /:id/read` writes it (refusing future timestamps) and `GET /:id/read-state` derives from it.
+*   **Unread counts state their basis.** Every response carries `basis: "last_read_at" | "never_marked_read"` and `excludesOwnMessages: true` — the caller's own messages are never counted against them, and a never-read thread says so instead of implying a policy.
+*   **The roster is no longer frozen at creation.** List/add/remove participants, with membership verification so a thread can never widen someone's tenant access, a `409` on duplicates, and the creator's seat protected from removal.
+*   **Unknown usage stays `null`.** `GET /:id/stats` sums only counters that messages actually recorded and reports `messagesMissingUsage`; a thread predating token accounting reports `tokensIn: null`, not a confident `0`. `measuredFrom: "stored_messages"` on every response.
+*   **Message bodies are searchable, and the matcher is named.** `GET /conversations/search` is scoped to the caller's accessible threads and labelled `matchKind: "substring_case_insensitive"` with verbatim excerpts at a reported `matchOffset` — not semantic, not ranked, and it does not pretend to be.
+*   **Messages can be corrected and withdrawn without destroying history.** Author-only edits of user messages keep an append-only trail (lengths and reasons, never the replaced text); redaction blanks the body while preserving the row, its ordering and its usage counters, recording who/when/why/how-long. Editing model output is a `409`.
+*   **Soft delete is finally reversible.** `GET /conversations/deleted` lists a creator's soft-deleted threads and `POST /:id/restore` brings one back; restoring twice is a `409`, restoring someone else's is a `403`.
+*   **The digest calls no model.** `GET /:id/digest` quotes the first and last readable bodies and counts terms deterministically, labelled `kind: "extractive_deterministic"`, `aiGenerated: false`, with a verbatim disclaimer. Redacted bodies are skipped and counted.
+*   Routes: `/api/v1/conversations` grew from 7 to 22 endpoints. The new router is registered **before** the Session 2 router so `/search`, `/unread` and `/deleted` are not swallowed by its cuid-validated `GET /:id`; each new handler attaches `authenticate` itself.
+*   Web: typed `conversationsApi` client importing the shared contract, and a dedicated `/app/conversations` console (roster, read state, measured usage rendered "not recorded" rather than `0`, digest with its disclaimer, labelled search, transcript export where redactions read `[redacted]`, and recovery). `/app/chat` is untouched.
+*   Tests: `conversationOps.test.ts` (23) — isolation across organizations and against same-org non-participants, read-state basis and own-message exclusion, truncation honesty, `null` vs summed usage, verbatim search excerpts and offsets, edit/redact permissions and trails, markdown transcript redaction, deterministic non-AI digest, and the soft-delete round trip. Plus `tests/e2e/conversations.spec.ts` (6 Playwright cases).
+*   Inventory: `conversations` PARTIAL → COMPLETE (routes 7 → 22, service SLOC 621 → 2794, shared contract present); repository totals 92 COMPLETE / 11 PARTIAL / 2 STUB-by-design / 1 DEMO DATA across 106 modules.
+*   Runtime validation against live PostgreSQL 17/Redis 8 remains pending; Session 112 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 111 — Global Command Center Completion] — 2026-08-06
 
 ### Command-centre operations register completed

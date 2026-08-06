@@ -44,6 +44,7 @@ import {
   Camera,
   Brain,
   Radar,
+  Inbox,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -91,6 +92,7 @@ const navItems = [
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },
   { to: "/app/cognitive", icon: Brain, label: "Cognitive / World Model" },
   { to: "/app/command", icon: Radar, label: "Global Command Center" },
+  { to: "/app/conversations", icon: Inbox, label: "Conversation Ops" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },

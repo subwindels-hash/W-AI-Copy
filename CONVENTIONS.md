@@ -30,6 +30,49 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 112 — Decisions Logged (Conversations / Messaging Completion)
+
+- **Module prefix:** `Conv` types and Zod contracts in
+  `packages/shared/src/conversations.ts`, `/api/v1/conversations` route prefix,
+  `apps/web/src/lib/conversations.ts` client (`conversationsApi`),
+  `/app/conversations` route + sidebar label "Conversation Ops".
+  `apps/web/src/lib/chat.ts` stays the Sessions 2–4 thread/stream client for
+  `/app/chat`; the two are complementary, not duplicates.
+- **Prisma-backed module, so isolation lives in the query layer.** This module
+  stores relational rows, not Redis blobs, so it has *no* `TI_NAMESPACE_CATALOG`
+  entry (that catalog audits Redis namespaces). Instead: every path filters on
+  the caller's `organizationId`, requires `createdById = caller` **or** a
+  participant row, and re-checks the loaded row's `organizationId` after the
+  query (fail-closed). Org membership alone never grants thread access.
+- **Additive route registration to avoid touching a working router.** New
+  collection paths (`/search`, `/unread`, `/deleted`) would be captured by the
+  Session 2 router's cuid-validated `GET /:id`, so the Session 112 router is
+  registered *first* in `server.ts` and attaches `authenticate` per route
+  (it runs ahead of the other router's `router.use(authenticate)`).
+- **A derived count must carry its definition.** Anything computed from state
+  the user can change ships the rule beside the number: `ConvReadState.basis`,
+  `excludesOwnMessages`, `ConvUnreadSummary.truncated` +
+  `inspectedConversations`, `ConvStats.measuredFrom`.
+- **`null` means "not recorded"; `0` means "measured zero".** Usage counters no
+  message stored come back `null` with `messagesMissingUsage` alongside, and the
+  UI renders "not recorded" rather than a fabricated zero.
+- **Name the matcher.** Substring search declares
+  `matchKind: "substring_case_insensitive"` and returns verbatim excerpts with
+  the real `matchOffset`, so no caller can mistake it for semantic search.
+- **Extractive means extractive.** The digest quotes stored bodies and counts
+  terms with a fixed stop-word list and a deterministic sort
+  (occurrences desc, term asc); it is labelled `kind:
+  "extractive_deterministic"`, `aiGenerated: false`, and carries
+  `CONV_DIGEST_DISCLAIMER` verbatim. No AI provider is invoked on this path.
+- **Corrections are append-only; nothing is destroyed.** Edits store lengths and
+  reasons in `Message.metadata.conv.edits` (never the replaced text); redaction
+  blanks the body and records `{redactedAt, redactedBy, reason, redactedLength}`
+  while the row, its ordering and its usage counters survive. Model output is
+  never editable. Conversation deletion stays a reversible soft delete.
+- **Audit mapping:** route files that extend an existing module get a
+  `ROUTE_OVERRIDES` entry in `audit/build-inventory.mjs`
+  (`conversationOps → conversations`), the same way `messages` already maps.
+
 ## Session 111 — Decisions Logged (Global Command Center Completion)
 
 - **Module prefix:** `Cmd` types and Zod contracts in

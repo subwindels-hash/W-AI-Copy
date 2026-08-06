@@ -62,6 +62,7 @@ export * from "./education.js";
 export * from "./scientific.js";
 export * from "./cognitive.js";
 export * from "./command.js";
+export * from "./conversations.js";
 export * from "./aiEconomy.js";
 export * from "./autonomous.js";
 export * from "./cyber.js";

@@ -39,6 +39,7 @@ const ROUTE_OVERRIDES = {
   biomedical: "biomedical", canvases: "collaboration", cognitive: "cognitive",
   collaboration: "collaboration", command: "command", composer: "composer",
   constitution: "constitution", conversations: "conversations",
+  conversationOps: "conversations",
   coreIntegration: "coreIntegration", cryptoIntelligence: "cryptoIntelligence",
   cyber: "cyber", dataMarketplace: "dataMarketplace", dataPlatform: "dataMarketplace",
   deployment: "deployment", devPortal: "devportal", developers: "developers",

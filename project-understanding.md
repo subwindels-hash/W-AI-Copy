@@ -40,7 +40,7 @@ Current counts that confirm the pattern is uniform (2026-08-06):
 - **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
 - **97** API test files; **26** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S111)
+## 4. The session-by-session arc (S1 → S112)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -144,6 +144,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **109** | `canvasCollab` | **Canvas Collaboration completion** — shared presence/cursor contracts, org-verified routes, org-scoped Redis state/channel migration and Canvas collaborator heartbeat UI (`docs/SESSION_109_SPECIFICATION.md`) |
 | **110** | `cognitive` | **Cognitive / World Model completion** — org-scoped entity/observation/hypothesis evidence register, idempotent Session 69 observation migration, deterministic coverage/blind-spot rollup, self-reported confidence and advisory AI labelling, human-only hypothesis resolution and dedicated `/app/cognitive` console (`docs/SESSION_110_SPECIFICATION.md`) |
 | **111** | `command` | **Global Command Center completion** — org-scoped incident/region/briefing/initiative/directive operations register, human-only acknowledge+resolve so MTTR is measured from stored timestamps, `unreported` regions until an operator files a status report, self-reported initiative progress, advisory AI-briefing labelling, idempotent Session 70 directive migration and dedicated `/app/command` console (`docs/SESSION_111_SPECIFICATION.md`) |
+| **112** | `conversations` | **Conversations / Messaging completion** — the Sessions 2–4 thread was already real; this session added everything around it: the module's first shared `Conv*` contract, participant management, the first code that ever writes `ConversationParticipant.lastReadAt`, unread counts that declare their basis and exclude the caller's own messages, statistics that report `null` (not `0`) for usage no message recorded, case-insensitive substring message search labelled as such, author-only edits with an append-only trail, redaction that blanks a body while keeping the row, transcript export, an explicitly non-AI extractive digest, soft-delete listing + creator-only restore, and a dedicated `/app/conversations` console (`docs/SESSION_112_SPECIFICATION.md`) |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -208,13 +209,13 @@ milestone"):**
 **Priority C — verification & hardening:**
 3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
    repository-wide test/module counts in `PROGRESS.md`. Current audit
-   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 91 COMPLETE,
-   12 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+   (`node audit/build-inventory.mjs`, 2026-08-05): 106 modules — 92 COMPLETE,
+   11 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
    Remaining PARTIAL modules, in the one-by-one completion order:
-   `conversations`, `derivatives`, `googleAuth`, `leadDiscovery`, `mfa`,
-   `mobile`, `opex`, `promptTemplates`, `publicApi`, `sustainability`, `talk`,
-   `usage`. **Next module to complete: `conversations`.**
-4. Run the S1–S6 and S89–S111 runtime-validation tracks in a target
+   `derivatives`, `googleAuth`, `leadDiscovery`, `mfa`, `mobile`, `opex`,
+   `promptTemplates`, `publicApi`, `sustainability`, `talk`, `usage`.
+   **Next module to complete: `derivatives`.**
+4. Run the S1–S6 and S89–S112 runtime-validation tracks in a target
    environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
    any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 

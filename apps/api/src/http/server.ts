@@ -20,6 +20,7 @@ import { registerProfileRoutes } from "./routes/profile.js";
 import { registerWorkspaceRoutes } from "./routes/workspace.js";
 import { registerConversationRoutes } from "./routes/conversations.js";
 import { registerMessageRoutes } from "./routes/messages.js";
+import { registerConversationOpsRoutes } from "./routes/conversationOps.js";
 import { registerAttachmentRoutes } from "./routes/attachments.js";
 import { registerProjectContinuityRoutes } from "./routes/projectContinuity.js";
 import { registerLeadDiscoveryRoutes } from "./routes/leadDiscovery.js";
@@ -205,6 +206,9 @@ export function createApp() {
   // /conversations + /conversations/:id/messages share a sub-router
   const conversationsRouter = express.Router();
   v1.use("/conversations", conversationsRouter);
+  // Session 112 first: /search, /unread and /deleted are literal paths that the
+  // Session 2 router's `GET /:id` (cuid-validated) would otherwise reject.
+  registerConversationOpsRoutes(conversationsRouter);
   registerConversationRoutes(conversationsRouter);
   registerMessageRoutes(conversationsRouter);
 

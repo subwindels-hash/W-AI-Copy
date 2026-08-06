@@ -49,6 +49,20 @@ WINDELS AI OS exposes a strict, JSON-based RESTful API under the `/api/v1` names
 *   `GET|POST /api/v1/command/initiatives`, `GET|PATCH|DELETE /api/v1/command/initiatives/:id`: Strategic initiatives; `progressPct` is always self-reported.
 *   `GET|POST /api/v1/command/directives`, `GET /api/v1/command/directives/:id`, `PATCH /api/v1/command/directives/:id/status`: Session 70 directive log with issuer and transition author.
 
+### 2.6 Conversations / Messaging (Sessions 2/3/4 + 112)
+*   `GET|POST /api/v1/conversations`, `GET|PATCH|DELETE /api/v1/conversations/:id`: Session 2 thread CRUD (`DELETE` is a soft delete).
+*   `GET|POST /api/v1/conversations/:id/messages`: Session 3/4 message list and send; `Accept: text/event-stream` streams the reply over SSE.
+*   `GET /api/v1/conversations/search`: Message-body search across threads the caller can read. Labelled `matchKind: "substring_case_insensitive"`; excerpts are verbatim slices at a reported `matchOffset` — not semantic, not ranked.
+*   `GET /api/v1/conversations/unread`: Unread summary; reports `inspectedConversations` and `truncated` so a capped scan is never mistaken for a total.
+*   `GET /api/v1/conversations/deleted`: Soft-deleted threads the caller created, with `restorableByCaller`.
+*   `GET|POST /api/v1/conversations/:id/participants`, `DELETE /api/v1/conversations/:id/participants/:participantId`: Roster. Adding a user verifies their `Membership` in the thread's organization (`404` otherwise); duplicates are `409`; the creator's seat cannot be removed (`409`).
+*   `GET /api/v1/conversations/:id/read-state`, `POST /api/v1/conversations/:id/read`: Unread position. Every response carries `basis` (`last_read_at` / `never_marked_read`) and `excludesOwnMessages: true`; a future `at` is rejected `400`.
+*   `GET /api/v1/conversations/:id/stats`: Measured statistics (`measuredFrom: "stored_messages"`). Usage counters no message recorded are `null`, never `0`, and `messagesMissingUsage` reports how many rows lacked them.
+*   `GET /api/v1/conversations/:id/transcript`: Ordered transcript, `format=json|markdown`; redacted bodies export as `[redacted]`.
+*   `GET /api/v1/conversations/:id/digest`: Extractive digest — `kind: "extractive_deterministic"`, `aiGenerated: false`, verbatim disclaimer. Quotes stored bodies and counts terms; no model is invoked.
+*   `POST /api/v1/conversations/:id/restore`: Creator-only restore of a soft-deleted thread (`409` if not deleted, `403` if not the creator).
+*   `GET|PATCH|DELETE /api/v1/conversations/:id/messages/:messageId`: Single message with its audit trail; `PATCH` is an author-only edit of a **user** message (`409` on model output, `403` on another author) recording an append-only trail; `DELETE` redacts the body (author or thread creator), keeping the row, its ordering and its usage counters.
+
 ---
 
 ## 3. ERROR SCHEMA
