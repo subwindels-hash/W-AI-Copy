@@ -939,3 +939,48 @@
 - **Best-effort analytics ledger; the request is the thing that must never fail.** `recordPublicApiCall` is fire-and-forget from the middleware, `ledgerAvailable: false` is reported rather than an empty ledger masquerading as zero, counts come only from the ledger and identifiers only from the database, and a deleted key keeps its counts with `null` identifiers (same rule as prompt templates).
 - **Internal management views of a public surface belong on the internal API.** The console reads `GET /api/v1/apikeys/usage` (user auth), never the public gateway; the external `GET /api/rest/v1/usage` is for key holders. Literal routes (`/usage`) are declared before parameterized ones (`/:id`).
 - **Test-only enum exports live in `prismaClientMock.ts`.** `WorkflowStatus`/`WorkflowRunStatus`/`WorkflowNodeType`/`NodeRunStatus` were added there (parsed from `schema.prisma` like the rest) so `runWorkflow` can be driven end to end in unit tests.
+
+## Session 121 — Decisions Logged (Sustainability/ESG Completion)
+
+- **Module prefix:** `Esg*`/`Sustainability*` types in `packages/shared/src/sustainability.ts`
+  (widened, appended), `esg:*` Redis keys (unchanged root — the org stays in
+  segment 2 for the legacy blob, the adoption marker, the index and the
+  per-record keys alike), the existing `/api/v1/sustainability` route prefix
+  (three endpoints unchanged; `GET`/`DELETE /records/:id` added),
+  `apps/web/src/lib/sustainability.ts` client (appended), `/app/sustainability`
+  route + sidebar label "Sustainability".
+- **A JSON-blob ledger is a lost-write bug, not a storage choice.** Session
+  64's whole-org string made every record a read-modify-write; Session 121
+  moved to one key per record behind an append-only LPUSH index — the same
+  shape Session 118 chose for the opex register. Any future module ledger
+  follows this: per-record keys + append-only index, never a mutable blob.
+- **Legacy blobs are adopted once and left in place.** The Session 64 blob is
+  read on first access, each entry becomes its own key, the `imported` marker
+  is set, and the legacy string is never deleted; a corrupt blob degrades to
+  an empty ledger rather than a crash.
+- **A year-on-year change is same-period or null.** YTD compares against the
+  same instant one year ago — never the full prior calendar year, never
+  all-time totals. No baseline → `null`, never `0` (0 reads as "no change").
+  A signed change is **truncated toward zero**, never rounded: rounding can
+  exaggerate a magnitude (12.46 % → 12.5), and for a reduction that is the
+  "rounding the failure away" direction.
+- **An ESG score is an attestation, not an arithmetic side-effect.** The
+  Session 64 `92 − ytd×2.5` formula (and hard-coded 85/88) was an invented
+  rating presented as data-derived. Scores are `null` with a `note` until an
+  assessment with a stated method exists — the same rule S118 applied to
+  trust dimensions.
+- **A derived row must not vanish because of display rounding.** `greenAi`
+  decided existence on the tCO2e rounded to 3 decimals, so a sub-0.5 kg
+  compute record produced no row. Truthiness/aggregation use unrounded
+  values; rounding is a display concern only.
+- **Rollup sections without a feed are structural zeros — named, not
+  hidden.** `energyRenewablePct`, `waterMl`, `wasteRecycledPct`,
+  `offsetsPurchasedT`, `netZeroTargetYear`, `gpuHours`, `optimizedPct` stay 0
+  for contract compatibility, and the rollup's `provenance` block names each
+  one (the S118 pattern). Web pages never render them as measurements.
+- **Correction paths are part of a ledger module.** `DELETE /records/:id`
+  (admin-gated) removes a mis-entered record and its index entry; the
+  dashboard recomputes from what remains.
+- **The S89 catalog covers every module's keys.** `esg` was missing entirely
+  and is now catalogued org-scoped with a comment stating the org-segment
+  position for every key shape.

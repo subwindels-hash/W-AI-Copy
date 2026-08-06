@@ -1034,6 +1034,7 @@
       "sessions61-72-82.spec.ts",
       "sessions73-75.spec.ts",
       "smoke.spec.ts",
+      "sustainability.spec.ts",
       "tenantIsolation.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
@@ -8398,13 +8399,14 @@
       "serviceFile": {
         "file": "sustainability.service.ts",
         "path": "/home/user/WIN/apps/api/src/sustainability/sustainability.service.ts",
-        "sloc": 209,
+        "sloc": 363,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
-      "serviceTotalSloc": 424,
+      "serviceTotalSloc": 1115,
       "serviceFiles": [
         "bootstrap.ts",
+        "sustainability.completion.test.ts",
         "sustainability.service.ts",
         "sustainability/sustainability.service.ts"
       ],
@@ -8416,30 +8418,33 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/sustainability.ts",
-        "sloc": 29,
+        "sloc": 88,
         "counts": {
-          "total": 3,
-          "GET": 2,
+          "total": 5,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 0,
-          "DELETE": 0
+          "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
           "GET /records",
+          "GET /records/:id",
+          "DELETE /records/:id",
           "POST /activity"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/sustainability.ts (69 LOC)",
+    "sharedTypes": "packages/shared/src/sustainability.ts (170 LOC)",
     "web": {
-      "client": "apps/web/src/lib/sustainability.ts (9 LOC)",
+      "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Activity",
         "Message"
       ],
@@ -8447,11 +8452,13 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "sustainability.spec.ts",
+      "sustainability/sustainability.completion.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "talk",
@@ -8556,11 +8563,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 487,
+        "sloc": 494,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1150,
+      "serviceTotalSloc": 1164,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8922,7 +8929,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 618,
+      "serviceTotalSloc": 623,
       "serviceFiles": [
         "bootstrap.ts",
         "rollups.test.ts",

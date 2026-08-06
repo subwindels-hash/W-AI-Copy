@@ -195,6 +195,13 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "pub:req", scope: "org_scoped" },
   { prefix: "pub:day", scope: "org_scoped" },
   { prefix: "pub:evt", scope: "org_scoped" },
+  // Sustainability / ESG ledger (Session 64, completed by Session 121). Every
+  // key is `esg:<org>:<suffix>` — the org sits in the segment straight after
+  // the prefix, so the sweep's derivation (orgIndex = prefix.split(":").length
+  // = 1) holds for the legacy blob `esg:<org>:records`, the adoption marker
+  // `esg:<org>:imported`, the index `esg:<org>:idx` and the per-record keys
+  // `esg:<org>:rec:<id>` alike.
+  { prefix: "esg", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A

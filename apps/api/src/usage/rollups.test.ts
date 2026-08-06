@@ -94,7 +94,12 @@ describe("an empty organization reports zeros, not plausible numbers", () => {
     const d = await SustainabilityService.dashboard(OID);
     expect(d.emissionsTotalTCO2e).toBe(0);
     expect(d.emissionsBySource).toHaveLength(0);
-    expect(d.scores.overall).toBe(0);
+    // Session 121: an ESG score without an attested assessment is null with a
+    // note (the Session 64 formula invented ratings; a bare 0 would read as
+    // a score of zero). A same-period change without a baseline is null too.
+    expect(d.scores.overall).toBeNull();
+    expect(typeof d.scores.note).toBe("string");
+    expect(d.emissionsYtdChangePct).toBeNull();
     expect(d.energySeries).toHaveLength(12);
   });
 

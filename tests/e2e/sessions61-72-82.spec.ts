@@ -77,7 +77,11 @@ test.describe("Sessions 61-72 + 82 API", () => {
   test("S64 sustainability: ESG scores + emissions breakdown", async () => {
     const d = await get("/sustainability/dashboard/rollup");
     expect(d.ok).toBe(true);
-    expect(d.data.scores.overall).toBeGreaterThan(0);
+    // Session 121: the Session 64 `92 - ytd*2.5` score formula was an invented
+    // rating; an ESG score requires an attested assessment, so scores are null
+    // with a note (previously asserted > 0 — that pinned the fabricated value).
+    expect(d.data.scores.overall).toBeNull();
+    expect(typeof d.data.scores.note).toBe("string");
     expect(Array.isArray(d.data.emissionsBySource)).toBe(true);
   });
 
