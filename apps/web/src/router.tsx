@@ -35,6 +35,8 @@ const SustainabilityPage = lazy(() => import("./pages/admin/SustainabilityPage")
 const UsagePage = lazy(() => import("./pages/admin/UsagePage").then((m) => ({ default: m.UsagePage })));
 const AiEngineeringPage = lazy(() => import("./pages/admin/AiEngineeringPage").then((m) => ({ default: m.AiEngineeringPage })));
 const IdentityKnowledgePage = lazy(() => import("./pages/admin/IdentityKnowledgePage").then((m) => ({ default: m.IdentityKnowledgePage })));
+const EventsPage = lazy(() => import("./pages/events/EventsPage").then((m) => ({ default: m.EventsPage })));
+const WebhookInboxPage = lazy(() => import("./pages/webhook/WebhookInboxPage").then((m) => ({ default: m.WebhookInboxPage })));
 const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ default: m.FilesPage })));
 const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
@@ -280,6 +282,8 @@ export const router = createBrowserRouter([
       { path: "usage", element: withSuspense(<UsagePage />) },
       { path: "ai-engineering", element: withSuspense(<AiEngineeringPage />) },
       { path: "identity-knowledge", element: withSuspense(<IdentityKnowledgePage />) },
+      { path: "events", element: withSuspense(<EventsPage />) },
+      { path: "webhook", element: withSuspense(<WebhookInboxPage />) },
       { path: "ads", element: withSuspense(<AdsPage />) },
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },

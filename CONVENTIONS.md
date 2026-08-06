@@ -1124,3 +1124,10 @@
   `hasPermission`, `requireSuperAdmin`, the Kernel event bus and the Memory
   Fabric are all reused — the module owns only its governed records and the
   rules around them.
+
+### Session 126 — Real-Time SSE Channel (`events`) & Inbound Webhook Receiver (`webhook`) Completion
+- **Fail-closed real-time stream scoping.** An event targeted at an organization must never be broadcast to a client session without an organization (`organizationId = null`). Only genuinely global system broadcasts (`organizationId = null` on the event) are delivered globally.
+- **Ring buffer replay on reconnect.** SSE events are persisted to `evt:hist:idx:<org>` (sorted set by timestamp) and `evt:hist:i:<org>:<id>`, capped at 200 events. Reconnecting clients passing `Last-Event-ID` or `?since=` receive stored missed events before new broadcasts.
+- **Constant-time webhook secret verification.** Inbound webhook HMACs and secret headers are compared using `crypto.timingSafeEqual`, and never fall back to `JWT_SECRET` when `WEBHOOK_SECRET` is unset.
+- **Inbound webhook inbox logging.** Inbound webhooks are recorded in `whk:inbox:idx:<org>` and `whk:inbox:i:<org>:<id>`, capped at 500 events, and dispatched to `EventBus` (`webhook.inbound_received`) for downstream consumers. Replay re-emits to `EventBus` and marks the inbox entry status as `"replayed"`.
+- **Tenant-isolation 2-segment rule.** Both `evt:hist` and `whk:inbox` are catalogued with their full 2-segment prefix so `prefix.split(":").length = 2` matches `<org>` at index 2. Bare roots (`evt`, `whk`) are omitted to prevent shifting the org segment.

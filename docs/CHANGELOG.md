@@ -5,6 +5,18 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 126 — Real-Time SSE Channel (Events) & Inbound Webhook Receiver Completion] — 2026-08-06
+
+### Both STUB-by-design modules (`events` and `webhook`) completed additively — 107 COMPLETE / 0 PARTIAL / 0 STUB-by-design / 1 DEMO DATA
+*   **`events` (Real-Time SSE Channel):** Additive completion of the SSE real-time channel (`/api/v1/events/stream` and `/api/v1/events/health` untouched). Replaced fail-open org scope matching with strict fail-closed matching so clients without an org never receive cross-tenant events. Implemented an organization-scoped historical ring buffer (`evt:hist:idx:<org>` + `evt:hist:i:<org>:<id>`, capped at 200 events) with automatic `Last-Event-ID` / `?since=` replay upon connection. Added `GET /events/history`, `GET /events/clients`, `POST /events/publish`, and `DELETE /events/clients/:id` (routes 2 → 6). Added `packages/shared/src/events.ts` (185 LOC) and new `/app/events` console page.
+*   **`webhook` (Inbound Webhook Receiver):** Additive completion of the inbound webhook receiver (`POST /api/v1/webhook/billing/webhook` untouched). Replaced string equality (`===`) in secret verification with constant-time `crypto.timingSafeEqual` and removed fallback to `JWT_SECRET`. Every inbound billing webhook is now recorded in an organization-scoped inbox (`whk:inbox:idx:<org>` + `whk:inbox:i:<org>:<id>`, capped at 500 records) and emitted via `EventBus` (`webhook.inbound_received`). Added general multi-source receiver (`POST /webhook/inbound/:source` supporting github, stripe, etl, custom), inbox query (`GET /webhook/inbound`), payload inspection (`GET /webhook/inbound/:id`), replay (`POST /webhook/inbound/:id/replay`), and delete correction path (`DELETE /webhook/inbound/:id`) (routes 1 → 6). Added `packages/shared/src/webhook.ts` (210 LOC) and new `/app/webhook` console page.
+*   **Tenant isolation:** Catalogued `evt:hist` and `whk:inbox` as `org_scoped` in `TI_NAMESPACE_CATALOG`. Bare root entries (`evt`, `whk`) are deliberately omitted to preserve the org-segment index rule.
+*   **Tests & verification:** Added `events.test.ts` (6 unit tests) + `webhookReceiver.test.ts` (7 unit tests) and `tests/e2e/events-webhook.spec.ts` (11 Playwright e2e cases).
+*   **Inventory:** Both `events` and `webhook` advance from **STUB** to **COMPLETE** (`routeCount >= 5`, shared contracts, services, web clients, console pages, tests, no synthetic flags). Total inventory is now **107 COMPLETE / 0 PARTIAL / 0 STUB-by-design / 1 DEMO DATA** (`quantum`) across 108 modules. Runtime validation remains pending; Session 126 is recorded 🟡 VERIFIED (partial).
+
+---
+---
+
 ## [Session 125 — Super Admin Biography, Identity Memory & AI Knowledge System] — 2026-08-06
 
 ### WINDELS AI OS becomes an intelligent digital representative — governed, traceable, Super-Admin-owned
