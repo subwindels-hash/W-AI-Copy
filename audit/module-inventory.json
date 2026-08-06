@@ -1582,16 +1582,17 @@
     "tier": "unknown",
     "routePrefix": "/api/v1/canvasCollab",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/canvasCollab",
       "serviceFile": {
-        "file": "canvas.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/canvas.service.ts",
-        "sloc": 263,
+        "file": "canvasCollab.service.ts",
+        "path": "/home/user/WIN/apps/api/src/canvasCollab/canvasCollab.service.ts",
+        "sloc": 3,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 394,
+      "serviceTotalSloc": 412,
       "serviceFiles": [
+        "canvasCollab.service.ts",
         "services/canvas.service.ts",
         "collaboration/canvasCollab.service.ts"
       ],
@@ -1604,7 +1605,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/canvasCollab.ts",
-        "sloc": 63,
+        "sloc": 64,
         "counts": {
           "total": 10,
           "GET": 4,
@@ -1627,9 +1628,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/canvasCollab.ts (24 LOC)",
     "web": {
-      "client": "apps/web/src/lib/canvas.ts (102 LOC, serves /canvas)",
+      "client": "apps/web/src/lib/canvasCollab.ts (13 LOC)",
       "pages": []
     },
     "db": {
@@ -1648,7 +1649,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "cognitive",
@@ -1743,7 +1744,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2350,
+      "serviceTotalSloc": 2374,
       "serviceFiles": [
         "bootstrap.ts",
         "cameraIntel.service.ts",
@@ -8172,11 +8173,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 379,
+        "sloc": 382,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 934,
+      "serviceTotalSloc": 940,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8222,7 +8223,8 @@
         "Agent",
         "Task",
         "Activity",
-        "Message"
+        "Message",
+        "Canvas"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"

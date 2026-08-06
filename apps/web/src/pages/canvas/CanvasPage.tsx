@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from "react";
 import { canvasApi, type Canvas, type CanvasBlock, type CanvasConnection } from "@/lib/canvas";
+import { canvasCollabApi, type CcPresence } from "@/lib/canvasCollab";
+import { useAuthStore } from "@/store/auth";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -24,9 +26,11 @@ const BLOCK_DEFAULTS: Record<string, BlockDef> = {
 const DEFAULT_BLOCK: BlockDef = { w: 320, h: 200, color: "slate", emoji: "▭", label: "Block" };
 
 export default function CanvasPage() {
+  const user = useAuthStore((state) => state.user);
   const [canvases, setCanvases] = useState<any[]>([]);
   const [canvasId, setCanvasId] = useState<string | null>(null);
   const [canvas, setCanvas] = useState<Canvas | null>(null);
+  const [presence, setPresence] = useState<CcPresence[]>([]);
   const [transform, setTransform] = useState<Transform>({ x: 80, y: 80, zoom: 1 });
   const [showSidebar, setShowSidebar] = useState(true);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -51,6 +55,23 @@ export default function CanvasPage() {
 
   useEffect(() => { loadList(); }, []);
   useEffect(() => { if (canvasId) loadCanvas(canvasId); }, [canvasId]);
+
+  // Presence heartbeat + active collaborator list. The API verifies canvas
+  // organization access before touching the org-scoped Redis keys.
+  useEffect(() => {
+    if (!canvasId || !user) return;
+    const displayName = user.displayName ?? user.email;
+    const heartbeat = () => canvasCollabApi.heartbeat(canvasId, displayName).catch(() => {});
+    const refreshPresence = () => canvasCollabApi.presence(canvasId).then(setPresence).catch(() => {});
+    heartbeat(); refreshPresence();
+    const beat = window.setInterval(heartbeat, 12_000);
+    const refresh = window.setInterval(refreshPresence, 4_000);
+    return () => {
+      window.clearInterval(beat); window.clearInterval(refresh);
+      void canvasCollabApi.leave(canvasId).catch(() => {});
+      setPresence([]);
+    };
+  }, [canvasId, user]);
 
   // Collaboration fallback: refresh the shared document regularly. This works
   // across multiple API instances and is deliberately kept separate from local
@@ -262,6 +283,10 @@ export default function CanvasPage() {
           onTitleChange={(t) => canvas && setCanvas({ ...canvas, title: t })}
           onTitleBlur={() => canvas && canvasApi.update(canvas.id, { title: canvas.title })}
         />
+        <div className="absolute right-3 top-2 z-20 flex items-center gap-1 rounded-full border border-white/10 bg-bg-dark/80 px-2 py-1 text-[11px] text-text-muted backdrop-blur">
+          <span className="h-2 w-2 rounded-full bg-emerald" /> {presence.length} collaborator{presence.length === 1 ? "" : "s"}
+          {presence.slice(0, 3).map((person) => <span key={person.userId} title={person.displayName} className="ml-1 grid h-5 w-5 place-items-center rounded-full text-[9px] text-white" style={{ backgroundColor: person.avatarColor }}>{person.displayName.slice(0, 1).toUpperCase()}</span>)}
+        </div>
 
         <div
           ref={containerRef}

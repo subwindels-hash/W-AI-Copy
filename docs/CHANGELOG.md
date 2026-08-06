@@ -5,6 +5,15 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 109 — Canvas Collaboration Completion] — 2026-08-05
+
+### Canvas presence/cursors completed with tenant-safe state
+*   `packages/shared/src/canvasCollab.ts` — `Cc` presence, cursor, canvas ID and validation contracts.
+*   Canvas Collaboration now uses org-scoped presence/cursor records and channels, verifies Canvas access at the route boundary, and migrates legacy slots safely.
+*   Added canonical `canvasCollab` service/client/page entrypoints; `/app/canvas` now sends real heartbeats, leave events and displays current collaborators.
+*   Session 89 audits `canvas:presence` and `canvas:cursor` namespaces.
+*   Existing collaboration suite expanded to 20 tests, including org-key isolation; runtime Redis/multi-browser validation remains pending.
+
 ## [Session 108 — Camera Feed Registry & Alert Console Completion] — 2026-08-05
 
 ### Camera registry and alert boundary completed

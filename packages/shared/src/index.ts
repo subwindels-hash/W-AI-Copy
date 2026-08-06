@@ -116,3 +116,4 @@ export type {
   BillingPaymentEventInput,
 } from "./billing.js";
 export * from "./camera.js";
+export * from "./canvasCollab.js";

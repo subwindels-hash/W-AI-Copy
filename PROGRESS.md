@@ -44,6 +44,7 @@
 | 106 | Autonomous Organization | 🟡 | completed approval-first autonomous organization vertical slice (org-scoped decision register, human resolution, list/detail/delete, legacy migration, honest review/impact rollups, admin writes and dedicated UI); 10 tests; `aut:meta` and `aut:decision` audited by S89; runtime pending |
 | 107 | Billing & Subscriptions | 🟡 | completed billing vertical slice (shared plan/subscription/invoice contracts, real invoice lifecycle, audited admin payment actions, idempotent webhook/dunning paths, tenant tests and dedicated billing UI); 11 integration tests; runtime pending |
 | 108 | Camera Feed Registry & Alert Console | 🟡 | completed camera vertical slice (shared `Cam` contracts, org-scoped feed/alert records, corrected mounted routes, admin feed/alert lifecycle, honest WebRTC handoff and dedicated console); 9 tests; `cam:feed`, `cam:alert` namespaces audited by S89; runtime pending |
+| 109 | Canvas Collaboration | 🟡 | completed canvas collaboration vertical slice (shared `Cc` contracts, org-verified presence/cursors, org-scoped Redis state/channel migration, Canvas heartbeat/leave UI and multi-user tests); 20 tests; `canvas:presence`, `canvas:cursor` audited by S89; runtime pending |
 
 ### Repository-wide cleanup passes (cross-session)
 - **Pre-existing test failures**: all 12 resolved in-repo (9 env-blocked suites unblocked via `prismaClientMock`; 3 genuine demo-data/ESG bugs fixed). See `docs/PRE_EXISTING_TEST_FAILURES.md`.
@@ -52,12 +53,12 @@
 - **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`.
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **1163 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 101 files: 98 passed + 3 skipped).
+- API unit/integration-style suite: **1164 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 101 files: 98 passed + 3 skipped).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
 - `make verify` (Prisma offline generate + build + typecheck + test): **green** in this sandbox; the preflight's blocked engine fetch is non-fatal by design.
 - Web typecheck: clean.
 - Remaining API typecheck errors: environment-only Prisma generated-type errors (`prisma generate` needs the blocked engine download).
-- Module inventory (regenerated 2026-08-05): **106 modules** — 88 COMPLETE, 15 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`). Admin Utilities, Agent Framework, AI Economy, API Key Management, Message Attachments, Autonomous Organization, Billing and Camera are now classified COMPLETE by the inventory.
+- Module inventory (regenerated 2026-08-05): **106 modules** — 89 COMPLETE, 14 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`). Admin Utilities, Agent Framework, AI Economy, API Key Management, Message Attachments, Autonomous Organization, Billing, Camera and Canvas Collaboration are now classified COMPLETE by the inventory.
 
 ## Blocked Gates (require target deployment environment)
 - `prisma generate` (native engine download from `binaries.prisma.sh` is network-blocked here).

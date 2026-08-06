@@ -7,8 +7,9 @@ import {
   addBlock, updateBlock, deleteBlock, addConnection, deleteConnection,
 } from "../../services/canvas.service.js";
 import { CanvasCollabService } from "../../collaboration/canvasCollab.service.js";
+import { CcCanvasIdSchema, CcCursorSchema, CcPresenceSchema } from "@windels/shared/canvasCollab";
 
-const CanvasIdParams = z.object({ id: z.string().cuid() });
+const CanvasIdParams = CcCanvasIdSchema;
 
 /**
  * Session 22 — Canvas Collab router.
@@ -40,23 +41,23 @@ export function registerCanvasCollabRoutes(router: Router) {
   });
 
   // ── Realtime collaboration (presence + cursors) ─────────────────
-  const collabBody = z.object({ displayName: z.string().min(1).max(120), avatarColor: z.string().max(16).optional() });
-  router.post("/:id/presence", validate({ params: CanvasIdParams, body: collabBody }), async (req, res, next) => {
+  router.post("/:id/presence", validate({ params: CanvasIdParams, body: CcPresenceSchema }), async (req, res, next) => {
     try {
-      const p = await CanvasCollabService.heartbeat(req.params.id, { userId: req.user!.id, displayName: req.body.displayName, avatarColor: req.body.avatarColor });
+      await getCanvas(req.user!.id, req.params.id);
+      const p = await CanvasCollabService.heartbeat(req.params.id, { userId: req.user!.id, displayName: req.body.displayName, avatarColor: req.body.avatarColor }, undefined, req.user!.organizationId!);
       res.json({ ok: true, data: p, meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
   router.get("/:id/presence", validate({ params: CanvasIdParams }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await CanvasCollabService.presence(req.params.id), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+    try { await getCanvas(req.user!.id, req.params.id); res.json({ ok: true, data: await CanvasCollabService.presence(req.params.id, undefined, req.user!.organizationId!), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
-  router.put("/:id/cursor", validate({ params: CanvasIdParams, body: z.object({ displayName: z.string().min(1).max(120), x: z.number(), y: z.number() }) }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await CanvasCollabService.moveCursor(req.params.id, { userId: req.user!.id, displayName: req.body.displayName }, req.body.x, req.body.y), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  router.put("/:id/cursor", validate({ params: CanvasIdParams, body: CcCursorSchema }), async (req, res, next) => {
+    try { await getCanvas(req.user!.id, req.params.id); res.json({ ok: true, data: await CanvasCollabService.moveCursor(req.params.id, { userId: req.user!.id, displayName: req.body.displayName }, req.body.x, req.body.y, undefined, req.user!.organizationId!), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
   router.get("/:id/cursors", validate({ params: CanvasIdParams }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await CanvasCollabService.cursors(req.params.id), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+    try { await getCanvas(req.user!.id, req.params.id); res.json({ ok: true, data: await CanvasCollabService.cursors(req.params.id, undefined, req.user!.organizationId!), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
   router.delete("/:id/presence", validate({ params: CanvasIdParams }), async (req, res, next) => {
-    try { await CanvasCollabService.leave(req.params.id, req.user!.id); res.json({ ok: true, meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+    try { await getCanvas(req.user!.id, req.params.id); await CanvasCollabService.leave(req.params.id, req.user!.id, undefined, req.user!.organizationId!); res.json({ ok: true, meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
 }

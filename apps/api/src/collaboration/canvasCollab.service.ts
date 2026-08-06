@@ -39,9 +39,9 @@ export interface CanvasCollabKv {
 }
 
 export const PRESENCE_TTL_SEC = Number(process.env.CANVAS_PRESENCE_TTL_SEC ?? 30);
-const presenceKey = (canvasId: string) => `canvas:presence:${canvasId}`;
-const cursorKey = (canvasId: string) => `canvas:cursor:${canvasId}`;
-export const collabChannel = (canvasId: string) => `canvas:collab:${canvasId}`;
+const presenceKey = (canvasId: string, organizationId?: string) => organizationId ? `canvas:presence:i:${organizationId}:${canvasId}` : `canvas:presence:${canvasId}`;
+const cursorKey = (canvasId: string, organizationId?: string) => organizationId ? `canvas:cursor:i:${organizationId}:${canvasId}` : `canvas:cursor:${canvasId}`;
+export const collabChannel = (canvasId: string, organizationId?: string) => organizationId ? `canvas:collab:${organizationId}:${canvasId}` : `canvas:collab:${canvasId}`;
 
 /** Shared Redis subscriber — one subscription per canvas id (idempotent). */
 const subscribers = new Set<string>();
@@ -62,7 +62,7 @@ function withDefaults(kv: CanvasCollabKv | undefined): CanvasCollabKv {
 
 export const CanvasCollabService = {
   /** Registers a heartbeat; expires via TTL when the collaborator stops. */
-  async heartbeat(canvasId: string, user: { userId: string; displayName: string; avatarColor?: string }, kv?: CanvasCollabKv): Promise<PresenceUser> {
+  async heartbeat(canvasId: string, user: { userId: string; displayName: string; avatarColor?: string }, kv?: CanvasCollabKv, organizationId?: string): Promise<PresenceUser> {
     const k = withDefaults(kv);
     const now = new Date().toISOString();
     const doc: PresenceUser = {
@@ -72,40 +72,55 @@ export const CanvasCollabService = {
       joinedAt: now,
       lastSeenAt: now,
     };
-    await k.hset(presenceKey(canvasId), user.userId, JSON.stringify(doc));
-    await k.publish(collabChannel(canvasId), JSON.stringify({ type: "presence", userId: user.userId, displayName: user.displayName, at: now }));
+    await k.hset(presenceKey(canvasId, organizationId), user.userId, JSON.stringify(doc));
+    await k.publish(collabChannel(canvasId, organizationId), JSON.stringify({ type: "presence", userId: user.userId, displayName: user.displayName, at: now }));
     return doc;
   },
 
   /** Active collaborators (expired heartbeats are pruned lazily). */
-  async presence(canvasId: string, kv?: CanvasCollabKv): Promise<PresenceUser[]> {
+  async presence(canvasId: string, kv?: CanvasCollabKv, organizationId?: string): Promise<PresenceUser[]> {
     const k = withDefaults(kv);
-    const raw = await k.hgetall(presenceKey(canvasId));
+    const scopedKey = presenceKey(canvasId, organizationId);
+    let raw = await k.hgetall(scopedKey);
+    // Backward-compatible read/migration for the pre-org key. New heartbeats
+    // never write to this key, and the caller must already have verified the
+    // canvas organization at the route boundary.
+    if (organizationId && Object.keys(raw).length === 0) {
+      const legacy = await k.hgetall(presenceKey(canvasId));
+      for (const [uid, value] of Object.entries(legacy)) await k.hset(scopedKey, uid, value);
+      raw = legacy;
+    }
     const cutoff = Date.now() - PRESENCE_TTL_SEC * 1000;
     const out: PresenceUser[] = [];
     for (const [uid, value] of Object.entries(raw)) {
       try {
         const doc = JSON.parse(value) as PresenceUser;
         if (Date.parse(doc.lastSeenAt) >= cutoff) out.push(doc);
-        else await k.hdel(presenceKey(canvasId), uid);
+        else await k.hdel(scopedKey, uid);
       } catch { /* corrupt entry — ignore */ }
     }
     return out.sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
   },
 
   /** Publishes a cursor move; peers pick it up via the collab channel. */
-  async moveCursor(canvasId: string, user: { userId: string; displayName: string }, x: number, y: number, kv?: CanvasCollabKv): Promise<CursorPosition> {
+  async moveCursor(canvasId: string, user: { userId: string; displayName: string }, x: number, y: number, kv?: CanvasCollabKv, organizationId?: string): Promise<CursorPosition> {
     const k = withDefaults(kv);
     const pos: CursorPosition = { userId: user.userId, displayName: user.displayName, x, y, at: new Date().toISOString() };
-    await k.hset(cursorKey(canvasId), user.userId, JSON.stringify(pos));
-    await k.publish(collabChannel(canvasId), JSON.stringify({ type: "cursor", ...pos }));
+    await k.hset(cursorKey(canvasId, organizationId), user.userId, JSON.stringify(pos));
+    await k.publish(collabChannel(canvasId, organizationId), JSON.stringify({ type: "cursor", ...pos }));
     return pos;
   },
 
   /** Latest cursors for initial paint. */
-  async cursors(canvasId: string, kv?: CanvasCollabKv): Promise<CursorPosition[]> {
+  async cursors(canvasId: string, kv?: CanvasCollabKv, organizationId?: string): Promise<CursorPosition[]> {
     const k = withDefaults(kv);
-    const raw = await k.hgetall(cursorKey(canvasId));
+    const scopedKey = cursorKey(canvasId, organizationId);
+    let raw = await k.hgetall(scopedKey);
+    if (organizationId && Object.keys(raw).length === 0) {
+      const legacy = await k.hgetall(cursorKey(canvasId));
+      for (const [uid, value] of Object.entries(legacy)) await k.hset(scopedKey, uid, value);
+      raw = legacy;
+    }
     const out: CursorPosition[] = [];
     for (const value of Object.values(raw)) {
       try { out.push(JSON.parse(value) as CursorPosition); } catch { /* skip */ }
@@ -114,11 +129,11 @@ export const CanvasCollabService = {
   },
 
   /** Leaves the canvas: removes presence + cursor and broadcasts. */
-  async leave(canvasId: string, userId: string, kv?: CanvasCollabKv): Promise<void> {
+  async leave(canvasId: string, userId: string, kv?: CanvasCollabKv, organizationId?: string): Promise<void> {
     const k = withDefaults(kv);
-    await k.hdel(presenceKey(canvasId), userId);
-    await k.hdel(cursorKey(canvasId), userId);
-    await k.publish(collabChannel(canvasId), JSON.stringify({ type: "leave", userId, at: new Date().toISOString() }));
+    await k.hdel(presenceKey(canvasId, organizationId), userId);
+    await k.hdel(cursorKey(canvasId, organizationId), userId);
+    await k.publish(collabChannel(canvasId, organizationId), JSON.stringify({ type: "leave", userId, at: new Date().toISOString() }));
   },
 
   /** Session id helper for the web client to correlate its own events. */

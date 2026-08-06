@@ -30,6 +30,22 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 109 — Decisions Logged (Canvas Collaboration Completion)
+
+- **Shared contract prefix:** `Cc` presence/cursor contracts live in
+  `packages/shared/src/canvasCollab.ts`; canonical service/client/page
+  entrypoints live under `canvasCollab` while existing Canvas files remain
+  compatible.
+- **Organization scope:** routes call the real Canvas access check before any
+  presence/cursor operation. New Redis presence/cursor keys and pub/sub
+  channels carry the organization segment; legacy slots migrate only after
+  access verification.
+- **Realtime honesty:** presence uses timestamp TTL pruning and cursor values
+  are real browser/API observations. The system does not claim CRDT/WebSocket
+  guarantees beyond the existing Redis pub/sub channel and polling fallback.
+- **UI parity:** `/app/canvas` sends heartbeat/leave events and displays the
+  actual collaborator set; the focused collaboration route is additive.
+
 ## Session 108 — Decisions Logged (Camera Feed Registry & Alert Console Completion)
 
 - **Shared contract prefix:** `Cam` feed, alert, stream-session and Zod

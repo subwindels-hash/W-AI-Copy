@@ -116,6 +116,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "efo:budget", scope: "org_scoped" },
   { prefix: "efo:cost", scope: "org_scoped" },
   { prefix: "efo:allocation", scope: "org_scoped" },
+  // Canvas Collaboration presence/cursor state (Session 109)
+  { prefix: "canvas:presence", scope: "org_scoped" },
+  { prefix: "canvas:cursor", scope: "org_scoped" },
   // AI Economy / GPU capacity ledger (Session 103)
   { prefix: "eco:meta", scope: "org_scoped" },
   { prefix: "eco:usage", scope: "org_scoped" },

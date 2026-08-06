@@ -130,6 +130,8 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_107_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_107_RUNTIME_VALIDATION_CHECKLIST.md) | Session 107 runtime validation (subscription scope, invoice transitions, webhook idempotency and dunning) |
 | [docs/SESSION_108_SPECIFICATION.md](./docs/SESSION_108_SPECIFICATION.md) | Session 108 — Camera Feed Registry & Alert Console completion (scoped feeds/alerts, corrected routes and honest stream handoff) |
 | [docs/SESSION_108_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_108_RUNTIME_VALIDATION_CHECKLIST.md) | Session 108 runtime validation (feed/alert isolation, gateway availability, RBAC and legacy migration) |
+| [docs/SESSION_109_SPECIFICATION.md](./docs/SESSION_109_SPECIFICATION.md) | Session 109 — Canvas Collaboration completion (org-scoped presence/cursors, route access checks and Canvas UI heartbeat) |
+| [docs/SESSION_109_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_109_RUNTIME_VALIDATION_CHECKLIST.md) | Session 109 runtime validation (canvas access isolation, TTL presence, cursor channels and multi-browser sync) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |
