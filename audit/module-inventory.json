@@ -1508,13 +1508,14 @@
       "serviceFile": {
         "file": "camera.service.ts",
         "path": "/home/user/WIN/apps/api/src/camera/camera.service.ts",
-        "sloc": 121,
+        "sloc": 166,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 242,
+      "serviceTotalSloc": 424,
       "serviceFiles": [
         "camera.service.ts",
+        "camera.test.ts",
         "camera/camera.service.ts"
       ],
       "importedServiceFiles": [
@@ -1525,20 +1526,23 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/camera.ts",
-        "sloc": 135,
+        "sloc": 91,
         "counts": {
-          "total": 8,
+          "total": 11,
           "GET": 4,
-          "POST": 2,
+          "POST": 3,
           "PUT": 0,
-          "PATCH": 1,
-          "DELETE": 1
+          "PATCH": 2,
+          "DELETE": 2
         },
         "endpoints": [
-          "GET /camera/feeds",
-          "POST /camera/feeds",
-          "GET /camera/feeds/:id/stream",
-          "GET /camera/feeds/:id/alerts",
+          "GET /feeds",
+          "POST /feeds",
+          "PATCH /feeds/:id",
+          "DELETE /feeds/:id",
+          "GET /feeds/:id/stream",
+          "GET /feeds/:id/alerts",
+          "POST /feeds/:id/alerts",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -1546,9 +1550,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/camera.ts (70 LOC)",
     "web": {
-      "client": "apps/web/src/lib/camera.ts (28 LOC)",
+      "client": "apps/web/src/lib/camera.ts (19 LOC)",
       "pages": []
     },
     "db": {
@@ -1562,13 +1566,14 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "collaboration.spec.ts"
+      "collaboration.spec.ts",
+      "camera/camera.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
       "Google"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "canvasCollab",

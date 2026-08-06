@@ -128,6 +128,8 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_106_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_106_RUNTIME_VALIDATION_CHECKLIST.md) | Session 106 runtime validation (RBAC, approval isolation, legacy migration and no-autonomous-execution gate) |
 | [docs/SESSION_107_SPECIFICATION.md](./docs/SESSION_107_SPECIFICATION.md) | Session 107 — Billing & Subscriptions completion (shared contracts, audited invoice lifecycle, idempotent webhooks and dedicated UI) |
 | [docs/SESSION_107_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_107_RUNTIME_VALIDATION_CHECKLIST.md) | Session 107 runtime validation (subscription scope, invoice transitions, webhook idempotency and dunning) |
+| [docs/SESSION_108_SPECIFICATION.md](./docs/SESSION_108_SPECIFICATION.md) | Session 108 — Camera Feed Registry & Alert Console completion (scoped feeds/alerts, corrected routes and honest stream handoff) |
+| [docs/SESSION_108_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_108_RUNTIME_VALIDATION_CHECKLIST.md) | Session 108 runtime validation (feed/alert isolation, gateway availability, RBAC and legacy migration) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |

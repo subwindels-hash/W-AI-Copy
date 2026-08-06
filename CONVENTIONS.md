@@ -30,6 +30,22 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 108 — Decisions Logged (Camera Feed Registry & Alert Console Completion)
+
+- **Shared contract prefix:** `Cam` feed, alert, stream-session and Zod
+  contracts live in `packages/shared/src/camera.ts`.
+- **Route mounting:** camera routes are mounted at `/api/v1/camera`, so the
+  route module uses relative `/feeds` paths; new API requests do not create a
+  duplicated `/camera/camera` path.
+- **Isolation:** feed and alert records use org-scoped item/index keys and
+  ownership checks. Legacy feed slots are migration inputs only.
+- **Media honesty:** an expiring WebRTC handoff token is not a live stream;
+  responses include `streamAvailable`, TURN state and an external gateway note.
+  Feed status defaults offline and alerts are advisory records.
+- **RBAC/UI:** administrators manage feed configuration and alert records;
+  authenticated users can read scoped feeds/alerts. `/app/camera` is the
+  dedicated console; the PlatformPage tab remains compatible.
+
 ## Session 107 — Decisions Logged (Billing & Subscriptions Completion)
 
 - **Shared contract prefix:** `Billing*` types/schemas live in

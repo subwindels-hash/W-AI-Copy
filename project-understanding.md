@@ -1,4 +1,4 @@
-# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 107)
+# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 108)
 
 > Compiled from the master spec (`uploads/CLAUDE.md` ~15k lines), the per-session
 > addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-05),
@@ -40,7 +40,7 @@ Current counts that confirm the pattern is uniform (2026-08-06):
 - **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
 - **97** API test files; **26** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S107)
+## 4. The session-by-session arc (S1 → S108)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -106,7 +106,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | 75 | `healthEcosystem` | **Record-only** health (de-faked) |
 | 76 | `v76validation` | Final integration & validation |
 
-### Recent additive sessions (S77–107) — shipped as 🟡 VERIFIED (partial) pending runtime closure
+### Recent additive sessions (S77–108) — shipped as 🟡 VERIFIED (partial) pending runtime closure
 | Session | Module(s) | What it is |
 |---|---|---|
 | 77A | `expertsPlatform` | Experts platform |
@@ -140,6 +140,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **105** | `attachments` | **Message Attachments completion** — normalized metadata, full-checksum storage keys, scoped byte/meta access, uploader deletion, target validation and mobile multipart parity (`docs/SESSION_105_SPECIFICATION.md`) |
 | **106** | `autonomous` | **Autonomous Organization approval-register completion** — org-scoped proposals, human resolution, honest review/impact metrics, legacy migration and dedicated approval console (`docs/SESSION_106_SPECIFICATION.md`) |
 | **107** | `billing` | **Billing & Subscriptions completion** — shared contracts, real subscription/invoice lifecycle, audited payment actions, idempotent webhooks/dunning and dedicated billing console (`docs/SESSION_107_SPECIFICATION.md`) |
+| **108** | `camera` | **Camera Feed Registry & Alert Console completion** — shared feed/alert contracts, org-scoped records, corrected mounted routes, honest stream handoff and dedicated camera console (`docs/SESSION_108_SPECIFICATION.md`) |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -204,7 +205,7 @@ milestone"):**
 **Priority C — verification & hardening:**
 3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
    repository-wide test/module counts in `PROGRESS.md`.
-4. Run the S1–S6 and S89–S107 runtime-validation tracks in a target
+4. Run the S1–S6 and S89–S108 runtime-validation tracks in a target
    environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
    any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 
@@ -219,4 +220,4 @@ milestone"):**
 ### Quick reference — "what session do I touch?"
 S1–36 foundation/platform · S37–76 V8 enterprise · S77 experts/media · S78 UX ·
 S79 gift cards · S80 currency · S81 trading · S82 cyber · S83 ETL · S84 project
-continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory · S97 business intelligence · S98 enterprise search · S99 factory studios & build farm · S100 enterprise FinOps depth · S101 Admin Console · S102 Agent Framework · S103 AI Economy · S104 API Key Management · S105 Attachments · S106 Autonomous Organization · S107 Billing**.
+continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory · S97 business intelligence · S98 enterprise search · S99 factory studios & build farm · S100 enterprise FinOps depth · S101 Admin Console · S102 Agent Framework · S103 AI Economy · S104 API Key Management · S105 Attachments · S106 Autonomous Organization · S107 Billing · S108 Camera Console**.

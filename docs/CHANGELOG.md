@@ -5,6 +5,16 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 108 — Camera Feed Registry & Alert Console Completion] — 2026-08-05
+
+### Camera registry and alert boundary completed
+*   `packages/shared/src/camera.ts` — `Cam` feed, alert, stream-session and Zod contracts.
+*   `apps/api/src/camera/camera.service.ts` — org-scoped feed/alert item/index records, legacy feed migration, feed update/delete, alert ownership checks, full stream handoff honesty and admin-compatible lifecycle.
+*   Routes: corrected mounted `/api/v1/camera/feeds` paths; added feed PATCH/DELETE, alert POST and shared validation. Session 89 camera feed/alert namespaces are org-audited.
+*   Web: typed feed/alert client, dedicated `/app/camera` console, status and alert controls, external-gateway availability labeling and non-admin read-only state.
+*   Tests: `camera.test.ts` (9) — scoped feed CRUD, status, alert isolation, stream availability, deletion cascade, legacy migration and contracts.
+*   Runtime validation against live Redis/camera gateway/CV infrastructure remains pending; Session 108 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 107 — Billing & Subscriptions Completion] — 2026-08-05
 
 ### Billing lifecycle completed as a real audited subscription/invoice slice

@@ -115,3 +115,4 @@ export type {
   BillingSubscriptionUpdateInput,
   BillingPaymentEventInput,
 } from "./billing.js";
+export * from "./camera.js";
