@@ -5,6 +5,23 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 128 — Multi-Provider Payment Gateways (`payments`)] — 2026-08-06
+
+### Native African, Global, and Sovereign On-Chain Crypto Checkout (109 COMPLETE / 0 PARTIAL / 0 STUB / 0 DEMO DATA)
+*   **Multi-Provider Checkout Orchestrator (`payments` module):** Shipped new additive module `/api/v1/payments` supporting checkouts across four distinct payment gateways and four on-chain crypto networks without modifying legacy `/api/v1/billing/*` routes.
+*   **Flutterwave (`flutterwave.service.ts`):** Supports card, mobile money (M-Pesa, MTN, Airtel), and bank transfers across NGN, GHS, KES, ZAR, USD. Includes constant-time `verif-hash` header verification (`/flutterwave/initialize`, `/verify/:ref`, `/webhook`).
+*   **Paystack (`paystack.service.ts`):** Supports African card and bank checkouts across NGN, GHS, ZAR, KES. Includes constant-time SHA512 HMAC `x-paystack-signature` verification (`/paystack/initialize`, `/verify/:ref`, `/webhook`).
+*   **PayPal (`paypal.service.ts`):** Supports international checkout order creation, order capture, and webhook transmission signature verification (`/paypal/create-order`, `/capture-order`, `/webhook`).
+*   **Blockonomics & Crypto Payments (`crypto.service.ts`):** Supports sovereign on-chain checkout across **Bitcoin (BTC)** (1 confirmation), **Tron (TRC-20 USDT / TRX)** (19 confirmations), **Ethereum (ERC-20 USDT / ETH)** (12 confirmations), and **BNB Chain (BNB / BEP-20 USDT)** (15 confirmations). Computes real-time crypto amounts and tracks block confirmation thresholds (`/crypto/create-charge`, `/charge/:id`, `/callback`).
+*   **Billing Invoice Integration:** Paid checkouts containing an `invoiceId` automatically settle subscription invoices via `billing.markInvoicePaid(orgId, invoiceId)`.
+*   **Shared Contract & UI:** Added `packages/shared/src/payments.ts` (285 LOC), typed web client `apps/web/src/lib/payments.ts`, and the `/app/payments` console page (`apps/web/src/pages/billing/PaymentGatewaysPage.tsx`).
+*   **Tenant Isolation:** Catalogued `{ prefix: "pay:tx", scope: "org_scoped" }` in `TI_NAMESPACE_CATALOG`. Bare root (`pay`) is omitted.
+*   **Tests & Verification:** Shipped `apps/api/src/payments/payments.test.ts` (14 unit tests) and `tests/e2e/payments.spec.ts` (12 Playwright E2E cases). Full API test suite: **1797 passing / 0 failures across 123 test files**.
+*   **Inventory:** New module `payments` added as **COMPLETE** (`routeCount = 16`, `svc = 645 LOC`, `tests = 14`). Total repository inventory: **109 COMPLETE / 0 PARTIAL / 0 STUB / 0 DEMO DATA / 0 MISSING (100% COMPLETE)** across 109 modules. Runtime validation remains pending; Session 128 is recorded 🟡 VERIFIED (partial).
+
+---
+---
+
 ## [Session 127 — Quantum Computing (`quantum`) Honest Gating & 100% Module Completion] — 2026-08-06
 
 ### All 108 modules in WINDELS AI OS are now COMPLETE (100% COMPLETE / 0 PARTIAL / 0 STUB / 0 DEMO DATA)

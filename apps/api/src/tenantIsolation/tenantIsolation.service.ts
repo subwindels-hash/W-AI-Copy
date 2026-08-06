@@ -219,6 +219,11 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // prefix (index 1), so the sweep's org-segment derivation holds for records
   // (`ik:rec:<org>:<id>`), versions, grants, and the activity ledger alike.
   { prefix: "ik", scope: "org_scoped" },
+  // Session 126 completed stubs: events (evt:hist) & webhook (whk:inbox)
+  { prefix: "evt:hist", scope: "org_scoped" },
+  { prefix: "whk:inbox", scope: "org_scoped" },
+  // Session 128 multi-provider payments: transaction ledger (pay:tx)
+  { prefix: "pay:tx", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A

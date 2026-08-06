@@ -64,6 +64,7 @@ const ApiKeysPage = lazy(() => import("./pages/apikey/ApiKeyPage").then((m) => (
 const AttachmentsPage = lazy(() => import("./pages/attachments/AttachmentsPage").then((m) => ({ default: m.AttachmentsPage })));
 const AutonomousPage = lazy(() => import("./pages/autonomous/AutonomousPage").then((m) => ({ default: m.AutonomousPage })));
 const BillingPage = lazy(() => import("./pages/billing/BillingPage").then((m) => ({ default: m.BillingPage })));
+const PaymentGatewaysPage = lazy(() => import("./pages/billing/PaymentGatewaysPage").then((m) => ({ default: m.PaymentGatewaysPage })));
 const CameraPage = lazy(() => import("./pages/camera/CameraPage").then((m) => ({ default: m.CameraPage })));
 const CognitivePage = lazy(() => import("./pages/cognitive/CognitivePage").then((m) => ({ default: m.CognitivePage })));
 const CommandCenterPage = lazy(() => import("./pages/command/CommandCenterPage").then((m) => ({ default: m.CommandCenterPage })));
@@ -311,6 +312,7 @@ export const router = createBrowserRouter([
       { path: "attachments", element: withSuspense(<AttachmentsPage />) },
       { path: "autonomous", element: withSuspense(<AutonomousPage />) },
       { path: "billing", element: withSuspense(<BillingPage />) },
+      { path: "payments", element: withSuspense(<PaymentGatewaysPage />) },
       { path: "camera", element: withSuspense(<CameraPage />) },
       { path: "cognitive", element: withSuspense(<CognitivePage />) },
       { path: "command", element: withSuspense(<CommandCenterPage />) },

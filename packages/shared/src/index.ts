@@ -129,3 +129,4 @@ export * from "./camera.js";
 export * from "./canvasCollab.js";
 export * from "./events.js";
 export * from "./webhook.js";
+export * from "./payments.js";

@@ -1154,6 +1154,7 @@
       "mlOps.spec.ts",
       "mobileSync.spec.ts",
       "opexAssurance.spec.ts",
+      "payments.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
       "promptTemplates.spec.ts",
@@ -7123,6 +7124,84 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "payments",
+    "title": "payments",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/payments",
+    "backend": {
+      "serviceDir": "apps/api/src/payments",
+      "serviceFile": {
+        "file": "crypto.service.ts",
+        "path": "/home/user/WIN/apps/api/src/payments/crypto.service.ts",
+        "sloc": 128,
+        "mathRandom": false,
+        "externalFetch": true
+      },
+      "serviceTotalSloc": 2079,
+      "serviceFiles": [
+        "crypto.service.ts",
+        "flutterwave.service.ts",
+        "payments.service.ts",
+        "payments.test.ts",
+        "paypal.service.ts",
+        "paystack.service.ts",
+        "payments/payments.service.ts",
+        "payments/flutterwave.service.ts",
+        "payments/paystack.service.ts",
+        "payments/paypal.service.ts",
+        "payments/crypto.service.ts"
+      ],
+      "importedServiceFiles": [
+        "payments/payments.service.ts",
+        "payments/flutterwave.service.ts",
+        "payments/paystack.service.ts",
+        "payments/paypal.service.ts",
+        "payments/crypto.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/payments.ts",
+        "sloc": 328,
+        "counts": {
+          "total": 16,
+          "GET": 6,
+          "POST": 10,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/payments.ts (76 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/payments.ts (100 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message",
+        "ApiKey",
+        "Invoice",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "payments.spec.ts",
+      "payments/payments.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "platform",
     "title": "Platform Admin UI Shell",
     "sessions": [],
@@ -8796,11 +8875,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 511,
+        "sloc": 516,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1198,
+      "serviceTotalSloc": 1208,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
