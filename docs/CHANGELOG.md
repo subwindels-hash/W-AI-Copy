@@ -5,6 +5,20 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 124 — AI Software Engineering Workforce] — 2026-08-06
+
+### An autonomous engineering department, not a coding agent
+*   `packages/shared/src/aiEngineering.ts` (new, 342 LOC) — the department's contract: the 19-role catalog (18 specialists + orchestrator), GitHub connections (token-in-store / masked-on-read), the multi-repo workspace, tasks with the pipeline statuses, GitHub entities (PRs/issues/milestones/releases/workflow runs/checks), repository-intelligence nodes (21 kinds, `observed` vs `heuristic` basis + confidence), engineering memory entries (source-labelled) and the command-center rollup. Zod schemas for every write body.
+*   **Workforce** (`workforce.service.ts`) — org-scoped repositories with per-repo AI teams (`role → engineer`), and the **orchestrator pipeline**: `queued → planning → implementing → testing → reviewing → fixing (bounded loop) → pr_ready → pr_open → done | failed`. Every step records `mode: advisory|executed` and whether an AI provider produced it; tests execute for real only when the repo has a `localPath` and `execute: true` is requested; a failed pipeline records a `lesson` into memory (`source: "task"`); a PR is only marked `pr_open` when the GitHub client actually opened one.
+*   **GitHub engineering module** (`github.service.ts`) — the real REST API over injectable `fetch`: connections verified at connect time (`/user`, `/user/orgs`), multiple accounts per org, repos list/create/structure-read, branches, commits (blobs→tree→commit→refs), pull requests (open/list/merge/review/close), issues, milestones, releases + GitHub's own generate-notes, workflow_dispatch, runs and check-runs. Tokens are stored only in the org-scoped store and every read returns `tokenMasked`; a missing connection is an explicit "no GitHub connection" error, never a fabricated remote result.
+*   **Repository intelligence** (`repoIntel.service.ts`) — a real scanner over a local checkout producing a persisted knowledge graph: observed nodes (structure, dependencies + framework detection, Prisma models, routes, services, models, components, auth, docs, CI, Dockerfiles, K8s, tests, TODOs) and labelled heuristic nodes (duplicate 6-line blocks, possibly-dead exports, secret literals, eval, oversized files, sync fs). Re-scans replace the graph; ignore lists respected; empty directories are reported honestly.
+*   **Engineering memory** (`memory.service.ts`) — org/repo-scoped entries (decision/standard/pattern/instruction/lesson/bugfix), tagged, searchable, source-labelled; the orchestrator records lessons from tasks and never invents entries.
+*   **Command center** (`commandCenter.service.ts` + the `/app/ai-engineering` console) — repositories, engineers by role, tasks by status, PRs/issues/builds/releases (GitHub-backed when connected), security/performance flags from intel, memory counts, recent activity — with unmeasured values shown as "not connected"/"unknown", never 0-as-success.
+*   Routes: 42 on `/api/v1/ai-engineering`; Session 26's `/api/v1/engineering` observability untouched. `aew` catalogued org-scoped in the Session 89 sweep (org in the segment straight after the prefix).
+*   Tests: 4 unit suites (28 tests) — workforce pipeline (incl. real executor injection and fix-loop), GitHub client against a mocked transport (every capability), repo-intel against a real fixture directory, memory. Plus `tests/e2e/aiEngineering.spec.ts` (5 Playwright cases).
+*   **Inventory: new module `aiEngineering` COMPLETE — 107 modules, 104 COMPLETE / 0 PARTIAL / 2 STUB-by-design / 1 DEMO DATA.** Repository suite: **1753 passing, 51 skipped, 0 failures** (115 → 119 files).
+*   Runtime validation against live PostgreSQL 17/Redis 8 and a reachable GitHub API remains pending; Session 124 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 123 — Usage Intelligence Completion] — 2026-08-06
 
 ### Deltas were placeholder zeros, empty denominators were zero, and per-module metrics were blank

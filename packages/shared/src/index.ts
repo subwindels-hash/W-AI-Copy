@@ -70,6 +70,7 @@ export * from "./opex.js";
 export * from "./promptTemplates.js";
 export * from "./publicApi.js";
 export * from "./talk.js";
+export * from "./aiEngineering.js";
 export * from "./industry.js";
 export * from "./healthEcosystem.js";
 export * from "./projectContinuity.js";

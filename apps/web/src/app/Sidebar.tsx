@@ -52,6 +52,7 @@ import {
   Gauge,
   SquarePen,
   Leaf,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -72,6 +73,7 @@ const navItems = [
   { to: "/app/public-api", icon: Globe2, label: "Public API" },
   { to: "/app/sustainability", icon: Leaf, label: "Sustainability" },
   { to: "/app/usage", icon: BarChart3, label: "Usage" },
+  { to: "/app/ai-engineering", icon: Workflow, label: "AI Engineering" },
   { to: "/app/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },

@@ -1051,3 +1051,39 @@
   (`events`, `webhook`) / 1 DEMO DATA (`quantum`). The two stubs are
   by-design (SSE channel + webhook receiver) and the demo module is labelled
   as such; the remaining work is the runtime-validation track.
+
+## Session 124 — Decisions Logged (AI Software Engineering Workforce)
+
+- **Module prefix:** `Aew*`/`AiEngineering*` types in `packages/shared/src/aiEngineering.ts`,
+  **`aew:` Redis keys**, the new `/api/v1/ai-engineering` route prefix (Session
+  26's `/api/v1/engineering` observability is untouched — the workforce is a
+  department, the observability module is its telemetry, and they stay
+  separate), `apps/web/src/lib/aiEngineering.ts` client, `/app/ai-engineering`
+  route + sidebar label "AI Engineering".
+- **A workforce is a coordination layer, and every step says what it did.**
+  The orchestrator pipeline records each step with `mode: advisory|executed`
+  and an `aiGenerated` flag. Plans without a configured AI provider are
+  deterministic templates — labelled as such, never presented as
+  measurements. Test execution is real only when the repo has a `localPath`
+  and the caller opts in; otherwise the step is advisory and says so.
+- **GitHub is one capability, not the product.** The department works over
+  its own org-scoped stores; GitHub connections add remote execution. Tokens
+  are verified at connect time (`/user`, `/user/orgs`), stored only in the
+  org-scoped store, and every read returns `tokenMasked`. A missing
+  connection is an explicit error — the workforce never fabricates a remote
+  result, and upstream API errors surface with their status.
+- **Repository intelligence labels inference.** Scanner nodes carry
+  `basis: "observed" | "heuristic"` and a confidence; heuristics (duplicate
+  blocks, dead exports, secret literals) are explicitly potentially-wrong.
+  Re-scans replace the graph; a scan of an empty directory is an empty graph
+  with repo status `ready`, never invented nodes.
+- **Memory entries are source-labelled and never invented.** The orchestrator
+  records lessons from finished/failed tasks (`source: "task"`); a
+  `source: "user"` entry can only be created by a person through the API.
+- **Command-center honesty:** unmeasured values are "not connected"/
+  "unknown"/`null`, never 0-as-success; the payload's `note` states which
+  half of the numbers came from connected GitHub accounts.
+- **Tenant isolation:** `aew` catalogued org-scoped in the S89 sweep — every
+  key is `aew:<entity>:<org>:…` with the org in the segment straight after
+  the prefix (the `esg` shape); per-repo knowledge graphs and teams live
+  under the org that owns the repo.

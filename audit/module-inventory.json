@@ -602,6 +602,134 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "aiEngineering",
+    "title": "aiEngineering",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/aiEngineering",
+    "backend": {
+      "serviceDir": "apps/api/src/aiEngineering",
+      "serviceFile": {
+        "file": "commandCenter.service.ts",
+        "path": "/home/user/WIN/apps/api/src/aiEngineering/commandCenter.service.ts",
+        "sloc": 117,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 3183,
+      "serviceFiles": [
+        "commandCenter.service.ts",
+        "github.service.ts",
+        "github.test.ts",
+        "memory.service.ts",
+        "memory.test.ts",
+        "repoIntel.service.ts",
+        "repoIntel.test.ts",
+        "workforce.service.ts",
+        "workforce.test.ts",
+        "aiEngineering/workforce.service.ts",
+        "aiEngineering/github.service.ts",
+        "aiEngineering/repoIntel.service.ts",
+        "aiEngineering/memory.service.ts",
+        "aiEngineering/commandCenter.service.ts"
+      ],
+      "importedServiceFiles": [
+        "aiEngineering/workforce.service.ts",
+        "aiEngineering/github.service.ts",
+        "aiEngineering/repoIntel.service.ts",
+        "aiEngineering/memory.service.ts",
+        "aiEngineering/commandCenter.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/aiEngineering.ts",
+        "sloc": 531,
+        "counts": {
+          "total": 42,
+          "GET": 18,
+          "POST": 18,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 3
+        },
+        "endpoints": [
+          "GET /roles",
+          "POST /repos",
+          "GET /repos",
+          "GET /repos/:id",
+          "DELETE /repos/:id",
+          "PATCH /repos/:id/team",
+          "POST /repos/:id/scan",
+          "GET /repos/:id/intel",
+          "GET /tasks",
+          "POST /tasks",
+          "GET /tasks/:id",
+          "POST /tasks/:id/run",
+          "POST /tasks/:id/pr",
+          "GET /memory",
+          "POST /memory",
+          "DELETE /memory/:id",
+          "GET /command-center",
+          "POST /connections",
+          "GET /connections",
+          "DELETE /connections/:id",
+          "GET /github/:connId/repos",
+          "POST /github/:connId/repos",
+          "GET /repos/:id/github/branches",
+          "POST /repos/:id/github/branches",
+          "POST /repos/:id/github/commits",
+          "GET /repos/:id/github/pulls",
+          "POST /repos/:id/github/pulls",
+          "POST /repos/:id/github/pulls/:number/merge",
+          "POST /repos/:id/github/pulls/:number/review",
+          "PATCH /repos/:id/github/pulls/:number",
+          "GET /repos/:id/github/issues",
+          "POST /repos/:id/github/issues",
+          "PATCH /repos/:id/github/issues/:number",
+          "GET /repos/:id/github/milestones",
+          "POST /repos/:id/github/milestones",
+          "GET /repos/:id/github/releases",
+          "POST /repos/:id/github/releases",
+          "POST /repos/:id/github/releases/generate-notes",
+          "GET /repos/:id/github/workflows",
+          "POST /repos/:id/github/workflows/:workflow/dispatch",
+          "GET /repos/:id/github/runs",
+          "GET /repos/:id/github/checks"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/aiEngineering.ts (342 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/aiEngineering.ts (77 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Task",
+        "Activity",
+        "Message",
+        "Workflow"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "aiEngineering.spec.ts",
+      "aiEngineering/github.test.ts",
+      "aiEngineering/memory.test.ts",
+      "aiEngineering/repoIntel.test.ts",
+      "aiEngineering/workforce.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "apikey",
     "title": "apikey",
     "sessions": [],
@@ -1002,6 +1130,7 @@
     "tests": [
       "agentComm.spec.ts",
       "aiEcosystem.spec.ts",
+      "aiEngineering.spec.ts",
       "auth.spec.ts",
       "collaboration.spec.ts",
       "conversations.spec.ts",
@@ -2055,6 +2184,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "aiEngineering.spec.ts",
       "sessions54-60.spec.ts",
       "sessions61-72-82.spec.ts",
       "command/operations.test.ts"
@@ -8569,11 +8699,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 500,
+        "sloc": 506,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1176,
+      "serviceTotalSloc": 1188,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

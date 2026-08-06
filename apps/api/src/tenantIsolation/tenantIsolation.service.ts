@@ -208,6 +208,12 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // catalogued by their two-segment prefix with the org in the segment after
   // the index marker.
   { prefix: "usg:evt", scope: "org_scoped" },
+  // AI Software Engineering Workforce (Session 124). Every key is
+  // `aew:<entity>:<org>:…` — the org sits in the segment straight after the
+  // prefix (index 1), so the sweep's org-segment derivation holds for repos
+  // (`aew:repo:<org>:<id>`), connections, engineer assignments, tasks, intel
+  // nodes, memory entries and the activity ledger alike.
+  { prefix: "aew", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A
