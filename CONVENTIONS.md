@@ -30,6 +30,59 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 117 — Decisions Logged (Mobile App / PWA Completion)
+
+- **Module prefix:** `Mobile*` types, `mob:*` Redis keys (`mobile:*` was already
+  taken by unrelated Session 21 cache entries), the existing `/api/v1/mobile`
+  route prefix, `apps/web/src/lib/mobile/sync.ts` client, `/app/mobile-devices`
+  route + sidebar label "Mobile Devices".
+- **A queue that reports success must actually hold the data.** The previous
+  implementation counted the array and dropped it, and the client deleted its
+  local copy on the strength of that count. The rule this session encodes: **a
+  client may delete local work only for ids the server explicitly reports as
+  held**, and every receipt carries `retainLocally` so the negative case is
+  stated rather than inferred from an absence.
+- **Stored is not applied.** The queue records a write; it does not perform one.
+  The server deliberately does **not** re-dispatch a queued action internally:
+  that would execute a write with none of its authorization, validation or
+  rate-limit context re-established. Replay happens on the device, against the
+  ordinary authenticated API, and the note ships inside every queue payload.
+- **Order by the server's clock, return the device's.** A handset's clock is
+  attacker-controlled and frequently just wrong, so `receivedAt` orders the
+  replay plan and `queuedAt` is returned separately, labelled as the device's
+  own value. Never silently prefer client-supplied time for anything ordered.
+- **Refuse, do not truncate.** A body over the size cap is rejected with a
+  reason. Truncating would store a corrupted write that looks replayable.
+- **Expiry is not application.** A record dropped at the end of its retention
+  window is reported `expired`; folding it into `applied` or deleting it
+  silently would turn lost work into apparent success.
+- **A client-supplied identifier is not an authorization.** A device id arriving
+  in a request body is checked against its owner before anything is written to
+  it. An id belonging to nobody is not an error — that is how a new handset is
+  issued one — but an id belonging to *someone else* is a `403` and a ledger
+  entry, not an upsert.
+- **Never select a column the schema says never to select.** `pinHash` and
+  `pushTokenHash` leave the server in no payload; a test greps a full keyspace
+  dump to prove it, and the grep first asserts the dump is non-empty so it
+  cannot pass vacuously.
+- **A push endpoint is a bearer capability.** Health reports the endpoint
+  **host** only. Anyone holding the full endpoint can send to that subscription.
+- **Bookkeeping is best-effort and never fails the thing it observes.** Push
+  delivery and retirement records are wrapped and the mobile service is imported
+  lazily, so a Redis problem cannot turn a delivered notification into a 500.
+- **Advisory policy is labelled advisory.** Only the queue limits this API
+  enforces are enforced; a minimum app version is a message for the client to
+  act on, and this API does not refuse requests from an out-of-date build.
+- **Removing `@ts-nocheck` counts as completing the module.** A route file
+  excluded from the type checker is not covered by the repository's guarantees.
+  The rename of the local `r` router to `router` also makes the file legible to
+  the audit's route scanner, which matches `router.<verb>`.
+- **Principal-scoped keys are catalogued `shared`, with the reason written
+  down.** A phone and its queue belong to a person, not a tenant, and the queue
+  is read before an organization is resolved. Marking them `org_scoped` would
+  make the Session 89 sweep read a user id as an organization id and report a
+  check it never made.
+
 ## Session 116 — Decisions Logged (Multi-Factor Authentication Completion)
 
 - **Module prefix:** `Mfa*` types, `mfa:*` Redis keys, the existing `/api/v1/mfa`

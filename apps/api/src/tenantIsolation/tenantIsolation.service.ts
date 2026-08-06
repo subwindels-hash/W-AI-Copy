@@ -158,6 +158,8 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "mfa:exempt", scope: "org_scoped" },
   { prefix: "mfa:exemptidx", scope: "org_scoped" },
   { prefix: "mfa:event", scope: "org_scoped" },
+  // Mobile / PWA (Session 117) — the organization's mobile policy.
+  { prefix: "mob:policy", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A
@@ -179,6 +181,21 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "mfa:lock", scope: "shared" },
   { prefix: "mfa:used", scope: "shared" },
   { prefix: "mfa:uevent", scope: "shared" },
+  // Mobile / PWA principal-scoped state (Session 117) — one key per *user* id.
+  // A phone, the writes it queued while offline, its PIN lock and its push
+  // history belong to the person who signed in on it, not to a tenant: the same
+  // person may hold memberships in several organizations from the same handset,
+  // and the offline queue is read before an organization has been resolved.
+  // Every read filters on the caller's own user id and re-checks the decoded
+  // record's `userId`, so cataloguing these as org_scoped would make the sweep
+  // read a user id as an organization id and report a check it never made.
+  { prefix: "mob:action", scope: "shared" },
+  { prefix: "mob:actidx", scope: "shared" },
+  { prefix: "mob:actdev", scope: "shared" },
+  { prefix: "mob:pinfail", scope: "shared" },
+  { prefix: "mob:pinlock", scope: "shared" },
+  { prefix: "mob:event", scope: "shared" },
+  { prefix: "mob:pushlog", scope: "shared" },
   // Google OAuth CSRF state is issued before any user — and therefore any
   // organization — is known, so it is shared by design and short-lived (10 min).
   { prefix: "google:state", scope: "shared" },

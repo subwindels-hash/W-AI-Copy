@@ -6382,34 +6382,39 @@
     "moduleKey": "mobile",
     "title": "Mobile App / PWA",
     "sessions": [
-      21
+      21,
+      117
     ],
     "tier": "core",
     "routePrefix": "/api/v1/mobile",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/mobile",
       "serviceFile": {
-        "file": "mobileAuth.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/mobileAuth.service.ts",
-        "sloc": 430,
+        "file": "mobileSync.service.ts",
+        "path": "/home/user/WIN/apps/api/src/mobile/mobileSync.service.ts",
+        "sloc": 1128,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 577,
+      "serviceTotalSloc": 3685,
       "serviceFiles": [
+        "mobileSync.service.ts",
+        "mobileSync.test.ts",
         "services/mobileAuth.service.ts",
-        "services/push.service.ts"
+        "services/push.service.ts",
+        "mobile/mobileSync.service.ts"
       ],
       "importedServiceFiles": [
         "services/mobileAuth.service.ts",
-        "services/push.service.ts"
+        "services/push.service.ts",
+        "mobile/mobileSync.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/mobile.ts",
-        "sloc": 218,
+        "sloc": 365,
         "counts": {
           "total": 21,
           "GET": 7,
@@ -6418,10 +6423,60 @@
           "PATCH": 0,
           "DELETE": 2
         },
-        "endpoints": []
+        "endpoints": [
+          "GET /config",
+          "POST /devices/register",
+          "GET /devices",
+          "DELETE /devices/:id",
+          "POST /push/subscribe",
+          "DELETE /push/subscribe",
+          "POST /push/test",
+          "POST /biometric/register-challenge",
+          "POST /biometric/register-verify",
+          "POST /biometric/auth-challenge",
+          "POST /biometric/auth-verify",
+          "POST /pin/set",
+          "POST /pin/verify",
+          "GET /notifications",
+          "POST /notifications/:id/read",
+          "POST /notifications/read-all",
+          "POST /offline/sync"
+        ]
+      },
+      {
+        "file": "apps/api/src/http/routes/mobileSync.ts",
+        "sloc": 360,
+        "counts": {
+          "total": 18,
+          "GET": 13,
+          "POST": 3,
+          "PUT": 1,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "POST /offline/actions",
+          "GET /offline/actions",
+          "GET /offline/summary",
+          "GET /offline/replay-plan",
+          "GET /offline/actions/:actionId",
+          "POST /offline/actions/:actionId/resolve",
+          "POST /offline/actions/:actionId/discard",
+          "GET /devices/trust",
+          "GET /devices/:deviceId/trust",
+          "GET /devices/:deviceId/pin/lock",
+          "DELETE /devices/:deviceId/pin",
+          "GET /push/health",
+          "GET /policy",
+          "PUT /policy",
+          "GET /assurance/self",
+          "GET /assurance/configuration",
+          "GET /assurance/gaps",
+          "GET /events"
+        ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/mobile.ts (827 LOC)",
     "web": {
       "client": "apps/web/src/lib/mobile/biometrics.ts (100 LOC, serves /mobile)",
       "pages": []
@@ -6429,18 +6484,27 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
-        "MobileDevice"
+        "Conversation",
+        "Message",
+        "MobileDevice",
+        "PushSubscription",
+        "BiometricCredential",
+        "Notification"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "mobile/mobileSync.test.ts",
       "services/mobileAuth.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "PARTIAL"
+    "externalIntegrations": [
+      "Google"
+    ],
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "modelFactory",
@@ -8402,11 +8466,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 435,
+        "sloc": 452,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1046,
+      "serviceTotalSloc": 1080,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

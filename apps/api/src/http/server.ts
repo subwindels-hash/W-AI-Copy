@@ -47,6 +47,7 @@ import { registerPlatformRoutes } from "./routes/platform.js";
 import { registerSecurityRoutes } from "./routes/security.js";
 import { registerPublicApiRoutes } from "./routes/publicApi.js";
 import { registerMobileRoutes } from "./routes/mobile.js";
+import { registerMobileSyncRoutes } from "./routes/mobileSync.js";
 import { registerQaRoutes } from "./routes/qa.js";
 import { registerReleaseRoutes } from "./routes/release.js";
 import { registerProgramRoutes } from "./routes/program.js";
@@ -1226,6 +1227,14 @@ export function createApp() {
   registerEnterpriseFinOpsRoutes(enterpriseFinOpsRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
+  //
+  // Session 117's durable offline queue, device-trust and push-health routes are
+  // mounted on their own /mobile router *first*, so anything they do not serve
+  // falls straight through to the Session 21 endpoints with their paths,
+  // payloads and (for GET /mobile/config) their public access unchanged.
+  const mobileSyncRouter = express.Router();
+  v1.use("/mobile", mobileSyncRouter);
+  registerMobileSyncRoutes(mobileSyncRouter);
   registerMobileRoutes(v1);
 
   // /events — SSE real-time channel (Module 1: Gap 6)

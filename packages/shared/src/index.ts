@@ -76,6 +76,7 @@ export * from "./derivatives.js";
 export * from "./googleAuth.js";
 export * from "./leadDiscovery.js";
 export * from "./mfa.js";
+export * from "./mobile.js";
 export * from "./mediaMetering.js";
 export * from "./advertising.js";
 export * from "./musicGen.js";
