@@ -138,12 +138,28 @@ test.describe("Sessions 61-72 + 82 API", () => {
     expect(Array.isArray(hypotheses.data)).toBe(true);
   });
 
-  test("S70 global command center: regions + incidents + briefings", async () => {
+  test("S70/S111 global command center: register-backed rollup", async () => {
     const d = await get("/command/dashboard/rollup");
     expect(d.ok).toBe(true);
     expect(Array.isArray(d.data.regions)).toBe(true);
     expect(Array.isArray(d.data.incidents)).toBe(true);
     expect(Array.isArray(d.data.briefings)).toBe(true);
+    expect(Array.isArray(d.data.directives)).toBe(true);
+    // Session 111: MTTR is measured, so a zero must be accompanied by
+    // `mttrKind: "none"` rather than presented as instant recovery.
+    const ops = d.data.operations;
+    expect(ops).toBeTruthy();
+    expect(["measured", "none"]).toContain(ops.mttrKind);
+    if (ops.mttrKind === "none") expect(ops.meanTimeToResolveMinutes).toBeNull();
+    expect(ops.regions.every((r: any) => r.servicesUp !== null || r.health === "unreported")).toBe(true);
+    expect(typeof ops.note).toBe("string");
+
+    const incidents = await get("/command/incidents");
+    expect(Array.isArray(incidents.data)).toBe(true);
+    const regions = await get("/command/regions");
+    expect(Array.isArray(regions.data)).toBe(true);
+    const initiatives = await get("/command/initiatives");
+    expect(Array.isArray(initiatives.data)).toBe(true);
   });
 
   test("S71 AI economy: GPU offers + allocations", async () => {

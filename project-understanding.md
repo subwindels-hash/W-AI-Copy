@@ -1,7 +1,7 @@
-# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 109)
+# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 111)
 
 > Compiled from the master spec (`uploads/CLAUDE.md` ~15k lines), the per-session
-> addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-05),
+> addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-06),
 > the current `docs/` session specifications, and the workflow brief preserved in
 > `SESSION_WORKFLOW.patch`. Use this as the "what is really going on" map before
 > adding anything new.
@@ -40,7 +40,7 @@ Current counts that confirm the pattern is uniform (2026-08-06):
 - **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
 - **97** API test files; **26** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S110)
+## 4. The session-by-session arc (S1 → S111)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -106,7 +106,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | 75 | `healthEcosystem` | **Record-only** health (de-faked) |
 | 76 | `v76validation` | Final integration & validation |
 
-### Recent additive sessions (S77–110) — shipped as 🟡 VERIFIED (partial) pending runtime closure
+### Recent additive sessions (S77–111) — shipped as 🟡 VERIFIED (partial) pending runtime closure
 | Session | Module(s) | What it is |
 |---|---|---|
 | 77A | `expertsPlatform` | Experts platform |
@@ -143,6 +143,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **108** | `camera` | **Camera Feed Registry & Alert Console completion** — shared feed/alert contracts, org-scoped records, corrected mounted routes, honest stream handoff and dedicated camera console (`docs/SESSION_108_SPECIFICATION.md`) |
 | **109** | `canvasCollab` | **Canvas Collaboration completion** — shared presence/cursor contracts, org-verified routes, org-scoped Redis state/channel migration and Canvas collaborator heartbeat UI (`docs/SESSION_109_SPECIFICATION.md`) |
 | **110** | `cognitive` | **Cognitive / World Model completion** — org-scoped entity/observation/hypothesis evidence register, idempotent Session 69 observation migration, deterministic coverage/blind-spot rollup, self-reported confidence and advisory AI labelling, human-only hypothesis resolution and dedicated `/app/cognitive` console (`docs/SESSION_110_SPECIFICATION.md`) |
+| **111** | `command` | **Global Command Center completion** — org-scoped incident/region/briefing/initiative/directive operations register, human-only acknowledge+resolve so MTTR is measured from stored timestamps, `unreported` regions until an operator files a status report, self-reported initiative progress, advisory AI-briefing labelling, idempotent Session 70 directive migration and dedicated `/app/command` console (`docs/SESSION_111_SPECIFICATION.md`) |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -207,13 +208,13 @@ milestone"):**
 **Priority C — verification & hardening:**
 3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
    repository-wide test/module counts in `PROGRESS.md`. Current audit
-   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 90 COMPLETE,
-   13 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 91 COMPLETE,
+   12 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
    Remaining PARTIAL modules, in the one-by-one completion order:
-   `command`, `conversations`, `derivatives`, `googleAuth`, `leadDiscovery`,
-   `mfa`, `mobile`, `opex`, `promptTemplates`, `publicApi`, `sustainability`,
-   `talk`, `usage`.
-4. Run the S1–S6 and S89–S110 runtime-validation tracks in a target
+   `conversations`, `derivatives`, `googleAuth`, `leadDiscovery`, `mfa`,
+   `mobile`, `opex`, `promptTemplates`, `publicApi`, `sustainability`, `talk`,
+   `usage`. **Next module to complete: `conversations`.**
+4. Run the S1–S6 and S89–S111 runtime-validation tracks in a target
    environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
    any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 

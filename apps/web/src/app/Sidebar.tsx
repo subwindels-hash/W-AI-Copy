@@ -43,6 +43,7 @@ import {
   CreditCard,
   Camera,
   Brain,
+  Radar,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -89,6 +90,7 @@ const navItems = [
   { to: "/app/billing", icon: CreditCard, label: "Billing" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },
   { to: "/app/cognitive", icon: Brain, label: "Cognitive / World Model" },
+  { to: "/app/command", icon: Radar, label: "Global Command Center" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },

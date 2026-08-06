@@ -46,6 +46,7 @@
 | 108 | Camera Feed Registry & Alert Console | 🟡 | completed camera vertical slice (shared `Cam` contracts, org-scoped feed/alert records, corrected mounted routes, admin feed/alert lifecycle, honest WebRTC handoff and dedicated console); 9 tests; `cam:feed`, `cam:alert` namespaces audited by S89; runtime pending |
 | 109 | Canvas Collaboration | 🟡 | completed canvas collaboration vertical slice (shared `Cc` contracts, org-verified presence/cursors, org-scoped Redis state/channel migration, Canvas heartbeat/leave UI and multi-user tests); 20 tests; `canvas:presence`, `canvas:cursor` audited by S89; runtime pending |
 | 110 | Cognitive / World Model | 🟡 | completed world-model evidence register (shared `Cog` entity/observation/hypothesis contracts, org-scoped fail-closed records, idempotent Session 69 observation migration, deterministic coverage/blind-spot rollup, human-only hypothesis resolution, labelled AI-assisted output and dedicated `/app/cognitive` console); 15 tests; `cog:meta`, `cog:entity`, `cog:obs`, `cog:hypothesis` audited by S89; runtime pending |
+| 111 | Global Command Center | 🟡 | completed operations register (org-scoped incident/region/briefing/initiative/directive records, human-only acknowledge+resolve so MTTR is *measured* not asserted, `unreported` regions until an operator files a status report, self-reported initiative progress, advisory AI-briefing labelling, idempotent Session 70 directive migration and dedicated `/app/command` console); 17 tests; `cmd:meta`, `cmd:incident`, `cmd:region`, `cmd:briefing`, `cmd:initiative`, `cmd:dir` audited by S89; runtime pending |
 
 ### Repository-wide cleanup passes (cross-session)
 - **Pre-existing test failures**: all 12 resolved in-repo (9 env-blocked suites unblocked via `prismaClientMock`; 3 genuine demo-data/ESG bugs fixed). See `docs/PRE_EXISTING_TEST_FAILURES.md`.
@@ -54,12 +55,12 @@
 - **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`.
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **1179 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 102 files: 99 passed + 3 skipped).
+- API unit/integration-style suite: **1196 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 103 files: 100 passed + 3 skipped).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
 - `make verify` (Prisma offline generate + build + typecheck + test): **green** in this sandbox; the preflight's blocked engine fetch is non-fatal by design.
 - Web typecheck: clean.
 - Remaining API typecheck errors: environment-only Prisma generated-type errors (`prisma generate` needs the blocked engine download).
-- Module inventory (regenerated 2026-08-05): **106 modules** — 89 COMPLETE, 14 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`). Admin Utilities, Agent Framework, AI Economy, API Key Management, Message Attachments, Autonomous Organization, Billing, Camera and Canvas Collaboration are now classified COMPLETE by the inventory.
+- Module inventory (regenerated 2026-08-06): **106 modules** — 91 COMPLETE, 12 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`). Admin Utilities, Agent Framework, AI Economy, API Key Management, Message Attachments, Autonomous Organization, Billing, Camera, Canvas Collaboration, Cognitive / World Model and Global Command Center are now classified COMPLETE by the inventory. Remaining PARTIAL: `conversations`, `derivatives`, `googleAuth`, `leadDiscovery`, `mfa`, `mobile`, `opex`, `promptTemplates`, `publicApi`, `sustainability`, `talk`, `usage`.
 
 ## Blocked Gates (require target deployment environment)
 - `prisma generate` (native engine download from `binaries.prisma.sh` is network-blocked here).

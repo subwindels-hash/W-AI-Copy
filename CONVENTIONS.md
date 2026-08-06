@@ -30,6 +30,63 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 111 — Decisions Logged (Global Command Center Completion)
+
+- **Module prefix:** `Cmd` types and Zod contracts in
+  `packages/shared/src/command.ts`, `cmd:*` Redis keys, `/api/v1/command` route
+  prefix, `apps/web/src/lib/command.ts` client (`commandApi`, with `gccApi` kept
+  as a Session 70 alias), `/app/command` route + sidebar label "Global Command
+  Center".
+- **Two command surfaces, kept separate:** `command.service.ts` projects live
+  *platform* activity (agents, workflows, tasks, AI requests, alerts) from real
+  tables; `operations.service.ts` is the organization's own incident/region/
+  briefing/initiative/directive register. `CommandService.operations()` is a
+  thin delegate so callers need one import.
+- **Storage:** `cmd:<entity>:i:<org>:<id>` + `cmd:<entity>:idx:<org>` ZSETs,
+  fail-closed reads that re-check the stored `organizationId`, CSPRNG ids
+  (`cmd_inc_`, `cmd_reg_`, `cmd_brf_`, `cmd_ini_`, and `cmd-` retained for
+  directives). Index scores use the record's own creation timestamp, so an edit
+  never reorders the board.
+- **Migration over replacement:** Session 70 directives were `tenantStore`
+  envelopes on the *same* key shape, so they are normalized in place on read and
+  rewritten once. The migration is idempotent, and fields the legacy envelope
+  never captured (`statusChangedBy`, `statusNote`) migrate as `null` rather than
+  being attributed to the issuer.
+- **MTTR is measured, not asserted.** `timeToResolveMinutes` comes from the
+  stored `openedAt`/`resolvedAt` pair; the rollup exposes
+  `meanTimeToResolveMinutes` (`null` when nothing is resolved), `mttrSampleSize`
+  and `mttrKind: "measured" | "none"` so a consumer can tell "no sample" apart
+  from "instant recovery". Session 70's hardcoded `mttrMinutes: 0` is gone.
+- **Unknown is a first-class state.** A region with no operator status report is
+  `health: "unreported"` with `servicesUp`/`latencyMs`/`activeUsers` `null` —
+  the platform probes nothing and never renders an unmeasured value as `0`.
+  Every region carries a `healthBasis` sentence naming the rule that fired.
+- **Errors over silent coercion.** Reporting more services up than a region
+  declares is a `400`, not a clamp; an incident naming an unregistered region is
+  a `404`, not a dangling reference; deleting a region with unresolved incidents
+  is a `409`, not a silent detach.
+- **Human-only lifecycle.** Incidents are born `open`; acknowledgement and
+  resolution both require a named user, resolution requires a written note, and
+  re-acknowledging / re-resolving / re-transitioning a directive is a `409`.
+- **Self-reported means labelled.** `CmdInitiative.progressKind` is always
+  `self_reported`, the rollup average is `self_reported_average` (or `none`),
+  and `ai_assisted` briefings carry `aiAssisted: true`, their own rollup bucket,
+  an advisory UI badge and an `[AI-assisted — advisory]` prefix in the legacy
+  `briefings` array.
+- **Rollup determinism:** counts, shares and measured durations only, no
+  `generatedAt`, no wall-clock arithmetic — pinned by a `JSON.stringify`
+  equality test across two reads.
+- **Kernel events** (`command.incident_declared`,
+  `command.incident_acknowledged`, `command.incident_resolved`,
+  `command.region_status_reported`, `command.directive_issued`) are best-effort
+  and emitted from write paths only.
+- **Contract widening is additive.** `RegionalStatus.health` gained
+  `"unreported"`, its numeric fields became nullable, `CommandIncident.status`
+  gained `"acknowledged"` and `strategicInitiatives[].due` became nullable —
+  existing producers and consumers keep compiling.
+- **No demo seed.** The register ships empty; an organization with no records is
+  displayed as empty.
+
 ## Session 110 — Decisions Logged (Cognitive / World Model Completion)
 
 - **Module prefix:** `Cog` types and Zod contracts in

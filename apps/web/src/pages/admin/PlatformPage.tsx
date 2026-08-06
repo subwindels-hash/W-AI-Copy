@@ -7968,24 +7968,30 @@ function CommandCenterTab() {
       <Globe2Icon className="h-5 w-5 text-crimson"/><div className="flex-1"><div className="font-semibold">Global Command Center</div>
       <div className="text-xs text-text-muted">Executive operations center sitting on Mission Control & Observatory — global KPIs, regional health, incident command, briefings, strategic initiatives.</div></div>
     </CardContent></Card>
+    {/* Session 111: these were rendered as `value/1000 + "K"`, so every real
+        count under a thousand displayed as "0K". They are raw counts now, and
+        MTTR shows "—" when no incident has been resolved to measure it from. */}
     <div className="grid md:grid-cols-4 gap-3">
       <Stat label="Enterprise Health" value={`${data.enterpriseHealth}%`} tone={data.enterpriseHealth>90?"emerald":"amber"}/>
-      <Stat label="Revenue MTD" value={`$${(data.globalRevenueMtd/1e6).toFixed(1)}M`} tone="emerald"/>
-      <Stat label="Active Users" value={(data.activeUsersGlobal/1000).toFixed(0)+"K"} tone="azure"/>
+      <Stat label="Revenue MTD" value={data.globalRevenueMtd?`$${data.globalRevenueMtd.toLocaleString()}`:"not tracked"} tone="emerald"/>
+      <Stat label="Active Users" value={data.activeUsersGlobal} tone="azure"/>
       <Stat label="Open Incidents" value={data.incidentsOpen} tone={data.incidentsCritical?"crimson":"amber"}/>
       <Stat label="Critical" value={data.incidentsCritical} tone="crimson"/>
-      <Stat label="MTTR" value={`${data.mttrMinutes}m`} tone="teal"/>
-      <Stat label="AI Decisions (24h)" value={(data.aiDecisions24h/1000).toFixed(0)+"k"} tone="violet"/>
-      <Stat label="Human Overrides" value={data.humanOverrides24h} tone="amber"/>
+      <Stat label="MTTR" value={data.operations?.mttrKind==="measured"?`${data.operations.meanTimeToResolveMinutes}m`:"—"} tone="teal"/>
+      <Stat label="AI Requests (24h)" value={data.aiDecisions24h} tone="violet"/>
+      <Stat label="Unacknowledged" value={data.operations?.unacknowledgedIncidents ?? 0} tone="amber"/>
     </div>
+    {data.operations ? <Card><CardContent className="p-3 text-[11px] text-text-muted">{data.operations.note}</CardContent></Card> : null}
     <div className="grid md:grid-cols-3 gap-3">
       <Card className="md:col-span-2"><CardHeader><CardTitle className="text-sm">Regional Status</CardTitle></CardHeader>
       <CardContent className="grid grid-cols-2 md:grid-cols-3 gap-2 text-xs">
         {(data.regions||[]).map((r:any)=>(<div key={r.region} className="p-2 border border-white/5 rounded">
           <div className="flex items-center justify-between"><span className="font-semibold">{r.region}</span>
-            <Badge variant={r.health==="healthy"?"emerald":r.health==="degraded"?"amber":"crimson"}>{r.health}</Badge></div>
-          <div className="text-text-muted mt-1">{r.servicesUp}/{r.servicesTotal} svcs · {r.latencyMs}ms · {(r.activeUsers/1000).toFixed(1)}K users</div>
+            <Badge variant={r.health==="healthy"?"emerald":r.health==="degraded"?"amber":r.health==="unreported"?"slate":"crimson"}>{r.health}</Badge></div>
+          {/* Unreported fields stay unreported — never rendered as 0. */}
+          <div className="text-text-muted mt-1">{r.servicesUp===null?`${r.servicesTotal} svcs declared · never reported`:`${r.servicesUp}/${r.servicesTotal} svcs`}{r.latencyMs===null?"":` · ${r.latencyMs}ms`}{r.activeUsers===null?"":` · ${r.activeUsers} users`}</div>
         </div>))}
+        {(data.regions||[]).length===0?<div className="text-text-muted">No regions declared.</div>:null}
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="text-sm">Executive Briefings</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-xs">
@@ -7993,6 +7999,7 @@ function CommandCenterTab() {
           <div className="flex items-center gap-1"><Bell className="h-3 w-3" style={{color:b.priority==="critical"?"#DC2626":b.priority==="high"?"#F59E0B":"#3B82F6"}}/><span className="font-semibold flex-1">{b.title}</span><Badge variant="slate">{b.category}</Badge></div>
           <div className="text-text-muted mt-1">{b.summary}</div>
         </div>))}
+        {(data.briefings||[]).length===0?<div className="text-text-muted">No briefings published.</div>:null}
       </CardContent></Card>
     </div>
     <Card><CardHeader><CardTitle className="text-sm">Active Incidents</CardTitle></CardHeader>
@@ -8002,8 +8009,10 @@ function CommandCenterTab() {
         <span className="flex-1 font-semibold">{i.title}</span>
         <Badge variant="slate">{i.service}</Badge><Badge variant="slate">{i.region}</Badge>
         <Badge variant={i.severity==="critical"?"crimson":i.severity==="warning"?"amber":"azure"}>{i.severity}</Badge>
-        <Badge variant={i.status==="resolved"?"emerald":i.status==="mitigating"?"amber":"crimson"}>{i.status}</Badge>
+        <Badge variant={i.status==="resolved"?"emerald":i.status==="mitigating"?"azure":i.status==="acknowledged"?"amber":"crimson"}>{i.status}</Badge>
       </div>))}
+      {(data.incidents||[]).filter((i:any)=>i.status!=="resolved").length===0?<div className="text-text-muted">No unresolved incidents in the command register.</div>:null}
+      <div className="text-text-muted pt-1">Full incident command, regional status reports, briefings, initiatives and directives live at <span className="font-semibold">/app/command</span>.</div>
     </CardContent></Card>
   </div>);
 }

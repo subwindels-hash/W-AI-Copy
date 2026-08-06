@@ -1944,54 +1944,85 @@
       "serviceFile": {
         "file": "command.service.ts",
         "path": "/home/user/WIN/apps/api/src/command/command.service.ts",
-        "sloc": 41,
+        "sloc": 131,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 85,
+      "serviceTotalSloc": 2269,
       "serviceFiles": [
         "bootstrap.ts",
         "command.service.ts",
-        "command/command.service.ts"
+        "operations.service.ts",
+        "operations.test.ts",
+        "command/command.service.ts",
+        "command/operations.service.ts"
       ],
       "importedServiceFiles": [
-        "command/command.service.ts"
+        "command/command.service.ts",
+        "command/operations.service.ts"
       ],
       "bootstrapFile": "apps/api/src/command/bootstrap.ts"
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/command.ts",
-        "sloc": 68,
+        "sloc": 275,
         "counts": {
-          "total": 4,
-          "GET": 2,
-          "POST": 1,
+          "total": 29,
+          "GET": 12,
+          "POST": 9,
           "PUT": 0,
-          "PATCH": 1,
-          "DELETE": 0
+          "PATCH": 4,
+          "DELETE": 4
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "GET /operations",
+          "GET /incidents",
+          "POST /incidents",
+          "GET /incidents/:id",
+          "PATCH /incidents/:id",
+          "DELETE /incidents/:id",
+          "POST /incidents/:id/updates",
+          "POST /incidents/:id/acknowledge",
+          "POST /incidents/:id/resolve",
+          "GET /regions",
+          "POST /regions",
+          "GET /regions/:id",
+          "PATCH /regions/:id",
+          "DELETE /regions/:id",
+          "POST /regions/:id/status",
+          "GET /briefings",
+          "POST /briefings",
+          "GET /briefings/:id",
+          "DELETE /briefings/:id",
+          "GET /initiatives",
+          "POST /initiatives",
+          "GET /initiatives/:id",
+          "PATCH /initiatives/:id",
+          "DELETE /initiatives/:id",
           "GET /directives",
           "POST /directives",
+          "GET /directives/:id",
           "PATCH /directives/:id/status"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/command.ts (51 LOC)",
+    "sharedTypes": "packages/shared/src/command.ts (455 LOC)",
     "web": {
-      "client": "apps/web/src/lib/command.ts (8 LOC)",
+      "client": "apps/web/src/lib/command.ts (97 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
-        "Workspace",
+        "Organization",
         "Membership",
         "Agent",
         "Task",
+        "Activity",
         "Conversation",
+        "Message",
         "Workflow",
         "WorkflowRun",
         "AiRequest",
@@ -2002,13 +2033,14 @@
     },
     "tests": [
       "sessions54-60.spec.ts",
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "command/operations.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
       "Azure"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "composer",
@@ -8194,11 +8226,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 387,
+        "sloc": 394,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 950,
+      "serviceTotalSloc": 964,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

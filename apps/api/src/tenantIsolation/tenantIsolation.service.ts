@@ -132,6 +132,13 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "cog:entity", scope: "org_scoped" },
   { prefix: "cog:obs", scope: "org_scoped" },
   { prefix: "cog:hypothesis", scope: "org_scoped" },
+  // Global Command Center operations register (Session 111)
+  { prefix: "cmd:meta", scope: "org_scoped" },
+  { prefix: "cmd:incident", scope: "org_scoped" },
+  { prefix: "cmd:region", scope: "org_scoped" },
+  { prefix: "cmd:briefing", scope: "org_scoped" },
+  { prefix: "cmd:initiative", scope: "org_scoped" },
+  { prefix: "cmd:dir", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

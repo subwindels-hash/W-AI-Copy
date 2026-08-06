@@ -5,6 +5,21 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 111 — Global Command Center Completion] — 2026-08-06
+
+### Command-centre operations register completed
+*   `packages/shared/src/command.ts` — `Cmd` incident, region, briefing, initiative, directive and operations-rollup contracts with Zod validation (Session 70 `GlobalCommandDashboard` types kept intact and additively widened).
+*   `apps/api/src/command/operations.service.ts` — org-scoped incident/region/briefing/initiative/directive records with fail-closed reads, CSPRNG ids, an idempotent in-place migration of Session 70 `tenantStore` directive envelopes and a deterministic operations rollup (empty organizations report zeros and `null`, never plausible numbers).
+*   **MTTR is now measured, not asserted.** Session 70 returned a hardcoded `mttrMinutes: 0`; incidents are declared `open`, acknowledged and resolved by named humans with a mandatory note, and `meanTimeToResolveMinutes` is the mean of the stored `openedAt`/`resolvedAt` deltas — `null` with `mttrKind: "none"` when nothing has been resolved.
+*   **Unknown is a first-class state.** A region stays `unreported` with `servicesUp`/`latencyMs`/`activeUsers` `null` until an operator files a status report; the platform probes nothing, and every region carries the `healthBasis` sentence naming the rule that produced its health.
+*   Honest labelling: initiative progress is stamped `progressKind: "self_reported"`, AI-assisted briefings are stored and counted separately as advisory (and prefixed `[AI-assisted — advisory]` in the legacy array), and `globalRevenueMtd`/`humanOverrides24h` stay `0` rather than being fabricated.
+*   The Session 70 dashboard's four permanently-empty arrays (`regions`, `incidents`, `briefings`, `strategicInitiatives`) are now filled from the register.
+*   Routes: `/api/v1/command` grew from 4 to 29 endpoints (operations rollup, incident command with a human timeline, region registry + status reports, briefings, initiatives, directives) with shared validation and admin-guarded mutations; `/dashboard/rollup` keeps its Session 70 shape and adds `directives` + `operations`.
+*   Session 89 now audits `cmd:meta`, `cmd:incident`, `cmd:region`, `cmd:briefing`, `cmd:initiative` and `cmd:dir` as org-scoped namespaces.
+*   Web: full typed client (`commandApi`, with `gccApi` kept as a Session 70 alias), dedicated `/app/command` console and sidebar entry. Three display bugs fixed in the existing PlatformPage tab: active users and AI requests were divided by 1000 and suffixed "K" (so every real count under a thousand read as `0K`), MTTR rendered a hardcoded `0m` as a measurement, and unreported regional latency/user counts were printed as numbers.
+*   Tests: `operations.test.ts` (17) — incident lifecycle, human-only resolution, measured MTTR maths, region health derivation, impossible status reports, deletion guards, AI-briefing labelling, self-reported progress, directive transitions, idempotent legacy migration, cross-tenant isolation, planted-record invisibility, repeated-read determinism, the Session 70 dashboard projection and write-only kernel events.
+*   Runtime validation against live PostgreSQL 17/Redis 8 remains pending; Session 111 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 110 — Cognitive / World Model Completion] — 2026-08-06
 
 ### World-model evidence register completed
