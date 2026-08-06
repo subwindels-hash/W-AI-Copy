@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from "express";
 import { verifyApiKey } from "../../publicApi/publicApi.service.js";
+import { recordPublicApiCall } from "../../publicApi/publicApiUsage.service.js";
 
 export async function apiKeyAuth(req: Request, res: Response, next: NextFunction) {
   const header = req.header("authorization") ?? "";
@@ -9,6 +10,8 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
   if (!token) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "API key required" } });
   const verified = await verifyApiKey(token);
   if (!verified) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid or revoked API key" } });
+  // Session 120 — best-effort call ledger: never fails or slows the request.
+  recordPublicApiCall(verified.key, req.method, req.path, new Date()).catch(() => {});
   // Attach a fake user-ish object that resolveUserContext can't read directly;
   // for public API we pass organization via key binding.
   (req as any).apiKey = verified.key;

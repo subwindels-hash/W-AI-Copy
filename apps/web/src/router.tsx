@@ -30,6 +30,7 @@ const MfaAssurancePage = lazy(() => import("./pages/security/MfaAssurancePage").
 const MobileDevicesPage = lazy(() => import("./pages/mobile/MobileDevicesPage").then((m) => ({ default: m.MobileDevicesPage })));
 const OpexAssurancePage = lazy(() => import("./pages/admin/OpexAssurancePage").then((m) => ({ default: m.OpexAssurancePage })));
 const PromptTemplatesPage = lazy(() => import("./pages/admin/PromptTemplatesPage").then((m) => ({ default: m.PromptTemplatesPage })));
+const PublicApiPage = lazy(() => import("./pages/admin/PublicApiPage").then((m) => ({ default: m.PublicApiPage })));
 const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ default: m.FilesPage })));
 const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
@@ -270,6 +271,7 @@ export const router = createBrowserRouter([
       { path: "mobile-devices", element: withSuspense(<MobileDevicesPage />) },
       { path: "opex", element: withSuspense(<OpexAssurancePage />) },
       { path: "prompt-templates", element: withSuspense(<PromptTemplatesPage />) },
+      { path: "public-api", element: withSuspense(<PublicApiPage />) },
       { path: "ads", element: withSuspense(<AdsPage />) },
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },

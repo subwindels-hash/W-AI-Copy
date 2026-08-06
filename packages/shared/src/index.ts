@@ -68,6 +68,7 @@ export * from "./autonomous.js";
 export * from "./cyber.js";
 export * from "./opex.js";
 export * from "./promptTemplates.js";
+export * from "./publicApi.js";
 export * from "./industry.js";
 export * from "./healthEcosystem.js";
 export * from "./projectContinuity.js";

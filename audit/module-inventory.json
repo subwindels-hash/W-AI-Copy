@@ -399,6 +399,7 @@
     },
     "tests": [
       "extensions.spec.ts",
+      "publicApi.spec.ts",
       "sessions41-76-80.spec.ts",
       "agents/agents.test.ts",
       "services/ai/registry.test.ts",
@@ -611,26 +612,30 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 148,
+        "sloc": 178,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 148,
+      "serviceTotalSloc": 617,
       "serviceFiles": [
-        "publicApi/publicApi.service.ts"
+        "publicApi/publicApi.service.ts",
+        "publicApi/publicApiUsage.service.ts",
+        "services/workspace.service.ts"
       ],
       "importedServiceFiles": [
-        "publicApi/publicApi.service.ts"
+        "publicApi/publicApi.service.ts",
+        "publicApi/publicApiUsage.service.ts",
+        "services/workspace.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/apikey.ts",
-        "sloc": 56,
+        "sloc": 75,
         "counts": {
-          "total": 5,
-          "GET": 2,
+          "total": 6,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 1,
@@ -639,7 +644,7 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
+    "sharedTypes": "packages/shared/src/apiKeys.ts (66 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/apikey.ts (3 LOC)",
       "pages": []
@@ -648,13 +653,18 @@
       "prismaModels": [
         "User",
         "Organization",
+        "Workspace",
         "Membership"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "publicApi/publicApi.test.ts"
+      "publicApi.spec.ts",
+      "publicApi/publicApi.completion.test.ts",
+      "publicApi/publicApi.test.ts",
+      "services/workflow.engine.test.ts",
+      "services/workspace.service.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -1014,6 +1024,7 @@
       "platformServices.spec.ts",
       "program.spec.ts",
       "promptTemplates.spec.ts",
+      "publicApi.spec.ts",
       "qa.spec.ts",
       "release.spec.ts",
       "sessions37-40.spec.ts",
@@ -2067,7 +2078,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1433,
+      "serviceTotalSloc": 1446,
       "serviceFiles": [
         "bootstrap.ts",
         "composer.service.ts",
@@ -2978,11 +2989,11 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 148,
+        "sloc": 178,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 321,
+      "serviceTotalSloc": 351,
       "serviceFiles": [
         "publicApi/publicApi.service.ts",
         "services/webhook.service.ts"
@@ -3018,7 +3029,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
+    "sharedTypes": "packages/shared/src/apiKeys.ts (66 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/developers.ts (71 LOC)",
       "pages": []
@@ -3032,6 +3043,7 @@
     },
     "tests": [
       "smoke.spec.ts",
+      "publicApi/publicApi.completion.test.ts",
       "publicApi/publicApi.test.ts"
     ],
     "syntheticData": [],
@@ -7392,30 +7404,34 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 148,
+        "sloc": 178,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1148,
+      "serviceTotalSloc": 2166,
       "serviceFiles": [
+        "publicApi.completion.test.ts",
         "publicApi.service.ts",
         "publicApi.test.ts",
+        "publicApiUsage.service.ts",
         "services/workflow.service.ts",
-        "services/webhook.service.ts"
+        "services/webhook.service.ts",
+        "publicApi/publicApiUsage.service.ts"
       ],
       "importedServiceFiles": [
         "services/workflow.service.ts",
-        "services/webhook.service.ts"
+        "services/webhook.service.ts",
+        "publicApi/publicApiUsage.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/publicApi.ts",
-        "sloc": 94,
+        "sloc": 177,
         "counts": {
-          "total": 6,
-          "GET": 4,
+          "total": 8,
+          "GET": 6,
           "POST": 2,
           "PUT": 0,
           "PATCH": 0,
@@ -7424,16 +7440,18 @@
         "endpoints": [
           "GET /",
           "GET /workflows",
+          "GET /workflows/:id",
           "POST /workflows/:id/run",
+          "GET /usage",
           "GET /agents",
           "POST /talk/channels/:id/messages",
           "GET /talk/channels"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
+    "sharedTypes": "packages/shared/src/publicApi.ts (178 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/publicApi.ts (41 LOC)",
       "pages": []
     },
     "db": {
@@ -7449,18 +7467,21 @@
         "TalkChannel",
         "TalkMessage",
         "Workflow",
+        "WorkflowRun",
         "ApiKey"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "publicApi.spec.ts",
+      "publicApi/publicApi.completion.test.ts",
       "publicApi/publicApi.test.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "qa",
@@ -8516,6 +8537,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "publicApi.spec.ts",
       "services/meeting.service.test.ts",
       "services/talk.test.ts"
     ],
@@ -8534,11 +8556,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 478,
+        "sloc": 487,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1132,
+      "serviceTotalSloc": 1150,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8956,6 +8978,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "publicApi.spec.ts",
       "sessions54-60.spec.ts",
       "usage/rollups.test.ts"
     ],

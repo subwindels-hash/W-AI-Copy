@@ -419,7 +419,9 @@ function findWebClient(modKey) {
     canvasCollab: ["canvas", "canvases"],
     googleAuth: ["auth/google"],
     promptTemplates: ["prompt-templates", "promptTemplates"],
-    publicApi: ["public", "api-keys"],
+    // Session 120 — the module's client (`lib/publicApi.ts`) serves the
+    // internal usage endpoint `/apikeys/usage` plus the gateway docs path.
+    publicApi: ["public", "api-keys", "apikeys/usage"],
   };
   const prefixes = PREFIX_ALIASES[modKey] ?? [moduleRoutePrefix(modKey)];
 

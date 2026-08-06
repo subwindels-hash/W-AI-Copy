@@ -113,19 +113,49 @@ export async function updateApiKey(userId: string, id: string, input: z.infer<ty
   if (!existing) throw AppError.notFound("API key not found");
   if (existing.revokedAt) throw AppError.conflict("Revoked API keys cannot be changed");
   if (input.revoked === false) throw AppError.badRequest("An active API key is not revoked");
+  // Session 120 — renewal path: an expiring (even expired-but-not-revoked)
+  // key can be extended from now. Revoked keys remain immutable.
+  const expiresAt =
+    input.expiresInDays !== undefined
+      ? new Date(Date.now() + input.expiresInDays * 86_400_000)
+      : undefined;
   const key = await prisma.apiKey.update({
     where: { id },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.scopes !== undefined ? { scopes: input.scopes as ApiKeyScope[] } : {}),
       ...(input.revoked === true ? { revokedAt: new Date() } : {}),
+      ...(expiresAt !== undefined ? { expiresAt } : {}),
     },
   });
   await audit(ctx.organizationId, userId, input.revoked === true ? "admin.apikey.revoked" : "admin.apikey.updated", id, {
     ...(input.name !== undefined ? { nameChanged: true } : {}),
     ...(input.scopes !== undefined ? { scopes: input.scopes } : {}),
+    ...(expiresAt !== undefined ? { expiresInDays: input.expiresInDays, expiresAt: iso(expiresAt) } : {}),
   });
-  return { id: key.id, name: key.name, scopes: scopesOf(key.scopes), revoked: Boolean(key.revokedAt), revokedAt: iso(key.revokedAt) };
+  return { id: key.id, name: key.name, scopes: scopesOf(key.scopes), revoked: Boolean(key.revokedAt), revokedAt: iso(key.revokedAt), expiresAt: iso(key.expiresAt) };
+}
+
+/**
+ * Session 120 — hard-delete an API key row.
+ *
+ * Before this session the HTTP DELETE endpoint silently *revoked* instead of
+ * deleting, and there was no way to permanently remove a key row — revoked
+ * keys accumulated forever. This is the correction path: the row is removed
+ * (the token dies immediately), the audit trail keeps `admin.apikey.deleted`,
+ * and the usage ledger keeps the key's historical counts with null
+ * identifiers rather than dropping them.
+ */
+export async function deleteApiKey(userId: string, id: string): Promise<{ id: string; deleted: true }> {
+  const ctx = await resolveUserContext(userId);
+  const existing = await prisma.apiKey.findFirst({ where: { id, organizationId: ctx.organizationId } });
+  if (!existing) throw AppError.notFound("API key not found");
+  await prisma.apiKey.delete({ where: { id } });
+  await audit(ctx.organizationId, userId, "admin.apikey.deleted", id, {
+    wasRevoked: Boolean(existing.revokedAt),
+    keyPrefix: existing.keyPrefix,
+  });
+  return { id, deleted: true };
 }
 
 export async function revokeApiKey(userId: string, id: string): Promise<AkApiKeyMutation> {

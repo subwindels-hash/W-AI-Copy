@@ -37,6 +37,8 @@ export interface AkApiKeyMutation {
   scopes: AkScope[];
   revoked: boolean;
   revokedAt: string | null;
+  /** Session 120 — present on update responses (renewal sets it). */
+  expiresAt: string | null;
 }
 
 export const AkApiKeyCreateSchema = z.object({
@@ -50,6 +52,9 @@ export const AkApiKeyUpdateSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional(),
   revoked: z.boolean().optional(),
+  /** Session 120 — renewal path: extend an expiring key's life from now.
+   *  Rejected for revoked keys by the service. */
+  expiresInDays: z.number().int().min(1).max(365).optional(),
 }).refine((value) => Object.keys(value).length > 0, "At least one field is required");
 export type AkApiKeyUpdateInput = z.infer<typeof AkApiKeyUpdateSchema>;
 

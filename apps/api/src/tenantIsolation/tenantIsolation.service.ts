@@ -186,6 +186,15 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "pt:use", scope: "org_scoped" },
   { prefix: "pt:recent", scope: "org_scoped" },
   { prefix: "pt:day", scope: "org_scoped" },
+  // Public API call ledger (Session 120). Each key carries the org id as the
+  // segment straight after the prefix (`pub:req:<org>`, `pub:day:<org>:<d>`,
+  // `pub:since:<org>`, `pub:evt:<org>`), so the sweep's org-segment
+  // derivation holds. A bare `pub` entry is deliberately NOT added: the
+  // sweep would read the literal `req` as an organization id.
+  { prefix: "pub:since", scope: "org_scoped" },
+  { prefix: "pub:req", scope: "org_scoped" },
+  { prefix: "pub:day", scope: "org_scoped" },
+  { prefix: "pub:evt", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A
