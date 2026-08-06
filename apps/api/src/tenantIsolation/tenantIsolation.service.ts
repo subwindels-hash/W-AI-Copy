@@ -87,6 +87,10 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // Website Builder (Session 93)
   { prefix: "wb:site", scope: "org_scoped" },
   { prefix: "wb:page", scope: "org_scoped" },
+  // Social Platform (Session 94)
+  { prefix: "sp:post", scope: "org_scoped" },
+  { prefix: "sp:comment", scope: "org_scoped" },
+  { prefix: "sp:reaction", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

@@ -331,6 +331,14 @@ async function main() {
         } catch (e) { logger.warn("website-builder bootstrap failed", { err: e }); }
       }, 23000);
 
+      // Session 94 — Social Platform (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapSocialPlatform } = await import("./socialPlatform/bootstrap.js");
+          await bootstrapSocialPlatform(logger);
+        } catch (e) { logger.warn("social-platform bootstrap failed", { err: e }); }
+      }, 24000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

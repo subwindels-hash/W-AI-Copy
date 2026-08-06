@@ -111,6 +111,7 @@ import { registerCrmRoutes } from "./routes/crm.js";
 import { registerEmailIntelRoutes } from "./routes/emailIntel.js";
 import { registerErpRoutes } from "./routes/erp.js";
 import { registerWebsiteBuilderRoutes } from "./routes/websiteBuilder.js";
+import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1127,6 +1128,13 @@ export function createApp() {
   const websiteBuilderRouter = express.Router();
   v1.use("/website-builder", websiteBuilderRouter);
   registerWebsiteBuilderRoutes(websiteBuilderRouter);
+
+  // /social-platform — Session 94: Social Platform (org-scoped feed, posts,
+  // comments, reactions ledger → computed engagement, hashtag extraction,
+  // deterministic rollup).
+  const socialPlatformRouter = express.Router();
+  v1.use("/social-platform", socialPlatformRouter);
+  registerSocialPlatformRoutes(socialPlatformRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

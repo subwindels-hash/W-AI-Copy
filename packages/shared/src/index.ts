@@ -83,3 +83,4 @@ export * from "./crm.js";
 export * from "./emailIntel.js";
 export * from "./erp.js";
 export * from "./websiteBuilder.js";
+export * from "./socialPlatform.js";

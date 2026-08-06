@@ -5,6 +5,38 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 94 — Social Platform] — 2026-08-05
+
+### New module: Social Platform (final named Phase-3 Enterprise Application)
+*   `packages/shared/src/socialPlatform.ts` — Zod contracts + types for
+    posts, comments, reactions and rollup (prefixed `Sp`); reaction emoji
+    allowlist.
+*   `apps/api/src/socialPlatform/socialPlatform.service.ts` — org-scoped
+    Redis-backed feed: posts with an honest lifecycle (draft → published |
+    archived; `publishedAt` stamped only on transition; idempotent
+    re-publish), comments, and a real **reactions ledger** from which
+    engagement is computed per read (never stored as a counter). Reaction
+    toggling is idempotent (same author + post + emoji removes).
+*   Deterministic hashtag extraction (`extractHashtags` — pure regex,
+    lowercase, deduped, order-preserving) stored at write time and aggregated
+    for the top-hashtags rollup.
+*   Deleting a post cascades its comments and reactions.
+*   Routes: `apps/api/src/http/routes/socialPlatform.ts` mounted at
+    `/api/v1/social-platform` (15 endpoints). Session 89 catalog gains the
+    `sp:post` / `sp:comment` / `sp:reaction` namespaces as `org_scoped`.
+*   Web: `apps/web/src/lib/socialPlatform.ts` client + `pages/socialPlatform/
+    SocialPlatformPage.tsx` (compose, feed with hashtag filter, reaction
+    buttons, comment thread, top hashtags/authors, post detail),
+    `/app/social` route + sidebar entry.
+*   Tests: `apps/api/src/socialPlatform/socialPlatform.test.ts` (15) — CRUD,
+    hashtag extraction, idempotent reaction toggling, ledger-computed
+    engagement, publish lifecycle, rollup determinism, cross-tenant
+    isolation, demo-seed idempotency, schema contracts.
+*   Demo seed (`apps/api/src/socialPlatform/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA`; production starts with an empty feed.
+*   **100 modules** in the inventory (73 COMPLETE).
+*   Spec: `docs/SESSION_94_SPECIFICATION.md`.
+
 ## [Session 93 — Website Builder] — 2026-08-05
 
 ### New module: Website Builder (next named Phase-3 Enterprise Application)

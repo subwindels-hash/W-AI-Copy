@@ -30,6 +30,28 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 94 — Decisions Logged (Social Platform)
+
+- **Module prefix:** `Sp` types, `sp:*` Redis keys, `/api/v1/social-platform`
+  route prefix, `apps/web/src/lib/socialPlatform.ts` client,
+  `/app/social` route + sidebar label "Social Platform".
+- **Engagement is computed, never stored:** reactions live in a ledger
+  (`sp:reaction:*`); per-emoji counts and totals are grouped from the ledger
+  on every read. Comment counts likewise come from the comment ledger.
+- **Reaction toggling is idempotent:** same author + post + emoji adds when
+  absent and removes when present — no duplicate rows, no counters.
+- **Hashtags are deterministic:** a pure regex extractor
+  (`extractHashtags`) lowercases, dedupes and preserves order; stored at
+  write time, aggregated for the top-hashtags rollup.
+- **Post lifecycle honest:** draft → published | archived; `publishedAt`
+  stamped only on the transition; re-publishing a published post is a no-op;
+  publishing an archived post fails.
+- **Deleting a post cascades** its comments and reactions.
+- **Rollup:** computed per read (counts, top authors, top hashtags, recent
+  feed); deterministic across reads.
+- **Demo seed:** idempotent, seeds `org-demo-sp`, gated behind
+  `WINDELS_DEMO_DATA`.
+
 ## Session 93 — Decisions Logged (Website Builder)
 
 - **Module prefix:** `Wb` types, `wb:*` Redis keys, `/api/v1/website-builder`

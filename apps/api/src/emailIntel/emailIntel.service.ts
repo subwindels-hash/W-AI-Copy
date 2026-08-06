@@ -81,6 +81,10 @@ async function listIds(entity: Entity, org: string): Promise<string[]> {
 
 const uid = (p: string) => p + randomUUID().slice(0, 8);
 
+// Monotonic write sequence — makes chronological ordering deterministic even
+// when two records land in the same ISO millisecond (no random-id tiebreaks).
+let writeSeq = 0;
+
 async function emitKernel(kind: string, payload: Record<string, unknown>) {
   try {
     const { KernelService } = await import("../kernel/kernel.service.js");
@@ -284,7 +288,18 @@ export const EmailIntelService = {
       if (filter?.direction && m.direction !== filter.direction) continue;
       out.push(m);
     }
-    return out.sort((a, b) => (a.receivedAt === b.receivedAt ? (a.id < b.id ? -1 : 1) : a.receivedAt < b.receivedAt ? -1 : 1));
+    return out.sort(
+      (a, b) =>
+        a.receivedAt === b.receivedAt
+          ? ((a as any)._seq ?? 0) - ((b as any)._seq ?? 0) || (a.id < b.id ? -1 : 1)
+          : a.receivedAt < b.receivedAt
+            ? -1
+            : 1
+    ).map((item) => {
+      const { _seq: _s, ...rest } = item as EiMessage & { _seq?: number };
+      void _s;
+      return rest as EiMessage;
+    });
   },
 
   async getMessage(org: string, id: string): Promise<EiMessage | null> {
@@ -332,7 +347,8 @@ export const EmailIntelService = {
       org, input.mailboxId, input.subject ?? "(no subject)", input.inReplyTo ?? null, input.references ?? []
     );
     const outboxStatus = direction === "outbound" ? "queued" : "none";
-    const rec: EiMessage = {
+    const rec: EiMessage & { _seq?: number } = {
+      _seq: ++writeSeq,
       id: uid("eimsg-"),
       organizationId: org,
       mailboxId: input.mailboxId,

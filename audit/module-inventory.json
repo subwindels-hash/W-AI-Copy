@@ -7335,6 +7335,84 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "socialPlatform",
+    "title": "socialPlatform",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/socialPlatform",
+    "backend": {
+      "serviceDir": "apps/api/src/socialPlatform",
+      "serviceFile": {
+        "file": "socialPlatform.service.ts",
+        "path": "/home/user/WIN/apps/api/src/socialPlatform/socialPlatform.service.ts",
+        "sloc": 399,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1080,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "socialPlatform.service.ts",
+        "socialPlatform.test.ts",
+        "socialPlatform/socialPlatform.service.ts"
+      ],
+      "importedServiceFiles": [
+        "socialPlatform/socialPlatform.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/socialPlatform/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/socialPlatform.ts",
+        "sloc": 144,
+        "counts": {
+          "total": 15,
+          "GET": 7,
+          "POST": 5,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /feed",
+          "GET /hashtags",
+          "GET /posts",
+          "POST /posts",
+          "GET /posts/:id",
+          "PATCH /posts/:id",
+          "DELETE /posts/:id",
+          "POST /posts/:id/publish",
+          "POST /posts/:id/archive",
+          "GET /posts/:id/comments",
+          "POST /posts/:id/comments",
+          "DELETE /comments/:id",
+          "POST /posts/:id/reactions",
+          "GET /posts/:id/reactions"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/socialPlatform.ts (120 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/socialPlatform.ts (99 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "socialPlatform/socialPlatform.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "spatial",
     "title": "Spatial Computing (S58)",
     "sessions": [
@@ -7580,11 +7658,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 342,
+        "sloc": 346,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 860,
+      "serviceTotalSloc": 868,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

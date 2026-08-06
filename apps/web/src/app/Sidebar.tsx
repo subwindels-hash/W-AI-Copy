@@ -28,6 +28,7 @@ import {
   ShieldCheck,
   Mail,
   Package,
+  Hash,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -60,6 +61,7 @@ const navItems = [
   { to: "/app/email-intel", icon: Mail, label: "Email Intel" },
   { to: "/app/erp", icon: Package, label: "ERP" },
   { to: "/app/website-builder", icon: Globe2, label: "Website Builder" },
+  { to: "/app/social", icon: Hash, label: "Social Platform" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },
