@@ -123,7 +123,8 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | 86 | (branding) | Global Branding footer app-wide |
 | 87 | `camera` | Camera Intelligence (RTSP registry, WebRTC, CV models: PPE/plate/intrusion) |
 | **89** | `tenantIsolation` | **Multi-tenancy enforcement** — per-org isolation policies, live Redis namespace audit, real cross-tenant self-tests, export gate (`docs/SESSION_89_SPECIFICATION.md`) |
-| **88+** | — | **88 is the open next-roadmap slot; Session 89 shipped an additive milestone** |
+| **90** | `crm` | **Enterprise CRM** — org-scoped contacts/companies/deal pipeline/activity ledger + deterministic rollup; first CRM surface on the platform; `crm:*` namespaces audited by S89 (`docs/SESSION_90_SPECIFICATION.md`) |
+| **88+** | — | **88 is the open next-roadmap slot; Sessions 89–90 shipped additive milestones** |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -203,4 +204,4 @@ milestone"):**
 ### Quick reference — "what session do I touch?"
 S1–36 foundation/platform · S37–76 V8 enterprise · S77 experts/media · S78 UX ·
 S79 gift cards · S80 currency · S81 trading · S82 cyber · S83 ETL · S84 project
-continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation (S88 = open slot)**.
+continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation (S88 = open slot) · S90 enterprise CRM**.

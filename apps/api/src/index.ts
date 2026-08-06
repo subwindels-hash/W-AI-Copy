@@ -299,6 +299,14 @@ async function main() {
         } catch (e) { logger.warn("gift cards bootstrap failed", { err: e }); }
       }, 16000);
 
+      // Session 90 — Enterprise CRM (demo seed is gated behind WINDELS_DEMO_DATA)
+      setTimeout(async () => {
+        try {
+          const { bootstrapCrm } = await import("./crm/bootstrap.js");
+          await bootstrapCrm(logger);
+        } catch (e) { logger.warn("crm bootstrap failed", { err: e }); }
+      }, 20000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

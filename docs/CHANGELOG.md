@@ -5,6 +5,46 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 90 — Enterprise CRM] — 2026-08-05
+
+### New module: Enterprise CRM (first CRM surface on the platform)
+*   `packages/shared/src/crm.ts` — Zod contracts + types for contacts, companies,
+    deals/pipeline and activities (prefixed `Crm`), single source shared by API,
+    routes and web client.
+*   `apps/api/src/crm/crm.service.ts` — real, org-scoped CRUD backed by Redis
+    (`crm:<entity>:i:<org>:<id>` + org-scoped indexes). Reads re-check the org
+    segment (fail-closed, per the Session 89 tenant-isolation guarantee).
+*   Deal pipeline: 6 default stages with default probabilities; every stage
+    transition is recorded as an audited activity and stamps `wonAt`/`lostAt`
+    only on a real change (no-op writes create nothing).
+*   Deterministic dashboard rollup (`GET /api/v1/crm/dashboard/rollup`):
+    weighted forecast (Σ amount × probability), conversion rate, per-stage
+    breakdown, top deals and recent activities — computed per read, no
+    `Math.random`, no fabricated numbers. Fresh orgs show honest zeros.
+*   Routes: `apps/api/src/http/routes/crm.ts` mounted at `/api/v1/crm`
+    (contacts/companies/deals/activities CRUD + pipeline stages + rollup).
+*   Session 89 integration: the `crm:contact|company|deal|activity` namespaces
+    are registered in the tenant-isolation audit catalog as `org_scoped`.
+*   Web: `apps/web/src/lib/crm.ts` client, `apps/web/src/pages/crm/CrmPage.tsx`
+    dashboard (stats, pipeline bars, deals, contacts, companies, activity
+    ledger, quick-create forms), `/app/crm` route + sidebar entry.
+*   Tests: `apps/api/src/crm/crm.test.ts` (12 tests) — CRUD, cross-tenant
+    isolation, stage-transition auditing, rollup determinism, demo-seed
+    idempotency, shared schema contracts.
+*   Demo seed (`apps/api/src/crm/bootstrap.ts`) is gated behind
+    `WINDELS_DEMO_DATA`; production starts empty.
+*   Spec: `docs/SESSION_90_SPECIFICATION.md`.
+
+### Small gap closures (web clients)
+*   `apps/web/src/lib/admin.ts` — typed client for `/api/v1/admin` (stats,
+    users, suspension, role).
+*   `apps/web/src/lib/promptTemplates.ts` — typed client for
+    `/api/v1/prompt-templates` (Session 23 module previously had no web client).
+*   `apps/web/src/lib/events.ts` — EventSource subscription helper for the
+    org-scoped SSE channel (`/api/v1/events/stream`) + health probe.
+*   Documented: Google OAuth (server redirect flow, LoginPage handles it) and
+    public API (external-consumer surface; developer portal covers keys/webhooks).
+
 ## [Session 1 Certification — DEMO Cleanup & Bootstrap Gating] — 2026-08-05
 
 ### Security / Fail-Closed (Repository-wide)

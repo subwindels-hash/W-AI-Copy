@@ -1,7 +1,7 @@
 # PROGRESS — WINDELS AI OS
 
 > **Status of this document:** Accurate as of 2026-08-05 on branch
-> `arena/019fd31a-win`. It is the single source of truth for session
+> `arena/019fd461-win`. It is the single source of truth for session
 > certification state. **PRODUCTION COMPLETE is only granted after the Phase 6
 > runtime validation checklist for a session passes in the target deployment
 > environment** (live PostgreSQL 17 + Redis + `prisma generate`). This sandbox
@@ -25,17 +25,21 @@
 | 5 | Canvas | 🟡 | canvas service tests (10); runtime pending |
 | 6 | Talk | 🟡 | meeting/action-item tests (10) + createMeeting fix; runtime pending |
 | 89 | Tenant Isolation | 🟡 | full service + tests; runtime pending |
+| 90 | Enterprise CRM | 🟡 | full vertical slice (contacts/companies/deals/activities + rollup); 12 tests; `crm:*` namespaces audited by S89; runtime pending |
 
 ### Repository-wide cleanup passes (cross-session)
 - **Pre-existing test failures**: all 12 resolved in-repo (9 env-blocked suites unblocked via `prismaClientMock`; 3 genuine demo-data/ESG bugs fixed). See `docs/PRE_EXISTING_TEST_FAILURES.md`.
 - **DEMO cleanup + Bootstrap gating** (Session 1 workflow): production DB fail-closed, CSPRNG hardening, 5 bootstraps gated behind `WINDELS_DEMO_DATA`. See `docs/DEMO_CLEANUP_AUDIT.md`.
 - **Simulated modules** (robotics, spatial, quantum, biomedical, legal, education, scientific, market data, voice cloning): 🔴 blocked on external providers/credentials; honestly labeled (`docs/SIMULATED_MODULES_INVENTORY.md`).
+- **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`.
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **934 tests passing, 0 failures** (51 integration tests auto-skip without a live server).
+- API unit/integration-style suite: **946 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 82 files).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
+- `make verify` (prisma offline generate + build + typecheck + test): **green on a fresh clone**.
 - Web typecheck: clean.
 - Remaining API typecheck errors: 76 env-only (`@prisma/client` generated types require `prisma generate`, which needs the blocked engine download).
+- Module inventory (regenerated): **96 modules** — 69 COMPLETE, 24 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
 
 ## Blocked Gates (require target deployment environment)
 - `prisma generate` (native engine download from `binaries.prisma.sh` is network-blocked here).

@@ -107,6 +107,7 @@ import { registerEtlRoutes } from "./routes/etl.js";
 import { registerCameraRoutes } from "./routes/camera.js";
 import { registerAdvertisingRoutes } from "./routes/advertising.js";
 import { registerTenantIsolationRoutes } from "./routes/tenantIsolation.js";
+import { registerCrmRoutes } from "./routes/crm.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1096,6 +1097,12 @@ export function createApp() {
   const tenantIsolationRouter = express.Router();
   v1.use("/tenant-isolation", tenantIsolationRouter);
   registerTenantIsolationRoutes(tenantIsolationRouter);
+
+  // /crm — Session 90: Enterprise CRM (contacts, companies, deal pipeline,
+  // activity ledger, deterministic dashboard rollup). Org-scoped Redis keys.
+  const crmRouter = express.Router();
+  v1.use("/crm", crmRouter);
+  registerCrmRoutes(crmRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

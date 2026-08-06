@@ -79,3 +79,4 @@ export * from "./musicVideo.js";
 export * from "./brokerIntegration.js";
 export * from "./marketing.js";
 export * from "./tenantIsolation.js";
+export * from "./crm.js";

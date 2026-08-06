@@ -35,6 +35,7 @@ const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
+const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -244,6 +245,7 @@ export const router = createBrowserRouter([
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
       { path: "tenant-isolation", element: withSuspense(<TenantIsolationPage />) },
+      { path: "crm", element: withSuspense(<CrmPage />) },
     ],
   },
   {
