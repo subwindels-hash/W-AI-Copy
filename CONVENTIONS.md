@@ -30,6 +30,54 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 116 — Decisions Logged (Multi-Factor Authentication Completion)
+
+- **Module prefix:** `Mfa*` types, `mfa:*` Redis keys, the existing `/api/v1/mfa`
+  route prefix, `apps/web/src/lib/mfa.ts` client, `/app/mfa-assurance` route +
+  sidebar label "MFA Assurance".
+- **The new type is `MfaOrgPolicy`, not `MfaPolicy`.** `wakeIntel.ts` already
+  exports an `MfaPolicy` (wake-word factors: voice print, face, clap biometric).
+  The barrel re-exports every module, so the short name would be a TS2308
+  ambiguity. A new module takes the longer name; a shipped module does not get
+  renamed to make room for it.
+- **A correct cryptographic core is not a complete control.** The RFC 6238
+  implementation was pinned to the spec's published vectors and was left exactly
+  as it was. What was added is everything the standard also asks for and the
+  product needed: a per-principal attempt throttle, a single-use guard, a
+  confirmed enrolment state and a record of what happened.
+- **Per-IP rate limiting is not an attempt throttle.** `rateLimit("login")` keys
+  on the caller's address; the second-factor counter keys on the *principal*
+  being attacked (`mfa:fail:<userId>`), because that is the thing with a
+  guessable secret.
+- **Never store the credential you are guarding against.** The replay marker is
+  `SHA-256(token)` truncated to 32 hex characters, keyed per user and expiring
+  with the token's own validity window. A test greps the entire keyspace for any
+  token, recovery code or plaintext secret.
+- **Enforcement follows proof, not intent.** `enable` starts a *pending*
+  enrolment; only a successful verification confirms it. A pending enrolment can
+  be abandoned without a code (that is the lockout escape hatch); a confirmed one
+  still requires a valid code to disable (that is not a bypass).
+- **A pre-ledger secret is `unrecorded`, never `confirmed`.** Back-filling a
+  state the system never observed is a fabricated verdict.
+- **A security policy change must not be able to lock out the only person who
+  could revert it.** Blocking enforcement is refused when the caller would
+  themselves be blocked by it; `report_only` is unaffected, since it blocks
+  nobody.
+- **Assurance fails open on the login path.** Policy evaluation is wrapped so
+  that anything other than an explicit `block` lets the sign-in proceed. A bug
+  in a reporting feature must never become an outage of authentication.
+- **`not_required`, `exempt` and `covered` are three different answers.** An
+  organization with a permissive policy is not a protected one, and an exemption
+  is a documented decision — neither is folded into the covered count.
+  `requiredCoverageRatio` is `null` when the policy requires nobody.
+- **Principal-scoped keys are catalogued as `shared`, with the reason.** MFA keys
+  address a user id, not a tenant, and the login path that reads them has not
+  resolved an organization yet. Declaring them `org_scoped` would make the
+  Session 89 sweep read a user id as an organization id and report conformance it
+  never checked.
+- **The configuration report reads the environment and makes no network call.**
+  It reports "configured", never "working", and never echoes a key value.
+
 ## Session 115 — Decisions Logged (Lead Discovery Completion)
 
 - **Module prefix:** `Lead*` types, `lead:*` Redis keys, the existing

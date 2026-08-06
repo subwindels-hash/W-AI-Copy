@@ -8,6 +8,7 @@ import { env } from "../config/env.js";
 import { AppError } from "../utils/result.js";
 import { Role } from "@windels/shared/permissions";
 import { MfaService } from "./mfa.service.js";
+import { MfaAssuranceService } from "../mfa/mfaAssurance.service.js";
 import { logger } from "../config/logger.js";
 
 // ─── Refresh Token Infrastructure ──────────────────────────────
@@ -223,6 +224,38 @@ export async function loginUser(
   const primaryMembership = user.memberships[0];
   const publicRole = toPublicRole(user.role);
 
+  // Session 116 — organization MFA policy.
+  //
+  // The default policy (`optional` / `report_only`) is exactly the platform's
+  // historical behaviour and always allows, so this is a no-op until an
+  // administrator saves something stricter. Only `block_after_grace` refuses,
+  // only once the member's grace deadline has passed, and never for an account
+  // with an active exemption. An internal failure here must not take logins
+  // down, so anything other than an explicit `block` lets the sign-in continue.
+  try {
+    const decision = await MfaAssuranceService.evaluateLogin({
+      userId: user.id,
+      organizationId: primaryMembership?.organizationId ?? null,
+      membershipRole: primaryMembership ? String((primaryMembership as any).role ?? "MEMBER") : null,
+      joinedAt: (primaryMembership as any)?.joinedAt
+        ? new Date((primaryMembership as any).joinedAt).toISOString()
+        : null,
+    });
+    if (decision.decision === "block") {
+      await MfaAssuranceService.recordLoginBlocked(
+        user.id,
+        decision.organizationId,
+        decision.reason,
+      ).catch(() => {});
+      throw AppError.forbidden(
+        "This organization requires multi-factor authentication and the enrolment deadline has passed. Ask an administrator to grant an exemption or to lift the requirement so you can enrol.",
+      );
+    }
+  } catch (e) {
+    if (e instanceof AppError) throw e;
+    logger.warn("mfa policy evaluation failed; allowing login", { err: String(e) });
+  }
+
   // MFA challenge if enabled
   const mfaStatus = await MfaService.status(user.id);
   if (mfaStatus.enabled) {
@@ -230,7 +263,18 @@ export async function loginUser(
     const code = randomBytes(18).toString("base64url");
     await redis.set(
       `mfa:challenge:${code}`,
-      JSON.stringify({ challengeId, userId: user.id, ip: metadata?.ip, ua: metadata?.ua, createdAt: Date.now() }),
+      // Session 116 adds `organizationId` so the second-factor step can record
+      // its outcome against the right organization ledger. Challenges issued
+      // before this field existed simply carry null and land in the member's
+      // own ledger only.
+      JSON.stringify({
+        challengeId,
+        userId: user.id,
+        organizationId: primaryMembership?.organizationId ?? null,
+        ip: metadata?.ip,
+        ua: metadata?.ua,
+        createdAt: Date.now(),
+      }),
       "EX", 300,
     );
     return {
@@ -248,8 +292,43 @@ export async function completeMfaLogin(input: { mfaToken: string; totp: string }
   const raw = await redis.get(`mfa:challenge:${input.mfaToken}`);
   if (!raw) throw AppError.unauthorized("MFA challenge expired or invalid");
   await redis.del(`mfa:challenge:${input.mfaToken}`);
-  const challenge = JSON.parse(raw) as { userId: string };
+  const challenge = JSON.parse(raw) as { userId: string; organizationId?: string | null };
+  const challengeOrg = challenge.organizationId ?? null;
+
+  // Session 116 — throttle and replay guard on the login second factor.
+  //
+  // This path had no per-account limit at all: `rateLimit("login")` on the route
+  // is per IP, which a distributed caller walks past, and a 6-digit code with a
+  // ±1 drift window is three live codes in a million. The gate also refuses a
+  // TOTP that already verified inside its live window (RFC 6238 §5.2).
+  const gate = await MfaAssuranceService.gate({
+    userId: challenge.userId,
+    organizationId: challengeOrg,
+    token: input.totp,
+  });
+  if (!gate.allowed) {
+    await MfaAssuranceService.recordBlocked({
+      userId: challenge.userId,
+      organizationId: challengeOrg,
+      reason: gate.reason,
+    }).catch(() => {});
+    if (gate.reason === "locked") {
+      throw AppError.tooManyRequests(
+        `Too many failed verification attempts. Try again in ${gate.lock.retryAfterSeconds}s.`,
+      );
+    }
+    throw AppError.unauthorized(gate.message ?? "Verification refused");
+  }
+
   const v = await MfaService.verify(challenge.userId, input.totp);
+  await MfaAssuranceService.recordVerification({
+    userId: challenge.userId,
+    organizationId: challengeOrg,
+    token: input.totp,
+    ok: v.ok,
+    method: v.method ?? null,
+    reason: v.reason ?? null,
+  }).catch(() => {});
   if (!v.ok) throw AppError.unauthorized("Invalid MFA code: " + (v.reason || "unknown"));
   const user = await prisma.user.findUnique({
     where: { id: challenge.userId },

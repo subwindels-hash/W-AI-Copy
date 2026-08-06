@@ -10,6 +10,7 @@ import { authenticate } from "./middleware/auth.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
+import { registerMfaAssuranceRoutes } from "./routes/mfaAssurance.js";
 import { registerGoogleAuthRoutes } from "./routes/googleAuth.js";
 import { registerGoogleIdentityRoutes } from "./routes/googleIdentity.js";
 import { registerDerivativesRoutes } from "./routes/derivatives.js";
@@ -189,6 +190,15 @@ export function createApp() {
   const v1 = express.Router();
   registerHealthRoutes(v1);
   registerAuthRoutes(v1);
+  // Session 116 — MFA assurance (policy, coverage, throttle, ledger) on a
+  // `/mfa` sub-router registered ahead of the original six endpoints. The
+  // sub-router attaches `authenticate` per handler rather than with
+  // `router.use`, so `/mfa/status`, `/mfa/enable`, `/mfa/confirm`,
+  // `/mfa/verify`, `/mfa/disable` and `/mfa/recovery-codes` fall through to
+  // their original handlers with their behaviour unchanged.
+  const mfaAssuranceRouter = express.Router();
+  v1.use("/mfa", mfaAssuranceRouter);
+  registerMfaAssuranceRoutes(mfaAssuranceRouter);
   registerMfaRoutes(v1);
   // Session 114 Google identity governance (policy, linked identities, ledger,
   // configuration report) on an `/auth/google` sub-router registered ahead of

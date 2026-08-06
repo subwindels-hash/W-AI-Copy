@@ -908,11 +908,11 @@
       "serviceFile": {
         "file": "auth.service.ts",
         "path": "/home/user/WIN/apps/api/src/services/auth.service.ts",
-        "sloc": 357,
+        "sloc": 436,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 407,
+      "serviceTotalSloc": 486,
       "serviceFiles": [
         "services/auth.service.ts",
         "security/passwords.ts"
@@ -1007,6 +1007,7 @@
       "leadPipeline.spec.ts",
       "marketplace.spec.ts",
       "mediaPublishing.spec.ts",
+      "mfaAssurance.spec.ts",
       "mlOps.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
@@ -4195,6 +4196,7 @@
     "tests": [
       "enterprise.spec.ts",
       "googleAuth.spec.ts",
+      "mfaAssurance.spec.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
@@ -6151,32 +6153,38 @@
   },
   {
     "moduleKey": "mfa",
-    "title": "mfa",
-    "sessions": [],
-    "tier": "unknown",
+    "title": "Multi-Factor Authentication (S116)",
+    "sessions": [
+      116
+    ],
+    "tier": "core",
     "routePrefix": "/api/v1/mfa",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/mfa",
       "serviceFile": {
-        "file": "mfa.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/mfa.service.ts",
-        "sloc": 195,
+        "file": "mfaAssurance.service.ts",
+        "path": "/home/user/WIN/apps/api/src/mfa/mfaAssurance.service.ts",
+        "sloc": 1246,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 195,
+      "serviceTotalSloc": 3525,
       "serviceFiles": [
-        "services/mfa.service.ts"
+        "mfaAssurance.service.ts",
+        "mfaAssurance.test.ts",
+        "services/mfa.service.ts",
+        "mfa/mfaAssurance.service.ts"
       ],
       "importedServiceFiles": [
-        "services/mfa.service.ts"
+        "services/mfa.service.ts",
+        "mfa/mfaAssurance.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/mfa.ts",
-        "sloc": 77,
+        "sloc": 153,
         "counts": {
           "total": 6,
           "GET": 1,
@@ -6193,28 +6201,65 @@
           "POST /mfa/disable",
           "POST /mfa/recovery-codes"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/mfaAssurance.ts",
+        "sloc": 239,
+        "counts": {
+          "total": 18,
+          "GET": 13,
+          "POST": 3,
+          "PUT": 1,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /assurance/summary",
+          "GET /assurance/gaps",
+          "GET /assurance/configuration",
+          "GET /policy",
+          "PUT /policy",
+          "GET /coverage",
+          "GET /coverage/me",
+          "GET /enrollment",
+          "POST /enrollment/abandon",
+          "GET /recovery/health",
+          "GET /lock",
+          "GET /locks",
+          "POST /locks/:userId/clear",
+          "GET /exemptions",
+          "POST /exemptions",
+          "DELETE /exemptions/:userId",
+          "GET /events",
+          "GET /events/me"
+        ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/mfa.ts (655 LOC)",
     "web": {
-      "client": "apps/web/src/lib/api.ts (261 LOC, serves /auth/mfa)",
+      "client": "apps/web/src/lib/mfa.ts (149 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
+        "Workspace",
+        "Membership",
         "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "mfaAssurance.spec.ts",
+      "mfa/mfaAssurance.test.ts",
       "services/auth.test.ts",
       "services/mfa.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "mlOps",
@@ -8357,11 +8402,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 411,
+        "sloc": 435,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 998,
+      "serviceTotalSloc": 1046,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

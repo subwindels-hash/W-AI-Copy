@@ -36,11 +36,11 @@ For each module, in strict order:
 (`CONVENTIONS.md`) → progress log.
 
 Current counts that confirm the pattern is uniform (2026-08-06):
-- **118** route files (`apps/api/src/http/routes/*.ts`)
-- **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
-- **97** API test files; **26** Playwright specs in `tests/e2e/`
+- **123** route files (`apps/api/src/http/routes/*.ts`)
+- **118** web API clients/helpers (`apps/web/src/lib/*.ts`)
+- **108** API test files; **32** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S115)
+## 4. The session-by-session arc (S1 → S116)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -149,6 +149,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 
 | **114** | `googleAuth` | **Google Identity / OAuth completion** — the OpenID Connect flow (JWKS signature/`iss`/`aud`/`nonce`/`exp` verification, account linking, provisioning) was already real and is untouched, but nothing governed it: an organization could not restrict Google sign-in to its own domain, nothing recorded that a sign-in had happened, a departed employee's Google account kept working until the platform user was deleted, and the API's own post-callback redirect target `/auth/callback` **did not exist in the web app**. This session added the module's first shared contract, an org-scoped governance service (policy · linked-identity register · ledger · environment-only configuration report), a policy gate + ledger write inside the real callback (default `open`, so existing deployments are unaffected), fingerprinted Google subjects, and the missing `/auth/callback` page (`docs/SESSION_114_SPECIFICATION.md`) |
 | **115** | `leadDiscovery` | **Lead Discovery completion** — Session 85's discovery half was honest (real Places text search, `503` when unconfigured, no enrichment, `source_returned` labelling) and is untouched; everything after a lead was found was missing. No workflow, **no deduplication at all** despite the service's own comment referring to it, no explanation for the permanently empty `phone`/`website` columns (text search never returns them), no collection rename/delete, no record of what was searched on a paid API, and directory-sourced names written into CSV verbatim so a listing called `=HYPERLINK(...)` executed on open. This session added the module's first shared contract, an org-scoped pipeline service (status · owner · notes · provider-id deduplication that marks rather than deletes · coverage that explains its own zeroes · search ledger · export preview), a best-effort ledger write inside the real `search()`, a spreadsheet formula guard, and the `/app/lead-pipeline` console (`docs/SESSION_115_SPECIFICATION.md`) |
+| **116** | `mfa` | **Multi-Factor Authentication completion** — the RFC 6238 TOTP core was genuinely good (generator pinned to the spec's published vectors, AES-256-GCM secret at rest, SHA-256 recovery digests, deliberate ±1 drift) and is untouched; everything around it was missing. **Nothing counted a failed second-factor attempt anywhere** and the only limit on `/auth/mfa/complete` was a per-IP rate limit; **an OTP could be replayed** for the rest of its ~90 s life, which RFC 6238 §5.2 requires a verifier to refuse; `POST /mfa/confirm` verified a code and **recorded nothing**, so enrolment was never confirmed and `enable` armed enforcement before the user had proved they could produce a code; the route file claimed authentication was handled globally when **no global `authenticate` is mounted**, so anonymous requests got a **500 instead of a 401**; and there was no organization policy, no coverage report and no audit trail. This session added the module's first shared contract (`MfaOrgPolicy`, since `wakeIntel.ts` already owns `MfaPolicy`), an org-scoped assurance service (throttle · replay guard · confirmed-enrolment lifecycle · policy · coverage · exemptions · fifteen-kind ledger · environment-only configuration report), a gate wired into the real verification and login paths that **fails open** so an assurance bug cannot take sign-in down, a self-lockout guard on blocking enforcement, and the `/app/mfa-assurance` console (`docs/SESSION_116_SPECIFICATION.md`) |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -213,13 +214,13 @@ milestone"):**
 **Priority C — verification & hardening:**
 3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
    repository-wide test/module counts in `PROGRESS.md`. Current audit
-   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 95 COMPLETE,
-   8 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 96 COMPLETE,
+   7 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
    Remaining PARTIAL modules, in the one-by-one completion order:
-   `mfa`, `mobile`, `opex`, `promptTemplates`, `publicApi`,
+   `mobile`, `opex`, `promptTemplates`, `publicApi`,
    `sustainability`, `talk`, `usage`.
-   **Next module to complete: `mfa`.**
-4. Run the S1–S6 and S89–S115 runtime-validation tracks in a target
+   **Next module to complete: `mobile`.**
+4. Run the S1–S6 and S89–S116 runtime-validation tracks in a target
    environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
    any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 

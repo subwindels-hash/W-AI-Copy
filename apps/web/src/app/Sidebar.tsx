@@ -61,6 +61,7 @@ const navItems = [
   { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },
   { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
   { to: "/app/lead-pipeline", icon: ClipboardList, label: "Lead Pipeline" },
+  { to: "/app/mfa-assurance", icon: ShieldCheck, label: "MFA Assurance" },
   { to: "/app/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },

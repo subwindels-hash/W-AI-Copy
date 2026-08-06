@@ -153,8 +153,32 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "lead:note", scope: "org_scoped" },
   { prefix: "lead:noteidx", scope: "org_scoped" },
   { prefix: "lead:hist", scope: "org_scoped" },
+  // MFA assurance (Session 116) — organization-scoped half.
+  { prefix: "mfa:policy", scope: "org_scoped" },
+  { prefix: "mfa:exempt", scope: "org_scoped" },
+  { prefix: "mfa:exemptidx", scope: "org_scoped" },
+  { prefix: "mfa:event", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
+  // MFA principal-scoped state — one key per *user* id, not per tenant. A
+  // person's second factor belongs to the person: the secret, its recovery
+  // digests, the enrolment record, the failure counter, the lock, the replay
+  // markers and the member's own ledger all key on the user id, and the login
+  // path that reads them has not resolved an organization yet. Cataloguing them
+  // as org_scoped would let the sweep treat a user id as an organization id and
+  // report conformance it has not checked. The first four predate Session 116
+  // and were never catalogued at all.
+  { prefix: "mfa:secret", scope: "shared" },
+  { prefix: "mfa:recovery", scope: "shared" },
+  { prefix: "mfa:enforced", scope: "shared" },
+  // Single-use, five-minute login challenge keyed by a CSPRNG token rather than
+  // by any principal; the payload carries the user id.
+  { prefix: "mfa:challenge", scope: "shared" },
+  { prefix: "mfa:enroll", scope: "shared" },
+  { prefix: "mfa:fail", scope: "shared" },
+  { prefix: "mfa:lock", scope: "shared" },
+  { prefix: "mfa:used", scope: "shared" },
+  { prefix: "mfa:uevent", scope: "shared" },
   // Google OAuth CSRF state is issued before any user — and therefore any
   // organization — is known, so it is shared by design and short-lived (10 min).
   { prefix: "google:state", scope: "shared" },

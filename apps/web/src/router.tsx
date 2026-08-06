@@ -26,6 +26,7 @@ const LearnPage = lazy(() => import("./pages/learn/LearnPage").then((m) => ({ de
 const ProjectsPage = lazy(() => import("./pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
 const LeadsPage = lazy(() => import("./pages/leads/LeadsPage").then((m) => ({ default: m.LeadsPage })));
 const LeadPipelinePage = lazy(() => import("./pages/leads/LeadPipelinePage").then((m) => ({ default: m.LeadPipelinePage })));
+const MfaAssurancePage = lazy(() => import("./pages/security/MfaAssurancePage").then((m) => ({ default: m.MfaAssurancePage })));
 const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ default: m.FilesPage })));
 const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
@@ -262,6 +263,7 @@ export const router = createBrowserRouter([
       { path: "projects", element: withSuspense(<ProjectsPage />) },
       { path: "leads", element: withSuspense(<LeadsPage />) },
       { path: "lead-pipeline", element: withSuspense(<LeadPipelinePage />) },
+      { path: "mfa-assurance", element: withSuspense(<MfaAssurancePage />) },
       { path: "ads", element: withSuspense(<AdsPage />) },
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },
