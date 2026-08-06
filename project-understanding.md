@@ -130,6 +130,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **94** | `socialPlatform` | **Social Platform** — org-scoped feed, posts/comments, reactions ledger → computed engagement, deterministic hashtags (`docs/SESSION_94_SPECIFICATION.md`) |
 | **95** | `helpdesk` | **Enterprise Helpdesk** — tickets + monotonic numbers, honest lifecycle, deterministic SLA, comment timeline, CRM activity integration (`docs/SESSION_95_SPECIFICATION.md`) |
 | **96** | `appBuilder` | **AI Software Factory** — implements `docs/AI_APPLICATION_BUILDER_SPECIFICATION.md` V3.0 core: projects, AI-workforce tasks, honest build state machine, immutable artifacts (real SHA-256/SBOM), Human Decision Inbox gate (`docs/SESSION_96_SPECIFICATION.md`) |
+| **97** | `businessIntelligence` | **Business Intelligence** — data sources, live KPI values from real module stores, report builder + deterministic evaluation + CSV export (`docs/SESSION_97_SPECIFICATION.md`) |
 | **88+** | — | **88 is the open next-roadmap slot; Sessions 89–91 shipped additive milestones** |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
@@ -210,4 +211,4 @@ milestone"):**
 ### Quick reference — "what session do I touch?"
 S1–36 foundation/platform · S37–76 V8 enterprise · S77 experts/media · S78 UX ·
 S79 gift cards · S80 currency · S81 trading · S82 cyber · S83 ETL · S84 project
-continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation (S88 = open slot) · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory**.
+continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation (S88 = open slot) · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory · S97 business intelligence**.

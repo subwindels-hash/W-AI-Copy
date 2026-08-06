@@ -355,6 +355,14 @@ async function main() {
         } catch (e) { logger.warn("app-builder bootstrap failed", { err: e }); }
       }, 26000);
 
+      // Session 97 — Enterprise Business Intelligence (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapBusinessIntelligence } = await import("./businessIntelligence/bootstrap.js");
+          await bootstrapBusinessIntelligence(logger);
+        } catch (e) { logger.warn("bi bootstrap failed", { err: e }); }
+      }, 27000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

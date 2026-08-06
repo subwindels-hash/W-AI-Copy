@@ -86,3 +86,4 @@ export * from "./websiteBuilder.js";
 export * from "./socialPlatform.js";
 export * from "./helpdesk.js";
 export * from "./appBuilder.js";
+export * from "./businessIntelligence.js";

@@ -32,6 +32,7 @@
 | 94 | Social Platform | 🟡 | full vertical slice (feed, posts, comments, reactions ledger → computed engagement, deterministic hashtag extraction); 15 tests; `sp:*` namespaces audited by S89; runtime pending |
 | 95 | Helpdesk & Support | 🟡 | full vertical slice (tickets + monotonic numbers, honest lifecycle, deterministic SLA, comment timeline, CRM activity integration); 13 tests; `hd:*` namespaces audited by S89; runtime pending |
 | 96 | AI Software Factory | 🟡 | full vertical slice (implements `docs/AI_APPLICATION_BUILDER_SPECIFICATION.md` V3.0 core: projects, AI-workforce tasks, honest build state machine, immutable artifacts with real SHA-256/SBOM, Human Decision Inbox gate); 15 tests; `ab:*` namespaces audited by S89; runtime pending |
+| 97 | Business Intelligence | 🟡 | full vertical slice (data sources, live KPI values computed from the real module stores, report builder + deterministic evaluation + real CSV export); 14 tests; `bi:*` namespaces audited by S89; runtime pending |
 
 ### Repository-wide cleanup passes (cross-session)
 - **Pre-existing test failures**: all 12 resolved in-repo (9 env-blocked suites unblocked via `prismaClientMock`; 3 genuine demo-data/ESG bugs fixed). See `docs/PRE_EXISTING_TEST_FAILURES.md`.
@@ -40,12 +41,12 @@
 - **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`.
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **1045 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 94 files).
+- API unit/integration-style suite: **1059 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 96 files).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
 - `make verify` (prisma offline generate + build + typecheck + test): **green on a fresh clone**.
 - Web typecheck: clean.
 - Remaining API typecheck errors: 76 env-only (`@prisma/client` generated types require `prisma generate`, which needs the blocked engine download).
-- Module inventory (regenerated): **102 modules** — 75 COMPLETE, 24 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+- Module inventory (regenerated): **103 modules** — 76 COMPLETE, 24 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
 
 ## Blocked Gates (require target deployment environment)
 - `prisma generate` (native engine download from `binaries.prisma.sh` is network-blocked here).

@@ -114,6 +114,7 @@ import { registerWebsiteBuilderRoutes } from "./routes/websiteBuilder.js";
 import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
 import { registerHelpdeskRoutes } from "./routes/helpdesk.js";
 import { registerAppBuilderRoutes } from "./routes/appBuilder.js";
+import { registerBusinessIntelligenceRoutes } from "./routes/businessIntelligence.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1152,6 +1153,13 @@ export function createApp() {
   const appBuilderRouter = express.Router();
   v1.use("/builder", appBuilderRouter);
   registerAppBuilderRoutes(appBuilderRouter);
+
+  // /bi — Session 97: Enterprise Business Intelligence & Report Builder
+  // (data sources, live KPI values computed from the real module stores,
+  // report builder + deterministic evaluation + real CSV export).
+  const businessIntelRouter = express.Router();
+  v1.use("/bi", businessIntelRouter);
+  registerBusinessIntelligenceRoutes(businessIntelRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

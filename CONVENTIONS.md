@@ -30,6 +30,28 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 97 — Decisions Logged (Enterprise Business Intelligence)
+
+- **Module prefix:** `Bi` types, `bi:*` Redis keys, `/api/v1/bi` route
+  prefix, `apps/web/src/lib/businessIntelligence.ts` client,
+  `/app/bi` route + sidebar label "Business Intel".
+- **KPI values are live, never stored:** `evaluateMetric()` reads the real
+  module records through each module service (CRM/ERP/Email/Social/Helpdesk/
+  Builder) and computes the value per read — identical store state ⇒
+  identical values. No caching-as-fact, no fabrication.
+- **Period windows** (`all | 7d | 30d`) filter record timestamps for
+  countable metrics; currency metrics (forecast, stock_value) use the
+  module's live rollup.
+- **Reports** are card layouts; `evaluate` computes every card live; CSV
+  export is real (escaped, deterministic rows). `sampledAt`/`evaluatedAt`
+  are honest wall-clock readings — determinism tests compare values, not
+  clocks.
+- **Metric validation** is per module (`BI_METRICS`) — an unknown metric is
+  rejected at create/update.
+- **Rollup:** counts + source health (live sample counts) computed per read.
+- **Demo seed:** idempotent, seeds `org-demo-bi` config only — it never
+  fabricates module data, so KPI values reflect whatever the stores contain.
+
 ## Session 96 — Decisions Logged (AI Software Factory / Application Builder)
 
 - **Module prefix:** `Ab` types, `ab:*` Redis keys, `/api/v1/builder` route

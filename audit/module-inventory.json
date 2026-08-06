@@ -1390,6 +1390,88 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "businessIntelligence",
+    "title": "businessIntelligence",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/businessIntelligence",
+    "backend": {
+      "serviceDir": "apps/api/src/businessIntelligence",
+      "serviceFile": {
+        "file": "businessIntelligence.service.ts",
+        "path": "/home/user/WIN/apps/api/src/businessIntelligence/businessIntelligence.service.ts",
+        "sloc": 485,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1277,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "businessIntelligence.service.ts",
+        "businessIntelligence.test.ts",
+        "businessIntelligence/businessIntelligence.service.ts"
+      ],
+      "importedServiceFiles": [
+        "businessIntelligence/businessIntelligence.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/businessIntelligence/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/businessIntelligence.ts",
+        "sloc": 171,
+        "counts": {
+          "total": 19,
+          "GET": 10,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 3
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /sources",
+          "POST /sources",
+          "GET /sources/:id",
+          "PATCH /sources/:id",
+          "DELETE /sources/:id",
+          "GET /kpis",
+          "POST /kpis",
+          "GET /kpis/:id",
+          "PATCH /kpis/:id",
+          "DELETE /kpis/:id",
+          "GET /kpis/:id/value",
+          "GET /reports",
+          "POST /reports",
+          "GET /reports/:id",
+          "PATCH /reports/:id",
+          "DELETE /reports/:id",
+          "GET /reports/:id/evaluate",
+          "GET /reports/:id/export.csv"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/businessIntelligence.ts (160 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/businessIntelligence.ts (103 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "businessIntelligence/businessIntelligence.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "camera",
     "title": "camera",
     "sessions": [],
@@ -7826,11 +7908,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 355,
+        "sloc": 359,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 886,
+      "serviceTotalSloc": 894,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

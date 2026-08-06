@@ -5,6 +5,38 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 97 — Enterprise Business Intelligence] — 2026-08-05
+
+### New module: Business Intelligence & Report Builder (Phase-4 Analytics)
+*   `packages/shared/src/businessIntelligence.ts` — Zod contracts + types
+    for sources, KPIs, reports and evaluated outputs (prefixed `Bi`);
+    per-module metric catalogs; periods (`all | 7d | 30d`); formats.
+*   `apps/api/src/businessIntelligence/businessIntelligence.service.ts` —
+    org-scoped Redis-backed sources/KPIs/reports plus the **live metric
+    engine**: `evaluateMetric()` reads the real module records through each
+    module service (CRM/ERP/Email/Social/Helpdesk/Builder) and computes the
+    value per read — never stored, never fabricated; identical store state ⇒
+    identical values.
+*   **Report builder** with deterministic live evaluation of every card and
+    a **real CSV export** (escaped, deterministic rows).
+*   Metric validation per module (unknown metrics rejected); period windows
+    filter real record timestamps.
+*   Routes: `apps/api/src/http/routes/businessIntelligence.ts` mounted at
+    `/api/v1/bi` (19 endpoints). Session 89 catalog gains the `bi:source` /
+    `bi:kpi` / `bi:report` namespaces as `org_scoped`.
+*   Web: `apps/web/src/lib/businessIntelligence.ts` client + `pages/bi/
+    BusinessIntelligencePage.tsx` (source registry, live KPI value cards,
+    report evaluation + CSV export link), `/app/bi` route + sidebar entry.
+*   Tests: `apps/api/src/businessIntelligence/businessIntelligence.test.ts`
+    (14) — CRUD, live metric engine (values update as module records change),
+    metric validation, deterministic evaluation, CSV export, rollup
+    determinism, cross-tenant isolation, demo-seed idempotency, schemas.
+*   Demo seed (`apps/api/src/businessIntelligence/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA` — defines BI config only, never fabricates module
+    data, so KPI values are honest.
+*   **103 modules** in the inventory (76 COMPLETE).
+*   Spec: `docs/SESSION_97_SPECIFICATION.md`.
+
 ## [Session 96 — AI Software Factory / Application Builder] — 2026-08-05
 
 ### New module: implements docs/AI_APPLICATION_BUILDER_SPECIFICATION.md V3.0 (core)
