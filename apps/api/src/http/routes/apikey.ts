@@ -1,49 +1,54 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
-import { z } from "zod";
 import type { ApiEnvelope } from "@windels/shared/api";
-import { createApiKey, listApiKeys, revokeApiKey, CreateApiKeySchema } from "../../publicApi/publicApi.service.js";
+import {
+  AkApiKeyCreateSchema,
+  AkApiKeyIdSchema,
+  AkApiKeyListQuerySchema,
+  AkApiKeyUpdateSchema,
+} from "@windels/shared/apiKeys";
+import { createApiKey, getApiKey, listApiKeys, revokeApiKey, updateApiKey } from "../../publicApi/publicApi.service.js";
+
+function meta(req: any) {
+  return { requestId: req.requestId ?? "", tookMs: Date.now() - (req.startedAt ?? Date.now()) };
+}
 
 /**
- * API-key routes. These create/read/revoke REAL persisted API keys (CSPRNG
- * generated, hashed at rest) via the same service that backs the Public API.
- * This previously returned a fake `ak_${Date.now()}` placeholder that was
- * never persisted and never usable.
+ * API-key routes. Plaintext keys are CSPRNG-generated, hashed at rest and
+ * returned only from the create response. All reads and mutations are scoped
+ * through the authenticated user's organization membership.
  */
 export function registerApiKeyRoutes(router: Router) {
   const keys = Router();
   keys.use(authenticate);
 
-  keys.get("/", async (req, res, next) => {
+  keys.get("/", validate({ query: AkApiKeyListQuerySchema }), async (req, res, next) => {
     try {
-      const data = await listApiKeys(req.user!.id);
-      const env: ApiEnvelope<typeof data> = {
-        ok: true,
-        data,
-        meta: { requestId: req.requestId ?? "", tookMs: Date.now() - (req.startedAt ?? Date.now()) },
-      };
-      res.json(env);
+      const data = await listApiKeys(req.user!.id, req.query as any);
+      const envelope: ApiEnvelope<typeof data> = { ok: true, data, meta: meta(req) };
+      res.json(envelope);
     } catch (e) { next(e); }
   });
 
-  keys.post("/", validate({ body: CreateApiKeySchema }), async (req, res, next) => {
+  keys.get("/:id", validate({ params: AkApiKeyIdSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await getApiKey(req.user!.id, req.params.id), meta: meta(req) }); } catch (e) { next(e); }
+  });
+
+  keys.post("/", validate({ body: AkApiKeyCreateSchema }), async (req, res, next) => {
     try {
       const data = await createApiKey(req.user!.id, req.body);
-      const env: ApiEnvelope<typeof data> = {
-        ok: true,
-        data,
-        meta: { requestId: req.requestId ?? "", tookMs: Date.now() - (req.startedAt ?? Date.now()) },
-      };
-      res.status(201).json(env);
+      const envelope: ApiEnvelope<typeof data> = { ok: true, data, meta: meta(req) };
+      res.status(201).json(envelope);
     } catch (e) { next(e); }
   });
 
-  keys.delete("/:id", validate({ params: z.object({ id: z.string().min(1) }) }), async (req, res, next) => {
-    try {
-      await revokeApiKey(req.user!.id, req.params.id);
-      res.json({ ok: true, data: { revoked: true }, meta: { requestId: req.requestId ?? "", tookMs: Date.now() - (req.startedAt ?? Date.now()) } });
-    } catch (e) { next(e); }
+  keys.patch("/:id", validate({ params: AkApiKeyIdSchema, body: AkApiKeyUpdateSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await updateApiKey(req.user!.id, req.params.id, req.body), meta: meta(req) }); } catch (e) { next(e); }
+  });
+
+  keys.delete("/:id", validate({ params: AkApiKeyIdSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await revokeApiKey(req.user!.id, req.params.id), meta: meta(req) }); } catch (e) { next(e); }
   });
 
   router.use("/apikeys", keys);

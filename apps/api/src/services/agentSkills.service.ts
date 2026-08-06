@@ -16,20 +16,13 @@ import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
 import { ToolRegistry, executeTool, type ToolContext } from "./tools/toolRegistry.js";
 import { logger } from "../config/logger.js";
-import { z } from "zod";
+import type { z } from "zod";
 import type { PaginationQuery } from "@windels/shared/api";
+import { AgSkillCreateSchema, AgSkillUpdateSchema } from "@windels/shared/agents";
 
-// ─── Schemas ────────────────────────────────────────────────────
-
-export const CreateSkillSchema = z.object({
-  name: z.string().min(1).max(64),
-  description: z.string().max(500).optional(),
-  toolName: z.string().min(1).max(64), // Links to ToolRegistry
-  config: z.record(z.any()).optional(),
-  enabled: z.boolean().default(true),
-});
-
-export const UpdateSkillSchema = CreateSkillSchema.partial();
+// Backwards-compatible names retained for existing route imports.
+export const CreateSkillSchema = AgSkillCreateSchema;
+export const UpdateSkillSchema = AgSkillUpdateSchema;
 
 // ─── Serialization ──────────────────────────────────────────────
 

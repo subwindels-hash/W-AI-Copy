@@ -94,6 +94,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // Enterprise Helpdesk (Session 95)
   { prefix: "hd:ticket", scope: "org_scoped" },
   { prefix: "hd:comment", scope: "org_scoped" },
+  // AI Workforce / Agent Framework lifecycle state (Session 102)
+  { prefix: "agent:lifecycle", scope: "org_scoped" },
+  { prefix: "agent:lifecycle:history", scope: "org_scoped" },
   // AI Software Factory / Application Builder (Session 96)
   { prefix: "ab:project", scope: "org_scoped" },
   { prefix: "ab:task", scope: "org_scoped" },
@@ -108,6 +111,22 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "es:history", scope: "org_scoped" },
   // Software Factory Studios (Session 99)
   { prefix: "sf:plan", scope: "org_scoped" },
+  // Enterprise FinOps depth (Session 100)
+  { prefix: "efo:center", scope: "org_scoped" },
+  { prefix: "efo:budget", scope: "org_scoped" },
+  { prefix: "efo:cost", scope: "org_scoped" },
+  { prefix: "efo:allocation", scope: "org_scoped" },
+  // Canvas Collaboration presence/cursor state (Session 109)
+  { prefix: "canvas:presence", scope: "org_scoped" },
+  { prefix: "canvas:cursor", scope: "org_scoped" },
+  // AI Economy / GPU capacity ledger (Session 103)
+  { prefix: "eco:meta", scope: "org_scoped" },
+  { prefix: "eco:usage", scope: "org_scoped" },
+  { prefix: "eco:allocation", scope: "org_scoped" },
+  { prefix: "eco:offer", scope: "org_scoped" },
+  // Autonomous Organization approval register (Session 106)
+  { prefix: "aut:meta", scope: "org_scoped" },
+  { prefix: "aut:decision", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

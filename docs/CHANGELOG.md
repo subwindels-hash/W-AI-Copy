@@ -5,6 +5,106 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 109 — Canvas Collaboration Completion] — 2026-08-05
+
+### Canvas presence/cursors completed with tenant-safe state
+*   `packages/shared/src/canvasCollab.ts` — `Cc` presence, cursor, canvas ID and validation contracts.
+*   Canvas Collaboration now uses org-scoped presence/cursor records and channels, verifies Canvas access at the route boundary, and migrates legacy slots safely.
+*   Added canonical `canvasCollab` service/client/page entrypoints; `/app/canvas` now sends real heartbeats, leave events and displays current collaborators.
+*   Session 89 audits `canvas:presence` and `canvas:cursor` namespaces.
+*   Existing collaboration suite expanded to 20 tests, including org-key isolation; runtime Redis/multi-browser validation remains pending.
+
+## [Session 108 — Camera Feed Registry & Alert Console Completion] — 2026-08-05
+
+### Camera registry and alert boundary completed
+*   `packages/shared/src/camera.ts` — `Cam` feed, alert, stream-session and Zod contracts.
+*   `apps/api/src/camera/camera.service.ts` — org-scoped feed/alert item/index records, legacy feed migration, feed update/delete, alert ownership checks, full stream handoff honesty and admin-compatible lifecycle.
+*   Routes: corrected mounted `/api/v1/camera/feeds` paths; added feed PATCH/DELETE, alert POST and shared validation. Session 89 camera feed/alert namespaces are org-audited.
+*   Web: typed feed/alert client, dedicated `/app/camera` console, status and alert controls, external-gateway availability labeling and non-admin read-only state.
+*   Tests: `camera.test.ts` (9) — scoped feed CRUD, status, alert isolation, stream availability, deletion cascade, legacy migration and contracts.
+*   Runtime validation against live Redis/camera gateway/CV infrastructure remains pending; Session 108 is recorded 🟡 VERIFIED (partial).
+
+## [Session 107 — Billing & Subscriptions Completion] — 2026-08-05
+
+### Billing lifecycle completed as a real audited subscription/invoice slice
+*   `packages/shared/src/billing.ts` — shared plan, subscription, invoice, overview, insights and update/payment schemas with collision-safe barrel aliases.
+*   Billing service/routes now consume shared contracts; dedicated overview includes invoice lines and receivables, admin mark-paid/void actions remain audited, and provider webhooks remain idempotent.
+*   Web: typed billing client expanded with invoice actions and dedicated `/app/billing` subscription/invoice console; existing Settings/Analytics consumers remain compatible.
+*   Tests: `billing.integration.test.ts` (11) covers subscription creation, paid-plan invoices, idempotent updates, tenant scope, payment/void transitions, webhook idempotency, unknown invoices, dunning and shared contracts; existing plan/schema tests remain green.
+*   Runtime validation against live PostgreSQL/Redis/payment provider remains pending; Session 107 is recorded 🟡 VERIFIED (partial).
+
+## [Session 106 — Autonomous Organization Approval Register Completion] — 2026-08-05
+
+### Approval-first autonomous organization completed
+*   `packages/shared/src/autonomous.ts` — `Aut` proposal, resolution, list/filter and dashboard honesty contracts.
+*   `apps/api/src/autonomous/autonomous.service.ts` — individual org-scoped decision records, safe legacy migration, human resolution, pending deletion, deterministic department/guardrail rollups and honest empty/approved-estimate states.
+*   Routes: `/api/v1/autonomous` now supports decision list/detail/propose/resolve/delete with admin-protected mutations; Session 89 audits `aut:meta` and `aut:decision` namespaces.
+*   Web: typed approval client, dedicated `/app/autonomous` console, admin proposal/approve/reject controls and read-only non-admin state. Existing PlatformPage tab remains compatible.
+*   Tests: `autonomous.test.ts` (10) plus existing rollup coverage — isolation, filters, human decisions, migration, blocked pending state, determinism and contracts.
+*   Runtime validation against live Redis remains pending; Session 106 is recorded 🟡 VERIFIED (partial).
+
+## [Session 105 — Message Attachments Completion] — 2026-08-05
+
+### Attachment metadata and mobile parity completed
+*   `packages/shared/src/attachments.ts` — `Att` normalized metadata, list/pagination, ID and upload-target contracts.
+*   `apps/api/src/attachments/attachments.service.ts` — normalized `sha256`/`previewText` responses, full-checksum storage keys with collision verification, metadata detail endpoint support and existing org/uploader protections.
+*   Routes: `/api/v1/attachments` now has normalized list/upload/meta/byte/delete paths with shared validation.
+*   Web/mobile: added exact attachment compatibility client/page entrypoints, `/app/attachments` navigation, and fixed `/m/files` to perform real multipart uploads.
+*   Tests: `attachments.test.ts` now has 10 passing cases covering limits, MIME/checksum, previews, pagination, bytes, target organization, cross-tenant access, deletion and claim ownership.
+*   Runtime validation against live PostgreSQL and the file volume remains pending; Session 105 is recorded 🟡 VERIFIED (partial).
+
+## [Session 104 — API Key Management Completion] — 2026-08-05
+
+### API keys completed as a secure shared vertical slice
+*   `packages/shared/src/apiKeys.ts` — `Ak` scope, list, one-time-create, mutation, query and ID contracts with Zod validation.
+*   `apps/api/src/publicApi/publicApi.service.ts` — scoped API-key detail/update lifecycle, irreversible revocation, SHA-256/CSPRNG handling and real audit-log records for create/update/revoke.
+*   Routes: `/api/v1/apikeys` now supports list/detail/create/update/revoke; existing `/developers/api-keys` compatibility paths remain intact.
+*   Web: typed `apiKeysApi`, dedicated `/app/api-keys` page with scope/expiry creation, one-time secret copy, prefix-only listing, rename, revoke and revoked-key visibility.
+*   Tests: `publicApi.test.ts` now has 10 passing cases covering plaintext/hash behavior, verification, expiry/revocation, detail, update/audit, cross-tenant isolation and contracts.
+*   Runtime validation against live PostgreSQL remains pending; Session 104 is recorded 🟡 VERIFIED (partial).
+
+## [Session 103 — AI Economy & GPU Capacity Ledger Completion] — 2026-08-05
+
+### AI Economy completed as an honest org-scoped capacity ledger
+*   `packages/shared/src/aiEconomy.ts` — expanded shared contracts and Zod schemas for usage observations, GPU allocations, compute offers and dashboard projection labeling.
+*   `apps/api/src/aiEconomy/aiEconomy.service.ts` — individual CSPRNG-keyed org-scoped Redis records for usage, allocations and offers; deterministic spend/department/capacity rollups; safe migration from legacy organization blobs; revenue/marketplace zeros remain honest until real ledgers exist.
+*   Routes: `/api/v1/ai-economy` now supports usage, allocation and compute-offer list/create/update/delete paths with admin-protected writes. Session 89 catalogs `eco:meta`, `eco:usage`, `eco:allocation` and `eco:offer` as org-scoped.
+*   Web: typed `ecoApi`, dedicated `/app/ai-economy` page, sidebar entry, administrator forms and read-only non-admin view. Existing PlatformPage AI Economy tab remains compatible.
+*   Tests: `apps/api/src/aiEconomy/aiEconomy.test.ts` (12) plus the existing usage rollup suite — ledger isolation, offer/allocation CRUD, migration, dashboard math, deterministic values, honesty guards and contracts.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending; Session 103 is recorded 🟡 VERIFIED (partial).
+
+## [Session 102 — AI Workforce / Agent Framework Completion] — 2026-08-05
+
+### Agent Framework completed as a shared, scoped vertical slice
+*   `packages/shared/src/agents.ts` — `Ag` agent, event, memory, knowledge, skill, model, pagination, lifecycle and Zod request contracts.
+*   Agent CRUD, event, skill, memory and knowledge paths now consume shared contracts through backwards-compatible schema aliases; the typed client consumes the same shared records.
+*   Lifecycle Redis state/history now use organization-scoped keys (`agent:lifecycle:<org>:<id>` and `agent:lifecycle:history:<org>:<id>`), with safe legacy migration and Session 89 catalog registration.
+*   `/m/agents` now consumes the real paginated API, derives online/assigned-task counts from real records and routes creation to the Workforce Hub instead of showing placeholder counts/no-op controls. Workforce Hub CRUD remains intact.
+*   Tests: `apps/api/src/agents/agents.test.ts` now has 10 tests covering CRUD, org isolation, status/query/pagination filtering, model validation, built-in protection, event access and contracts.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending; Session 102 is recorded 🟡 VERIFIED (partial).
+
+## [Session 101 — Admin Console Completion] — 2026-08-05
+
+### Admin Utilities completed as a real vertical slice
+*   `packages/shared/src/admin.ts` — `Adm` stats, user-directory, pagination, role/status filter and mutation contracts with shared Zod validation.
+*   `apps/api/src/services/admin.service.ts` — organization-scoped directory/detail reads, super-admin platform scope, search/filter/pagination support, audited suspension/reactivation and role changes with self/super-admin protection.
+*   Routes: existing `/api/v1/admin` endpoints remain compatible; added `GET /users/:id` and optional role/status filters. All authorization remains server-side through RBAC and Membership checks.
+*   Web: typed `adminApi`, dedicated `/admin` Admin Console with live stats, search, filters, pagination, suspend/reactivate controls, super-admin role controls, loading/error/empty states and honest audit messaging. Added Admin Console sidebar entry.
+*   Tests: `apps/api/src/services/admin.test.ts` (8) — scoped/platform stats, directory pagination/filtering, cross-tenant isolation, user detail, mutation guards, audit rows and Zod contracts.
+*   FakePrisma now mirrors Prisma's reverse one-to-one `User.profile` shape for reliable service tests.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending; Session 101 is recorded 🟡 VERIFIED (partial).
+
+## [Session 100 — Enterprise FinOps Depth] — 2026-08-06
+
+### Org-scoped budgets, cost allocation and chargebacks
+*   `packages/shared/src/enterpriseFinOps.ts` — `Efo` records and Zod contracts for cost centers, period budgets, integer minor-unit actual costs, allocation ledger rows, computed chargebacks and rollups.
+*   `apps/api/src/enterpriseFinOps/enterpriseFinOps.service.ts` — fail-closed Redis-backed `efo:*` CRUD; CSPRNG identifiers; currency/period/conservation validation; direct, shared, usage and proportional allocations; live budget utilization, variance, method totals and unallocated spend computed per read. The historical global Session 31 FinOps service is unchanged.
+*   Routes: `apps/api/src/http/routes/enterpriseFinOps.ts` mounted at `/api/v1/finops` with cost-center, budget, cost, allocation and computed chargeback endpoints. Session 89 catalog now audits `efo:center`, `efo:budget`, `efo:cost` and `efo:allocation` as `org_scoped`.
+*   Web: typed `enterpriseFinOpsApi`, `/app/finops` page and unique Wallet Cards sidebar entry. The UI labels minor units honestly and distinguishes actual costs, allocation rows and computed chargeback statements.
+*   Tests: `enterpriseFinOps.test.ts` (13) — CRUD, duplicate/currency/period validation, direct and shared allocation conservation, chargeback math and date filtering, deterministic rollup, cross-tenant isolation, cascade deletion, gated seed idempotency and Zod contracts.
+*   Demo seed (`org-demo-efo`) is opt-in only via `WINDELS_DEMO_DATA=true`; fresh organizations remain empty.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending in this sandbox; Session 100 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 99 — Software Factory: Five Studios & Build Farm] — 2026-08-05
 
 ### Completes AI_APPLICATION_BUILDER_SPECIFICATION.md V3.0 §3–§4

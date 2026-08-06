@@ -1,11 +1,9 @@
 import { Router } from "express";
-import { randomBytes } from "node:crypto";
-import { authenticate } from "../middleware/auth.js";
+import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
-import { z } from "zod";
 import { CameraService } from "../../camera/camera.service.js";
+import { CamAlertCreateSchema, CamFeedCreateSchema, CamFeedIdSchema, CamFeedUpdateSchema } from "@windels/shared/camera";
 import { tenantStore } from "../../utils/tenantStore.js";
-import { authenticate as _authenticate } from "../middleware/auth.js";
 import { z as z_notes } from "zod";
 
 /**
@@ -16,72 +14,30 @@ import { z as z_notes } from "zod";
  * configured we return STUN only rather than shipping a placeholder credential
  * that would fail (or, worse, work) in production.
  */
-function iceServers() {
-  const servers: Array<{ urls: string; username?: string; credential?: string }> = [
-    { urls: process.env.WEBRTC_STUN_URL || "stun:stun.l.google.com:19302" },
-  ];
-  const turnUrl = process.env.WEBRTC_TURN_URL;
-  const turnUser = process.env.WEBRTC_TURN_USERNAME;
-  const turnCredential = process.env.WEBRTC_TURN_CREDENTIAL;
-  if (turnUrl && turnUser && turnCredential) {
-    servers.push({ urls: turnUrl, username: turnUser, credential: turnCredential });
-  }
-  return servers;
-}
-
-const createFeedSchema = {
-  body: z.object({
-    name: z.string().min(1).max(100),
-    streamUrl: z.string().url(),
-    locationName: z.string().max(200).optional(),
-    resolution: z.string().max(50).optional(),
-  }),
-};
-
 export function registerCameraRoutes(router: Router) {
   router.use(authenticate);
 
-  router.get("/camera/feeds", async (req, res, next) => {
-    try {
-      const data = await CameraService.listFeeds(req.user!.organizationId!);
-      res.json({ ok: true, data, meta: { requestId: req.requestId } });
-    } catch (e) { next(e); }
+  router.get("/feeds", async (req, res, next) => {
+    try { res.json({ ok: true, data: await CameraService.listFeeds(req.user!.organizationId!), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
-
-  router.post("/camera/feeds", validate(createFeedSchema), async (req, res, next) => {
-    try {
-      const data = await CameraService.createFeed(req.user!.organizationId!, req.body);
-      res.status(201).json({ ok: true, data, meta: { requestId: req.requestId } });
-    } catch (e) { next(e); }
+  router.post("/feeds", requireAdmin, validate({ body: CamFeedCreateSchema }), async (req, res, next) => {
+    try { res.status(201).json({ ok: true, data: await CameraService.createFeed(req.user!.organizationId!, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
-
-  router.get("/camera/feeds/:id/stream", async (req, res, next) => {
-    try {
-      const feed = await CameraService.getFeed(req.user!.organizationId!, req.params.id);
-      if (!feed) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Feed not found" } });
-      
-      // Return WebRTC low-latency stream session tokens
-      res.json({
-        ok: true,
-        data: {
-          // Session tokens gate access to a live camera feed, so they are drawn
-          // from the CSPRNG. Math.random() produced a guessable 8-char token.
-          webrtcSessionToken: "session_" + randomBytes(24).toString("base64url"),
-          iceServers: iceServers(),
-          turnConfigured: Boolean(process.env.WEBRTC_TURN_URL),
-        },
-        meta: { requestId: req.requestId }
-      });
-    } catch (e) { next(e); }
+  router.patch("/feeds/:id", requireAdmin, validate({ params: CamFeedIdSchema, body: CamFeedUpdateSchema }), async (req, res, next) => {
+    try { const data = await CameraService.updateFeed(req.user!.organizationId!, req.params.id, req.body); if (!data) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Feed not found" } }); res.json({ ok: true, data, meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
-
-  router.get("/camera/feeds/:id/alerts", async (req, res, next) => {
-    try {
-      const data = await CameraService.listAlerts(req.params.id);
-      res.json({ ok: true, data, meta: { requestId: req.requestId } });
-    } catch (e) { next(e); }
+  router.delete("/feeds/:id", requireAdmin, validate({ params: CamFeedIdSchema }), async (req, res, next) => {
+    try { const deleted = await CameraService.deleteFeed(req.user!.organizationId!, req.params.id); if (!deleted) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Feed not found" } }); res.json({ ok: true, data: { deleted: true, id: req.params.id }, meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
-
+  router.get("/feeds/:id/stream", validate({ params: CamFeedIdSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await CameraService.streamSession(req.user!.organizationId!, req.params.id), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.get("/feeds/:id/alerts", validate({ params: CamFeedIdSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await CameraService.listAlerts(req.user!.organizationId!, req.params.id), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.post("/feeds/:id/alerts", requireAdmin, validate({ params: CamFeedIdSchema, body: CamAlertCreateSchema }), async (req, res, next) => {
+    try { res.status(201).json({ ok: true, data: await CameraService.triggerAlert(req.user!.organizationId!, req.params.id, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
 
   // Real tenant-scoped notes ledger for camera — user-authored annotations
   // persisted in Redis. Every write is a real Redis write; every read reflects

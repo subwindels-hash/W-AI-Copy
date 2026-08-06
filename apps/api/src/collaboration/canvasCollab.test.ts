@@ -178,4 +178,13 @@ describe("CanvasCollabService", () => {
     const presence = await CanvasCollabService.presence("c1", kv as any);
     expect(presence.map((p) => p.userId)).toEqual(["second", "first"]);
   });
+
+  it("writes org-scoped presence and cursor keys when an organization is supplied", async () => {
+    await CanvasCollabService.heartbeat("c1", { userId: "u1", displayName: "Ada" }, kv as any, "org-a");
+    await CanvasCollabService.moveCursor("c1", { userId: "u1", displayName: "Ada" }, 4, 5, kv as any, "org-a");
+    expect(kv.hashes.has("canvas:presence:i:org-a:c1")).toBe(true);
+    expect(kv.hashes.has("canvas:cursor:i:org-a:c1")).toBe(true);
+    expect(await CanvasCollabService.presence("c1", kv as any, "org-b")).toHaveLength(0);
+    expect(await CanvasCollabService.cursors("c1", kv as any, "org-b")).toHaveLength(0);
+  });
 });

@@ -30,6 +30,182 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 109 — Decisions Logged (Canvas Collaboration Completion)
+
+- **Shared contract prefix:** `Cc` presence/cursor contracts live in
+  `packages/shared/src/canvasCollab.ts`; canonical service/client/page
+  entrypoints live under `canvasCollab` while existing Canvas files remain
+  compatible.
+- **Organization scope:** routes call the real Canvas access check before any
+  presence/cursor operation. New Redis presence/cursor keys and pub/sub
+  channels carry the organization segment; legacy slots migrate only after
+  access verification.
+- **Realtime honesty:** presence uses timestamp TTL pruning and cursor values
+  are real browser/API observations. The system does not claim CRDT/WebSocket
+  guarantees beyond the existing Redis pub/sub channel and polling fallback.
+- **UI parity:** `/app/canvas` sends heartbeat/leave events and displays the
+  actual collaborator set; the focused collaboration route is additive.
+
+## Session 108 — Decisions Logged (Camera Feed Registry & Alert Console Completion)
+
+- **Shared contract prefix:** `Cam` feed, alert, stream-session and Zod
+  contracts live in `packages/shared/src/camera.ts`.
+- **Route mounting:** camera routes are mounted at `/api/v1/camera`, so the
+  route module uses relative `/feeds` paths; new API requests do not create a
+  duplicated `/camera/camera` path.
+- **Isolation:** feed and alert records use org-scoped item/index keys and
+  ownership checks. Legacy feed slots are migration inputs only.
+- **Media honesty:** an expiring WebRTC handoff token is not a live stream;
+  responses include `streamAvailable`, TURN state and an external gateway note.
+  Feed status defaults offline and alerts are advisory records.
+- **RBAC/UI:** administrators manage feed configuration and alert records;
+  authenticated users can read scoped feeds/alerts. `/app/camera` is the
+  dedicated console; the PlatformPage tab remains compatible.
+
+## Session 107 — Decisions Logged (Billing & Subscriptions Completion)
+
+- **Shared contract prefix:** `Billing*` types/schemas live in
+  `packages/shared/src/billing.ts`; barrel exports use collision-safe aliases
+  for the older platform-services billing names.
+- **Money precision:** plan prices and invoice lines remain integer cents;
+  subscription changes create open invoices, while payment success is only
+  recorded by an authenticated audited admin action or idempotent provider
+  webhook.
+- **Payment honesty:** there is no fake payment provider or automatic paid
+  verdict. Unknown/duplicate webhook events are handled explicitly, and
+  dunning only transitions real overdue open invoices.
+- **UI:** `/app/billing` is a dedicated admin-aware console; Settings and
+  Analytics continue to consume the same client.
+
+## Session 106 — Decisions Logged (Autonomous Organization Approval Register Completion)
+
+- **Shared contract prefix:** `Aut` contracts and Zod schemas remain in
+  `packages/shared/src/autonomous.ts`.
+- **Approval-first boundary:** proposals are real records but this module never
+  executes an autonomous action. `awaiting_human` is the default state and only
+  authenticated admin decisions produce `approved`/`rejected` outcomes.
+- **Ledger storage:** decisions use `aut:decision:i:<org>:<id>` records and an
+  organization index; old JSON blobs are migration inputs only.
+- **Honest metrics:** review rate is labeled as human review, empty governance
+  evidence is zero, and approved impact is labeled an estimate rather than
+  realized savings. Plans, budgets and executive seats stay empty until real
+  ledgers exist.
+- **UI:** `/app/autonomous` is a dedicated approval console; non-admins see
+  read-only data and no fake execution controls.
+
+## Session 105 — Decisions Logged (Message Attachments Completion)
+
+- **Shared contract prefix:** `Att` types and Zod contracts live in
+  `packages/shared/src/attachments.ts`; `filesApi` exposes the normalized
+  metadata shape used by web and mobile.
+- **Metadata normalization:** API responses use `sha256` and `previewText`,
+  matching the client. Prisma's `checksum`/`extractedText` names stay internal.
+- **Storage integrity:** new object keys contain the full SHA-256 plus a safe
+  filename. If a same-key object exists, its bytes are rehashed before reuse;
+  a mismatch is a conflict, never silent overwrite.
+- **Scope and deletion:** upload targets and reads are organization-scoped;
+  only the uploader can delete an unclaimed attachment. Claimed message/talk
+  attachments remain protected.
+- **Mobile parity:** `/m/files` uses the real paginated client and multipart
+  upload for camera/photo/document actions rather than no-op picker callbacks.
+
+## Session 104 — Decisions Logged (API Key Management Completion)
+
+- **Shared contract prefix:** `Ak` types and Zod schemas live in
+  `packages/shared/src/apiKeys.ts`; the public API service preserves its
+  `CreateApiKeySchema`/`UpdateApiKeySchema` aliases for existing consumers.
+- **Secret handling:** `wnd_` bearer tokens are generated with CSPRNG bytes;
+  only SHA-256 hashes and prefixes are persisted. Plaintext is returned once
+  from create and never from list/detail.
+- **Lifecycle:** API keys may be renamed or have scopes changed while active;
+  revocation is irreversible and all create/update/revoke transitions write
+  organization-scoped audit records.
+- **Isolation:** API key reads and mutations resolve the caller's membership
+  organization and fail closed for foreign key IDs. The dedicated client/page
+  uses `/api/v1/apikeys`; the existing Developer Portal remains compatible.
+
+## Session 103 — Decisions Logged (AI Economy & GPU Capacity Ledger Completion)
+
+- **Shared contract prefix:** `AiEconomy*` types/schemas remain in
+  `packages/shared/src/aiEconomy.ts`; `ecoApi` and the dedicated page consume
+  those contracts.
+- **Ledger storage:** usage, allocation and compute-offer observations are
+  individual Redis hash records under `eco:<entity>:i:<org>:<id>` with
+  organization indexes. The old per-org JSON blobs are migration inputs only;
+  new writes never append to a blob.
+- **Provider honesty:** capacity offers are administrator-recorded
+  observations, not a static/generated provider catalog. Empty organizations
+  show no offers. Revenue, earnings, margin and marketplace volume remain zero
+  without their real ledgers.
+- **Projection labeling:** the only forecast is a straight-line projection of
+  observed 30-day spend and is labeled `forecastKind: observed_run_rate`;
+  no forecast is emitted for an empty ledger.
+- **RBAC:** dashboard reads are authenticated; usage, allocation and offer
+  mutations require admin role. Cross-tenant operations fail closed.
+
+## Session 102 — Decisions Logged (AI Workforce / Agent Framework Completion)
+
+- **Shared contract prefix:** `Ag` types and Zod schemas in
+  `packages/shared/src/agents.ts`; existing agent service schema exports remain
+  aliases for compatibility. The typed client uses the same records and
+  `AgPaginated<T>` envelope.
+- **Organization scope:** agent, memory, knowledge, skill and event reads are
+  constrained by the caller's `resolveUserContext` organization. Internal
+  lifecycle state now writes `agent:lifecycle:<org>:<id>` and history writes
+  `agent:lifecycle:history:<org>:<id>`; old slots migrate only after the agent
+  organization is verified.
+- **Model honesty:** agent creation/update accepts only a model recognized by
+  the ProviderRegistry; the Workforce Hub does not silently send a default
+  fabricated model when no model is selected.
+- **Mobile parity:** `/m/agents` consumes the real paginated agent response,
+  computes online/assigned-task counts from returned records, and navigates to
+  the real Workforce Hub for creation instead of exposing no-op controls.
+- **Tests:** the core agent suite now covers ten service/contract scenarios,
+  including cross-organization mutation and event isolation.
+
+## Session 101 — Decisions Logged (Admin Console Completion)
+
+- **Shared contract prefix:** `Adm` types and Zod schemas in
+  `packages/shared/src/admin.ts`; the existing `/api/v1/admin` route family is
+  retained and the web client now consumes the shared output types.
+- **Scope is enforced by the database relationship:** organization admins can
+  read and mutate only users with a `Membership` in their active organization;
+  super admins retain platform-wide scope. No new Redis namespace is needed
+  because this surface operates on the core Prisma User/Membership/AuditLog
+  models.
+- **Admin actions are audited and guarded:** suspension/reactivation writes an
+  audit row; role changes are super-admin-only; actors cannot suspend or change
+  their own account; super-admin accounts cannot be suspended.
+- **Directory contract:** user list responses use `{ users, pagination }` with
+  optional search, role and status filters. The new detail endpoint and filters
+  are additive; existing stats and mutation paths remain compatible.
+- **UI:** `/admin` now renders the dedicated real-data Admin Console with
+  search, filters, pagination and guarded actions. The historical
+  `AdminDashboard` component remains in place for compatibility.
+
+## Session 100 — Decisions Logged (Enterprise FinOps Depth)
+
+- **Module prefix:** `Efo` types, `efo:center|budget|cost|allocation:*` Redis
+  namespaces, `/api/v1/finops` routes, `apps/web/src/lib/enterpriseFinOps.ts`
+  client, `/app/finops` route + sidebar label "Enterprise FinOps". This is
+  additive and intentionally separate from the historical global Session 31
+  `FinOpsService` under `/enterprise-foundation`.
+- **Accounting precision:** budgets, actual costs and allocations persist
+  integer `amountMinor` values plus an explicit three-letter currency. There
+  is no implicit FX conversion and a cost center's currency is locked once it
+  has budgets or allocations.
+- **Ledger separation:** provider observations are stored once as costs;
+  chargeback ownership is represented by separate allocation rows. Direct
+  allocation is a convenience on cost creation, while shared/usage/proportional
+  splits are explicit and conservation-checked (sum allocations cannot exceed
+  source cost).
+- **Computed statements:** budget utilization, variance, status, by-method
+  totals, unallocated spend and the rollup are computed per read from live
+  ledgers. Chargebacks are never stored as a duplicated fact.
+- **Demo seed:** idempotent synthetic records are gated behind
+  `WINDELS_DEMO_DATA` in `org-demo-efo` (3 centers, 3 budgets, 3 costs, 4
+  allocations); fresh organizations remain empty.
+
 ## Session 99 — Decisions Logged (Software Factory: Five Studios & Build Farm)
 
 - **Module prefix:** `Sf` types, `sf:plan:*` Redis keys (plans only —

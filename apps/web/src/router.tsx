@@ -8,6 +8,7 @@ const LoginPage = lazy(() => import("./pages/auth/LoginPage").then((m) => ({ def
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })));
 const UserDashboard = lazy(() => import("./pages/dashboard/UserDashboard").then((m) => ({ default: m.UserDashboard })));
 const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
+const AdminPage = lazy(() => import("./pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const SuperAdminDashboard = lazy(() => import("./pages/dashboard/SuperAdminDashboard").then((m) => ({ default: m.SuperAdminDashboard })));
 const ChatPage = lazy(() => import("./pages/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
@@ -45,6 +46,13 @@ const SoftwareFactoryPage = lazy(() => import("./pages/appBuilder/SoftwareFactor
 const BusinessIntelligencePage = lazy(() => import("./pages/bi/BusinessIntelligencePage").then((m) => ({ default: m.BusinessIntelligencePage })));
 const EnterpriseSearchPage = lazy(() => import("./pages/search/EnterpriseSearchPage").then((m) => ({ default: m.EnterpriseSearchPage })));
 const StudiosPage = lazy(() => import("./pages/softwareFactory/StudiosPage").then((m) => ({ default: m.StudiosPage })));
+const EnterpriseFinOpsPage = lazy(() => import("./pages/finops/EnterpriseFinOpsPage").then((m) => ({ default: m.EnterpriseFinOpsPage })));
+const AiEconomyPage = lazy(() => import("./pages/aiEconomy/AiEconomyPage").then((m) => ({ default: m.AiEconomyPage })));
+const ApiKeysPage = lazy(() => import("./pages/apikey/ApiKeyPage").then((m) => ({ default: m.ApiKeyPage })));
+const AttachmentsPage = lazy(() => import("./pages/attachments/AttachmentsPage").then((m) => ({ default: m.AttachmentsPage })));
+const AutonomousPage = lazy(() => import("./pages/autonomous/AutonomousPage").then((m) => ({ default: m.AutonomousPage })));
+const BillingPage = lazy(() => import("./pages/billing/BillingPage").then((m) => ({ default: m.BillingPage })));
+const CameraPage = lazy(() => import("./pages/camera/CameraPage").then((m) => ({ default: m.CameraPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -264,6 +272,13 @@ export const router = createBrowserRouter([
       { path: "bi", element: withSuspense(<BusinessIntelligencePage />) },
       { path: "search", element: withSuspense(<EnterpriseSearchPage />) },
       { path: "software-factory", element: withSuspense(<StudiosPage />) },
+      { path: "finops", element: withSuspense(<EnterpriseFinOpsPage />) },
+      { path: "ai-economy", element: withSuspense(<AiEconomyPage />) },
+      { path: "api-keys", element: withSuspense(<ApiKeysPage />) },
+      { path: "attachments", element: withSuspense(<AttachmentsPage />) },
+      { path: "autonomous", element: withSuspense(<AutonomousPage />) },
+      { path: "billing", element: withSuspense(<BillingPage />) },
+      { path: "camera", element: withSuspense(<CameraPage />) },
     ],
   },
   {
@@ -274,7 +289,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: withSuspense(<AdminDashboard />) },
+      { index: true, element: withSuspense(<AdminPage />) },
       { path: "governance", element: withSuspense(<GovernancePage />) },
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },

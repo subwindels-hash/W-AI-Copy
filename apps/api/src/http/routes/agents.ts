@@ -3,12 +3,13 @@ import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { z } from "zod";
 import { PaginationQuery } from "@windels/shared/api";
-import { CreateAgentSchema, UpdateAgentSchema, listAgents, getAgent, createAgent, updateAgent, deleteAgent, listAgentEvents } from "../../agents/agents.service.js";
+import { AgAgentCreateSchema, AgAgentIdSchema, AgAgentListQuerySchema, AgAgentUpdateSchema } from "@windels/shared/agents";
+import { listAgents, getAgent, createAgent, updateAgent, deleteAgent, listAgentEvents } from "../../agents/agents.service.js";
 import { aiRegistry } from "../../services/ai/registry.js";
 import { CreateSkillSchema, UpdateSkillSchema, createSkill, deleteSkill, getSkill, listAgentSkills, updateSkill } from "../../services/agentSkills.service.js";
 import { getLifecycleHistory, getLifecycleState, TransitionSchema, transitionAgent } from "../../services/agentLifecycle.service.js";
 
-const AgentId = z.object({ id: z.string().cuid() });
+const AgentId = AgAgentIdSchema;
 const AgentSkillId = z.object({ id: z.string().cuid(), skillId: z.string().cuid() });
 
 export function registerAgentRoutes(router: Router) {
@@ -16,17 +17,17 @@ export function registerAgentRoutes(router: Router) {
 
   // Static routes must precede /:id.
   router.get("/meta/models", (_req, res) => res.json({ ok: true, data: aiRegistry.listModels() }));
-  router.get("/", validate({ query: PaginationQuery.extend({ status: z.enum(["idle", "online", "working", "error", "paused", "offline"]).optional(), q: z.string().trim().max(120).optional() }) }), async (req, res, next) => {
+  router.get("/", validate({ query: AgAgentListQuerySchema }), async (req, res, next) => {
     try { res.json({ ok: true, data: await listAgents(req.user!.id, req.query as any, req.query as any), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
-  router.post("/", validate({ body: CreateAgentSchema }), async (req, res, next) => {
+  router.post("/", validate({ body: AgAgentCreateSchema }), async (req, res, next) => {
     try { res.status(201).json({ ok: true, data: await createAgent(req.user!.id, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
 
   router.get("/:id", validate({ params: AgentId }), async (req, res, next) => {
     try { res.json({ ok: true, data: await getAgent(req.user!.id, req.params.id), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
-  router.patch("/:id", validate({ params: AgentId, body: UpdateAgentSchema }), async (req, res, next) => {
+  router.patch("/:id", validate({ params: AgentId, body: AgAgentUpdateSchema }), async (req, res, next) => {
     try { res.json({ ok: true, data: await updateAgent(req.user!.id, req.params.id, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
   });
   router.delete("/:id", validate({ params: AgentId }), async (req, res, next) => {

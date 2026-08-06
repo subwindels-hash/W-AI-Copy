@@ -112,6 +112,26 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_97_SPECIFICATION.md](./docs/SESSION_97_SPECIFICATION.md) | Session 97 — Business Intelligence (live KPI values, report builder, CSV export) |
 | [docs/SESSION_98_SPECIFICATION.md](./docs/SESSION_98_SPECIFICATION.md) | Session 98 — Enterprise Search (unified search over module records, facets, history) |
 | [docs/SESSION_99_SPECIFICATION.md](./docs/SESSION_99_SPECIFICATION.md) | Session 99 — Factory Studios & Build Farm (completes the V3.0 spec §3–§4) |
+| [docs/SESSION_100_SPECIFICATION.md](./docs/SESSION_100_SPECIFICATION.md) | Session 100 — Enterprise FinOps depth (org-scoped budgets, cost allocation and computed chargebacks) |
+| [docs/SESSION_100_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_100_RUNTIME_VALIDATION_CHECKLIST.md) | Session 100 runtime validation (PostgreSQL/Redis, ledger conservation, chargeback and tenant-isolation gates) |
+| [docs/SESSION_101_SPECIFICATION.md](./docs/SESSION_101_SPECIFICATION.md) | Session 101 — Admin Console completion (scoped directory, audited actions, filters and pagination) |
+| [docs/SESSION_101_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_101_RUNTIME_VALIDATION_CHECKLIST.md) | Session 101 runtime validation (RBAC, organization isolation and audited admin actions) |
+| [docs/SESSION_102_SPECIFICATION.md](./docs/SESSION_102_SPECIFICATION.md) | Session 102 — AI Workforce / Agent Framework completion (shared contracts, scoped lifecycle, tests and mobile parity) |
+| [docs/SESSION_102_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_102_RUNTIME_VALIDATION_CHECKLIST.md) | Session 102 runtime validation (agent isolation, lifecycle Redis keys, model validation and UI parity) |
+| [docs/SESSION_103_SPECIFICATION.md](./docs/SESSION_103_SPECIFICATION.md) | Session 103 — AI Economy & GPU capacity ledger completion (usage, allocations, offers and honest projections) |
+| [docs/SESSION_103_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_103_RUNTIME_VALIDATION_CHECKLIST.md) | Session 103 runtime validation (RBAC, org-scoped ledgers, migration, capacity and honest economics) |
+| [docs/SESSION_104_SPECIFICATION.md](./docs/SESSION_104_SPECIFICATION.md) | Session 104 — API Key Management completion (secure one-time secrets, scoped lifecycle, audit logs and dedicated UI) |
+| [docs/SESSION_104_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_104_RUNTIME_VALIDATION_CHECKLIST.md) | Session 104 runtime validation (hash-at-rest, bearer verification, expiry/revocation and tenant isolation) |
+| [docs/SESSION_105_SPECIFICATION.md](./docs/SESSION_105_SPECIFICATION.md) | Session 105 — Message Attachments completion (normalized metadata, checksum storage, scoped bytes and mobile uploads) |
+| [docs/SESSION_105_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_105_RUNTIME_VALIDATION_CHECKLIST.md) | Session 105 runtime validation (MIME/size, checksum, byte/meta isolation, deletion and mobile multipart uploads) |
+| [docs/SESSION_106_SPECIFICATION.md](./docs/SESSION_106_SPECIFICATION.md) | Session 106 — Autonomous Organization approval-register completion (human decisions, scoped records, honest governance metrics and UI) |
+| [docs/SESSION_106_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_106_RUNTIME_VALIDATION_CHECKLIST.md) | Session 106 runtime validation (RBAC, approval isolation, legacy migration and no-autonomous-execution gate) |
+| [docs/SESSION_107_SPECIFICATION.md](./docs/SESSION_107_SPECIFICATION.md) | Session 107 — Billing & Subscriptions completion (shared contracts, audited invoice lifecycle, idempotent webhooks and dedicated UI) |
+| [docs/SESSION_107_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_107_RUNTIME_VALIDATION_CHECKLIST.md) | Session 107 runtime validation (subscription scope, invoice transitions, webhook idempotency and dunning) |
+| [docs/SESSION_108_SPECIFICATION.md](./docs/SESSION_108_SPECIFICATION.md) | Session 108 — Camera Feed Registry & Alert Console completion (scoped feeds/alerts, corrected routes and honest stream handoff) |
+| [docs/SESSION_108_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_108_RUNTIME_VALIDATION_CHECKLIST.md) | Session 108 runtime validation (feed/alert isolation, gateway availability, RBAC and legacy migration) |
+| [docs/SESSION_109_SPECIFICATION.md](./docs/SESSION_109_SPECIFICATION.md) | Session 109 — Canvas Collaboration completion (org-scoped presence/cursors, route access checks and Canvas UI heartbeat) |
+| [docs/SESSION_109_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_109_RUNTIME_VALIDATION_CHECKLIST.md) | Session 109 runtime validation (canvas access isolation, TTL presence, cursor channels and multi-browser sync) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |

@@ -35,6 +35,14 @@ function seedMemberships() {
   ]);
   db.seed("Organization", [{ id: ORG_A, name: "Alpha" }, { id: ORG_B, name: "Beta" }]);
   db.seed("Workspace", [{ id: "ws-a", organizationId: ORG_A }, { id: "ws-b", organizationId: ORG_B }]);
+  db.seed("User", [
+    { id: USER_A, email: "alpha@example.com", role: "USER", isActive: true, isSuspended: false, createdAt: new Date() },
+    { id: USER_B, email: "beta@example.com", role: "USER", isActive: true, isSuspended: false, createdAt: new Date() },
+  ]);
+  db.seed("UserProfile", [
+    { id: cuid(), userId: USER_A, displayName: "Alpha User" },
+    { id: cuid(), userId: USER_B, displayName: "Beta User" },
+  ]);
 }
 
 beforeEach(() => {
@@ -75,5 +83,54 @@ describe("public API keys", () => {
     const token = String(created.token ?? created.key ?? created.plaintext);
     db.tables.get("ApiKey")![0].expiresAt = new Date(Date.now() - 1000);
     expect(await apikeys.verifyApiKey(token)).toBeNull();
+  });
+
+  it("reads a key detail only inside the owning organization", async () => {
+    const created: any = await apikeys.createApiKey(USER_A, { name: "detail", scopes: ["READ"] } as any);
+    expect(await apikeys.getApiKey(USER_A, created.id)).toMatchObject({ id: created.id, name: "detail", revoked: false });
+    await expect(apikeys.getApiKey(USER_B, created.id)).rejects.toThrow("API key not found");
+  });
+
+  it("lists active keys by organization and can include revoked keys explicitly", async () => {
+    await apikeys.createApiKey(USER_A, { name: "active", scopes: ["READ"] } as any);
+    const revoked: any = await apikeys.createApiKey(USER_A, { name: "old", scopes: ["READ"] } as any);
+    await apikeys.revokeApiKey(USER_A, revoked.id);
+    expect((await apikeys.listApiKeys(USER_A)).map((key) => key.name)).toEqual(["active"]);
+    expect((await apikeys.listApiKeys(USER_A, { includeRevoked: true })).map((key) => key.name)).toHaveLength(2);
+  });
+
+  it("updates name/scopes, audits the change, and makes revocation irreversible", async () => {
+    const created: any = await apikeys.createApiKey(USER_A, { name: "ci", scopes: ["READ"] } as any);
+    const updated = await apikeys.updateApiKey(USER_A, created.id, { name: "production", scopes: ["READ", "WRITE"] });
+    expect(updated).toMatchObject({ id: created.id, name: "production", scopes: ["READ", "WRITE"], revoked: false });
+    const revoked = await apikeys.revokeApiKey(USER_A, created.id);
+    expect(revoked.revoked).toBe(true);
+    await expect(apikeys.updateApiKey(USER_A, created.id, { name: "again" })).rejects.toThrow("Revoked API keys");
+    expect(db.tables.get("AuditLog")!.map((row) => row.action)).toEqual(["admin.apikey.created", "admin.apikey.updated", "admin.apikey.revoked"]);
+  });
+
+  it("rejects cross-organization list, update and revoke attempts", async () => {
+    const created: any = await apikeys.createApiKey(USER_A, { name: "private", scopes: ["READ"] } as any);
+    expect(await apikeys.listApiKeys(USER_B)).toHaveLength(0);
+    await expect(apikeys.updateApiKey(USER_B, created.id, { name: "leaked" })).rejects.toThrow("API key not found");
+    await expect(apikeys.revokeApiKey(USER_B, created.id)).rejects.toThrow("API key not found");
+    expect((await apikeys.listApiKeys(USER_A))[0]!.name).toBe("private");
+  });
+
+  it("hashes tokens consistently and never exposes the stored hash in list output", async () => {
+    const created: any = await apikeys.createApiKey(USER_A, { name: "hash", scopes: ["READ"] } as any);
+    const token = String(created.key);
+    expect(apikeys.hashToken(token)).toBe(db.tables.get("ApiKey")![0]!.keyHash);
+    expect(JSON.stringify(await apikeys.listApiKeys(USER_A))).not.toContain(db.tables.get("ApiKey")![0]!.keyHash);
+  });
+});
+
+describe("public API key contracts", () => {
+  it("rejects malformed scope and update inputs", async () => {
+    const { AkApiKeyCreateSchema, AkApiKeyUpdateSchema } = await import("@windels/shared/apiKeys");
+    expect(AkApiKeyCreateSchema.safeParse({ name: "ci", scopes: ["READ"] }).success).toBe(true);
+    expect(AkApiKeyCreateSchema.safeParse({ name: "ci", scopes: ["ROOT"] }).success).toBe(false);
+    expect(AkApiKeyUpdateSchema.safeParse({}).success).toBe(false);
+    expect(AkApiKeyUpdateSchema.safeParse({ revoked: true }).success).toBe(true);
   });
 });

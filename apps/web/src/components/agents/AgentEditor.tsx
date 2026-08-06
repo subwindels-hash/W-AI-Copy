@@ -43,7 +43,7 @@ export function AgentEditor(props: {
     systemPrompt: agent?.systemPrompt ?? "",
     department: agent?.department ?? "General",
     temperature: agent?.temperature ?? 0.7,
-    modelId: agent?.modelId ?? "windels-assistant",
+    modelId: agent?.modelId ?? "",
     capabilities: (agent?.capabilities ?? []).join(", "),
   });
   const [saving, setSaving] = useState(false);
@@ -73,7 +73,7 @@ export function AgentEditor(props: {
         name: form.name, role: form.role, emoji: form.emoji, color: form.color,
         description: form.description, systemPrompt: form.systemPrompt,
         department: form.department, temperature: Number(form.temperature),
-        modelId: form.modelId,
+        modelId: form.modelId || undefined,
         capabilities: form.capabilities.split(",").map((s) => s.trim()).filter(Boolean),
       };
       const a = creating
