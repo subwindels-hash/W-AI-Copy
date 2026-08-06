@@ -1,71 +1,162 @@
-import { randomUUID } from "node:crypto";
+/**
+ * Session 73 — Operational Excellence & Responsible AI.
+ *
+ * The three endpoints this service backs keep their paths, their request bodies
+ * and their response shapes. What changed in Session 118 is what happens
+ * underneath:
+ *
+ *   - `createAlert` and `updateAlert` now write through
+ *     `OpexAssuranceService`, which stores one key per finding behind an
+ *     append-only index. They used to read the organization's entire register
+ *     out of a single Redis string, mutate the array in memory and write it
+ *     back, so two administrators filing a finding at the same time lost one of
+ *     them. Their return values are unchanged.
+ *   - `dashboard` keeps its shape and gains a `provenance` block. Two of its
+ *     numbers were wrong and are corrected here:
+ *       * `mitigations24h` filtered on `at`, the *filing* time, so a finding
+ *         resolved a minute ago did not count if it was filed last week. It now
+ *         uses the recorded resolution time.
+ *       * `reliability` used `Math.round`, so 999 successes out of 1 000
+ *         reported 100%. It is floored.
+ *       * `humanApprovalRate` counted tasks completed in the last 30 days
+ *         against every open task ever created. Both sides now use the same
+ *         window.
+ *
+ * The rollup's remaining zeros are structural: `regulations`, `playbooks`,
+ * `explanations`, `governance.gates`, `safety.benchmarks`, `maturityScore` and
+ * `collaborationSessionsActive` are declared by the Session 73 contract and
+ * nothing in this deployment populates them. Rather than delete fields that
+ * existing consumers read, the `provenance` block states which is which, and
+ * `GET /opex/trust` reports the honest, nullable version of the trust block.
+ */
 import { redisCmd as redis } from "../db/redis.js";
 import { prisma } from "../db/client.js";
 import type { Logger } from "pino";
-import type { OpexDashboard } from "@windels/shared";
+import type { OpexDashboard, OpexSeverity } from "@windels/shared";
+import { opexRatePercent } from "@windels/shared/opex";
 import { AppError } from "../utils/result.js";
-const K = { meta: (oid: string) => `opex:${oid}:meta`, alerts: (oid: string) => `opex:${oid}:safety-alerts` };
-type Alert = { id: string; category: string; severity: "info" | "warning" | "critical"; source: string; message: string; model?: string; at: string; status: "open" | "acknowledged" | "resolved"; acknowledgedBy?: string; resolvedBy?: string; note?: string };
-async function list(oid: string): Promise<Alert[]> { const raw = await redis.get(K.alerts(oid)); try { return raw ? JSON.parse(raw) : []; } catch { return []; } }
-async function save(oid: string, alerts: Alert[]) { await redis.set(K.alerts(oid), JSON.stringify(alerts)); }
+import { OpexAssuranceService, toLegacyAlert } from "./opexAssurance.service.js";
+import type { LegacyOpexAlert } from "./opexAssurance.service.js";
+
+const K = {
+  meta: (oid: string) => `opex:${oid}:meta`,
+  alerts: (oid: string) => `opex:${oid}:safety-alerts`,
+};
+
+/** Retained for callers that still import the Session 73 alert shape. */
+export type Alert = LegacyOpexAlert;
+
 export const OpexService = {
-  async ensureBootstrapped(logger?: Logger, oid = "org-windels") { if (!(await redis.exists(K.meta(oid)))) { await redis.set(K.meta(oid), "1"); logger?.info({ msg: "[opex] safety register initialized", organizationId: oid }); } },
-  async createAlert(oid: string, input: Omit<Alert, "id" | "at" | "status">) { await this.ensureBootstrapped(undefined, oid); const alerts = await list(oid); const alert: Alert = { ...input, id: `safety-${randomUUID()}`, at: new Date().toISOString(), status: "open" }; alerts.push(alert); await save(oid, alerts); return alert; },
-  async updateAlert(oid: string, id: string, actorId: string, status: "acknowledged" | "resolved", note?: string) { const alerts = await list(oid); const i = alerts.findIndex((a) => a.id === id); if (i < 0) throw AppError.notFound("Safety alert not found"); const old = alerts[i]!; if (old.status === "resolved") throw AppError.conflict("Safety alert is already resolved"); const alert = { ...old, status, note: note ?? old.note, ...(status === "acknowledged" ? { acknowledgedBy: actorId } : { resolvedBy: actorId }) }; alerts[i] = alert; await save(oid, alerts); return alert; },
+  async ensureBootstrapped(logger?: Logger, oid = "org-windels") {
+    if (!(await redis.exists(K.meta(oid)))) {
+      await redis.set(K.meta(oid), "1");
+      logger?.info({ msg: "[opex] safety register initialized", organizationId: oid });
+    }
+  },
+
+  /**
+   * File a safety finding.
+   *
+   * Same signature, same return value. The write now goes to one key per
+   * finding instead of a read-modify-write over the whole register.
+   */
+  async createAlert(
+    oid: string,
+    input: Omit<Alert, "id" | "at" | "status">,
+    actorId: string | null = null,
+  ): Promise<Alert> {
+    await this.ensureBootstrapped(undefined, oid);
+    const record = await OpexAssuranceService.fileAlert(oid, actorId, {
+      category: input.category,
+      severity: input.severity as OpexSeverity,
+      source: input.source,
+      message: input.message,
+      model: input.model ?? null,
+    });
+    return toLegacyAlert(record);
+  },
+
+  /**
+   * Acknowledge or resolve a finding.
+   *
+   * Same signature, same return value, same `409` on an already-resolved
+   * record — except the error now points at the reopen path, which exists.
+   */
+  async updateAlert(
+    oid: string,
+    id: string,
+    actorId: string,
+    status: "acknowledged" | "resolved",
+    note?: string,
+  ): Promise<Alert> {
+    const record = await OpexAssuranceService.readAlert(oid, id).catch(() => null);
+    if (!record) {
+      // Adopt the Session 73 register first: the id may predate the durable
+      // store, in which case it is imported rather than reported missing.
+      await OpexAssuranceService.ensureLegacyImported(oid);
+      const adopted = await OpexAssuranceService.readAlert(oid, id);
+      if (!adopted) throw AppError.notFound("Safety alert not found");
+    }
+    const next = await OpexAssuranceService.transitionAlert(oid, id, actorId, status, note);
+    return toLegacyAlert(next);
+  },
+
   /**
    * Operational-excellence rollup.
    *
-   * Safety counts come from the org's recorded alert register; reliability and
-   * data-freshness are derived from real AI traffic. Trust dimensions that
-   * require an assessment nobody has run (alignment, transparency,
-   * explainability) stay 0 — an unassessed platform must not score itself.
+   * Safety counts come from the organization's recorded register; reliability
+   * and data freshness are derived from real AI traffic. Trust dimensions that
+   * require an assessment nobody has run stay 0 in *this* payload because the
+   * Session 73 contract types them as non-nullable numbers — the `provenance`
+   * block below marks each one, and `GET /opex/trust` reports them as `null`.
    */
   async dashboard(oid: string): Promise<OpexDashboard> {
     await this.ensureBootstrapped(undefined, oid);
-    const since = new Date(Date.now() - 30 * 86_400_000);
-    const day = new Date(Date.now() - 86_400_000);
+    await OpexAssuranceService.ensureLegacyImported(oid);
 
-    const alerts = await list(oid);
-    const open = alerts.filter((a) => a.status !== "resolved");
-    const resolved24h = alerts.filter((a) => a.status === "resolved" && a.at >= day.toISOString()).length;
-
-    const [aiTotal, aiFailed, latest, humanApprovals, pendingApprovals] = await Promise.all([
-      prisma.aiRequest.count({ where: { organizationId: oid, createdAt: { gte: since } } }).catch(() => 0),
-      prisma.aiRequest.count({ where: { organizationId: oid, createdAt: { gte: since }, status: { not: "succeeded" } } }).catch(() => 0),
-      prisma.aiRequest.findFirst({ where: { organizationId: oid }, orderBy: { createdAt: "desc" }, select: { createdAt: true } }).catch(() => null),
-      prisma.task.count({ where: { organizationId: oid, status: "DONE", updatedAt: { gte: since } } }).catch(() => 0),
-      prisma.task.count({ where: { organizationId: oid, status: { in: ["TODO", "IN_PROGRESS"] } } }).catch(() => 0),
+    const [summary, reliabilityReport, policy] = await Promise.all([
+      OpexAssuranceService.registerSummary(oid),
+      OpexAssuranceService.reliability(oid),
+      OpexAssuranceService.getPolicy(oid),
     ]);
+    const taskClosure = await OpexAssuranceService.taskClosure(oid, policy.reliabilityWindowDays);
+    const page = await OpexAssuranceService.listAlerts(oid, { limit: 20 });
 
-    // Reliability = observed AI success rate. 0 when nothing has run, which is
-    // honest: no evidence of reliability is not evidence of reliability.
-    const reliability = aiTotal ? Math.round(((aiTotal - aiFailed) / aiTotal) * 100) : 0;
-    const dataFreshnessHours = latest
-      ? Math.round((Date.now() - latest.createdAt.getTime()) / 3_600_000)
-      : 0;
-    // Safety pass rate over the recorded register.
-    const passRate = alerts.length
-      ? Math.round(((alerts.length - open.length) / alerts.length) * 100)
-      : 0;
-    const decisionsRequiringHuman = pendingApprovals;
-    const totalDecisions = humanApprovals + pendingApprovals;
-    const humanApprovalRate = totalDecisions ? Math.round((humanApprovals / totalDecisions) * 100) : 0;
+    const pendingApprovals = await prisma.task
+      .count({ where: { organizationId: oid, status: { in: ["TODO", "IN_PROGRESS"] } } })
+      .catch(() => 0);
+
+    // Floored, never rounded: a rate that rounds a failure away cannot be used
+    // to notice one. 0 here means "no recorded traffic", which provenance says.
+    const reliability = reliabilityReport.successRatePercent ?? 0;
+    const dataFreshnessHours = reliabilityReport.dataFreshnessHours ?? 0;
+    // The closure rate over filed findings. Session 73 called this the safety
+    // pass rate; provenance states what it actually measures.
+    const passRate = summary.closureRatePercent ?? 0;
+    const humanApprovalRate = taskClosure.ratePercent ?? 0;
 
     return {
       trust: {
-        // Only dimensions backed by a real signal are populated.
-        trust: reliability, alignment: 0, safety: passRate, compliance: 0,
-        transparency: 0, explainability: 0, reliability,
-        hallucinationRisk: 0, evidenceQuality: 0,
-        dataFreshnessHours, humanApprovalRate,
+        trust: reliability,
+        alignment: 0,
+        safety: passRate,
+        compliance: 0,
+        transparency: 0,
+        explainability: 0,
+        reliability,
+        hallucinationRisk: 0,
+        evidenceQuality: 0,
+        dataFreshnessHours,
+        humanApprovalRate,
         operationalStability: reliability,
       },
       safety: {
         passRate,
-        alertsOpen: open.length,
-        alertsCritical: open.filter((a) => a.severity === "critical").length,
-        mitigations24h: resolved24h,
-        auditsCompleted: alerts.filter((a) => a.status === "resolved").length,
+        alertsOpen: summary.open,
+        alertsCritical: summary.openCritical,
+        // From the recorded resolution time, not the filing time.
+        mitigations24h: summary.resolvedLast24h,
+        auditsCompleted: summary.byStatus.resolved,
         benchmarks: {},
       },
       regulations: { tracked: 0, changed30d: 0, openGaps: 0, upcoming: 0 },
@@ -75,18 +166,34 @@ export const OpexService = {
       continuous: {
         kpis: [
           { label: "AI success rate", value: reliability, target: 99, unit: "%", trend: "flat" },
-          { label: "Safety alerts open", value: open.length, target: 0, unit: "", trend: "flat" },
-          { label: "Mitigations (24h)", value: resolved24h, target: 0, unit: "", trend: "flat" },
+          { label: "Safety findings open", value: summary.open, target: 0, unit: "", trend: "flat" },
+          { label: "Resolved (24h)", value: summary.resolvedLast24h, target: 0, unit: "", trend: "flat" },
         ],
-        bottlenecks: open.length
-          ? [{ area: "safety-register", impact: open.some((a) => a.severity === "critical") ? "high" as const : "med" as const, recommendation: "Triage open safety findings." }]
+        bottlenecks: summary.open
+          ? [
+              {
+                area: "safety-register",
+                impact: summary.openCritical ? ("high" as const) : ("med" as const),
+                recommendation: "Triage open safety findings.",
+              },
+            ]
           : [],
         maturityScore: 0,
       },
-      recentAlerts: alerts.slice(-20).reverse(),
-      recentRegulations: [], recentExplanations: [],
+      recentAlerts: page.alerts.map(toLegacyAlert),
+      recentRegulations: [],
+      recentExplanations: [],
       collaborationSessionsActive: 0,
-      decisionsRequiringHuman,
+      decisionsRequiringHuman: pendingApprovals,
+      provenance: OpexAssuranceService.provenance({
+        reliability: reliabilityReport.total > 0,
+        freshness: reliabilityReport.lastRequestAt !== null,
+        register: summary.total > 0,
+      }),
     };
   },
 };
+
+/** Exported for the assurance service's legacy adoption path. */
+export const OPEX_LEGACY_REGISTER_KEY = K.alerts;
+export { opexRatePercent };

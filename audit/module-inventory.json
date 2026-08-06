@@ -1009,6 +1009,8 @@
       "mediaPublishing.spec.ts",
       "mfaAssurance.spec.ts",
       "mlOps.spec.ts",
+      "mobileSync.spec.ts",
+      "opexAssurance.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
       "qa.spec.ts",
@@ -2331,6 +2333,7 @@
     },
     "tests": [
       "conversations.spec.ts",
+      "mobileSync.spec.ts",
       "conversations/conversationOps.test.ts",
       "conversations/conversations.test.ts",
       "services/message.service.test.ts"
@@ -4197,6 +4200,8 @@
       "enterprise.spec.ts",
       "googleAuth.spec.ts",
       "mfaAssurance.spec.ts",
+      "mobileSync.spec.ts",
+      "opexAssurance.spec.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
@@ -6497,6 +6502,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "mobileSync.spec.ts",
       "mobile/mobileSync.test.ts",
       "services/mobileAuth.test.ts"
     ],
@@ -6749,7 +6755,8 @@
     "moduleKey": "opex",
     "title": "OpEx / Trust / Safety (S73)",
     "sessions": [
-      73
+      73,
+      118
     ],
     "tier": "platform",
     "routePrefix": "/api/v1/opex",
@@ -6758,18 +6765,22 @@
       "serviceFile": {
         "file": "opex.service.ts",
         "path": "/home/user/WIN/apps/api/src/opex/opex.service.ts",
-        "sloc": 93,
+        "sloc": 200,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 189,
+      "serviceTotalSloc": 3935,
       "serviceFiles": [
         "bootstrap.ts",
         "opex.service.ts",
-        "opex/opex.service.ts"
+        "opexAssurance.service.ts",
+        "opexAssurance.test.ts",
+        "opex/opex.service.ts",
+        "opex/opexAssurance.service.ts"
       ],
       "importedServiceFiles": [
-        "opex/opex.service.ts"
+        "opex/opex.service.ts",
+        "opex/opexAssurance.service.ts"
       ],
       "bootstrapFile": "apps/api/src/opex/bootstrap.ts"
     },
@@ -6790,18 +6801,54 @@
           "POST /safety-alerts",
           "POST /safety-alerts/:id/status"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/opexAssurance.ts",
+        "sloc": 375,
+        "counts": {
+          "total": 20,
+          "GET": 16,
+          "POST": 1,
+          "PUT": 2,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /register/alerts",
+          "GET /register/summary",
+          "GET /register/timings",
+          "GET /register/breaches",
+          "GET /register/alerts/:alertId",
+          "GET /register/alerts/:alertId/history",
+          "POST /register/alerts/:alertId/reopen",
+          "GET /reliability",
+          "GET /reliability/failures",
+          "GET /assessments",
+          "PUT /assessments/:dimension",
+          "DELETE /assessments/:dimension",
+          "GET /trust",
+          "GET /policy",
+          "PUT /policy",
+          "GET /assurance/summary",
+          "GET /assurance/configuration",
+          "GET /assurance/gaps",
+          "GET /assurance/provenance",
+          "GET /events"
+        ]
       }
     ],
-    "sharedTypes": "packages/shared/src/opex.ts (73 LOC)",
+    "sharedTypes": "packages/shared/src/opex.ts (761 LOC)",
     "web": {
-      "client": "apps/web/src/lib/opex.ts (8 LOC)",
+      "client": "apps/web/src/lib/opex.ts (160 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Task",
         "Message",
+        "Workflow",
         "AiRequest",
         "Alert"
       ],
@@ -6809,11 +6856,16 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions73-75.spec.ts"
+      "opexAssurance.spec.ts",
+      "sessions73-75.spec.ts",
+      "opex/opexAssurance.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "PARTIAL"
+    "externalIntegrations": [
+      "OpenAI",
+      "Anthropic"
+    ],
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "platform",
@@ -8466,11 +8518,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 452,
+        "sloc": 467,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1080,
+      "serviceTotalSloc": 1110,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8517,7 +8569,8 @@
         "Task",
         "Activity",
         "Message",
-        "Canvas"
+        "Canvas",
+        "Alert"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"

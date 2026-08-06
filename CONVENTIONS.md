@@ -30,6 +30,65 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 118 — Decisions Logged (Operational Excellence Completion)
+
+- **Module prefix:** `Opex*` types, **`opx:*` Redis keys**, the existing
+  `/api/v1/opex` route prefix, `apps/web/src/lib/opex.ts` client (appended),
+  `/app/opex` route + sidebar label "Operational Excellence".
+- **`opx:` and not `opex:` — a tenant-isolation constraint, not a style
+  choice.** The Session 89 sweep derives the organization's position in a key as
+  `ns.prefix.split(":").length`. Session 73's keys are `opex:<org>:meta` and
+  `opex:<org>:safety-alerts`, so the prefix `opex` puts the organization at
+  index 1. A new key named `opex:alert:<org>:<id>` catalogued under the prefix
+  `opex:alert` would still be matched by the shorter `opex` entry and the sweep
+  would read the literal string `alert` as an organization id — reporting a
+  check it never made. Any future session adding keys to a module whose legacy
+  prefix already occupies a segment must either use a distinct prefix or extend
+  the sweep; silently colliding is worse than either.
+- **A number that has not been measured is `null`, never `0`.** This is the
+  central rule of the session. On a 0-100 scale zero is a score, so an
+  unassessed `alignment` reads as catastrophic and an unassessed
+  `hallucinationRisk` — a *risk* dimension — reads as "no risk". Every published
+  number in a new surface is an `OpexMeasure` carrying `value: number | null`
+  plus the `basis` it was obtained on. **No `?? 0` in a value position**, in the
+  service or in the page.
+- **Rates are floored, never rounded.** 999 successes out of 1 000 is 99 %. A
+  reliability metric that rounds a failure away cannot be used to notice one.
+- **An empty denominator yields `null`, not `0`.** `opexRatePercent` returns
+  `null` when the denominator is zero: no evidence of reliability is not
+  evidence of unreliability, and no filings is not a 0 % closure rate.
+- **Refuse to publish a composite.** `OpexTrustReport.compositeScore` is typed
+  as the literal `null` so it cannot be filled in later by accident. Averaging
+  observed traffic statistics against unassessed dimensions produces a number
+  whose movement cannot be attributed to anything. Publish the parts and their
+  bases instead.
+- **Name the measurement, not the aspiration.** A closure rate is a closure
+  rate, not a "safety pass rate". A metric's label is part of its correctness.
+- **Never invent a timestamp during a migration.** Records adopted from an older
+  store that did not record transition times keep `null` for those fields, carry
+  an `importedFromLegacyRegister` flag, are counted separately, and are excluded
+  from every statistic that would need the missing time — with the exclusion
+  count and its reason shipped inside the payload.
+- **Adopt, do not destroy.** Legacy adoption reads the old blob, writes durable
+  records, sets a one-shot marker, and **leaves the old key in place**. A
+  malformed legacy value is tolerated, not fatal.
+- **Corrections append.** Reopening a resolved record adds a transition and
+  increments a counter; it never edits or removes the resolution it undoes. A
+  workflow with no correction path forces the correction to happen off the
+  record.
+- **A score without a method is an opinion.** An operator assessment requires
+  the method that produced it (≥ 10 characters), stores the author and time, and
+  goes `stale` at the policy's validity window rather than being trusted
+  indefinitely.
+- **Declared-but-unimplemented contract sections are named in the payload.**
+  When a shipped response type has fields nothing populates, deleting them is
+  not additive — so publish a provenance block that says, field by field, which
+  numbers are observed and which are structural zeros, and list the same
+  sections in the gap report.
+- **Hide the control the API will refuse.** Console reads are open to any member
+  because the endpoints are; write controls are rendered only for
+  administrators. A button that always fails is worse than no button.
+
 ## Session 117 — Decisions Logged (Mobile App / PWA Completion)
 
 - **Module prefix:** `Mobile*` types, `mob:*` Redis keys (`mobile:*` was already

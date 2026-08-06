@@ -160,6 +160,21 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "mfa:event", scope: "org_scoped" },
   // Mobile / PWA (Session 117) — the organization's mobile policy.
   { prefix: "mob:policy", scope: "org_scoped" },
+  // Operational excellence (Session 118). `opex` is Session 73's own namespace
+  // (`opex:<org>:meta`, `opex:<org>:safety-alerts`), org-scoped since it
+  // shipped but never catalogued until now. The Session 118 namespaces are
+  // `opx:` rather than `opex:` on purpose: an `opex:alert:<org>:<id>` key would
+  // sit under the same root with the organization in the *third* segment, and
+  // the sweep reads the segment straight after the prefix — it would treat the
+  // literal string "alert" as an organization id and report a conformance check
+  // it never performed.
+  { prefix: "opex", scope: "org_scoped" },
+  { prefix: "opx:alert", scope: "org_scoped" },
+  { prefix: "opx:idx", scope: "org_scoped" },
+  { prefix: "opx:assess", scope: "org_scoped" },
+  { prefix: "opx:policy", scope: "org_scoped" },
+  { prefix: "opx:event", scope: "org_scoped" },
+  { prefix: "opx:imported", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A

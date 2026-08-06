@@ -49,6 +49,7 @@ import {
   Sigma,
   Fingerprint,
   Smartphone,
+  Gauge,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -64,6 +65,7 @@ const navItems = [
   { to: "/app/lead-pipeline", icon: ClipboardList, label: "Lead Pipeline" },
   { to: "/app/mfa-assurance", icon: ShieldCheck, label: "MFA Assurance" },
   { to: "/app/mobile-devices", icon: Smartphone, label: "Mobile Devices" },
+  { to: "/app/opex", icon: Gauge, label: "Operational Excellence" },
   { to: "/app/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },

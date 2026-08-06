@@ -107,6 +107,7 @@ import { registerAiEconomyRoutes } from "./routes/aiEconomy.js";
 import { registerAutonomousRoutes } from "./routes/autonomous.js";
 import { registerCyberRoutes } from "./routes/cyber.js";
 import { registerOpexRoutes } from "./routes/opex.js";
+import { registerOpexAssuranceRoutes } from "./routes/opexAssurance.js";
 import { registerIndustryRoutes } from "./routes/industry.js";
 import { registerHealthEcosystemRoutes } from "./routes/healthEcosystem.js";
 import { registerEtlRoutes } from "./routes/etl.js";
@@ -1081,9 +1082,13 @@ export function createApp() {
   registerCyberRoutes(cybRouter);
 
   // /opex — Session 73: Operational Excellence & Responsible AI
+  // Session 118 registers its assurance handlers on the same router and *ahead*
+  // of Session 73's three, so an unmatched path falls straight through to
+  // /opex/dashboard/rollup and /opex/safety-alerts with their behaviour intact.
   const opexRouter = express.Router();
   v1.use("/opex", opexRouter);
   opexRouter.use(authenticate);
+  registerOpexAssuranceRoutes(opexRouter);
   registerOpexRoutes(opexRouter);
 
   // /industry — Session 74: Semantic Intelligence, Industry Solutions & Digital Operations
