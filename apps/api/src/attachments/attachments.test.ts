@@ -69,16 +69,60 @@ describe("attachments", () => {
 
   it("stores a checksum and scopes the record to the organization", async () => {
     const att = await attachments.uploadAttachment(USER_A, png());
-    expect(att.organizationId).toBe(ORG_A);
-    // sha256 hex
-    expect(att.checksum).toMatch(/^[0-9a-f]{64}$/);
-    expect(att.storageKey.startsWith(`${ORG_A}/`)).toBe(true);
+    expect(att.sha256).toMatch(/^[0-9a-f]{64}$/);
+    expect(att.filename).toBe("chart.png");
+    const stored = db.tables.get("MessageAttachment")!.find((row) => row.id === att.id)!;
+    expect(stored.organizationId).toBe(ORG_A);
+    expect(stored.checksum).toBe(att.sha256);
+    expect(stored.storageKey.startsWith(`${ORG_A}/${att.sha256}-`)).toBe(true);
   });
 
   it("does not list another organization's attachments", async () => {
     await attachments.uploadAttachment(USER_A, png());
-    const forB = await attachments.listAttachments(USER_B, {} as any);
-    const items = Array.isArray(forB) ? forB : (forB as any).items ?? [];
-    expect(items).toHaveLength(0);
+    const forB = await attachments.listAttachments(USER_B, { page: 1, perPage: 25 });
+    expect(forB.items).toHaveLength(0);
+    expect(forB.pagination.total).toBe(0);
+  });
+
+  it("returns normalized text previews and real list pagination", async () => {
+    const text = await attachments.uploadAttachment(USER_A, { buffer: Buffer.from("hello attachment"), originalname: "notes.txt", mimetype: "text/plain", size: 16 });
+    expect(text.previewText).toBe("hello attachment");
+    const list = await attachments.listAttachments(USER_A, { page: 1, perPage: 1 });
+    expect(list.items).toHaveLength(1);
+    expect(list.items[0]).toMatchObject({ id: text.id, sha256: text.sha256, previewText: "hello attachment" });
+    expect(list.pagination).toMatchObject({ page: 1, perPage: 1, total: 1, totalPages: 1 });
+  });
+
+  it("serves bytes and metadata only inside the owning organization", async () => {
+    const att = await attachments.uploadAttachment(USER_A, png());
+    const served = await attachments.getAttachmentBytes(USER_A, att.id);
+    expect(served.buffer.equals(Buffer.from("89504e470d0a1a0a", "hex"))).toBe(true);
+    expect(await attachments.getAttachmentMetadata(USER_A, att.id)).toMatchObject({ id: att.id, sha256: att.sha256 });
+    await expect(attachments.getAttachmentBytes(USER_B, att.id)).rejects.toThrow("Attachment not found");
+    await expect(attachments.getAttachmentMetadata(USER_B, att.id)).rejects.toThrow("Attachment not found");
+  });
+
+  it("enforces target conversation organization at upload time", async () => {
+    const conversationA = cuid();
+    const conversationB = cuid();
+    db.seed("Conversation", [
+      { id: conversationA, organizationId: ORG_A, deletedAt: null },
+      { id: conversationB, organizationId: ORG_B, deletedAt: null },
+    ]);
+    await expect(attachments.uploadAttachment(USER_A, png(), { conversationId: conversationA })).resolves.toBeTruthy();
+    await expect(attachments.uploadAttachment(USER_A, png(), { conversationId: conversationB })).rejects.toThrow("Conversation not found");
+  });
+
+  it("allows only the uploader to delete an unclaimed attachment", async () => {
+    const att = await attachments.uploadAttachment(USER_A, png());
+    await expect(attachments.deleteAttachment(USER_B, att.id)).rejects.toThrow(/uploader|not found/i);
+    await expect(attachments.deleteAttachment(USER_A, att.id)).resolves.toBeUndefined();
+    await expect(attachments.getAttachmentMetadata(USER_A, att.id)).rejects.toThrow("Attachment not found");
+  });
+
+  it("claims only unclaimed attachments from the authenticated owner", async () => {
+    const att = await attachments.uploadAttachment(USER_A, png());
+    expect(await attachments.claimConversationAttachments(USER_A, ORG_A, cuid(), [att.id])).toEqual([att.id]);
+    await expect(attachments.claimConversationAttachments(USER_B, ORG_B, cuid(), [att.id])).rejects.toThrow("unavailable");
   });
 });

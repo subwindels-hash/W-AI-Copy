@@ -4,6 +4,8 @@ import path from "node:path";
 import { prisma } from "../db/client.js";
 import { resolveUserContext } from "../services/workspace.service.js";
 import { AppError } from "../utils/result.js";
+import type { z } from "zod";
+import { AttAttachment, AttAttachmentList, AttListQuery, AttUploadTargetSchema } from "@windels/shared/attachments";
 
 const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
 const MAX_SIZE = 25 * 1024 * 1024;
@@ -17,6 +19,24 @@ const ALLOWED_MIME = new Set([
 
 function safeFilename(name: string) {
   return name.replace(/[^\w.]+/g, "_").slice(0, 120) || "upload";
+}
+
+function iso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function serializeAttachment(a: any): AttAttachment {
+  return {
+    id: a.id,
+    filename: a.filename,
+    mimeType: a.mimeType,
+    sizeBytes: a.sizeBytes,
+    sha256: a.checksum,
+    previewText: a.extractedText ?? null,
+    conversationId: a.conversationId ?? null,
+    talkMessageId: a.talkMessageId ?? null,
+    createdAt: iso(a.createdAt),
+  };
 }
 
 function extractTextPreview(mime: string, buffer: Buffer): string | null {
@@ -35,11 +55,13 @@ async function assertTargetInOrganization(organizationId: string, opts: { conver
   }
 }
 
+export const UploadTargetSchema = AttUploadTargetSchema;
+
 export async function uploadAttachment(
   userId: string,
   file: { buffer: Buffer; originalname: string; mimetype: string; size: number },
-  opts: { conversationId?: string; talkMessageId?: string } = {},
-) {
+  opts: z.infer<typeof UploadTargetSchema> = {},
+): Promise<AttAttachment> {
   if (!file.size) throw AppError.badRequest("File is empty");
   if (file.size > MAX_SIZE) throw AppError.badRequest("File exceeds 25MB limit");
   if (!ALLOWED_MIME.has(file.mimetype)) throw AppError.badRequest(`File type ${file.mimetype} not allowed`);
@@ -47,17 +69,25 @@ export async function uploadAttachment(
   const ctx = await resolveUserContext(userId);
   await assertTargetInOrganization(ctx.organizationId, opts);
   const checksum = createHash("sha256").update(file.buffer).digest("hex");
-  const storageKey = `${ctx.organizationId}/${checksum.slice(0, 8)}-${safeFilename(file.originalname)}`;
+  // Full checksum prevents a same-name/short-prefix collision from being
+  // mistaken for an equivalent existing object.
+  const storageKey = `${ctx.organizationId}/${checksum}-${safeFilename(file.originalname)}`;
   const fullPath = path.join(UPLOAD_DIR, storageKey);
 
   await mkdir(path.dirname(fullPath), { recursive: true });
-  await writeFile(fullPath, file.buffer, { flag: "wx" }).catch(async (error: NodeJS.ErrnoException) => {
-    // A same-name/same-content upload may race. The existing file is equivalent.
-    if (error.code !== "EEXIST") throw error;
-  });
+  try {
+    await writeFile(fullPath, file.buffer, { flag: "wx" });
+  } catch (error) {
+    const fsError = error as NodeJS.ErrnoException;
+    if (fsError.code !== "EEXIST") throw error;
+    const existing = await readFile(fullPath).catch(() => null);
+    if (!existing || createHash("sha256").update(existing).digest("hex") !== checksum) {
+      throw AppError.conflict("Attachment storage collision detected");
+    }
+  }
 
   try {
-    return await prisma.messageAttachment.create({
+    const attachment = await prisma.messageAttachment.create({
       data: {
         organizationId: ctx.organizationId,
         conversationId: opts.conversationId ?? null,
@@ -71,8 +101,10 @@ export async function uploadAttachment(
         extractedText: extractTextPreview(file.mimetype, file.buffer),
       },
     });
+    return serializeAttachment(attachment);
   } catch (error) {
-    // Do not remove a potentially pre-existing, equivalent object.
+    // Leave the object in place: a retry with the same checksum can safely
+    // reuse it, and deleting it could remove another metadata row's object.
     throw error;
   }
 }
@@ -89,7 +121,14 @@ export async function getAttachmentBytes(userId: string, id: string) {
   }
 }
 
-export async function listAttachments(userId: string, input: { q?: string; page: number; perPage: number }) {
+export async function getAttachmentMetadata(userId: string, id: string): Promise<AttAttachment> {
+  const ctx = await resolveUserContext(userId);
+  const attachment = await prisma.messageAttachment.findFirst({ where: { id, organizationId: ctx.organizationId } });
+  if (!attachment) throw AppError.notFound("Attachment not found");
+  return serializeAttachment(attachment);
+}
+
+export async function listAttachments(userId: string, input: AttListQuery): Promise<AttAttachmentList> {
   const ctx = await resolveUserContext(userId);
   const where = {
     organizationId: ctx.organizationId,
@@ -99,7 +138,7 @@ export async function listAttachments(userId: string, input: { q?: string; page:
     prisma.messageAttachment.findMany({ where, orderBy: { createdAt: "desc" }, skip: (input.page - 1) * input.perPage, take: input.perPage }),
     prisma.messageAttachment.count({ where }),
   ]);
-  return { items, pagination: { page: input.page, perPage: input.perPage, total, totalPages: Math.ceil(total / input.perPage) } };
+  return { items: items.map(serializeAttachment), pagination: { page: input.page, perPage: input.perPage, total, totalPages: Math.ceil(total / input.perPage) } };
 }
 
 export async function deleteAttachment(userId: string, id: string) {
@@ -123,7 +162,6 @@ export async function claimConversationAttachments(userId: string, organizationI
   if (!attachmentIds.length) return [];
   const attachments = await prisma.messageAttachment.findMany({ where: { id: { in: attachmentIds }, organizationId, uploaderId: userId, messageId: null, talkMessageId: null } });
   if (attachments.length !== attachmentIds.length) throw AppError.badRequest("One or more attachments are unavailable");
-  // Uploaded attachments may already be associated with this conversation, but never another one.
   if (attachments.some((a) => a.conversationId && a.conversationId !== conversationId)) throw AppError.badRequest("Attachment belongs to another conversation");
   return attachments.map((a) => a.id);
 }

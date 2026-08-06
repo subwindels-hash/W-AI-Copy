@@ -5,6 +5,16 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 105 — Message Attachments Completion] — 2026-08-05
+
+### Attachment metadata and mobile parity completed
+*   `packages/shared/src/attachments.ts` — `Att` normalized metadata, list/pagination, ID and upload-target contracts.
+*   `apps/api/src/attachments/attachments.service.ts` — normalized `sha256`/`previewText` responses, full-checksum storage keys with collision verification, metadata detail endpoint support and existing org/uploader protections.
+*   Routes: `/api/v1/attachments` now has normalized list/upload/meta/byte/delete paths with shared validation.
+*   Web/mobile: added exact attachment compatibility client/page entrypoints, `/app/attachments` navigation, and fixed `/m/files` to perform real multipart uploads.
+*   Tests: `attachments.test.ts` now has 10 passing cases covering limits, MIME/checksum, previews, pagination, bytes, target organization, cross-tenant access, deletion and claim ownership.
+*   Runtime validation against live PostgreSQL and the file volume remains pending; Session 105 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 104 — API Key Management Completion] — 2026-08-05
 
 ### API keys completed as a secure shared vertical slice

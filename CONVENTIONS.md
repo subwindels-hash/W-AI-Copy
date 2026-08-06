@@ -30,6 +30,22 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 105 — Decisions Logged (Message Attachments Completion)
+
+- **Shared contract prefix:** `Att` types and Zod contracts live in
+  `packages/shared/src/attachments.ts`; `filesApi` exposes the normalized
+  metadata shape used by web and mobile.
+- **Metadata normalization:** API responses use `sha256` and `previewText`,
+  matching the client. Prisma's `checksum`/`extractedText` names stay internal.
+- **Storage integrity:** new object keys contain the full SHA-256 plus a safe
+  filename. If a same-key object exists, its bytes are rehashed before reuse;
+  a mismatch is a conflict, never silent overwrite.
+- **Scope and deletion:** upload targets and reads are organization-scoped;
+  only the uploader can delete an unclaimed attachment. Claimed message/talk
+  attachments remain protected.
+- **Mobile parity:** `/m/files` uses the real paginated client and multipart
+  upload for camera/photo/document actions rather than no-op picker callbacks.
+
 ## Session 104 — Decisions Logged (API Key Management Completion)
 
 - **Shared contract prefix:** `Ak` types and Zod schemas live in

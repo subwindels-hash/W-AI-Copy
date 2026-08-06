@@ -836,11 +836,11 @@
       "serviceFile": {
         "file": "attachments.service.ts",
         "path": "/home/user/WIN/apps/api/src/attachments/attachments.service.ts",
-        "sloc": 130,
+        "sloc": 168,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 345,
+      "serviceTotalSloc": 465,
       "serviceFiles": [
         "attachments.service.ts",
         "attachments.test.ts",
@@ -854,10 +854,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/attachments.ts",
-        "sloc": 54,
+        "sloc": 56,
         "counts": {
-          "total": 4,
-          "GET": 2,
+          "total": 5,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 0,
@@ -866,9 +866,9 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/attachments.ts (39 LOC)",
     "web": {
-      "client": "apps/web/src/lib/files.ts (54 LOC, serves /attachments)",
+      "client": "apps/web/src/lib/attachments.ts (3 LOC)",
       "pages": []
     },
     "db": {
@@ -891,7 +891,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "auth",

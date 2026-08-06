@@ -38,6 +38,7 @@ import {
   UserCog,
   Coins,
   KeyRound,
+  Paperclip,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -79,6 +80,7 @@ const navItems = [
   { to: "/app/finops", icon: WalletCards, label: "Enterprise FinOps" },
   { to: "/app/ai-economy", icon: Coins, label: "AI Economy" },
   { to: "/app/api-keys", icon: KeyRound, label: "API Keys" },
+  { to: "/app/attachments", icon: Paperclip, label: "Attachments" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
