@@ -125,7 +125,7 @@ export function PaymentGatewaysPage() {
           <div className="mt-1 text-2xl font-semibold text-text-bright">
             {providers.length !== undefined ? providers.length : "not recorded"}
           </div>
-          <div className="mt-1 text-xs text-text-muted">Flutterwave, Paystack, PayPal, Crypto</div>
+          <div className="mt-1 text-xs text-text-muted">Flutterwave, Paystack, Stripe, PayPal, Crypto</div>
         </Card>
         <Card className="p-4">
           <div className="text-xs uppercase tracking-wide text-text-muted">Total Transactions</div>
@@ -173,6 +173,7 @@ export function PaymentGatewaysPage() {
                 >
                   <option value="flutterwave">Flutterwave (Cards, Mobile Money)</option>
                   <option value="paystack">Paystack (African Card & Bank)</option>
+                  <option value="stripe">Stripe (Global Card, Apple Pay, Google Pay, SEPA)</option>
                   <option value="paypal">PayPal (Global Checkout Orders)</option>
                   <option value="crypto">Blockonomics / Multi-Chain Crypto</option>
                 </select>

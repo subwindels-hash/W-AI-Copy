@@ -82,6 +82,14 @@ export function verifyPaystackPayment(reference: string): Promise<PaymentTransac
 }
 
 /**
+ * Verify a Stripe payment transaction by reference.
+ */
+export function verifyStripePayment(reference: string, sessionId?: string): Promise<PaymentTransaction> {
+  const qs = sessionId ? `?session_id=${encodeURIComponent(sessionId)}` : "";
+  return api<PaymentTransaction>(`/payments/stripe/verify/${encodeURIComponent(reference)}${qs}`);
+}
+
+/**
  * Capture an approved PayPal Checkout order.
  */
 export function capturePayPalOrder(orderId: string): Promise<PaymentTransaction> {

@@ -69,23 +69,25 @@ test.describe("Session 128 — multi-provider payments completion", () => {
     return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
   }
 
-  test("GET /payments/providers lists Flutterwave, Paystack, PayPal, and Crypto", async () => {
+  test("GET /payments/providers lists Flutterwave, Paystack, Stripe, PayPal, and Crypto", async () => {
     const res = await get("/payments/providers");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.data)).toBe(true);
-    expect(res.data.length).toBe(4);
+    expect(res.data.length).toBe(5);
 
     const ids = res.data.map((p: any) => p.provider);
     expect(ids).toContain("flutterwave");
     expect(ids).toContain("paystack");
+    expect(ids).toContain("stripe");
     expect(ids).toContain("paypal");
     expect(ids).toContain("crypto");
   });
 
-  test("POST /payments/checkout initiates checkouts for all 4 payment providers", async () => {
+  test("POST /payments/checkout initiates checkouts for all 5 payment providers", async () => {
     const providers = [
       { p: "flutterwave", prefix: "FLW_WIN_" },
       { p: "paystack", prefix: "PYS_WIN_" },
+      { p: "stripe", prefix: "STR_WIN_" },
       { p: "paypal", prefix: "PPL_WIN_" },
       { p: "crypto", prefix: "CRY_WIN_" },
     ];
@@ -163,6 +165,19 @@ test.describe("Session 128 — multi-provider payments completion", () => {
     expect(init.status).toBe(201);
 
     const verify = await get(`/payments/paystack/verify/${init.data.reference}`);
+    expect(verify.status).toBe(200);
+    expect(verify.data.reference).toBe(init.data.reference);
+  });
+
+  test("GET /payments/stripe/verify/:reference settles transaction", async () => {
+    const init = await send("POST", "/payments/stripe/initialize", {
+      amount: 120,
+      currency: "USD",
+      description: `${marker} stripe verify`,
+    });
+    expect(init.status).toBe(201);
+
+    const verify = await get(`/payments/stripe/verify/${init.data.reference}`);
     expect(verify.status).toBe(200);
     expect(verify.data.reference).toBe(init.data.reference);
   });

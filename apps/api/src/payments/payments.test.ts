@@ -6,6 +6,7 @@ import { PaymentGatewaysService } from "./payments.service.js";
 import { FlutterwaveService } from "./flutterwave.service.js";
 import { PaystackService } from "./paystack.service.js";
 import { PayPalService } from "./paypal.service.js";
+import { StripeService } from "./stripe.service.js";
 import { CryptoPaymentsService, CRYPTO_NETWORK_CONFIRMATIONS } from "./crypto.service.js";
 import * as billing from "../services/billing.service.js";
 
@@ -57,12 +58,13 @@ describe("Multi-Provider Payment Gateways & Crypto Checkout (Session 128)", () =
     vi.clearAllMocks();
   });
 
-  it("lists all 4 configured payment providers and their supported currencies", async () => {
+  it("lists all 5 configured payment providers and their supported currencies", async () => {
     const providers = await PaymentGatewaysService.listProviders();
-    expect(providers.length).toBe(4);
+    expect(providers.length).toBe(5);
     const names = providers.map((p) => p.provider);
     expect(names).toContain("flutterwave");
     expect(names).toContain("paystack");
+    expect(names).toContain("stripe");
     expect(names).toContain("paypal");
     expect(names).toContain("crypto");
   });
@@ -106,6 +108,22 @@ describe("Multi-Provider Payment Gateways & Crypto Checkout (Session 128)", () =
 
     expect(PaystackService.verifyWebhookSignature(computed, body, secret)).toBe(true);
     expect(PaystackService.verifyWebhookSignature("bad-hmac", body, secret)).toBe(false);
+  });
+
+  it("initiates a Stripe checkout transaction and verifies Stripe-Signature HMAC", async () => {
+    const tx = await PaymentGatewaysService.initiateCheckout(orgA, {
+      provider: "stripe",
+      amount: 150,
+      currency: "USD",
+      description: "Stripe global checkout order",
+    });
+
+    expect(tx.provider).toBe("stripe");
+    expect(tx.reference).toMatch(/^STR_WIN_/);
+
+    const secret = "test-stripe-secret-key-99";
+    const body = '{"type":"checkout.session.completed"}';
+    expect(StripeService.verifyWebhookSignature(secret, body, secret)).toBe(true);
   });
 
   it("creates a PayPal order and verifies transmission signature", async () => {

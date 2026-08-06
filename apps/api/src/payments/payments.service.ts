@@ -23,6 +23,7 @@ import * as billing from "../services/billing.service.js";
 import { FlutterwaveService } from "./flutterwave.service.js";
 import { PaystackService } from "./paystack.service.js";
 import { PayPalService } from "./paypal.service.js";
+import { StripeService } from "./stripe.service.js";
 import { CryptoPaymentsService } from "./crypto.service.js";
 import type {
   PaymentProviderConfig,
@@ -68,6 +69,13 @@ export const PaymentGatewaysService = {
         testMode: process.env.NODE_ENV !== "production" || !process.env.PAYSTACK_SECRET_KEY,
         supportedCurrencies: ["NGN", "GHS", "ZAR", "KES"],
         displayName: "Paystack (African Card & Bank Transfer)",
+      },
+      {
+        provider: "stripe",
+        active: true,
+        testMode: process.env.NODE_ENV !== "production" || !process.env.STRIPE_SECRET_KEY,
+        supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "NGN", "ZAR"],
+        displayName: "Stripe (Global Card, Apple Pay, Google Pay, SEPA)",
       },
       {
         provider: "paypal",
@@ -167,6 +175,16 @@ export const PaymentGatewaysService = {
       });
       reference = pys.reference;
       checkoutUrl = pys.checkoutUrl;
+    } else if (provider === "stripe") {
+      const str = await StripeService.createCheckoutSession({
+        amount,
+        currency,
+        customerEmail: input.customerEmail,
+        description: input.description,
+        invoiceId: input.invoiceId,
+      });
+      reference = str.reference;
+      checkoutUrl = str.checkoutUrl;
     } else if (provider === "paypal") {
       const ppl = await PayPalService.createOrder({
         amount,

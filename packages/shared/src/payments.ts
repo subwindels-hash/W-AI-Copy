@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-export const PAYMENT_PROVIDERS = ["flutterwave", "paystack", "paypal", "crypto"] as const;
+export const PAYMENT_PROVIDERS = ["flutterwave", "paystack", "stripe", "paypal", "crypto"] as const;
 export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 export const CRYPTO_NETWORKS = ["btc", "tron_trc20", "eth_erc20", "bnb_chain"] as const;

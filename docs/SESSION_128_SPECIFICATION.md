@@ -1,8 +1,8 @@
-# Session 128 — Multi-Provider Payment Gateways (Flutterwave, Paystack, PayPal & Crypto/Blockonomics)
+# Session 128 — Multi-Provider Payment Gateways (Stripe, Flutterwave, Paystack, PayPal & Crypto/Blockonomics)
 
 **Module:** `payments` (new)
 **Mount:** `/api/v1/payments`
-**Status:** COMPLETE (routes = 16, shared contract = 285 LOC, 4 provider services, unit suite + E2E spec)
+**Status:** COMPLETE (routes = 19, shared contract = 285 LOC, 5 provider services, unit suite + E2E spec)
 **Date:** 2026-08-06 · **Branch:** `arena/019fd78f-win`
 
 ---
@@ -40,7 +40,11 @@ WINDELS AI OS operates across global and African markets where credit card-only 
   - `PaymentProviderConfigSchema`: Provider configuration reporting (`active`, `testMode`, `supportedCurrencies`, `supportedNetworks`).
 
 ### 3.2 Provider Services (`apps/api/src/payments/*`)
-1. **Flutterwave Service (`flutterwave.service.ts`)**:
+1. **Stripe Service (`stripe.service.ts`)**:
+   - `createCheckoutSession()`: Supports global checkouts (Card, Apple Pay, Google Pay, SEPA) across USD, EUR, GBP, CAD, AUD, JPY, NGN, ZAR. Generates reference `STR_WIN_...`.
+   - `verifyPayment()`: Confirms transaction status with Stripe Checkout API.
+   - `verifyWebhookSignature()`: Verifies `Stripe-Signature` HMAC SHA256 signature in constant time.
+2. **Flutterwave Service (`flutterwave.service.ts`)**:
    - `initializePayment()`: Supports card, mobile money, and bank transfer checkout. Generates reference `FLW_WIN_...`.
    - `verifyPayment()`: Confirms transaction status with Flutterwave API or local verification cache.
    - `verifyWebhookSignature()`: Verifies `verif-hash` header against `FLUTTERWAVE_SECRET_HASH`.

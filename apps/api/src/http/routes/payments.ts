@@ -15,6 +15,7 @@ import { validate } from "../middleware/validate.js";
 import { PaymentGatewaysService } from "../../payments/payments.service.js";
 import { FlutterwaveService } from "../../payments/flutterwave.service.js";
 import { PaystackService } from "../../payments/paystack.service.js";
+import { StripeService } from "../../payments/stripe.service.js";
 import { PayPalService } from "../../payments/paypal.service.js";
 import { CryptoPaymentsService, CRYPTO_NETWORK_CONFIRMATIONS } from "../../payments/crypto.service.js";
 import {
@@ -186,6 +187,60 @@ export function registerPaymentsRoutes(router: Router) {
 
       const ref = req.body?.data?.reference;
       const status = req.body?.event === "charge.success" ? "completed" : "failed";
+      if (ref) {
+        await PaymentGatewaysService.settleTransaction("org-payments-default", ref, status, req.body);
+      }
+      res.json({ ok: true, data: { received: true } });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // ─── Stripe Gateways ───────────────────────────────────────────────────────
+  payments.post("/stripe/initialize", async (req, res, next) => {
+    try {
+      const user = req.user;
+      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
+      const orgId = user.organizationId ?? "org-payments-default";
+
+      const tx = await PaymentGatewaysService.initiateCheckout(orgId, {
+        provider: "stripe",
+        amount: Number(req.body.amount || 100),
+        currency: req.body.currency || "USD",
+        invoiceId: req.body.invoiceId,
+        description: req.body.description,
+        customerEmail: req.body.customerEmail || user.email,
+      });
+      res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  payments.get("/stripe/verify/:reference", async (req, res, next) => {
+    try {
+      const user = req.user;
+      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
+      const orgId = user.organizationId ?? "org-payments-default";
+
+      const str = await StripeService.verifyPayment(req.params.reference, req.query.session_id as string);
+      const settled = await PaymentGatewaysService.settleTransaction(orgId, req.params.reference, str.status, str as any);
+      res.json({ ok: true, data: settled || str, meta: { requestId: req.requestId } });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  payments.post("/stripe/webhook", async (req, res, next) => {
+    try {
+      const signature = req.headers["stripe-signature"] as string | undefined;
+      const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
+      if (!StripeService.verifyWebhookSignature(signature, rawBody)) {
+        return res.status(401).json({ ok: false, error: "Invalid Stripe webhook signature" });
+      }
+
+      const ref = req.body?.data?.object?.client_reference_id;
+      const status = req.body?.type === "checkout.session.completed" ? "completed" : "failed";
       if (ref) {
         await PaymentGatewaysService.settleTransaction("org-payments-default", ref, status, req.body);
       }

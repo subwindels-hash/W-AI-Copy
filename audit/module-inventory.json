@@ -7202,7 +7202,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 2081,
+      "serviceTotalSloc": 2465,
       "serviceFiles": [
         "crypto.service.ts",
         "flutterwave.service.ts",
@@ -7210,9 +7210,11 @@
         "payments.test.ts",
         "paypal.service.ts",
         "paystack.service.ts",
+        "stripe.service.ts",
         "payments/payments.service.ts",
         "payments/flutterwave.service.ts",
         "payments/paystack.service.ts",
+        "payments/stripe.service.ts",
         "payments/paypal.service.ts",
         "payments/crypto.service.ts"
       ],
@@ -7220,6 +7222,7 @@
         "payments/payments.service.ts",
         "payments/flutterwave.service.ts",
         "payments/paystack.service.ts",
+        "payments/stripe.service.ts",
         "payments/paypal.service.ts",
         "payments/crypto.service.ts"
       ],
@@ -7228,11 +7231,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/payments.ts",
-        "sloc": 328,
+        "sloc": 383,
         "counts": {
-          "total": 16,
-          "GET": 6,
-          "POST": 10,
+          "total": 19,
+          "GET": 7,
+          "POST": 12,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -7242,7 +7245,7 @@
     ],
     "sharedTypes": "packages/shared/src/payments.ts (76 LOC)",
     "web": {
-      "client": "apps/web/src/lib/payments.ts (100 LOC)",
+      "client": "apps/web/src/lib/payments.ts (108 LOC)",
       "pages": []
     },
     "db": {
@@ -7262,7 +7265,10 @@
       "payments/payments.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
+    "externalIntegrations": [
+      "Stripe",
+      "Google"
+    ],
     "status": "COMPLETE"
   },
   {
