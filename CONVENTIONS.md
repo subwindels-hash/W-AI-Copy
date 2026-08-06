@@ -30,6 +30,21 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 107 — Decisions Logged (Billing & Subscriptions Completion)
+
+- **Shared contract prefix:** `Billing*` types/schemas live in
+  `packages/shared/src/billing.ts`; barrel exports use collision-safe aliases
+  for the older platform-services billing names.
+- **Money precision:** plan prices and invoice lines remain integer cents;
+  subscription changes create open invoices, while payment success is only
+  recorded by an authenticated audited admin action or idempotent provider
+  webhook.
+- **Payment honesty:** there is no fake payment provider or automatic paid
+  verdict. Unknown/duplicate webhook events are handled explicitly, and
+  dunning only transitions real overdue open invoices.
+- **UI:** `/app/billing` is a dedicated admin-aware console; Settings and
+  Analytics continue to consume the same client.
+
 ## Session 106 — Decisions Logged (Autonomous Organization Approval Register Completion)
 
 - **Shared contract prefix:** `Aut` contracts and Zod schemas remain in

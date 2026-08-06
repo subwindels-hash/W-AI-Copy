@@ -19,8 +19,9 @@
  */
 import { prisma } from "../db/client.js";
 import { resolveUserContext } from "./workspace.service.js";
-import { z } from "zod";
+import type { z } from "zod";
 import { createHash, randomBytes, randomUUID } from "node:crypto";
+import { BillingPaymentEventSchema, BillingSubscriptionUpdateSchema } from "@windels/shared/billing";
 import type { Prisma } from "@prisma/client";
 import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
@@ -48,22 +49,9 @@ export type InvoiceLine = {
 };
 
 // ─── Zod ─────────────────────────────────────────────────────────────────
-export const UpdateSubscriptionSchema = z.object({
-  plan: z.enum(["starter", "pro", "team", "enterprise"]).optional(),
-  seats: z.number().int().min(1).max(10_000).optional(),
-  cycle: z.enum(["monthly", "annual"]).optional(),
-  customerEmail: z.string().email().optional(),
-}).refine((v) => Object.keys(v).length > 0, "At least one subscription field is required");
-
-export const RecordPaymentEventSchema = z.object({
-  eventId: z.string().min(1).max(200),          // provider event id — idempotency key
-  invoiceNumber: z.string().min(1).max(64),     // WIN-8-digit invoice number
-  status: z.enum(["paid", "failed", "voided", "refunded"]),
-  paidAt: z.string().datetime().optional(),
-  amountCents: z.number().int().nonnegative().optional(),
-  currency: z.string().length(3).optional(),
-  meta: z.record(z.any()).optional(),
-});
+// Backwards-compatible names retained for existing route/tests.
+export const UpdateSubscriptionSchema = BillingSubscriptionUpdateSchema;
+export const RecordPaymentEventSchema = BillingPaymentEventSchema;
 
 // ─── Internal helpers ────────────────────────────────────────────────────
 function computeAmountCents(plan: PlanId, cycle: "monthly" | "annual", seats: number): { total: number; lines: InvoiceLine[] } {

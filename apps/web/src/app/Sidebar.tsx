@@ -40,6 +40,7 @@ import {
   KeyRound,
   Paperclip,
   Crown,
+  CreditCard,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -83,6 +84,7 @@ const navItems = [
   { to: "/app/api-keys", icon: KeyRound, label: "API Keys" },
   { to: "/app/attachments", icon: Paperclip, label: "Attachments" },
   { to: "/app/autonomous", icon: Crown, label: "Autonomous Org" },
+  { to: "/app/billing", icon: CreditCard, label: "Billing" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },

@@ -1183,14 +1183,15 @@
     "backend": {
       "serviceDir": "apps/api/src/billing",
       "serviceFile": {
-        "file": "billing.test.ts",
-        "path": "/home/user/WIN/apps/api/src/billing/billing.test.ts",
-        "sloc": 159,
+        "file": "billing.integration.test.ts",
+        "path": "/home/user/WIN/apps/api/src/billing/billing.integration.test.ts",
+        "sloc": 132,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 921,
+      "serviceTotalSloc": 1041,
       "serviceFiles": [
+        "billing.integration.test.ts",
         "billing.test.ts",
         "exchangeRates.test.ts",
         "exchangeRates.ts",
@@ -1204,7 +1205,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/billing.ts",
-        "sloc": 63,
+        "sloc": 40,
         "counts": {
           "total": 6,
           "GET": 2,
@@ -1223,15 +1224,17 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/billing.ts (93 LOC)",
     "web": {
-      "client": "apps/web/src/lib/billing.ts (31 LOC)",
+      "client": "apps/web/src/lib/billing.ts (17 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Workspace",
+        "Membership",
         "AuditLog",
         "BillingSubscription",
         "Invoice"
@@ -1241,12 +1244,13 @@
     },
     "tests": [
       "platformServices.spec.ts",
+      "billing/billing.integration.test.ts",
       "billing/billing.test.ts",
       "billing/exchangeRates.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "biomedical",

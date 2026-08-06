@@ -5,6 +5,15 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 107 — Billing & Subscriptions Completion] — 2026-08-05
+
+### Billing lifecycle completed as a real audited subscription/invoice slice
+*   `packages/shared/src/billing.ts` — shared plan, subscription, invoice, overview, insights and update/payment schemas with collision-safe barrel aliases.
+*   Billing service/routes now consume shared contracts; dedicated overview includes invoice lines and receivables, admin mark-paid/void actions remain audited, and provider webhooks remain idempotent.
+*   Web: typed billing client expanded with invoice actions and dedicated `/app/billing` subscription/invoice console; existing Settings/Analytics consumers remain compatible.
+*   Tests: `billing.integration.test.ts` (11) covers subscription creation, paid-plan invoices, idempotent updates, tenant scope, payment/void transitions, webhook idempotency, unknown invoices, dunning and shared contracts; existing plan/schema tests remain green.
+*   Runtime validation against live PostgreSQL/Redis/payment provider remains pending; Session 107 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 106 — Autonomous Organization Approval Register Completion] — 2026-08-05
 
 ### Approval-first autonomous organization completed
