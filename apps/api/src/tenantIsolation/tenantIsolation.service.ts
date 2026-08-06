@@ -77,6 +77,13 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "ei:mailbox", scope: "org_scoped" },
   { prefix: "ei:message", scope: "org_scoped" },
   { prefix: "ei:thread", scope: "org_scoped" },
+  // Enterprise ERP (Session 92)
+  { prefix: "erp:product", scope: "org_scoped" },
+  { prefix: "erp:warehouse", scope: "org_scoped" },
+  { prefix: "erp:movement", scope: "org_scoped" },
+  { prefix: "erp:supplier", scope: "org_scoped" },
+  { prefix: "erp:po", scope: "org_scoped" },
+  { prefix: "erp:so", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

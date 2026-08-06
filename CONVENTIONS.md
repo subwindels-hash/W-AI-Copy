@@ -30,6 +30,30 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 92 — Decisions Logged (Enterprise ERP)
+
+- **Module prefix:** `Erp` types, `erp:*` Redis keys, `/api/v1/erp` route
+  prefix, `apps/web/src/lib/erp.ts` client, `/app/erp` route + sidebar label
+  "ERP".
+- **Stock is never stored:** the movements ledger (`erp:movement:*`) is the
+  single source of truth; current stock is Σ of movement quantities computed
+  per read (`currentStock`). Order `receive`/`fulfill` actions create real
+  ledger rows — no simulated inventory.
+- **Order totals** are computed from line items at write and re-verified on
+  read (hydrate recomputes `totalCents`).
+- **Lifecycle honesty:** PO `draft → submitted → received | cancelled`; SO
+  `draft → confirmed → fulfilled | cancelled`; `receivedAt`/`fulfilledAt`
+  stamped only on the actual transition; closed orders reject further edits.
+- **CRM hook (won deal → SO):** never fabricates a line item — a deal with no
+  matching product creates an empty SO with the company link and the deal
+  amount recorded in `note`. Sales-order items are therefore allowed to be
+  empty at the schema level.
+- **SKU uniqueness** is enforced per org (create + update).
+- **Rollup:** computed per read — inventory value (Σ stock × cost), low stock
+  (< reorderLevel), order totals by status; deterministic across reads.
+- **Demo seed:** idempotent, seeds `org-demo-erp`, gated behind
+  `WINDELS_DEMO_DATA`.
+
 ## Session 91 — Decisions Logged (Enterprise Email Intelligence)
 
 - **Module prefix:** `Ei` types, `ei:*` Redis keys, `/api/v1/email-intel`

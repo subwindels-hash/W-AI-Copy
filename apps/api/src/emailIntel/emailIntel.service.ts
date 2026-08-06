@@ -477,8 +477,10 @@ export const EmailIntelService = {
       outboxStatus: status,
       outboxError: error,
       smtpResponse: smtpResponse ?? cur.smtpResponse,
+      // `sentAt` is the composition/queue time (never overwritten — the
+      // average-response-time metric measures time-to-compose); the actual
+      // SMTP delivery moment is `deliveredAt`.
       deliveredAt: status === "sent" ? now : cur.deliveredAt,
-      sentAt: status === "sent" ? now : cur.sentAt,
     };
     await writeItem("message", org, next);
     if (status === "sent") void emitKernel("ei.message.sent", { id, organizationId: org });

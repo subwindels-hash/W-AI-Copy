@@ -27,6 +27,7 @@ import {
   Landmark,
   ShieldCheck,
   Mail,
+  Package,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -57,6 +58,7 @@ const navItems = [
   { to: "/app/tenant-isolation", icon: ShieldCheck, label: "Tenant Isolation" },
   { to: "/app/crm", icon: UsersRound, label: "CRM" },
   { to: "/app/email-intel", icon: Mail, label: "Email Intel" },
+  { to: "/app/erp", icon: Package, label: "ERP" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },

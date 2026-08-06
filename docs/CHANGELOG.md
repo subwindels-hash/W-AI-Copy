@@ -5,6 +5,42 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 92 — Enterprise ERP] — 2026-08-05
+
+### New module: Enterprise ERP (last major named Phase-3 Enterprise Application)
+*   `packages/shared/src/erp.ts` — Zod contracts + types for products,
+    warehouses, movements, suppliers, purchase/sales orders and rollup
+    (prefixed `Erp`).
+*   `apps/api/src/erp/erp.service.ts` — real, org-scoped CRUD backed by Redis
+    (`erp:<entity>:i:<org>:<id>`).
+*   **Stock is computed, never stored:** the movements ledger is the single
+    source of truth; `currentStock()` sums movement quantities per read.
+*   **Order lifecycles:** PO draft → submitted → received | cancelled; SO
+    draft → confirmed → fulfilled | cancelled. `receive`/`fulfill` create real
+    ledger rows; `receivedAt`/`fulfilledAt` stamped only on the transition;
+    closed orders reject edits; totals recomputed on read.
+*   **CRM hook:** `POST /api/v1/erp/sales-orders/from-deal/:dealId` converts a
+    Session 90 won deal into a sales order linked to the deal's company.
+    Honest behavior: no fabricated line item — a deal with no product match
+    yields an empty order with the deal amount in `note`.
+*   SKU uniqueness enforced per org; suppliers + warehouses registries.
+*   Deterministic operations rollup (`GET /api/v1/erp/dashboard/rollup`):
+    inventory value (Σ stock × cost), low-stock alerts (< reorder level),
+    order totals by status, recent movements — no `Math.random`, honest zeros.
+*   Routes: `apps/api/src/http/routes/erp.ts` mounted at `/api/v1/erp`
+    (32 endpoints). Session 89 catalog gains the six `erp:*` namespaces as
+    `org_scoped`.
+*   Web: `apps/web/src/lib/erp.ts` client + `pages/erp/ErpPage.tsx` (stats,
+    low stock, inventory table, PO/SO panels with Receive/Fulfill, product/
+    supplier/warehouse lists, quick-create forms, CRM deal conversion),
+    `/app/erp` route + sidebar entry.
+*   Tests: `apps/api/src/erp/erp.test.ts` (17) — CRUD, ledger stock math,
+    PO/SO lifecycles, CRM hook, rollup determinism, cross-tenant isolation,
+    demo-seed idempotency, schema contracts.
+*   Demo seed (`apps/api/src/erp/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA`; production starts with an empty catalog.
+*   Spec: `docs/SESSION_92_SPECIFICATION.md`.
+
 ## [Session 91 — Enterprise Email Intelligence] — 2026-08-05
 
 ### New module: Enterprise Email Intelligence (first email surface on the platform)

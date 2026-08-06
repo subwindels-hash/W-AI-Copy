@@ -3501,6 +3501,101 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "erp",
+    "title": "erp",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/erp",
+    "backend": {
+      "serviceDir": "apps/api/src/erp",
+      "serviceFile": {
+        "file": "erp.service.ts",
+        "path": "/home/user/WIN/apps/api/src/erp/erp.service.ts",
+        "sloc": 736,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1847,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "erp.service.ts",
+        "erp.test.ts",
+        "erp/erp.service.ts"
+      ],
+      "importedServiceFiles": [
+        "erp/erp.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/erp/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/erp.ts",
+        "sloc": 283,
+        "counts": {
+          "total": 32,
+          "GET": 13,
+          "POST": 9,
+          "PUT": 0,
+          "PATCH": 5,
+          "DELETE": 5
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /products",
+          "POST /products",
+          "GET /products/:id",
+          "PATCH /products/:id",
+          "DELETE /products/:id",
+          "GET /warehouses",
+          "POST /warehouses",
+          "GET /warehouses/:id",
+          "PATCH /warehouses/:id",
+          "DELETE /warehouses/:id",
+          "GET /inventory",
+          "POST /movements",
+          "GET /movements",
+          "GET /suppliers",
+          "POST /suppliers",
+          "GET /suppliers/:id",
+          "PATCH /suppliers/:id",
+          "DELETE /suppliers/:id",
+          "GET /purchase-orders",
+          "POST /purchase-orders",
+          "GET /purchase-orders/:id",
+          "PATCH /purchase-orders/:id",
+          "DELETE /purchase-orders/:id",
+          "POST /purchase-orders/:id/receive",
+          "GET /sales-orders",
+          "POST /sales-orders",
+          "GET /sales-orders/:id",
+          "PATCH /sales-orders/:id",
+          "DELETE /sales-orders/:id",
+          "POST /sales-orders/:id/fulfill",
+          "POST /sales-orders/from-deal/:dealId"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/erp.ts (240 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/erp.ts (233 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "erp/erp.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "etl",
     "title": "etl",
     "sessions": [],
@@ -7485,11 +7580,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 332,
+        "sloc": 339,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 840,
+      "serviceTotalSloc": 854,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

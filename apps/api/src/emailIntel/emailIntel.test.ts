@@ -251,11 +251,14 @@ describe("EI — dashboard rollup (deterministic, honest)", () => {
       mailboxId: mb.id, fromAddress: "chidi@example.com",
       subject: "Invoice", bodyText: "Invoice due today.", isRead: true,
     }, null);
-    // A real reply pair (sent after the inbound it answers).
+    // A real reply pair (sent after the inbound it answers) — the reply's
+    // sentAt is explicit and far in the future so the measured response time
+    // is deterministic (markOutbox never overwrites sentAt).
     const out = await EmailIntelService.createMessage(ORG_A, {
       mailboxId: mb.id, direction: "outbound", fromAddress: "inbox@example.com",
       to: ["ada@example.com"], subject: "Re: Follow up", bodyText: "Confirmed.",
       inReplyTo: i1.messageId,
+      sentAt: new Date(Date.now() + 60_000).toISOString(),
     }, null);
     await EmailIntelService.markOutbox(ORG_A, out.id, "sent", null, "250 OK");
 

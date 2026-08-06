@@ -109,6 +109,7 @@ import { registerAdvertisingRoutes } from "./routes/advertising.js";
 import { registerTenantIsolationRoutes } from "./routes/tenantIsolation.js";
 import { registerCrmRoutes } from "./routes/crm.js";
 import { registerEmailIntelRoutes } from "./routes/emailIntel.js";
+import { registerErpRoutes } from "./routes/erp.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1111,6 +1112,13 @@ export function createApp() {
   const emailIntelRouter = express.Router();
   v1.use("/email-intel", emailIntelRouter);
   registerEmailIntelRoutes(emailIntelRouter);
+
+  // /erp — Session 92: Enterprise ERP (product catalog, inventory +
+  // movements ledger, suppliers, purchase/sales orders with honest
+  // lifecycles, CRM won-deal hook, deterministic operations rollup).
+  const erpRouter = express.Router();
+  v1.use("/erp", erpRouter);
+  registerErpRoutes(erpRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

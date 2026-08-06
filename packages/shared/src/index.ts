@@ -81,3 +81,4 @@ export * from "./marketing.js";
 export * from "./tenantIsolation.js";
 export * from "./crm.js";
 export * from "./emailIntel.js";
+export * from "./erp.js";

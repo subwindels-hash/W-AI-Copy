@@ -315,6 +315,14 @@ async function main() {
         } catch (e) { logger.warn("email-intel bootstrap failed", { err: e }); }
       }, 21000);
 
+      // Session 92 — Enterprise ERP (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapErp } = await import("./erp/bootstrap.js");
+          await bootstrapErp(logger);
+        } catch (e) { logger.warn("erp bootstrap failed", { err: e }); }
+      }, 22000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {
