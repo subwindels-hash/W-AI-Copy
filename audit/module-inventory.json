@@ -173,7 +173,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1305,
+      "serviceTotalSloc": 1294,
       "serviceFiles": [
         "enterprise/agentComm/agentIdentity.service.ts",
         "enterprise/agentComm/commProtocol.service.ts",
@@ -327,11 +327,11 @@
       "serviceFile": {
         "file": "agents.service.ts",
         "path": "/home/user/WIN/apps/api/src/agents/agents.service.ts",
-        "sloc": 216,
+        "sloc": 205,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1929,
+      "serviceTotalSloc": 1982,
       "serviceFiles": [
         "agents.service.ts",
         "agents.test.ts",
@@ -351,7 +351,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/agents.ts",
-        "sloc": 62,
+        "sloc": 63,
         "counts": {
           "total": 14,
           "GET": 7,
@@ -378,9 +378,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/agents.ts (166 LOC)",
     "web": {
-      "client": "apps/web/src/lib/agents.ts (87 LOC)",
+      "client": "apps/web/src/lib/agents.ts (54 LOC)",
       "pages": []
     },
     "db": {
@@ -409,7 +409,7 @@
     "externalIntegrations": [
       "Azure"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "aiEconomy",
@@ -8140,11 +8140,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 368,
+        "sloc": 371,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 912,
+      "serviceTotalSloc": 918,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8186,6 +8186,7 @@
       "prismaModels": [
         "User",
         "Membership",
+        "Agent",
         "Task",
         "Activity",
         "Message"

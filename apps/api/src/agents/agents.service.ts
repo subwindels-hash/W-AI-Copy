@@ -1,28 +1,17 @@
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "../services/workspace.service.js";
-import { z } from "zod";
+import type { z } from "zod";
 import type { PaginationQuery } from "@windels/shared/api";
+import { AgAgentCreateSchema, AgAgentUpdateSchema } from "@windels/shared/agents";
+import type { AgAgent, AgAgentListQuery } from "@windels/shared/agents";
 import { aiRegistry } from "../services/ai/registry.js";
 
-export const CreateAgentSchema = z.object({
-  name: z.string().min(1).max(64),
-  role: z.string().min(1).max(64),
-  description: z.string().max(500).optional(),
-  color: z.string().default("azure"),
-  emoji: z.string().max(8).optional().default("🤖"),
-  systemPrompt: z.string().max(8000).optional(),
-  department: z.string().max(64).optional(),
-  capabilities: z.array(z.string()).optional(),
-  modelId: z.string().optional(),
-  temperature: z.number().min(0).max(2).optional(),
-  maxTokens: z.number().int().min(64).max(64000).optional(),
-  avatarStyle: z.string().optional(),
-});
+// Backwards-compatible names retained for existing route and consumer imports.
+export const CreateAgentSchema = AgAgentCreateSchema;
+export const UpdateAgentSchema = AgAgentUpdateSchema;
 
-export const UpdateAgentSchema = CreateAgentSchema.partial().refine((value) => Object.keys(value).length > 0, "At least one field is required");
-
-function serializeAgent(a: any) {
+function serializeAgent(a: any): AgAgent {
   return {
     id: a.id,
     name: a.name,
@@ -38,7 +27,7 @@ function serializeAgent(a: any) {
     maxTokens: a.maxTokens,
     avatarStyle: a.avatarStyle,
     isBuiltIn: a.isBuiltIn,
-    status: a.status.toLowerCase(),
+    status: String(a.status ?? "IDLE").toLowerCase() as AgAgent["status"],
     lastActivityAt: a.lastActivityAt,
     activeTaskId: a.activeTaskId,
     activeTask: a.activeTask ? { id: a.activeTask.id, title: a.activeTask.title, status: a.activeTask.status } : null,
@@ -58,8 +47,8 @@ function serializeAgent(a: any) {
 
 export async function listAgents(
   userId: string,
-  pagination: PaginationQuery,
-  filters?: { status?: string; q?: string }
+  pagination: AgAgentListQuery,
+  filters?: { status?: AgAgentListQuery["status"]; q?: string }
 ) {
   const ctx = await resolveUserContext(userId);
   const where: any = { organizationId: ctx.organizationId };

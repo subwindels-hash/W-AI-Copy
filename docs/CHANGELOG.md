@@ -5,6 +5,16 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 102 — AI Workforce / Agent Framework Completion] — 2026-08-05
+
+### Agent Framework completed as a shared, scoped vertical slice
+*   `packages/shared/src/agents.ts` — `Ag` agent, event, memory, knowledge, skill, model, pagination, lifecycle and Zod request contracts.
+*   Agent CRUD, event, skill, memory and knowledge paths now consume shared contracts through backwards-compatible schema aliases; the typed client consumes the same shared records.
+*   Lifecycle Redis state/history now use organization-scoped keys (`agent:lifecycle:<org>:<id>` and `agent:lifecycle:history:<org>:<id>`), with safe legacy migration and Session 89 catalog registration.
+*   `/m/agents` now consumes the real paginated API, derives online/assigned-task counts from real records and routes creation to the Workforce Hub instead of showing placeholder counts/no-op controls. Workforce Hub CRUD remains intact.
+*   Tests: `apps/api/src/agents/agents.test.ts` now has 10 tests covering CRUD, org isolation, status/query/pagination filtering, model validation, built-in protection, event access and contracts.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending; Session 102 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 101 — Admin Console Completion] — 2026-08-05
 
 ### Admin Utilities completed as a real vertical slice

@@ -14,6 +14,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { FakePrisma, cuid } from "../testUtils/fakePrisma.js";
+import { AgAgentCreateSchema, AgAgentListQuerySchema, AgAgentUpdateSchema } from "@windels/shared/agents";
 
 const db = new FakePrisma();
 vi.mock("../db/client.js", () => ({ prisma: db.client() }));
@@ -72,5 +73,55 @@ describe("agents", () => {
     const events = db.tables.get("AgentEvent") ?? [];
     expect(events).toHaveLength(1);
     expect(events[0].agentId).toBe(a.id);
+  });
+
+  it("filters agents by status, query and pagination from the real organization store", async () => {
+    const online = await agents.createAgent(USER_A, { name: "Online Researcher", role: "research" } as any);
+    await agents.createAgent(USER_A, { name: "Offline Writer", role: "writer" } as any);
+    await agents.updateAgentStatus(online.id, "ONLINE");
+    const result = await agents.listAgents(USER_A, { page: 1, perPage: 10, status: "online", q: "research" }, { status: "online", q: "research" });
+    expect(result.items.map((item) => item.id)).toEqual([online.id]);
+    expect(result.pagination.total).toBe(1);
+  });
+
+  it("updates an agent and rejects an unavailable model", async () => {
+    const a = await agents.createAgent(USER_A, { name: "Editable", role: "analyst" } as any);
+    const updated = await agents.updateAgent(USER_A, a.id, { name: "Edited", capabilities: ["summarize"] });
+    expect(updated.name).toBe("Edited");
+    await expect(agents.updateAgent(USER_A, a.id, { modelId: "missing-model" })).rejects.toThrow("not available");
+  });
+
+  it("prevents cross-organization updates and deletes", async () => {
+    const a = await agents.createAgent(USER_A, { name: "Private", role: "analyst" } as any);
+    await expect(agents.updateAgent(USER_B, a.id, { name: "Leaked" })).rejects.toThrow();
+    await expect(agents.deleteAgent(USER_B, a.id)).rejects.toThrow();
+    expect((await agents.getAgent(USER_A, a.id)).name).toBe("Private");
+  });
+
+  it("does not allow built-in agents to be deleted, but deletes custom agents", async () => {
+    const builtInId = cuid();
+    db.seed("Agent", [{ id: builtInId, organizationId: ORG_A, name: "Built-in", role: "core", isBuiltIn: true, status: "IDLE", createdAt: new Date(), updatedAt: new Date() }]);
+    await expect(agents.deleteAgent(USER_A, builtInId)).rejects.toThrow("Built-in agents cannot be deleted");
+    const custom = await agents.createAgent(USER_A, { name: "Custom", role: "helper" } as any);
+    await expect(agents.deleteAgent(USER_A, custom.id)).resolves.toBeUndefined();
+    await expect(agents.getAgent(USER_A, custom.id)).rejects.toThrow("Agent not found");
+  });
+
+  it("lists events only after verifying the agent belongs to the caller's organization", async () => {
+    const a = await agents.createAgent(USER_A, { name: "Audited", role: "observer" } as any);
+    await agents.recordAgentEvent(a.id, "STATUS_CHANGED", "online", { source: "test" });
+    const result = await agents.listAgentEvents(USER_A, a.id, { page: 1, perPage: 20 });
+    expect(result.items[0]).toMatchObject({ type: "status_changed", message: "online", metadata: { source: "test" } });
+    await expect(agents.listAgentEvents(USER_B, a.id, { page: 1, perPage: 20 })).rejects.toThrow();
+  });
+});
+
+describe("agent shared contracts", () => {
+  it("validates create, update and list inputs", () => {
+    expect(AgAgentCreateSchema.safeParse({ name: "Researcher", role: "analyst" }).success).toBe(true);
+    expect(AgAgentCreateSchema.safeParse({ name: "", role: "analyst" }).success).toBe(false);
+    expect(AgAgentUpdateSchema.safeParse({}).success).toBe(false);
+    expect(AgAgentListQuerySchema.safeParse({ page: "1", perPage: "25", status: "online" }).success).toBe(true);
+    expect(AgAgentListQuerySchema.safeParse({ status: "unknown" }).success).toBe(false);
   });
 });

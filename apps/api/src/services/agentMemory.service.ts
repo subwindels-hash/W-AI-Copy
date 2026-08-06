@@ -1,17 +1,11 @@
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
-import { z } from "zod";
+import type { z } from "zod";
 import type { PaginationQuery } from "@windels/shared/api";
+import { AgMemoryCreateSchema } from "@windels/shared/agents";
 
-export const CreateMemorySchema = z.object({
-  type: z.enum(["FACT", "PREFERENCE", "PROCEDURE", "CONVERSATION", "TASK", "FEEDBACK"]).default("FACT"),
-  content: z.string().min(1).max(4000),
-  source: z.string().max(64).optional(),
-  sourceRef: z.string().max(128).optional(),
-  importance: z.number().min(0).max(1).default(0.5),
-  tags: z.array(z.string()).max(20).optional(),
-});
+export const CreateMemorySchema = AgMemoryCreateSchema;
 
 async function assertAccess(userId: string, agentId: string) {
   const ctx = await resolveUserContext(userId);

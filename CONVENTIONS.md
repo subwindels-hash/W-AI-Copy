@@ -30,6 +30,26 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 102 — Decisions Logged (AI Workforce / Agent Framework Completion)
+
+- **Shared contract prefix:** `Ag` types and Zod schemas in
+  `packages/shared/src/agents.ts`; existing agent service schema exports remain
+  aliases for compatibility. The typed client uses the same records and
+  `AgPaginated<T>` envelope.
+- **Organization scope:** agent, memory, knowledge, skill and event reads are
+  constrained by the caller's `resolveUserContext` organization. Internal
+  lifecycle state now writes `agent:lifecycle:<org>:<id>` and history writes
+  `agent:lifecycle:history:<org>:<id>`; old slots migrate only after the agent
+  organization is verified.
+- **Model honesty:** agent creation/update accepts only a model recognized by
+  the ProviderRegistry; the Workforce Hub does not silently send a default
+  fabricated model when no model is selected.
+- **Mobile parity:** `/m/agents` consumes the real paginated agent response,
+  computes online/assigned-task counts from returned records, and navigates to
+  the real Workforce Hub for creation instead of exposing no-op controls.
+- **Tests:** the core agent suite now covers ten service/contract scenarios,
+  including cross-organization mutation and event isolation.
+
 ## Session 101 — Decisions Logged (Admin Console Completion)
 
 - **Shared contract prefix:** `Adm` types and Zod schemas in

@@ -1,16 +1,11 @@
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
-import { z } from "zod";
+import type { z } from "zod";
 import type { PaginationQuery } from "@windels/shared/api";
+import { AgKnowledgeCreateSchema } from "@windels/shared/agents";
 
-export const CreateKnowledgeSchema = z.object({
-  type: z.enum(["DOCUMENT", "URL", "SNIPPET", "FILE"]).default("SNIPPET"),
-  title: z.string().min(1).max(200),
-  content: z.string().min(1).max(200_000),
-  source: z.string().max(500).optional(),
-  mimeType: z.string().max(128).optional(),
-});
+export const CreateKnowledgeSchema = AgKnowledgeCreateSchema;
 
 async function assertAccess(userId: string, agentId: string) {
   const ctx = await resolveUserContext(userId);

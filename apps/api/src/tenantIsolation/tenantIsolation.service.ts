@@ -94,6 +94,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // Enterprise Helpdesk (Session 95)
   { prefix: "hd:ticket", scope: "org_scoped" },
   { prefix: "hd:comment", scope: "org_scoped" },
+  // AI Workforce / Agent Framework lifecycle state (Session 102)
+  { prefix: "agent:lifecycle", scope: "org_scoped" },
+  { prefix: "agent:lifecycle:history", scope: "org_scoped" },
   // AI Software Factory / Application Builder (Session 96)
   { prefix: "ab:project", scope: "org_scoped" },
   { prefix: "ab:task", scope: "org_scoped" },

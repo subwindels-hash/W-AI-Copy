@@ -19,7 +19,8 @@ import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
 import { logger } from "../config/logger.js";
 import { pushEvent } from "../http/routes/events.js";
-import { z } from "zod";
+import type { z } from "zod";
+import { AgLifecycleTransitionSchema } from "@windels/shared/agents";
 
 // ─── Lifecycle States ───────────────────────────────────────────
 
@@ -36,31 +37,49 @@ const VALID_TRANSITIONS: Record<LifecycleState, LifecycleState[]> = {
   ARCHIVED: [], // Terminal state
 };
 
-// Redis key for lifecycle state (supplements Prisma Agent.status)
-const LIFECYCLE_KEY = (agentId: string) => `agent:lifecycle:${agentId}`;
-const LIFECYCLE_HISTORY_KEY = (agentId: string) => `agent:lifecycle:history:${agentId}`;
+// Redis keys for lifecycle state (supplements Prisma Agent.status). The org
+// segment is required even though agent ids are globally opaque; this keeps
+// lifecycle state auditable by the Session 89 namespace checker.
+const LIFECYCLE_KEY = (organizationId: string, agentId: string) => `agent:lifecycle:${organizationId}:${agentId}`;
+const LIFECYCLE_HISTORY_KEY = (organizationId: string, agentId: string) => `agent:lifecycle:history:${organizationId}:${agentId}`;
+// Legacy keys are read once and migrated after an upgrade, never written.
+const LEGACY_LIFECYCLE_KEY = (agentId: string) => `agent:lifecycle:${agentId}`;
+const LEGACY_HISTORY_KEY = (agentId: string) => `agent:lifecycle:history:${agentId}`;
+
+async function organizationForAgent(agentId: string): Promise<string> {
+  const agent = await prisma.agent.findUnique({ where: { id: agentId }, select: { organizationId: true } });
+  if (!agent) throw AppError.notFound("Agent not found");
+  return agent.organizationId;
+}
 
 // ─── Schemas ────────────────────────────────────────────────────
 
-export const TransitionSchema = z.object({
-  to: z.enum(LIFECYCLE_STATES as [string, ...string[]]),
-  reason: z.string().min(1).max(500),
-  metadata: z.record(z.any()).optional(),
-});
+// Backwards-compatible name retained for route imports.
+export const TransitionSchema = AgLifecycleTransitionSchema;
 
 // ─── State Management ───────────────────────────────────────────
 
 /**
  * Get the current lifecycle state of an agent.
  */
-export async function getLifecycleState(agentId: string): Promise<{
+export async function getLifecycleState(agentId: string, organizationId?: string): Promise<{
   state: LifecycleState;
   since: string;
   metadata: Record<string, any>;
 }> {
-  // Try Redis first (fast)
+  const orgId = organizationId ?? await organizationForAgent(agentId);
+  // Try the org-scoped Redis key first (fast). Upgrade legacy state once if it
+  // exists; the agent's organization was resolved from Prisma before reading
+  // the legacy slot, so this migration cannot cross an agent boundary.
   try {
-    const raw = await redisCmd.get(LIFECYCLE_KEY(agentId));
+    let raw = await redisCmd.get(LIFECYCLE_KEY(orgId, agentId));
+    if (!raw) {
+      raw = await redisCmd.get(LEGACY_LIFECYCLE_KEY(agentId));
+      if (raw) {
+        await redisCmd.set(LIFECYCLE_KEY(orgId, agentId), raw);
+        await redisCmd.del(LEGACY_LIFECYCLE_KEY(agentId));
+      }
+    }
     if (raw) {
       const data = JSON.parse(raw);
       return {
@@ -96,7 +115,7 @@ export async function getLifecycleState(agentId: string): Promise<{
 /**
  * Get the full lifecycle history of an agent.
  */
-export async function getLifecycleHistory(agentId: string): Promise<
+export async function getLifecycleHistory(agentId: string, organizationId?: string): Promise<
   Array<{
     from: LifecycleState | null;
     to: LifecycleState;
@@ -106,8 +125,20 @@ export async function getLifecycleHistory(agentId: string): Promise<
     metadata: Record<string, any>;
   }>
 > {
+  const orgId = organizationId ?? await organizationForAgent(agentId);
   try {
-    const raw = await redisCmd.lrange(LIFECYCLE_HISTORY_KEY(agentId), 0, -1);
+    let raw = await redisCmd.lrange(LIFECYCLE_HISTORY_KEY(orgId, agentId), 0, -1);
+    if (raw.length === 0) {
+      const legacy = await redisCmd.lrange(LEGACY_HISTORY_KEY(agentId), 0, -1);
+      if (legacy.length > 0) {
+        const pipeline = redisCmd.multi();
+        for (const entry of [...legacy].reverse()) pipeline.lpush(LIFECYCLE_HISTORY_KEY(orgId, agentId), entry);
+        pipeline.ltrim(LIFECYCLE_HISTORY_KEY(orgId, agentId), 0, 99);
+        await pipeline.exec();
+        await redisCmd.del(LEGACY_HISTORY_KEY(agentId));
+        raw = legacy;
+      }
+    }
     return raw.map((r) => JSON.parse(r));
   } catch {
     return [];
@@ -138,7 +169,7 @@ export async function transitionAgent(
   if (!agent) throw AppError.notFound("Agent not found");
 
   // Get current state
-  const current = await getLifecycleState(agentId);
+  const current = await getLifecycleState(agentId, ctx.organizationId);
   const from = current.state;
   const to = input.to as LifecycleState;
 
@@ -169,15 +200,15 @@ export async function transitionAgent(
   try {
     const pipeline = redisCmd.multi();
     pipeline.set(
-      LIFECYCLE_KEY(agentId),
+      LIFECYCLE_KEY(ctx.organizationId, agentId),
       JSON.stringify({
         state: to,
         since: timestamp,
         metadata: input.metadata ?? {},
       }),
     );
-    pipeline.lpush(LIFECYCLE_HISTORY_KEY(agentId), JSON.stringify(historyEntry));
-    pipeline.ltrim(LIFECYCLE_HISTORY_KEY(agentId), 0, 99); // Keep last 100 transitions
+    pipeline.lpush(LIFECYCLE_HISTORY_KEY(ctx.organizationId, agentId), JSON.stringify(historyEntry));
+    pipeline.ltrim(LIFECYCLE_HISTORY_KEY(ctx.organizationId, agentId), 0, 99); // Keep last 100 transitions
     await pipeline.exec();
   } catch (e) {
     logger.warn("Failed to persist lifecycle state to Redis", { agentId, error: e });
