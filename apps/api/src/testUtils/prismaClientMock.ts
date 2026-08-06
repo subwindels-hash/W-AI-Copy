@@ -93,6 +93,11 @@ export const MeetingStatus = enums.MeetingStatus ?? {};
 export const NotetakerStatus = enums.NotetakerStatus ?? {};
 export const AlertSeverity = enums.AlertSeverity ?? {};
 export const Permission = enums.Permission ?? {};
+// Workflow engine enums (Session 120 tests drive runWorkflow end to end).
+export const WorkflowStatus = enums.WorkflowStatus ?? {};
+export const WorkflowRunStatus = enums.WorkflowRunStatus ?? {};
+export const WorkflowNodeType = enums.WorkflowNodeType ?? {};
+export const NodeRunStatus = enums.NodeRunStatus ?? {};
 
 // Catch-all for any enum imported that isn't named above: this is only a
 // convenience; services import the named constants, which are covered above.

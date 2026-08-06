@@ -50,6 +50,9 @@ import {
   Fingerprint,
   Smartphone,
   Gauge,
+  SquarePen,
+  Leaf,
+  Workflow,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -66,6 +69,12 @@ const navItems = [
   { to: "/app/mfa-assurance", icon: ShieldCheck, label: "MFA Assurance" },
   { to: "/app/mobile-devices", icon: Smartphone, label: "Mobile Devices" },
   { to: "/app/opex", icon: Gauge, label: "Operational Excellence" },
+  { to: "/app/prompt-templates", icon: SquarePen, label: "Prompt Templates" },
+  { to: "/app/public-api", icon: Globe2, label: "Public API" },
+  { to: "/app/sustainability", icon: Leaf, label: "Sustainability" },
+  { to: "/app/usage", icon: BarChart3, label: "Usage" },
+  { to: "/app/ai-engineering", icon: Workflow, label: "AI Engineering" },
+  { to: "/app/identity-knowledge", icon: ShieldCheck, label: "Identity Knowledge" },
   { to: "/app/marketing", icon: Megaphone, label: "Marketing" },
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },

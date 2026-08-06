@@ -124,6 +124,13 @@ export function ActionItemsSidebar({ open, channelId, meetingId, onClose }: Prop
                 {a.dueDate && <span>· due {new Date(a.dueDate).toLocaleDateString()}</span>}
                 {a.assignee && <span>· {a.assignee.displayName}</span>}
                 {a.meeting && <span className="text-teal">· 📞 {a.meeting.title}</span>}
+                {/* Session 122 — AI-extracted items are labelled, never
+                    presented as if a person typed them. */}
+                {a.aiGenerated && (
+                  <span className="rounded bg-violet/15 px-1.5 py-0.5 text-[10px] text-violet" title="Extracted from a meeting transcript by the AI notetaker">
+                    AI-extracted
+                  </span>
+                )}
               </div>
             </div>
           </div>

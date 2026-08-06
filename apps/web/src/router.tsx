@@ -29,6 +29,12 @@ const LeadPipelinePage = lazy(() => import("./pages/leads/LeadPipelinePage").the
 const MfaAssurancePage = lazy(() => import("./pages/security/MfaAssurancePage").then((m) => ({ default: m.MfaAssurancePage })));
 const MobileDevicesPage = lazy(() => import("./pages/mobile/MobileDevicesPage").then((m) => ({ default: m.MobileDevicesPage })));
 const OpexAssurancePage = lazy(() => import("./pages/admin/OpexAssurancePage").then((m) => ({ default: m.OpexAssurancePage })));
+const PromptTemplatesPage = lazy(() => import("./pages/admin/PromptTemplatesPage").then((m) => ({ default: m.PromptTemplatesPage })));
+const PublicApiPage = lazy(() => import("./pages/admin/PublicApiPage").then((m) => ({ default: m.PublicApiPage })));
+const SustainabilityPage = lazy(() => import("./pages/admin/SustainabilityPage").then((m) => ({ default: m.SustainabilityPage })));
+const UsagePage = lazy(() => import("./pages/admin/UsagePage").then((m) => ({ default: m.UsagePage })));
+const AiEngineeringPage = lazy(() => import("./pages/admin/AiEngineeringPage").then((m) => ({ default: m.AiEngineeringPage })));
+const IdentityKnowledgePage = lazy(() => import("./pages/admin/IdentityKnowledgePage").then((m) => ({ default: m.IdentityKnowledgePage })));
 const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ default: m.FilesPage })));
 const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
@@ -268,6 +274,12 @@ export const router = createBrowserRouter([
       { path: "mfa-assurance", element: withSuspense(<MfaAssurancePage />) },
       { path: "mobile-devices", element: withSuspense(<MobileDevicesPage />) },
       { path: "opex", element: withSuspense(<OpexAssurancePage />) },
+      { path: "prompt-templates", element: withSuspense(<PromptTemplatesPage />) },
+      { path: "public-api", element: withSuspense(<PublicApiPage />) },
+      { path: "sustainability", element: withSuspense(<SustainabilityPage />) },
+      { path: "usage", element: withSuspense(<UsagePage />) },
+      { path: "ai-engineering", element: withSuspense(<AiEngineeringPage />) },
+      { path: "identity-knowledge", element: withSuspense(<IdentityKnowledgePage />) },
       { path: "ads", element: withSuspense(<AdsPage />) },
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },

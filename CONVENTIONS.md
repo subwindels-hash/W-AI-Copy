@@ -878,3 +878,249 @@
 - **Deals require a company** (no orphan deals); contacts may be company-less.
 - **Kernel events:** every write emits `crm.<entity>.<action>` via
   `KernelService.dispatch` (best effort — never fails the write).
+
+## Session 119 — Decisions Logged (Prompt Templates Completion)
+
+- **Module prefix:** `PromptTemplate*` types in `packages/shared/src/promptTemplates.ts`,
+  **`pt:*` Redis keys**, the existing `/api/v1/prompt-templates` route prefix
+  (unchanged; the sub-router became literal path declarations on the same
+  router, so absolute paths are identical), `apps/web/src/lib/promptTemplates.ts`
+  client (types now re-exported from the shared contract), `/app/prompt-templates`
+  route + sidebar label "Prompt Templates".
+- **`pt:` namespaces are catalogued individually — a bare `pt` entry must
+  never be added.** Each key (`pt:use:<org>`, `pt:recent:<org>`,
+  `pt:day:<org>:<yyyy-mm-dd>`, `pt:since:<org>`) carries the org id in the
+  segment straight after the prefix. A shorter `pt` entry would make the
+  Session 89 sweep expect the org one segment earlier and read the literal
+  `use` as an organization id — the same prefix-length constraint that made
+  Session 118 choose `opx:` over `opex:`.
+- **The renderer is a shared pure function, and holes are reported, not
+  hidden.** `renderPromptTemplate(content, vars)` lives in the shared package
+  (tested identically on both sides of the wire), tolerates whitespace around
+  the pipe (`{{var | default}}`), and returns `missing` — surfaced to clients
+  as `unresolved: string[]` on `POST /:id/use`. The empty-string substitution
+  for a missing variable is Session 23's pinned behaviour and is kept; the
+  caller is simply told what happened. Malformed placeholders (`{{ }}`, single
+  braces) are left raw and are not reported as missing.
+- **Best-effort analytics ledger; the durable counter is the write that
+  matters.** `recordTemplateUse` never throws; a Redis outage cannot block a
+  template use. Statistics never mix sources: lifetime totals come from the
+  database `usageCount`, window numbers come only from the ledger, and the
+  payload carries `ledgerAvailable` so an empty ledger is distinguishable from
+  a measured zero.
+- **Days before the ledger began are not zero-use days.** `daily` contains
+  only days with recorded events; `avgUsesPerDay` divides by
+  `ledgerCoveredDays` (max of ledger start and window start through today) and
+  is `null` when the ledger covers no day. The `pt:since` marker is written
+  with `NX` so the cap-500 event list can never corrupt the ledger-start
+  answer.
+- **Deletion does not erase history.** A template deleted after its uses were
+  recorded keeps its id and count in window aggregates with `title: null` —
+  the title is not invented.
+- **Icon length counts Unicode code points**, not UTF-16 units: a family emoji
+  (11 units, 4 code points) is one glyph and validates. Rates/averages are
+  floored; an empty denominator is `null`.
+- **Built-in templates stay immutable; duplication is the correction path.**
+  `POST /:id/duplicate` copies any template into an ordinary editable user
+  template (`isBuiltIn: false`, `"<title> (copy)"` truncated to 200 chars or an
+  explicit override) — the console hides Edit/Delete on built-ins and offers
+  Duplicate instead.
+- **Route literal paths precede parameterized ones.** `/prompt-templates/stats`
+  is declared before `/prompt-templates/:id` so the literal segment is not
+  captured by the cuid-validated parameter (which would answer 400, not 404).
+
+## Session 120 — Decisions Logged (Public API Gateway Completion)
+
+- **Module prefix:** `Pub*` types in `packages/shared/src/publicApi.ts`, **`pub:*` Redis keys**, the existing `/api/rest/v1` route prefix (six endpoints unchanged), `apps/web/src/lib/publicApi.ts` client (internal usage call + shared types), `/app/public-api` route + sidebar label "Public API".
+- **`pub:` namespaces are catalogued individually — a bare `pub` entry must never be added.** Each key (`pub:req:<org>`, `pub:day:<org>:<date>`, `pub:since:<org>`, `pub:evt:<org>`) carries the org id in the segment straight after the prefix; a shorter entry would make the Session 89 sweep read the literal `req` as an organization id. The third module to hit this constraint after `opx:` and `pt:` — it is now the standing rule: *new org-scoped namespaces are catalogued with the full multi-segment prefix, never a shorter root that would shift the org segment.*
+- **An HTTP verb must mean what it says.** `DELETE /api/v1/apikeys/:id` silently revoked — there was no way to permanently remove a key row. DELETE now hard-deletes (audited); soft revocation remains available through `PATCH { revoked: true }`. When a route's semantics contradict its verb, the correction is to make the verb honest, not to add a second weird endpoint.
+- **A credential needs a lifecycle, including an end and a renewal.** Keys can be created, scoped, revoked, **deleted** and now **renewed** (`expiresInDays` on PATCH). Revoked keys stay immutable; expired-but-not-revoked keys can be renewed and verify again.
+- **Gateway runs are pinned to the key's organization, never the caller's membership.** `runWorkflow` accepts an optional explicit `organizationId`; when the gateway passes it, the actor's membership is not consulted at all. The lesson generalises: an API-key-authenticated request must scope every downstream lookup to `apiOrganization`, because the key's org and the user's org can differ (multi-membership).
+- **Best-effort analytics ledger; the request is the thing that must never fail.** `recordPublicApiCall` is fire-and-forget from the middleware, `ledgerAvailable: false` is reported rather than an empty ledger masquerading as zero, counts come only from the ledger and identifiers only from the database, and a deleted key keeps its counts with `null` identifiers (same rule as prompt templates).
+- **Internal management views of a public surface belong on the internal API.** The console reads `GET /api/v1/apikeys/usage` (user auth), never the public gateway; the external `GET /api/rest/v1/usage` is for key holders. Literal routes (`/usage`) are declared before parameterized ones (`/:id`).
+- **Test-only enum exports live in `prismaClientMock.ts`.** `WorkflowStatus`/`WorkflowRunStatus`/`WorkflowNodeType`/`NodeRunStatus` were added there (parsed from `schema.prisma` like the rest) so `runWorkflow` can be driven end to end in unit tests.
+
+## Session 121 — Decisions Logged (Sustainability/ESG Completion)
+
+- **Module prefix:** `Esg*`/`Sustainability*` types in `packages/shared/src/sustainability.ts`
+  (widened, appended), `esg:*` Redis keys (unchanged root — the org stays in
+  segment 2 for the legacy blob, the adoption marker, the index and the
+  per-record keys alike), the existing `/api/v1/sustainability` route prefix
+  (three endpoints unchanged; `GET`/`DELETE /records/:id` added),
+  `apps/web/src/lib/sustainability.ts` client (appended), `/app/sustainability`
+  route + sidebar label "Sustainability".
+- **A JSON-blob ledger is a lost-write bug, not a storage choice.** Session
+  64's whole-org string made every record a read-modify-write; Session 121
+  moved to one key per record behind an append-only LPUSH index — the same
+  shape Session 118 chose for the opex register. Any future module ledger
+  follows this: per-record keys + append-only index, never a mutable blob.
+- **Legacy blobs are adopted once and left in place.** The Session 64 blob is
+  read on first access, each entry becomes its own key, the `imported` marker
+  is set, and the legacy string is never deleted; a corrupt blob degrades to
+  an empty ledger rather than a crash.
+- **A year-on-year change is same-period or null.** YTD compares against the
+  same instant one year ago — never the full prior calendar year, never
+  all-time totals. No baseline → `null`, never `0` (0 reads as "no change").
+  A signed change is **truncated toward zero**, never rounded: rounding can
+  exaggerate a magnitude (12.46 % → 12.5), and for a reduction that is the
+  "rounding the failure away" direction.
+- **An ESG score is an attestation, not an arithmetic side-effect.** The
+  Session 64 `92 − ytd×2.5` formula (and hard-coded 85/88) was an invented
+  rating presented as data-derived. Scores are `null` with a `note` until an
+  assessment with a stated method exists — the same rule S118 applied to
+  trust dimensions.
+- **A derived row must not vanish because of display rounding.** `greenAi`
+  decided existence on the tCO2e rounded to 3 decimals, so a sub-0.5 kg
+  compute record produced no row. Truthiness/aggregation use unrounded
+  values; rounding is a display concern only.
+- **Rollup sections without a feed are structural zeros — named, not
+  hidden.** `energyRenewablePct`, `waterMl`, `wasteRecycledPct`,
+  `offsetsPurchasedT`, `netZeroTargetYear`, `gpuHours`, `optimizedPct` stay 0
+  for contract compatibility, and the rollup's `provenance` block names each
+  one (the S118 pattern). Web pages never render them as measurements.
+- **Correction paths are part of a ledger module.** `DELETE /records/:id`
+  (admin-gated) removes a mis-entered record and its index entry; the
+  dashboard recomputes from what remains.
+- **The S89 catalog covers every module's keys.** `esg` was missing entirely
+  and is now catalogued org-scoped with a comment stating the org-segment
+  position for every key shape.
+
+## Session 122 — Decisions Logged (Talk Completion)
+
+- **Module prefix:** `Talk*` types in `packages/shared/src/talk.ts`, the existing
+  `/api/v1/talk` route prefix (23 endpoints unchanged), `apps/web/src/lib/talk.ts`
+  (types now re-exported from the shared contract; old names kept as aliases),
+  existing `/app/talk` page + sidebar entry.
+- **A hardcoded 0 in a read position is a lie.** `unreadCount` was always 0
+  ("computed live when needed" — it never was) and the sidebar showed the total
+  message count as if it were unread. Unread is now measured (messages after
+  lastReadAt, excluding the caller's own and deleted ones) or **`null`** when
+  the caller has no membership row — no read position is not "all caught up".
+  UI badges render only when a real number says so.
+- **Cross-org references are refused before anything is persisted.** Channel
+  members, DM peers and AI participants must belong to the caller's
+  organization; a foreign id answers 400 naming the ids, and no dead member
+  row or unusable DM is ever created. The rule generalises: any id the caller
+  pastes into a payload that will live inside their tenant must be
+  tenant-validated on write, not merely inaccessible on read.
+- **A status field with no lifecycle is a trap.** Meetings accepted every
+  status transition and stamped startedAt/endedAt accordingly, so a CANCELLED
+  meeting could be resurrected. Lifecycles are now explicit state machines
+  (`TALK_MEETING_TRANSITIONS` in the shared contract), terminal states are
+  terminal, re-sending the current status is idempotent, and a refused
+  transition answers 409 naming the allowed ones.
+- **AI-generated content must be labelled at the payload and the UI.** The
+  notetaker already stored `metadata.aiGenerated`; serializers now surface it
+  as `aiGenerated` on every action item and the UI badges "AI-extracted".
+- **Shared contracts hold the Zod; services re-export under the old names.**
+  The ten talk schemas moved to `packages/shared/src/talk.ts` and both
+  services re-export them, so route files and tests keep compiling untouched.
+  Caller-facing input types use `z.input`, not `z.infer`, so defaulted fields
+  stay optional exactly as the same-file inference behaved.
+
+## Session 123 — Decisions Logged (Usage Intelligence Completion — the last PARTIAL)
+
+- **Module prefix:** `Usage*`/`Usg*` types in `packages/shared/src/usage.ts`
+  (widened, appended), `usg:evt` Redis keys (tenantStore shape, unchanged),
+  the existing `/api/v1/usage-intel` route prefix (three endpoints unchanged;
+  `GET`/`DELETE /events/:id` added), `apps/web/src/lib/usage.ts` client
+  (appended), `/app/usage` route + sidebar label "Usage".
+- **A hardcoded delta is a placeholder, not a measurement.** The AI metrics'
+  `deltaPct: 0, trend: "flat"` were never computed — the prior window wasn't
+  queried. Every delta is now computed against a real prior window or is
+  `null` (no baseline → no trend). Same rule as S121's same-period changes:
+  *a percentage change without a baseline is null, never 0.*
+- **An empty denominator is `null`, and the direction of falseness matters.**
+  0 ms latency is the *perfectly fast* reading, 0 % error the *no failures*
+  reading, 0 % adoption the *nobody uses it* reading — all false compliments
+  (or accusations) for an org with no data. Third module to pin this rule
+  after S118/S121.
+- **A field that exists but is never populated is a structural zero wearing
+  a measured name.** `series[].tokens` was always 0 because the row fetch
+  never selected token counts. If the code can compute it, compute it; if it
+  cannot, say so (provenance) — never leave a 0 field that looks measured.
+- **tenantStore modules are catalogued by their two-segment prefix**
+  (`usg:evt` → org in the segment after the index marker), matching the
+  CRM/AppBuilder/Helpdesk convention; the S89 sweep's shallow check passes
+  for this shape, and the comment states the org's position.
+- **Literal routes precede parameterized ones** (`/events/:id` after
+  `/events`, matching the `/usage`-style guidance from S120).
+- **The completion track is done.** Sessions 119–123 moved
+  promptTemplates, publicApi, sustainability, talk and usage from PARTIAL to
+  COMPLETE; the inventory now reads 103 COMPLETE / 0 PARTIAL / 2 STUB-by-design
+  (`events`, `webhook`) / 1 DEMO DATA (`quantum`). The two stubs are
+  by-design (SSE channel + webhook receiver) and the demo module is labelled
+  as such; the remaining work is the runtime-validation track.
+
+## Session 124 — Decisions Logged (AI Software Engineering Workforce)
+
+- **Module prefix:** `Aew*`/`AiEngineering*` types in `packages/shared/src/aiEngineering.ts`,
+  **`aew:` Redis keys**, the new `/api/v1/ai-engineering` route prefix (Session
+  26's `/api/v1/engineering` observability is untouched — the workforce is a
+  department, the observability module is its telemetry, and they stay
+  separate), `apps/web/src/lib/aiEngineering.ts` client, `/app/ai-engineering`
+  route + sidebar label "AI Engineering".
+- **A workforce is a coordination layer, and every step says what it did.**
+  The orchestrator pipeline records each step with `mode: advisory|executed`
+  and an `aiGenerated` flag. Plans without a configured AI provider are
+  deterministic templates — labelled as such, never presented as
+  measurements. Test execution is real only when the repo has a `localPath`
+  and the caller opts in; otherwise the step is advisory and says so.
+- **GitHub is one capability, not the product.** The department works over
+  its own org-scoped stores; GitHub connections add remote execution. Tokens
+  are verified at connect time (`/user`, `/user/orgs`), stored only in the
+  org-scoped store, and every read returns `tokenMasked`. A missing
+  connection is an explicit error — the workforce never fabricates a remote
+  result, and upstream API errors surface with their status.
+- **Repository intelligence labels inference.** Scanner nodes carry
+  `basis: "observed" | "heuristic"` and a confidence; heuristics (duplicate
+  blocks, dead exports, secret literals) are explicitly potentially-wrong.
+  Re-scans replace the graph; a scan of an empty directory is an empty graph
+  with repo status `ready`, never invented nodes.
+- **Memory entries are source-labelled and never invented.** The orchestrator
+  records lessons from finished/failed tasks (`source: "task"`); a
+  `source: "user"` entry can only be created by a person through the API.
+- **Command-center honesty:** unmeasured values are "not connected"/
+  "unknown"/`null`, never 0-as-success; the payload's `note` states which
+  half of the numbers came from connected GitHub accounts.
+- **Tenant isolation:** `aew` catalogued org-scoped in the S89 sweep — every
+  key is `aew:<entity>:<org>:…` with the org in the segment straight after
+  the prefix (the `esg` shape); per-repo knowledge graphs and teams live
+  under the org that owns the repo.
+
+## Session 125 — Decisions Logged (Super Admin Biography, Identity Memory & AI Knowledge)
+
+- **Module prefix:** `Ik*` types in `packages/shared/src/identityKnowledge.ts`,
+  **`ik:` Redis keys** (org in the segment straight after the prefix — the
+  `esg`/`aew` shape, catalogued org-scoped in the S89 sweep),
+  `/api/v1/identity-knowledge` route prefix, `apps/web/src/lib/identityKnowledge.ts`
+  client, `/app/identity-knowledge` route + sidebar label "Identity Knowledge".
+- **The Super Admin is an authority boundary, enforced twice.** Every
+  mutating route carries `requireSuperAdmin` AND the service re-checks
+  `superAdminOnly(actor)`, so a mis-wired route still cannot bypass the
+  rule. This is the pattern for any future "single trusted authority"
+  capability: route middleware is convenience, the service check is the
+  guarantee.
+- **Approval gates AI usage; publish = verified.** A record answers the AI
+  engine once it is `approved`; `verified` (highest confidence) is set ONLY
+  by a Super Admin `publish`. Editing a published record returns it to
+  `pending_approval` and clears verification — nothing reaches the AI
+  without a fresh approval.
+- **AI answers carry their receipts.** Every answer returns `sources[]`
+  (record id/title/kind/classification/verified/usedIn) and labels the
+  AI-generated summary as such; an answer with no approved match says "I do
+  not have sufficient approved knowledge" — never a guess. Restricted
+  records are included only for authorized viewers.
+- **Synchronization goes through the existing fabric, never a parallel
+  store.** Published records are written with `MemoryEvolutionService.add`
+  (the fabric deduplicates by content+scope, so re-syncs cannot duplicate)
+  and announced via `KernelService.dispatch` — the same integration points
+  the memory and orchestrator modules use.
+- **Search integration is additive and permission-aware.** A new
+  `knowledge` entity type in `ES_ENTITY_TYPES` + a `scanType` case; the
+  search service threads the viewer through `search`/`scanType` and private
+  records are never indexed.
+- **Reuse, don't re-implement:** AuditLog (Prisma), attachments uploads,
+  `hasPermission`, `requireSuperAdmin`, the Kernel event bus and the Memory
+  Fabric are all reused — the module owns only its governed records and the
+  rules around them.

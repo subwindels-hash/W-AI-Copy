@@ -58,12 +58,18 @@ describe("an empty organization reports zeros, not plausible numbers", () => {
   it("usage", async () => {
     const d = await UsageService.dashboard(OID);
     expect(d.totalRequests30d).toBe(0);
-    expect(d.adoptionPct).toBe(0);
-    expect(d.automationRate).toBe(0);
+    // Session 123: an empty denominator is null, never 0 — no members is not
+    // a 0 % adoption rate, and no workflow runs is not a 0 % automation rate.
+    expect(d.adoptionPct).toBeNull();
+    expect(d.automationRate).toBeNull();
     expect(d.topModels).toHaveLength(0);
     // The 30-day series still has 30 points, all empty — an honest shape.
+    // Latency on an empty day is null (0 ms would read as "perfectly fast").
     expect(d.series).toHaveLength(30);
     expect(d.series.every((p) => p.requests === 0)).toBe(true);
+    expect(d.series.every((p) => p.latencyMs === null)).toBe(true);
+    expect(d.metrics.find((m) => m.label === "Avg AI latency")!.value).toBeNull();
+    expect(d.metrics.find((m) => m.label === "AI error rate")!.value).toBeNull();
   });
 
   it("cognitive", async () => {
@@ -94,7 +100,12 @@ describe("an empty organization reports zeros, not plausible numbers", () => {
     const d = await SustainabilityService.dashboard(OID);
     expect(d.emissionsTotalTCO2e).toBe(0);
     expect(d.emissionsBySource).toHaveLength(0);
-    expect(d.scores.overall).toBe(0);
+    // Session 121: an ESG score without an attested assessment is null with a
+    // note (the Session 64 formula invented ratings; a bare 0 would read as
+    // a score of zero). A same-period change without a baseline is null too.
+    expect(d.scores.overall).toBeNull();
+    expect(typeof d.scores.note).toBe("string");
+    expect(d.emissionsYtdChangePct).toBeNull();
     expect(d.energySeries).toHaveLength(12);
   });
 

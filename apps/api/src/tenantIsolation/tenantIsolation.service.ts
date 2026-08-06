@@ -175,6 +175,50 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "opx:policy", scope: "org_scoped" },
   { prefix: "opx:event", scope: "org_scoped" },
   { prefix: "opx:imported", scope: "org_scoped" },
+  // Prompt Templates usage ledger (Session 119). Each key carries the org id
+  // as the segment straight after the prefix (`pt:use:<org>`,
+  // `pt:recent:<org>`, `pt:day:<org>:<yyyy-mm-dd>`, `pt:since:<org>`), so the
+  // sweep's org-segment derivation holds. A bare `pt` entry is deliberately
+  // NOT added: `pt:use:<org>` would then be matched with the org expected one
+  // segment earlier, and the sweep would read the literal `use` as an
+  // organization id and report a conformance check it never performed.
+  { prefix: "pt:since", scope: "org_scoped" },
+  { prefix: "pt:use", scope: "org_scoped" },
+  { prefix: "pt:recent", scope: "org_scoped" },
+  { prefix: "pt:day", scope: "org_scoped" },
+  // Public API call ledger (Session 120). Each key carries the org id as the
+  // segment straight after the prefix (`pub:req:<org>`, `pub:day:<org>:<d>`,
+  // `pub:since:<org>`, `pub:evt:<org>`), so the sweep's org-segment
+  // derivation holds. A bare `pub` entry is deliberately NOT added: the
+  // sweep would read the literal `req` as an organization id.
+  { prefix: "pub:since", scope: "org_scoped" },
+  { prefix: "pub:req", scope: "org_scoped" },
+  { prefix: "pub:day", scope: "org_scoped" },
+  { prefix: "pub:evt", scope: "org_scoped" },
+  // Sustainability / ESG ledger (Session 64, completed by Session 121). Every
+  // key is `esg:<org>:<suffix>` — the org sits in the segment straight after
+  // the prefix, so the sweep's derivation (orgIndex = prefix.split(":").length
+  // = 1) holds for the legacy blob `esg:<org>:records`, the adoption marker
+  // `esg:<org>:imported`, the index `esg:<org>:idx` and the per-record keys
+  // `esg:<org>:rec:<id>` alike.
+  { prefix: "esg", scope: "org_scoped" },
+  // Usage Intelligence event ledger (Session 55, completed by Session 123).
+  // tenantStore shape: `usg:evt:idx:<org>` (zset) and `usg:evt:i:<org>:<id>`
+  // (per-event hash) — the same shape the CRM/AppBuilder/Helpdesk stores use,
+  // catalogued by their two-segment prefix with the org in the segment after
+  // the index marker.
+  { prefix: "usg:evt", scope: "org_scoped" },
+  // AI Software Engineering Workforce (Session 124). Every key is
+  // `aew:<entity>:<org>:…` — the org sits in the segment straight after the
+  // prefix (index 1), so the sweep's org-segment derivation holds for repos
+  // (`aew:repo:<org>:<id>`), connections, engineer assignments, tasks, intel
+  // nodes, memory entries and the activity ledger alike.
+  { prefix: "aew", scope: "org_scoped" },
+  // Super Admin Biography / Identity Knowledge system (Session 125). Every key
+  // is `ik:<entity>:<org>:…` — the org sits in the segment straight after the
+  // prefix (index 1), so the sweep's org-segment derivation holds for records
+  // (`ik:rec:<org>:<id>`), versions, grants, and the activity ledger alike.
+  { prefix: "ik", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A

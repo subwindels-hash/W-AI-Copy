@@ -389,9 +389,22 @@ export async function deleteWorkflow(userId: string, id: string) {
 }
 
 // ─── Execution ──────────────────────────────────────────────────
-export async function runWorkflow(userId: string, id: string, input: z.infer<typeof RunWorkflowSchema>) {
-  const ctx = await resolveUserContext(userId);
-  const w = await prisma.workflow.findFirst({ where: { id, organizationId: ctx.organizationId, deletedAt: null } });
+/**
+ * Run a workflow. With `organizationId` omitted (the default) the workflow
+ * is resolved through the actor's membership — the historical behaviour.
+ *
+ * Session 120 — the public API gateway passes the *API key's* organization
+ * explicitly. Before that, the public route called this with only the key
+ * creator's user id, so the workflow was resolved through the creator's
+ * membership: a key issued to org A whose creator also belonged to org B
+ * could trigger org B's workflows — a cross-tenant hole on the public
+ * surface. With the organization pinned, the lookup cannot leave the key's
+ * tenant, and the actor's membership is not consulted at all.
+ */
+export async function runWorkflow(userId: string, id: string, input: z.infer<typeof RunWorkflowSchema>, organizationId?: string) {
+  const ctx = organizationId ? null : await resolveUserContext(userId);
+  const orgId = organizationId ?? ctx!.organizationId;
+  const w = await prisma.workflow.findFirst({ where: { id, organizationId: orgId, deletedAt: null } });
   if (!w) throw AppError.notFound("Workflow not found");
   if (w.status !== WorkflowStatus.ACTIVE && w.status !== WorkflowStatus.DRAFT) {
     throw AppError.badRequest(`Workflow is ${w.status.toLowerCase()}; cannot run.`);
@@ -438,7 +451,7 @@ export async function runWorkflow(userId: string, id: string, input: z.infer<typ
     let lastResult: any = null;
     for (let attempt = 0; attempt <= retryCount; attempt++) {
       const t0 = Date.now();
-      const res = await executeNode(node, context, ctx.organizationId, controller.signal);
+      const res = await executeNode(node, context, orgId, controller.signal);
       nodeRuns.push({
         nodeId: node.id, label: node.label, type: node.type,
         status: res.status, attempts: attempt + 1, durationMs: Date.now() - t0,
@@ -483,7 +496,7 @@ export async function runWorkflow(userId: string, id: string, input: z.infer<typ
           where: { id: run.id },
           data: { status, endedAt: new Date(), error, nodeRuns: nodeRuns as any, output: outs.get("__input") as any },
         });
-        dispatch("workflow.run.failed", ctx.organizationId, { workflowId: id, workflowName: w.name, runId: run.id, error });
+        dispatch("workflow.run.failed", orgId, { workflowId: id, workflowName: w.name, runId: run.id, error });
         throw new AppError("INTERNAL_ERROR", error ?? `Node "${node.label}" failed`, 500);
       }
     }
@@ -502,7 +515,7 @@ export async function runWorkflow(userId: string, id: string, input: z.infer<typ
     where: { id: run.id },
     data: { status, endedAt: new Date(), nodeRuns: nodeRuns as any, output: outs as any },
   });
-  dispatch("workflow.run.succeeded", ctx.organizationId, { workflowId: id, workflowName: w.name, runId: run.id });
+  dispatch("workflow.run.succeeded", orgId, { workflowId: id, workflowName: w.name, runId: run.id });
   return { runId: run.id, status: "succeeded", nodeRuns };
 }
 

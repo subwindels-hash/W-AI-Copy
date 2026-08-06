@@ -399,6 +399,8 @@
     },
     "tests": [
       "extensions.spec.ts",
+      "identityKnowledge.spec.ts",
+      "publicApi.spec.ts",
       "sessions41-76-80.spec.ts",
       "agents/agents.test.ts",
       "services/ai/registry.test.ts",
@@ -601,6 +603,134 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "aiEngineering",
+    "title": "aiEngineering",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/aiEngineering",
+    "backend": {
+      "serviceDir": "apps/api/src/aiEngineering",
+      "serviceFile": {
+        "file": "commandCenter.service.ts",
+        "path": "/home/user/WIN/apps/api/src/aiEngineering/commandCenter.service.ts",
+        "sloc": 117,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 3183,
+      "serviceFiles": [
+        "commandCenter.service.ts",
+        "github.service.ts",
+        "github.test.ts",
+        "memory.service.ts",
+        "memory.test.ts",
+        "repoIntel.service.ts",
+        "repoIntel.test.ts",
+        "workforce.service.ts",
+        "workforce.test.ts",
+        "aiEngineering/workforce.service.ts",
+        "aiEngineering/github.service.ts",
+        "aiEngineering/repoIntel.service.ts",
+        "aiEngineering/memory.service.ts",
+        "aiEngineering/commandCenter.service.ts"
+      ],
+      "importedServiceFiles": [
+        "aiEngineering/workforce.service.ts",
+        "aiEngineering/github.service.ts",
+        "aiEngineering/repoIntel.service.ts",
+        "aiEngineering/memory.service.ts",
+        "aiEngineering/commandCenter.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/aiEngineering.ts",
+        "sloc": 531,
+        "counts": {
+          "total": 42,
+          "GET": 18,
+          "POST": 18,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 3
+        },
+        "endpoints": [
+          "GET /roles",
+          "POST /repos",
+          "GET /repos",
+          "GET /repos/:id",
+          "DELETE /repos/:id",
+          "PATCH /repos/:id/team",
+          "POST /repos/:id/scan",
+          "GET /repos/:id/intel",
+          "GET /tasks",
+          "POST /tasks",
+          "GET /tasks/:id",
+          "POST /tasks/:id/run",
+          "POST /tasks/:id/pr",
+          "GET /memory",
+          "POST /memory",
+          "DELETE /memory/:id",
+          "GET /command-center",
+          "POST /connections",
+          "GET /connections",
+          "DELETE /connections/:id",
+          "GET /github/:connId/repos",
+          "POST /github/:connId/repos",
+          "GET /repos/:id/github/branches",
+          "POST /repos/:id/github/branches",
+          "POST /repos/:id/github/commits",
+          "GET /repos/:id/github/pulls",
+          "POST /repos/:id/github/pulls",
+          "POST /repos/:id/github/pulls/:number/merge",
+          "POST /repos/:id/github/pulls/:number/review",
+          "PATCH /repos/:id/github/pulls/:number",
+          "GET /repos/:id/github/issues",
+          "POST /repos/:id/github/issues",
+          "PATCH /repos/:id/github/issues/:number",
+          "GET /repos/:id/github/milestones",
+          "POST /repos/:id/github/milestones",
+          "GET /repos/:id/github/releases",
+          "POST /repos/:id/github/releases",
+          "POST /repos/:id/github/releases/generate-notes",
+          "GET /repos/:id/github/workflows",
+          "POST /repos/:id/github/workflows/:workflow/dispatch",
+          "GET /repos/:id/github/runs",
+          "GET /repos/:id/github/checks"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/aiEngineering.ts (342 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/aiEngineering.ts (77 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Task",
+        "Activity",
+        "Message",
+        "Workflow"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "aiEngineering.spec.ts",
+      "aiEngineering/github.test.ts",
+      "aiEngineering/memory.test.ts",
+      "aiEngineering/repoIntel.test.ts",
+      "aiEngineering/workforce.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "apikey",
     "title": "apikey",
     "sessions": [],
@@ -611,26 +741,30 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 148,
+        "sloc": 178,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 148,
+      "serviceTotalSloc": 617,
       "serviceFiles": [
-        "publicApi/publicApi.service.ts"
+        "publicApi/publicApi.service.ts",
+        "publicApi/publicApiUsage.service.ts",
+        "services/workspace.service.ts"
       ],
       "importedServiceFiles": [
-        "publicApi/publicApi.service.ts"
+        "publicApi/publicApi.service.ts",
+        "publicApi/publicApiUsage.service.ts",
+        "services/workspace.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/apikey.ts",
-        "sloc": 56,
+        "sloc": 75,
         "counts": {
-          "total": 5,
-          "GET": 2,
+          "total": 6,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 1,
@@ -639,7 +773,7 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
+    "sharedTypes": "packages/shared/src/apiKeys.ts (66 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/apikey.ts (3 LOC)",
       "pages": []
@@ -648,13 +782,18 @@
       "prismaModels": [
         "User",
         "Organization",
+        "Workspace",
         "Membership"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "publicApi/publicApi.test.ts"
+      "publicApi.spec.ts",
+      "publicApi/publicApi.completion.test.ts",
+      "publicApi/publicApi.test.ts",
+      "services/workflow.engine.test.ts",
+      "services/workspace.service.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -887,6 +1026,7 @@
     },
     "tests": [
       "attachments/attachments.test.ts",
+      "services/talk.completion.test.ts",
       "services/talk.test.ts"
     ],
     "syntheticData": [],
@@ -991,6 +1131,7 @@
     "tests": [
       "agentComm.spec.ts",
       "aiEcosystem.spec.ts",
+      "aiEngineering.spec.ts",
       "auth.spec.ts",
       "collaboration.spec.ts",
       "conversations.spec.ts",
@@ -1003,6 +1144,7 @@
       "extensions.spec.ts",
       "googleAuth.spec.ts",
       "governance.spec.ts",
+      "identityKnowledge.spec.ts",
       "infrastructure.spec.ts",
       "leadPipeline.spec.ts",
       "marketplace.spec.ts",
@@ -1013,6 +1155,8 @@
       "opexAssurance.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
+      "promptTemplates.spec.ts",
+      "publicApi.spec.ts",
       "qa.spec.ts",
       "release.spec.ts",
       "sessions37-40.spec.ts",
@@ -1022,7 +1166,10 @@
       "sessions61-72-82.spec.ts",
       "sessions73-75.spec.ts",
       "smoke.spec.ts",
+      "sustainability.spec.ts",
+      "talk.spec.ts",
       "tenantIsolation.spec.ts",
+      "usage.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
     ],
@@ -2039,6 +2186,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "aiEngineering.spec.ts",
       "sessions54-60.spec.ts",
       "sessions61-72-82.spec.ts",
       "command/operations.test.ts"
@@ -2066,7 +2214,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1433,
+      "serviceTotalSloc": 1446,
       "serviceFiles": [
         "bootstrap.ts",
         "composer.service.ts",
@@ -2977,11 +3125,11 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 148,
+        "sloc": 178,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 321,
+      "serviceTotalSloc": 351,
       "serviceFiles": [
         "publicApi/publicApi.service.ts",
         "services/webhook.service.ts"
@@ -3017,7 +3165,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
+    "sharedTypes": "packages/shared/src/apiKeys.ts (66 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/developers.ts (71 LOC)",
       "pages": []
@@ -3031,6 +3179,7 @@
     },
     "tests": [
       "smoke.spec.ts",
+      "publicApi/publicApi.completion.test.ts",
       "publicApi/publicApi.test.ts"
     ],
     "syntheticData": [],
@@ -3907,11 +4056,11 @@
       "serviceFile": {
         "file": "enterpriseSearch.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
-        "sloc": 394,
+        "sloc": 412,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1049,
+      "serviceTotalSloc": 1085,
       "serviceFiles": [
         "bootstrap.ts",
         "enterpriseSearch.service.ts",
@@ -4202,6 +4351,7 @@
       "mfaAssurance.spec.ts",
       "mobileSync.spec.ts",
       "opexAssurance.spec.ts",
+      "usage.spec.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
@@ -5154,6 +5304,98 @@
     },
     "tests": [
       "sessions42-47.spec.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "identityKnowledge",
+    "title": "identityKnowledge",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/identityKnowledge",
+    "backend": {
+      "serviceDir": "apps/api/src/identityKnowledge",
+      "serviceFile": {
+        "file": "identityKnowledge.service.ts",
+        "path": "/home/user/WIN/apps/api/src/identityKnowledge/identityKnowledge.service.ts",
+        "sloc": 655,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1812,
+      "serviceFiles": [
+        "identityKnowledge.service.ts",
+        "identityKnowledge.test.ts",
+        "identityKnowledge/identityKnowledge.service.ts",
+        "attachments/attachments.service.ts"
+      ],
+      "importedServiceFiles": [
+        "identityKnowledge/identityKnowledge.service.ts",
+        "attachments/attachments.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/identityKnowledge.ts",
+        "sloc": 248,
+        "counts": {
+          "total": 22,
+          "GET": 8,
+          "POST": 11,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /records",
+          "POST /records",
+          "GET /records/:id",
+          "PATCH /records/:id",
+          "DELETE /records/:id",
+          "POST /records/:id/approve",
+          "POST /records/:id/publish",
+          "POST /records/:id/archive",
+          "GET /records/:id/versions",
+          "POST /records/:id/grants",
+          "DELETE /records/:id/grants/:userId",
+          "POST /records/:id/relations",
+          "POST /sync",
+          "POST /ask",
+          "GET /agents",
+          "POST /agents/:agentId/run",
+          "GET /dashboard",
+          "GET /graph",
+          "GET /activity",
+          "POST /documents",
+          "POST /import",
+          "GET /export"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/identityKnowledge.ts (239 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/identityKnowledge.ts (89 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "AuditLog",
+        "Agent",
+        "Activity",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "identityKnowledge.spec.ts",
+      "identityKnowledge/identityKnowledge.test.ts",
+      "attachments/attachments.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -7309,40 +7551,53 @@
       "serviceFile": {
         "file": "promptTemplates.service.ts",
         "path": "/home/user/WIN/apps/api/src/promptTemplates/promptTemplates.service.ts",
-        "sloc": 95,
+        "sloc": 208,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 301,
+      "serviceTotalSloc": 1741,
       "serviceFiles": [
         "bootstrap.ts",
+        "promptTemplates.completion.test.ts",
         "promptTemplates.service.ts",
         "promptTemplates.test.ts",
-        "promptTemplates/promptTemplates.service.ts"
+        "promptTemplatesUsage.service.ts",
+        "promptTemplates/promptTemplates.service.ts",
+        "promptTemplates/promptTemplatesUsage.service.ts"
       ],
       "importedServiceFiles": [
-        "promptTemplates/promptTemplates.service.ts"
+        "promptTemplates/promptTemplates.service.ts",
+        "promptTemplates/promptTemplatesUsage.service.ts"
       ],
       "bootstrapFile": "apps/api/src/promptTemplates/bootstrap.ts"
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/promptTemplates.ts",
-        "sloc": 65,
+        "sloc": 152,
         "counts": {
-          "total": 5,
-          "GET": 1,
-          "POST": 2,
+          "total": 8,
+          "GET": 3,
+          "POST": 3,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
         },
-        "endpoints": []
+        "endpoints": [
+          "GET /prompt-templates",
+          "POST /prompt-templates",
+          "GET /prompt-templates/stats",
+          "GET /prompt-templates/:id",
+          "POST /prompt-templates/:id/use",
+          "POST /prompt-templates/:id/duplicate",
+          "PATCH /prompt-templates/:id",
+          "DELETE /prompt-templates/:id"
+        ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/promptTemplates.ts (319 LOC)",
     "web": {
-      "client": "apps/web/src/lib/promptTemplates.ts (42 LOC)",
+      "client": "apps/web/src/lib/promptTemplates.ts (55 LOC)",
       "pages": []
     },
     "db": {
@@ -7359,11 +7614,13 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "promptTemplates.spec.ts",
+      "promptTemplates/promptTemplates.completion.test.ts",
       "promptTemplates/promptTemplates.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "publicApi",
@@ -7376,30 +7633,34 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 148,
+        "sloc": 178,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1148,
+      "serviceTotalSloc": 2166,
       "serviceFiles": [
+        "publicApi.completion.test.ts",
         "publicApi.service.ts",
         "publicApi.test.ts",
+        "publicApiUsage.service.ts",
         "services/workflow.service.ts",
-        "services/webhook.service.ts"
+        "services/webhook.service.ts",
+        "publicApi/publicApiUsage.service.ts"
       ],
       "importedServiceFiles": [
         "services/workflow.service.ts",
-        "services/webhook.service.ts"
+        "services/webhook.service.ts",
+        "publicApi/publicApiUsage.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/publicApi.ts",
-        "sloc": 94,
+        "sloc": 177,
         "counts": {
-          "total": 6,
-          "GET": 4,
+          "total": 8,
+          "GET": 6,
           "POST": 2,
           "PUT": 0,
           "PATCH": 0,
@@ -7408,16 +7669,18 @@
         "endpoints": [
           "GET /",
           "GET /workflows",
+          "GET /workflows/:id",
           "POST /workflows/:id/run",
+          "GET /usage",
           "GET /agents",
           "POST /talk/channels/:id/messages",
           "GET /talk/channels"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
+    "sharedTypes": "packages/shared/src/publicApi.ts (178 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/publicApi.ts (41 LOC)",
       "pages": []
     },
     "db": {
@@ -7433,18 +7696,21 @@
         "TalkChannel",
         "TalkMessage",
         "Workflow",
+        "WorkflowRun",
         "ApiKey"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "publicApi.spec.ts",
+      "publicApi/publicApi.completion.test.ts",
       "publicApi/publicApi.test.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "qa",
@@ -8361,13 +8627,14 @@
       "serviceFile": {
         "file": "sustainability.service.ts",
         "path": "/home/user/WIN/apps/api/src/sustainability/sustainability.service.ts",
-        "sloc": 209,
+        "sloc": 363,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
-      "serviceTotalSloc": 424,
+      "serviceTotalSloc": 1115,
       "serviceFiles": [
         "bootstrap.ts",
+        "sustainability.completion.test.ts",
         "sustainability.service.ts",
         "sustainability/sustainability.service.ts"
       ],
@@ -8379,30 +8646,33 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/sustainability.ts",
-        "sloc": 29,
+        "sloc": 88,
         "counts": {
-          "total": 3,
-          "GET": 2,
+          "total": 5,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 0,
-          "DELETE": 0
+          "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
           "GET /records",
+          "GET /records/:id",
+          "DELETE /records/:id",
           "POST /activity"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/sustainability.ts (69 LOC)",
+    "sharedTypes": "packages/shared/src/sustainability.ts (170 LOC)",
     "web": {
-      "client": "apps/web/src/lib/sustainability.ts (9 LOC)",
+      "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Activity",
         "Message"
       ],
@@ -8410,11 +8680,13 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "sustainability.spec.ts",
+      "sustainability/sustainability.completion.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "talk",
@@ -8430,11 +8702,11 @@
       "serviceFile": {
         "file": "talk.service.ts",
         "path": "/home/user/WIN/apps/api/src/services/talk.service.ts",
-        "sloc": 479,
+        "sloc": 544,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1009,
+      "serviceTotalSloc": 1076,
       "serviceFiles": [
         "services/talk.service.ts",
         "services/meeting.service.ts"
@@ -8484,9 +8756,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/talk.ts (340 LOC)",
     "web": {
-      "client": "apps/web/src/lib/talk.ts (186 LOC)",
+      "client": "apps/web/src/lib/talk.ts (117 LOC)",
       "pages": []
     },
     "db": {
@@ -8500,12 +8772,15 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "publicApi.spec.ts",
+      "talk.spec.ts",
       "services/meeting.service.test.ts",
+      "services/talk.completion.test.ts",
       "services/talk.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "tenantIsolation",
@@ -8518,11 +8793,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 467,
+        "sloc": 511,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1110,
+      "serviceTotalSloc": 1198,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8880,14 +9155,15 @@
       "serviceFile": {
         "file": "usage.service.ts",
         "path": "/home/user/WIN/apps/api/src/usage/usage.service.ts",
-        "sloc": 168,
+        "sloc": 273,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 618,
+      "serviceTotalSloc": 1112,
       "serviceFiles": [
         "bootstrap.ts",
         "rollups.test.ts",
+        "usage.completion.test.ts",
         "usage.service.ts",
         "usage/usage.service.ts"
       ],
@@ -8899,25 +9175,27 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/usage.ts",
-        "sloc": 64,
+        "sloc": 127,
         "counts": {
-          "total": 3,
-          "GET": 2,
+          "total": 5,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 0,
-          "DELETE": 0
+          "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
           "POST /events",
-          "GET /events"
+          "GET /events",
+          "GET /events/:id",
+          "DELETE /events/:id"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/usage.ts (84 LOC)",
+    "sharedTypes": "packages/shared/src/usage.ts (168 LOC)",
     "web": {
-      "client": "apps/web/src/lib/usage.ts (9 LOC)",
+      "client": "apps/web/src/lib/usage.ts (49 LOC)",
       "pages": []
     },
     "db": {
@@ -8940,12 +9218,17 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "publicApi.spec.ts",
       "sessions54-60.spec.ts",
-      "usage/rollups.test.ts"
+      "usage.spec.ts",
+      "usage/rollups.test.ts",
+      "usage/usage.completion.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "PARTIAL"
+    "externalIntegrations": [
+      "OpenAI"
+    ],
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "uxIntelligence",
