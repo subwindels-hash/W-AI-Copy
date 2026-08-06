@@ -30,6 +30,48 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 114 — Decisions Logged (Google Identity Completion)
+
+- **Module prefix:** `Google*` types, `gid:*` Redis keys, the existing
+  `/api/v1/auth/google` route prefix, `apps/web/src/lib/googleAuth.ts` client,
+  `/app/google-identity` route + sidebar label "Google Identity".
+- **New contract file, not an extension:** unlike Session 113, the module had
+  no shared contract at all, so `packages/shared/src/googleAuth.ts` is new and
+  exported from the barrel. Nothing was moved out of the API service into it.
+- **Governance is a separate service from the flow.** `services/googleAuth.service.ts`
+  keeps sole ownership of the OAuth exchange and ID-token verification;
+  `googleAuth/googleIdentity.service.ts` owns policy, register, ledger and
+  configuration. The flow calls the governance service at exactly two points
+  (gate before issuing a session, record after) and nowhere else.
+- **A default is labelled as a default.** When no policy record exists the API
+  returns the platform default with `isDefault: true`, so a UI can never
+  present "open" as a decision somebody made. Resetting a policy that was never
+  stored is a `404`, not a silent success.
+- **Enforcement fails closed; auditing fails open.** A policy read error
+  propagates and the sign-in fails (Redis is already required earlier in the
+  flow for the OAuth state). A ledger write failure is swallowed: the session
+  was already authorized, and losing an audit row must not lock a legitimate
+  user out. Both choices are stated in comments at the call sites.
+- **Secrets and subjects never leave the process.** The configuration report
+  returns booleans and a masked client id, never `GOOGLE_CLIENT_SECRET`;
+  Google's `sub` is stored only as a truncated SHA-256 fingerprint
+  (`GOOGLE_SUBJECT_FINGERPRINT_CHARS`).
+- **Environment reports do not reach the network.** Readiness is derived from
+  environment checks only, `ready = checks.every(pass)` (a `warn` is not a
+  pass), and the payload's own note says a passing check means "configured",
+  not "working". A test asserts `fetch` is never called.
+- **Ledger ordering is deterministic without lying about time.** Entries carry
+  a per-process append counter used only to break same-millisecond ties; it is
+  stripped before the record leaves the service, so no timestamp is nudged to
+  make sorting easier.
+- **Sub-router mounting (as Session 113):** `v1.use("/auth/google", router)`
+  registered *before* `registerGoogleAuthRoutes(v1)`, with `authenticate`
+  attached per handler rather than via `router.use`, so unmatched paths fall
+  through to the original endpoints and keep their unauthenticated status.
+- **Pre-login namespaces are catalogued too.** `google:state` was added to
+  `TI_NAMESPACE_CATALOG` as `shared` with a comment explaining why it cannot be
+  org-scoped, rather than being left uncatalogued.
+
 ## Session 113 — Decisions Logged (Derivatives & Fixed-Income Desk Completion)
 
 - **Module prefix:** `Deriv` types, `deriv:*` Redis keys, `/api/v1/derivatives`

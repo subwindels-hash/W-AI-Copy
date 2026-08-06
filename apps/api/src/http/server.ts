@@ -11,6 +11,7 @@ import { registerHealthRoutes } from "./routes/health.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
 import { registerGoogleAuthRoutes } from "./routes/googleAuth.js";
+import { registerGoogleIdentityRoutes } from "./routes/googleIdentity.js";
 import { registerDerivativesRoutes } from "./routes/derivatives.js";
 import { registerDerivativesDeskRoutes } from "./routes/derivativesDesk.js";
 import { registerAdminRoutes } from "./routes/admin.js";
@@ -188,6 +189,16 @@ export function createApp() {
   registerHealthRoutes(v1);
   registerAuthRoutes(v1);
   registerMfaRoutes(v1);
+  // Session 114 Google identity governance (policy, linked identities, ledger,
+  // configuration report) on an `/auth/google` sub-router registered ahead of
+  // the OAuth endpoints themselves. The sub-router attaches `authenticate` per
+  // handler rather than with `router.use`, so `/auth/google`,
+  // `/auth/google/status` and `/auth/google/callback` fall through to the
+  // original handlers with their behaviour — including their unauthenticated
+  // status — unchanged.
+  const googleIdentityRouter = express.Router();
+  v1.use("/auth/google", googleIdentityRouter);
+  registerGoogleIdentityRoutes(googleIdentityRouter);
   registerGoogleAuthRoutes(v1);
   // Session 113 desk (position book, portfolio exposure, scenarios, bond
   // ladder) on a `/derivatives` sub-router, registered ahead of the Session 81

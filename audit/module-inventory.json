@@ -1001,6 +1001,7 @@
       "enterprise.spec.ts",
       "enterpriseFoundation.spec.ts",
       "extensions.spec.ts",
+      "googleAuth.spec.ts",
       "governance.spec.ts",
       "infrastructure.spec.ts",
       "marketplace.spec.ts",
@@ -4192,6 +4193,7 @@
     },
     "tests": [
       "enterprise.spec.ts",
+      "googleAuth.spec.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
@@ -4655,32 +4657,38 @@
   },
   {
     "moduleKey": "googleAuth",
-    "title": "googleAuth",
-    "sessions": [],
-    "tier": "unknown",
+    "title": "Google Identity / OAuth (S114)",
+    "sessions": [
+      114
+    ],
+    "tier": "core",
     "routePrefix": "/api/v1/googleAuth",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/googleAuth",
       "serviceFile": {
-        "file": "googleAuth.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/googleAuth.service.ts",
-        "sloc": 207,
+        "file": "googleIdentity.service.ts",
+        "path": "/home/user/WIN/apps/api/src/googleAuth/googleIdentity.service.ts",
+        "sloc": 866,
         "mathRandom": false,
-        "externalFetch": true
+        "externalFetch": false
       },
-      "serviceTotalSloc": 207,
+      "serviceTotalSloc": 2486,
       "serviceFiles": [
-        "services/googleAuth.service.ts"
+        "googleIdentity.service.ts",
+        "googleIdentity.test.ts",
+        "services/googleAuth.service.ts",
+        "googleAuth/googleIdentity.service.ts"
       ],
       "importedServiceFiles": [
-        "services/googleAuth.service.ts"
+        "services/googleAuth.service.ts",
+        "googleAuth/googleIdentity.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/googleAuth.ts",
-        "sloc": 44,
+        "sloc": 62,
         "counts": {
           "total": 3,
           "GET": 3,
@@ -4694,28 +4702,63 @@
           "GET /auth/google",
           "GET /auth/google/callback"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/googleIdentity.ts",
+        "sloc": 181,
+        "counts": {
+          "total": 15,
+          "GET": 8,
+          "POST": 4,
+          "PUT": 1,
+          "PATCH": 0,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /summary",
+          "GET /config",
+          "GET /policy",
+          "PUT /policy",
+          "DELETE /policy",
+          "POST /policy/evaluate",
+          "GET /me",
+          "POST /me/revoke",
+          "GET /identities",
+          "GET /identities/:id",
+          "POST /identities/:id/revoke",
+          "POST /identities/:id/restore",
+          "DELETE /identities/:id",
+          "GET /events",
+          "GET /domains"
+        ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/googleAuth.ts (404 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/googleAuth.ts (115 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "Message"
+        "User",
+        "Organization",
+        "Workspace",
+        "Message",
+        "Integration"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "googleAuth/googleIdentity.test.ts",
       "services/googleAuth.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
+      "Stripe",
       "Google"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "governance",
@@ -8273,11 +8316,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 397,
+        "sloc": 404,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 970,
+      "serviceTotalSloc": 984,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8333,7 +8376,9 @@
       "tenantIsolation/tenantIsolation.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
+    "externalIntegrations": [
+      "Google"
+    ],
     "status": "COMPLETE"
   },
   {

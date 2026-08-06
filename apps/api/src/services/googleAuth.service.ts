@@ -20,6 +20,7 @@
  */
 import { randomBytes, createHash } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { GoogleIdentityService } from "../googleAuth/googleIdentity.service.js";
 import { prisma } from "../db/client.js";
 import { env } from "../config/env.js";
 import type { Role } from "@prisma/client";
@@ -107,6 +108,31 @@ export const GoogleAuthService = {
 
     // Link or create
     let existing = await prisma.user.findUnique({ where: { email }, include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true } });
+
+    // Session 114 — organization policy gate.
+    //
+    // Only applicable once the account resolves to a member of an organization:
+    // a brand-new Google account belongs to no organization at this point and
+    // provisions its own workspace below, which is why no policy can gate it.
+    // With no stored policy the default is `open`, so a deployment that never
+    // configures one behaves exactly as it did before this gate existed.
+    // A refusal is written to that organization's ledger by `authorizeSignIn`.
+    const gatedOrgId = existing?.memberships?.[0]?.organizationId ?? null;
+    if (gatedOrgId) {
+      const decision = await GoogleIdentityService.authorizeSignIn({
+        organizationId: gatedOrgId,
+        userId: existing!.id,
+        email,
+        emailVerified: true,
+      });
+      if (!decision.allowed) {
+        throw Object.assign(new Error(decision.reason), {
+          code: "GOOGLE_SIGNIN_BLOCKED",
+          outcome: decision.outcome,
+        });
+      }
+    }
+
     let isNewUser = false;
     let userId = existing?.id;
     let primaryMembership = existing?.memberships?.[0];
@@ -155,6 +181,24 @@ export const GoogleAuthService = {
       { issuer: env.JWT_ISSUER, expiresIn: env.JWT_ACCESS_TTL as unknown as number } as jwt.SignOptions,
     );
     await prisma.user.update({ where: { id: userId }, data: { lastLoginAt: new Date() } }).catch(() => {});
+
+    // Session 114 — record the completed sign-in in the organization's Google
+    // identity register and ledger. Best effort on purpose: the session has
+    // already been authorized above, and losing an audit row must not lock a
+    // legitimate user out. A failure here leaves the previous register entry
+    // untouched rather than writing a partial one.
+    const ledgerOrgId = primaryMembership?.organizationId ?? null;
+    if (ledgerOrgId) {
+      await GoogleIdentityService.recordSignIn({
+        organizationId: ledgerOrgId,
+        userId,
+        email,
+        subject: claims.sub,
+        displayName,
+        provisioned: isNewUser,
+      }).catch(() => { /* ledger write failure must not fail an authorized login */ });
+    }
+
     return {
       token,
       user: { id: userId, email, role: publicRole, displayName: profile?.displayName ?? displayName, organizationId: primaryMembership?.organizationId ?? null },

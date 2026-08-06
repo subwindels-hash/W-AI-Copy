@@ -46,6 +46,7 @@ import {
   Radar,
   Inbox,
   Sigma,
+  Fingerprint,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -95,6 +96,7 @@ const navItems = [
   { to: "/app/command", icon: Radar, label: "Global Command Center" },
   { to: "/app/conversations", icon: Inbox, label: "Conversation Ops" },
   { to: "/app/derivatives", icon: Sigma, label: "Derivatives Desk" },
+  { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },

@@ -57,6 +57,8 @@ const CognitivePage = lazy(() => import("./pages/cognitive/CognitivePage").then(
 const CommandCenterPage = lazy(() => import("./pages/command/CommandCenterPage").then((m) => ({ default: m.CommandCenterPage })));
 const ConversationsPage = lazy(() => import("./pages/conversations/ConversationsPage").then((m) => ({ default: m.ConversationsPage })));
 const DerivativesPage = lazy(() => import("./pages/derivatives/DerivativesPage").then((m) => ({ default: m.DerivativesPage })));
+const GoogleIdentityPage = lazy(() => import("./pages/googleAuth/GoogleIdentityPage").then((m) => ({ default: m.GoogleIdentityPage })));
+const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then((m) => ({ default: m.GoogleCallbackPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -181,6 +183,9 @@ export const router = createBrowserRouter([
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },
   { path: "/auth/login", element: withSuspense(<LoginPage />) },
   { path: "/auth/register", element: withSuspense(<RegisterPage />) },
+  // Session 114 — the API has always redirected here after a Google sign-in;
+  // until now the route did not exist and the token in the fragment was lost.
+  { path: "/auth/callback", element: withSuspense(<GoogleCallbackPage />) },
   { path: "/auth/forgot", element: placeholder("Password reset", "Password reset flow is implemented when auth is hardened in later slices.") },
 
   // Desktop App (/d/*) — Session 16
@@ -287,6 +292,7 @@ export const router = createBrowserRouter([
       { path: "command", element: withSuspense(<CommandCenterPage />) },
       { path: "conversations", element: withSuspense(<ConversationsPage />) },
       { path: "derivatives", element: withSuspense(<DerivativesPage />) },
+      { path: "google-identity", element: withSuspense(<GoogleIdentityPage />) },
     ],
   },
   {

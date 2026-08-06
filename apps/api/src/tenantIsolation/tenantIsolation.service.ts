@@ -142,8 +142,15 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // Derivatives & Fixed-Income Desk (Session 113)
   { prefix: "deriv:pos", scope: "org_scoped" },
   { prefix: "deriv:bond", scope: "org_scoped" },
+  // Google Identity governance (Session 114)
+  { prefix: "gid:policy", scope: "org_scoped" },
+  { prefix: "gid:link", scope: "org_scoped" },
+  { prefix: "gid:event", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
+  // Google OAuth CSRF state is issued before any user — and therefore any
+  // organization — is known, so it is shared by design and short-lived (10 min).
+  { prefix: "google:state", scope: "shared" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {

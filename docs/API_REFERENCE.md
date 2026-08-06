@@ -82,6 +82,26 @@ WINDELS AI OS exposes a strict, JSON-based RESTful API under the `/api/v1` names
 *   `GET|POST /api/v1/derivatives/bonds`, `GET|PATCH|DELETE /api/v1/derivatives/bonds/:id`: Fixed-income holdings. A holding needs a yield or a price; creating or updating into a state with neither is `400`.
 *   `GET /api/v1/derivatives/bonds/ladder`: Market-value weighted duration/convexity/yield (`null`, not `0`, when nothing can be valued), maturity buckets, contractual cashflows, and `shiftsBps` parallel shifts computed as a full reprice against the model's own base valuation.
 
+### 2.8 Google Identity / OAuth (Session 114)
+
+**The OAuth flow itself (pre-existing and unchanged; the first two are deliberately unauthenticated):**
+*   `GET /api/v1/auth/google/status`: Whether this deployment has Google sign-in configured. Anonymous by design — a sign-in page has to ask before anyone has a session.
+*   `GET /api/v1/auth/google`: Starts the flow. Issues a CSRF `state` (10-minute TTL) and redirects to Google. `503` when the deployment is not configured.
+*   `GET /api/v1/auth/google/callback`: Exchanges the authorization code, verifies the ID token's signature against Google's JWKS, links or provisions the account, mints a platform JWT and redirects to `<web origin>/auth/callback#token=…`. A sign-in refused by organization policy redirects to the same page with `#error=policy_blocked&outcome=…&message=…` instead of a token.
+
+**Session 114 — governance (authenticated; policy, revoke, restore and unlink require an administrator):**
+*   `GET /api/v1/auth/google/summary`: Rollup of policy, configuration, identity counts, recorded sign-ins and per-domain stats. Counts describe what the ledger recorded since it was introduced — `GOOGLE_LEDGER_NOTE` ships in the payload saying so, and `lastAt`/`lastSignInAt` are `null` when nothing was recorded rather than a zero date.
+*   `GET /api/v1/auth/google/config` *(admin)*: Per-variable configuration checks read from this process's environment only — no request is made to Google, so `pass` means present and well-formed, not accepted. The client id is masked, the secret is reported as present or absent, and `ready` is true only when every check passes (a `warn` is not a pass).
+*   `GET|PUT|DELETE /api/v1/auth/google/policy`: The organization's sign-in policy. `mode` is `open`, `domain_allowlist`, `linked_only` or `disabled`; `domain_allowlist` with an empty list is rejected rather than silently refusing everyone. Domains are normalized to bare lower-case (`@Windels.AI ` → `windels.ai`) and wildcards are rejected. `DELETE` resets to the platform default, and `isDefault` distinguishes "never configured" from "deliberately set to open".
+*   `POST /api/v1/auth/google/policy/evaluate` *(admin)*: Dry run of an address against the stored policy. Returns the same decision shape the real gate uses, with `applied: false` — nothing is signed in and nothing is written to the ledger.
+*   `GET /api/v1/auth/google/identities`, `GET /api/v1/auth/google/identities/:id`: Linked Google identities, filterable by `status`, `domain`, `userId` and a substring `q`. Google's `sub` is stored only as a truncated SHA-256 fingerprint, never in the clear.
+*   `POST /api/v1/auth/google/identities/:id/revoke`, `POST …/restore`, `DELETE …/:id` *(admin)*: Revoke blocks future Google sign-ins for that account in this organization; it does not delete the platform user, end Google's own session, or invalidate an already-issued token — `GOOGLE_REVOKE_NOTE` states this in the payload. `DELETE` unlinks the record entirely.
+*   `GET /api/v1/auth/google/me`, `POST /api/v1/auth/google/me/revoke`: The caller's own linked identity and the policy decision for their own address. Any authenticated user may revoke their own link without an administrator.
+*   `GET /api/v1/auth/google/events` *(admin)*: Append-only ledger of sign-ins, refusals, provisioning and administrative actions, filterable by `kind`, `outcome`, `userId` and `since`. Retention is the most recent 500 entries per organization; `stored` and `oldestAt` report what survives trimming.
+*   `GET /api/v1/auth/google/domains`: Identity counts and last recorded sign-in per email domain.
+
+A Google account with no existing platform user provisions its own workspace, so it belongs to no organization at the moment the decision is made; no organization policy can gate that first sign-in. `GOOGLE_PROVISIONING_NOTE` says so in the policy payload rather than leaving the gap implied.
+
 ---
 
 ## 3. ERROR SCHEMA
