@@ -5,6 +5,39 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 95 — Enterprise Helpdesk & Customer Support] — 2026-08-05
+
+### New module: Enterprise Helpdesk (customer support desk)
+*   `packages/shared/src/helpdesk.ts` — Zod contracts + types for tickets,
+    comments and rollup (prefixed `Hd`); SLA target hours per priority;
+    open-status set; validated lifecycle transitions.
+*   `apps/api/src/helpdesk/helpdesk.service.ts` — org-scoped Redis-backed
+    tickets with **monotonic human numbers** (`HD-1001` from `hd:seq:<org>`),
+    an honest lifecycle (`new → open → pending → resolved → closed`; stamps
+    `resolvedAt`/`closedAt` only on real transitions; validated + idempotent),
+    **deterministic SLA tracking** (`slaDueAt` computed from priority target
+    hours; compliance measured on resolved tickets against their stored due
+    date), a comment timeline with internal staff notes, assignment, and a
+    rollup computed per read (SLA compliance %, avg resolution hours from
+    real timestamps, by-priority/by-assignee, overdue).
+*   **CRM integration:** a ticket linking a contact/company writes a real
+    Session 90 CRM `note` activity (best-effort).
+*   Routes: `apps/api/src/http/routes/helpdesk.ts` mounted at
+    `/api/v1/helpdesk` (11 endpoints). Session 89 catalog gains the
+    `hd:ticket` / `hd:comment` namespaces as `org_scoped`.
+*   Web: `apps/web/src/lib/helpdesk.ts` client + `pages/helpdesk/
+    HelpdeskPage.tsx` (stats, filterable ticket queue with SLA/overdue
+    badges, advance-transition buttons, comment timeline with internal
+    flag, new-ticket form), `/app/helpdesk` route + sidebar entry.
+*   Tests: `apps/api/src/helpdesk/helpdesk.test.ts` (13) — CRUD + monotonic
+    numbers, SLA computation, lifecycle, comments/assignment, CRM activity,
+    rollup determinism, cross-tenant isolation, demo-seed idempotency,
+    schema contracts.
+*   Demo seed (`apps/api/src/helpdesk/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA`; production starts with an empty queue.
+*   **101 modules** in the inventory (74 COMPLETE).
+*   Spec: `docs/SESSION_95_SPECIFICATION.md`.
+
 ## [Session 94 — Social Platform] — 2026-08-05
 
 ### New module: Social Platform (final named Phase-3 Enterprise Application)

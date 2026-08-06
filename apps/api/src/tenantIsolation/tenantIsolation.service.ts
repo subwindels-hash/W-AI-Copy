@@ -91,6 +91,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "sp:post", scope: "org_scoped" },
   { prefix: "sp:comment", scope: "org_scoped" },
   { prefix: "sp:reaction", scope: "org_scoped" },
+  // Enterprise Helpdesk (Session 95)
+  { prefix: "hd:ticket", scope: "org_scoped" },
+  { prefix: "hd:comment", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

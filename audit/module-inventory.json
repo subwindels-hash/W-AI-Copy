@@ -3068,11 +3068,11 @@
       "serviceFile": {
         "file": "emailIntel.service.ts",
         "path": "/home/user/WIN/apps/api/src/emailIntel/emailIntel.service.ts",
-        "sloc": 741,
+        "sloc": 757,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2240,
+      "serviceTotalSloc": 2272,
       "serviceFiles": [
         "bootstrap.ts",
         "emailIntel.service.ts",
@@ -4485,6 +4485,85 @@
     "tests": [
       "sessions73-75.spec.ts",
       "healthEcosystem/healthEcosystem.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "helpdesk",
+    "title": "helpdesk",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/helpdesk",
+    "backend": {
+      "serviceDir": "apps/api/src/helpdesk",
+      "serviceFile": {
+        "file": "helpdesk.service.ts",
+        "path": "/home/user/WIN/apps/api/src/helpdesk/helpdesk.service.ts",
+        "sloc": 386,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1065,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "helpdesk.service.ts",
+        "helpdesk.test.ts",
+        "helpdesk/helpdesk.service.ts"
+      ],
+      "importedServiceFiles": [
+        "helpdesk/helpdesk.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/helpdesk/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/helpdesk.ts",
+        "sloc": 114,
+        "counts": {
+          "total": 11,
+          "GET": 4,
+          "POST": 4,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /tickets",
+          "POST /tickets",
+          "GET /tickets/:id",
+          "PATCH /tickets/:id",
+          "DELETE /tickets/:id",
+          "POST /tickets/:id/assign",
+          "POST /tickets/:id/transition",
+          "GET /tickets/:ticketId/comments",
+          "POST /tickets/:ticketId/comments",
+          "DELETE /comments/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/helpdesk.ts (130 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/helpdesk.ts (95 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Workspace",
+        "Agent",
+        "Activity",
+        "Message",
+        "Invoice",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "helpdesk/helpdesk.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -7658,11 +7737,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 346,
+        "sloc": 349,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 868,
+      "serviceTotalSloc": 874,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

@@ -30,6 +30,29 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 95 — Decisions Logged (Enterprise Helpdesk & Customer Support)
+
+- **Module prefix:** `Hd` types, `hd:*` Redis keys, `/api/v1/helpdesk` route
+  prefix, `apps/web/src/lib/helpdesk.ts` client, `/app/helpdesk` route +
+  sidebar label "Helpdesk".
+- **Ticket numbers are real:** `HD-<n>` from a Redis monotonic counter
+  (`hd:seq:<org>`) — stable and unique per org, never random.
+- **SLA is deterministic:** target hours per priority (`urgent` 2h → `low`
+  72h) drive `slaDueAt` at create and priority-change; compliance is measured
+  on resolved tickets against their stored due date; overdue = open tickets
+  with `slaDueAt < now`. Nothing invented.
+- **Lifecycle is honest:** `new → open → pending → resolved → closed` with
+  validated forward transitions; `resolvedAt`/`closedAt` stamped only on the
+  real transition; re-transitions are idempotent no-ops; closed is terminal.
+- **Comments** are a timeline with an `internal` staff-notes flag.
+- **CRM integration:** a ticket linking a contact/company writes a real
+  Session 90 CRM `note` activity (best-effort — never fails the ticket).
+- **Rollup:** computed per read (counts, by-priority, SLA compliance %,
+  avg resolution hours from real `resolvedAt − createdAt`, by-assignee);
+  deterministic across reads.
+- **Demo seed:** idempotent, seeds `org-demo-hd`, gated behind
+  `WINDELS_DEMO_DATA`.
+
 ## Session 94 — Decisions Logged (Social Platform)
 
 - **Module prefix:** `Sp` types, `sp:*` Redis keys, `/api/v1/social-platform`

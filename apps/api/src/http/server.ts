@@ -112,6 +112,7 @@ import { registerEmailIntelRoutes } from "./routes/emailIntel.js";
 import { registerErpRoutes } from "./routes/erp.js";
 import { registerWebsiteBuilderRoutes } from "./routes/websiteBuilder.js";
 import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
+import { registerHelpdeskRoutes } from "./routes/helpdesk.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1135,6 +1136,13 @@ export function createApp() {
   const socialPlatformRouter = express.Router();
   v1.use("/social-platform", socialPlatformRouter);
   registerSocialPlatformRoutes(socialPlatformRouter);
+
+  // /helpdesk — Session 95: Enterprise Helpdesk & Customer Support (tickets
+  // with honest lifecycle + deterministic SLA, comment timeline, assignment,
+  // CRM activity integration, computed rollup).
+  const helpdeskRouter = express.Router();
+  v1.use("/helpdesk", helpdeskRouter);
+  registerHelpdeskRoutes(helpdeskRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);
