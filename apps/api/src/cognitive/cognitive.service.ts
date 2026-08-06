@@ -1,7 +1,16 @@
+/**
+ * Session 69 / 110 — Cognitive platform observability rollup.
+ *
+ * This file answers "what is actually running in this organization right now"
+ * from real tables. The Session 110 world-model evidence register (entities,
+ * observations, hypotheses) lives beside it in `worldModel.service.ts`; the
+ * `worldModel()` delegate below exists so callers that already hold
+ * `CognitiveService` reach it without a second import.
+ */
 import { prisma } from "../db/client.js";
 import { redisCmd as redis } from "../db/redis.js";
 import type { Logger } from "pino";
-import type { CognitiveDashboard, ObservatoryNode } from "@windels/shared";
+import type { CognitiveDashboard, CogWorldModelRollup, ObservatoryNode } from "@windels/shared";
 
 const K = { meta: (oid: string) => `cog:${oid}:meta` };
 export const CognitiveService = {
@@ -67,5 +76,16 @@ export const CognitiveService = {
       ],
       innovations: [], scenarios: [],
     } satisfies CognitiveDashboard;
+  },
+
+  /**
+   * Session 110 world-model rollup (entities/observations/hypotheses). Kept as
+   * a thin delegate so the two cognitive surfaces stay separable: this file
+   * projects live platform activity, `worldModel.service.ts` projects the
+   * organization's own evidence register.
+   */
+  async worldModel(oid: string): Promise<CogWorldModelRollup> {
+    const { CognitiveWorldModelService } = await import("./worldModel.service.js");
+    return CognitiveWorldModelService.worldModel(oid);
   },
 };

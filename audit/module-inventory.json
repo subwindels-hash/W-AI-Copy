@@ -1664,68 +1664,89 @@
       "serviceFile": {
         "file": "cognitive.service.ts",
         "path": "/home/user/WIN/apps/api/src/cognitive/cognitive.service.ts",
-        "sloc": 72,
+        "sloc": 92,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 147,
+      "serviceTotalSloc": 1439,
       "serviceFiles": [
         "bootstrap.ts",
         "cognitive.service.ts",
-        "cognitive/cognitive.service.ts"
+        "worldModel.service.ts",
+        "worldModel.test.ts",
+        "cognitive/cognitive.service.ts",
+        "cognitive/worldModel.service.ts"
       ],
       "importedServiceFiles": [
-        "cognitive/cognitive.service.ts"
+        "cognitive/cognitive.service.ts",
+        "cognitive/worldModel.service.ts"
       ],
       "bootstrapFile": "apps/api/src/cognitive/bootstrap.ts"
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/cognitive.ts",
-        "sloc": 66,
+        "sloc": 168,
         "counts": {
-          "total": 4,
-          "GET": 2,
-          "POST": 1,
+          "total": 16,
+          "GET": 8,
+          "POST": 4,
           "PUT": 0,
-          "PATCH": 0,
-          "DELETE": 1
+          "PATCH": 1,
+          "DELETE": 3
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "GET /world-model",
+          "GET /entities",
+          "POST /entities",
+          "GET /entities/:id",
+          "PATCH /entities/:id",
+          "DELETE /entities/:id",
           "GET /observations",
           "POST /observations",
-          "DELETE /observations/:id"
+          "GET /observations/:id",
+          "DELETE /observations/:id",
+          "GET /hypotheses",
+          "POST /hypotheses",
+          "GET /hypotheses/:id",
+          "POST /hypotheses/:id/resolve",
+          "DELETE /hypotheses/:id"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/cognitive.ts (84 LOC)",
+    "sharedTypes": "packages/shared/src/cognitive.ts (299 LOC)",
     "web": {
-      "client": "apps/web/src/lib/cognitive.ts (8 LOC)",
+      "client": "apps/web/src/lib/cognitive.ts (64 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
         "Task",
+        "Activity",
         "Conversation",
+        "Message",
         "AgentMemory",
         "AgentKnowledge",
         "Workflow",
         "WorkflowRun",
         "AiRequest",
+        "Integration",
         "Alert"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "cognitive/worldModel.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "collaboration",
@@ -8173,11 +8194,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 382,
+        "sloc": 387,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 940,
+      "serviceTotalSloc": 950,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

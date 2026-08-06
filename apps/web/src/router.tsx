@@ -53,6 +53,7 @@ const AttachmentsPage = lazy(() => import("./pages/attachments/AttachmentsPage")
 const AutonomousPage = lazy(() => import("./pages/autonomous/AutonomousPage").then((m) => ({ default: m.AutonomousPage })));
 const BillingPage = lazy(() => import("./pages/billing/BillingPage").then((m) => ({ default: m.BillingPage })));
 const CameraPage = lazy(() => import("./pages/camera/CameraPage").then((m) => ({ default: m.CameraPage })));
+const CognitivePage = lazy(() => import("./pages/cognitive/CognitivePage").then((m) => ({ default: m.CognitivePage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -279,6 +280,7 @@ export const router = createBrowserRouter([
       { path: "autonomous", element: withSuspense(<AutonomousPage />) },
       { path: "billing", element: withSuspense(<BillingPage />) },
       { path: "camera", element: withSuspense(<CameraPage />) },
+      { path: "cognitive", element: withSuspense(<CognitivePage />) },
     ],
   },
   {

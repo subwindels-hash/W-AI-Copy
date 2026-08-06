@@ -30,6 +30,45 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 110 — Decisions Logged (Cognitive / World Model Completion)
+
+- **Module prefix:** `Cog` types and Zod contracts in
+  `packages/shared/src/cognitive.ts`, `cog:*` Redis keys, `/api/v1/cognitive`
+  route prefix, `apps/web/src/lib/cognitive.ts` client, `/app/cognitive` route
+  + sidebar label "Cognitive / World Model".
+- **Two cognitive surfaces, kept separate:** `cognitive.service.ts` projects
+  live *platform* activity (agents, workflows, AI requests, alerts) from real
+  tables; `worldModel.service.ts` is the organization's own evidence register.
+  `CognitiveService.worldModel()` is a thin delegate so callers need one import.
+- **Storage:** `cog:<entity>:i:<org>:<id>` + `cog:<entity>:idx:<org>` ZSETs,
+  fail-closed reads that re-check the stored `organizationId`, CSPRNG ids
+  (`cog_ent_`, `cog_obs_`, `cog_hyp_`).
+- **Migration over replacement:** Session 69 observations were `tenantStore`
+  envelopes on the *same* key shape, so they are normalized in place on read
+  and rewritten once. The migration is idempotent — unwrapping only happens
+  when a `data` envelope is present, and the index keeps one member per record.
+- **Confidence is never computed.** Every observation carries
+  `confidenceKind: "self_reported"`, and the rollup average is labelled
+  `self_reported_average`. With no observations the average is `null`, not `0`.
+- **AI output is advisory and labelled.** `origin: "ai_assisted"` +
+  `aiAssisted: true`, counted in its own rollup bucket and badged in the UI. It
+  never flows into a hypothesis outcome.
+- **Hypotheses are human-resolved.** Created `open`; only
+  `POST /hypotheses/:id/resolve` (admin) with a mandatory note can set
+  `supported`/`refuted`/`inconclusive`, stamping `resolvedBy`. Re-resolution is
+  a `409`.
+- **Referential honesty:** unknown observation ids are dropped at hypothesis
+  creation rather than stored as phantom support; deleting an observation
+  prunes it from citing hypotheses; deleting an entity that still has
+  observations is a `409`, not a silent detach.
+- **Rollup determinism:** counts/shares only, no `generatedAt`, no wall-clock
+  arithmetic — pinned by a `JSON.stringify` equality test across two reads.
+- **Kernel events** (`cognitive.entity_created`,
+  `cognitive.observation_recorded`, `cognitive.hypothesis_resolved`) are
+  best-effort and emitted from write paths only.
+- **No demo seed.** The register ships empty; an organization with no records
+  is displayed as empty.
+
 ## Session 109 — Decisions Logged (Canvas Collaboration Completion)
 
 - **Shared contract prefix:** `Cc` presence/cursor contracts live in

@@ -7904,12 +7904,28 @@ function CognitiveTab() {
       <Stat label="Marketplace Assets" value={data.marketplaceUnifiedAssets} tone="fuchsia"/>
       <Stat label="Federation Partners" value={data.federationPartners} tone="teal"/>
       <Stat label="Observatory" value={`${data.observatoryHealthyPct}%`} tone="emerald"/>
-      <Stat label="Reasoning Avg" value={`${Math.round(data.reasoningAccuracyAvg*100)}%`} tone="azure"/>
-      <Stat label="Global Memory" value={(data.globalMemoryEntries/1e6).toFixed(1)+"M"} tone="amber"/>
+      {/* Session 110: the service already returns whole percents (AI success
+          rate over 30d). Multiplying by 100 again rendered e.g. 7500%. */}
+      <Stat label="AI success rate (30d)" value={`${data.reasoningAccuracyAvg}%`} tone="azure"/>
+      {/* Raw entry count — dividing by 1e6 and labelling it "M" implied
+          millions of memories on an organization that has a handful. */}
+      <Stat label="Memory + knowledge entries" value={data.globalMemoryEntries} tone="amber"/>
       <Stat label="Innovation Pipeline" value={`$${(data.innovationPipelineValueUsd/1e6).toFixed(1)}M`} tone="fuchsia"/>
       <Stat label="Civilization Entities" value={data.civilizationEntities} tone="violet"/>
       <Stat label="Prediction Acc" value={`${data.predictionAccuracyPct}%`} tone="emerald"/>
     </div>
+    {/* Session 110 — the world-model evidence register behind /app/cognitive. */}
+    <Card><CardHeader><CardTitle className="text-sm">World Model register (Session 110)</CardTitle></CardHeader>
+    <CardContent className="grid md:grid-cols-4 gap-3">
+      <Stat label="Entities" value={data.worldModel?.entityCount ?? 0} tone="violet"/>
+      <Stat label="Observations" value={data.worldModel?.observationCount ?? 0} tone="azure"/>
+      <Stat label="Open hypotheses" value={data.worldModel?.openHypotheses ?? 0} tone="amber"/>
+      <Stat label="Evidence coverage" value={`${data.worldModel?.evidenceCoveragePct ?? 0}%`} tone="emerald"/>
+      <div className="md:col-span-4 text-xs text-text-muted">
+        {data.worldModel?.note ?? "Counts are computed from stored records only."}
+        {data.worldModel?.aiAssistedObservations ? ` ${data.worldModel.aiAssistedObservations} AI-assisted observation(s) are labelled advisory.` : ""}
+      </div>
+    </CardContent></Card>
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Self-Evolution Components</CardTitle></CardHeader>
       <CardContent className="space-y-1 text-xs">

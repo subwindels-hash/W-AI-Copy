@@ -127,6 +127,11 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // Autonomous Organization approval register (Session 106)
   { prefix: "aut:meta", scope: "org_scoped" },
   { prefix: "aut:decision", scope: "org_scoped" },
+  // Cognitive / World Model evidence register (Session 110)
+  { prefix: "cog:meta", scope: "org_scoped" },
+  { prefix: "cog:entity", scope: "org_scoped" },
+  { prefix: "cog:obs", scope: "org_scoped" },
+  { prefix: "cog:hypothesis", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

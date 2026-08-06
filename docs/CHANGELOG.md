@@ -5,6 +5,18 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 110 — Cognitive / World Model Completion] — 2026-08-06
+
+### World-model evidence register completed
+*   `packages/shared/src/cognitive.ts` — `Cog` entity, observation, hypothesis, domain-coverage and rollup contracts with Zod validation (Session 69 `CognitiveDashboard` types kept intact).
+*   `apps/api/src/cognitive/worldModel.service.ts` — org-scoped entity/observation/hypothesis records with fail-closed reads, CSPRNG ids, an idempotent in-place migration of Session 69 `tenantStore` observation envelopes, evidence pruning on delete and a deterministic coverage/blind-spot rollup (empty organizations report zeros and `null`, never plausible numbers).
+*   Honest labelling: recorded confidence is stamped `self_reported`, AI-assisted observations are stored and counted separately as advisory, and hypotheses can only be resolved by a named human with a written note.
+*   Routes: `/api/v1/cognitive` grew from 4 to 16 endpoints (world-model rollup, entity/observation/hypothesis CRUD, human resolution) with shared validation and admin-guarded mutations; `/dashboard/rollup` keeps its Session 69 shape and adds `worldModel`.
+*   Session 89 now audits `cog:meta`, `cog:entity`, `cog:obs` and `cog:hypothesis` as org-scoped namespaces.
+*   Web: full typed client, dedicated `/app/cognitive` console (coverage grid, blind spots, advisory badges, human resolution) and sidebar entry. Two display bugs fixed in the existing PlatformPage tab: the AI success rate was multiplied by 100 twice, and memory entries were divided by 1e6 and suffixed "M".
+*   Tests: `worldModel.test.ts` (15) — CRUD, rollup maths, repeated-read determinism, empty-organization honesty, cross-tenant isolation, planted-record invisibility, AI labelling, human-only resolution, evidence pruning, idempotent migration and Zod contracts.
+*   Runtime validation against live PostgreSQL 17/Redis 8 remains pending; Session 110 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 109 — Canvas Collaboration Completion] — 2026-08-05
 
 ### Canvas presence/cursors completed with tenant-safe state

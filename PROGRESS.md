@@ -1,7 +1,7 @@
 # PROGRESS — WINDELS AI OS
 
-> **Status of this document:** Accurate as of 2026-08-05 on branch
-> `arena/019fd4f2-win`. It is the single source of truth for session
+> **Status of this document:** Accurate as of 2026-08-06 on branch
+> `arena/019fd574-win`. It is the single source of truth for session
 > certification state. **PRODUCTION COMPLETE is only granted after the Phase 6
 > runtime validation checklist for a session passes in the target deployment
 > environment** (live PostgreSQL 17 + Redis + `prisma generate`). This sandbox
@@ -45,6 +45,7 @@
 | 107 | Billing & Subscriptions | 🟡 | completed billing vertical slice (shared plan/subscription/invoice contracts, real invoice lifecycle, audited admin payment actions, idempotent webhook/dunning paths, tenant tests and dedicated billing UI); 11 integration tests; runtime pending |
 | 108 | Camera Feed Registry & Alert Console | 🟡 | completed camera vertical slice (shared `Cam` contracts, org-scoped feed/alert records, corrected mounted routes, admin feed/alert lifecycle, honest WebRTC handoff and dedicated console); 9 tests; `cam:feed`, `cam:alert` namespaces audited by S89; runtime pending |
 | 109 | Canvas Collaboration | 🟡 | completed canvas collaboration vertical slice (shared `Cc` contracts, org-verified presence/cursors, org-scoped Redis state/channel migration, Canvas heartbeat/leave UI and multi-user tests); 20 tests; `canvas:presence`, `canvas:cursor` audited by S89; runtime pending |
+| 110 | Cognitive / World Model | 🟡 | completed world-model evidence register (shared `Cog` entity/observation/hypothesis contracts, org-scoped fail-closed records, idempotent Session 69 observation migration, deterministic coverage/blind-spot rollup, human-only hypothesis resolution, labelled AI-assisted output and dedicated `/app/cognitive` console); 15 tests; `cog:meta`, `cog:entity`, `cog:obs`, `cog:hypothesis` audited by S89; runtime pending |
 
 ### Repository-wide cleanup passes (cross-session)
 - **Pre-existing test failures**: all 12 resolved in-repo (9 env-blocked suites unblocked via `prismaClientMock`; 3 genuine demo-data/ESG bugs fixed). See `docs/PRE_EXISTING_TEST_FAILURES.md`.
@@ -53,7 +54,7 @@
 - **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`.
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **1164 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 101 files: 98 passed + 3 skipped).
+- API unit/integration-style suite: **1179 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 102 files: 99 passed + 3 skipped).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
 - `make verify` (Prisma offline generate + build + typecheck + test): **green** in this sandbox; the preflight's blocked engine fetch is non-fatal by design.
 - Web typecheck: clean.
