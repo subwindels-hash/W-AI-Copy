@@ -5,7 +5,8 @@ import { z } from "zod";
 import { LeadDiscoveryService } from "../../leadDiscovery/leadDiscovery.service.js";
 export function registerLeadDiscoveryRoutes(router: Router) {
   router.use(authenticate);
-  router.post("/search", validate({ body: z.object({ query: z.string().trim().min(3).max(300) }) }), async (req, res, next) => { try { res.json({ ok: true, data: await LeadDiscoveryService.search(req.user!.organizationId!, req.body.query), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  // Session 115 passes the caller so the search ledger can attribute the query.
+  router.post("/search", validate({ body: z.object({ query: z.string().trim().min(3).max(300) }) }), async (req, res, next) => { try { res.json({ ok: true, data: await LeadDiscoveryService.search(req.user!.organizationId!, req.body.query, req.user!.id ?? null), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.get("/leads", async (req, res, next) => { try { res.json({ ok: true, data: await LeadDiscoveryService.list(req.user!.organizationId!), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.get("/collections", async (req, res, next) => { try { res.json({ ok: true, data: await LeadDiscoveryService.listCollections(req.user!.organizationId!), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.post("/collections", validate({ body: z.object({ name: z.string().trim().min(1).max(120) }) }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await LeadDiscoveryService.createCollection(req.user!.organizationId!, req.user!.id, req.body.name), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });

@@ -1,12 +1,18 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
+import { LeadPipelineService } from "./leadPipeline.service.js";
 
 const K = { leads: (oid: string) => `leads85:${oid}:leads`, lead: (oid: string, id: string) => `leads85:${oid}:lead:${id}`, collections: (oid: string) => `leads85:${oid}:collections`, collection: (oid: string, id: string) => `leads85:${oid}:collection:${id}` };
 type Lead = { id: string; name: string; category?: string; address?: string; phone?: string; website?: string; source: "google_places"; sourceId: string; discoveredAt: string; verificationStatus: "source_returned"; query: string };
 
 export const LeadDiscoveryService = {
-  async search(organizationId: string, query: string) {
+  /**
+   * `actorId` (Session 115) is optional and defaults to null, so every existing
+   * caller keeps working: it is only used to attribute the search in the
+   * ledger, never to authorize anything.
+   */
+  async search(organizationId: string, query: string, actorId: string | null = null) {
     const key = process.env.GOOGLE_PLACES_API_KEY;
     if (!key) throw new AppError("SERVICE_UNAVAILABLE", "Google Places API configuration required", 503);
     const url = new URL("https://maps.googleapis.com/maps/api/place/textsearch/json"); url.searchParams.set("query", query); url.searchParams.set("key", key);
@@ -25,7 +31,18 @@ export const LeadDiscoveryService = {
       const lead: Lead = { id: `lead-${randomUUID()}`, name: String(item.name), category: item.types?.[0], address: item.formatted_address, source: "google_places", sourceId, discoveredAt: new Date().toISOString(), verificationStatus: "source_returned", query };
       await redis.set(K.lead(organizationId, lead.id), JSON.stringify(lead)); await redis.lpush(K.leads(organizationId), lead.id); leads.push(lead);
     }
-    await redis.ltrim(K.leads(organizationId), 0, 9999); return { query, source: "google_places", results: leads };
+    await redis.ltrim(K.leads(organizationId), 0, 9999);
+    // Session 115 — write the search to the organization's ledger. Deliberately
+    // best-effort: this module spends money on a third-party API, and a failed
+    // bookkeeping write must never turn a successful, already-paid-for search
+    // into an error for the caller. The results below are returned either way.
+    await LeadPipelineService.recordSearch({
+      organizationId,
+      query,
+      actorId,
+      sourceIds: leads.map((lead) => lead.sourceId),
+    }).catch(() => {});
+    return { query, source: "google_places", results: leads };
   },
   async list(organizationId: string) { const ids = await redis.lrange(K.leads(organizationId), 0, 199); const out: Lead[] = []; for (const id of ids) { const raw = await redis.get(K.lead(organizationId, id)); if (raw) out.push(JSON.parse(raw)); } return out; },
   async createCollection(organizationId: string, userId: string, name: string) { const item = { id: `collection-${randomUUID()}`, name, createdById: userId, leadIds: [] as string[], createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }; await redis.set(K.collection(organizationId, item.id), JSON.stringify(item)); await redis.lpush(K.collections(organizationId), item.id); return item; },

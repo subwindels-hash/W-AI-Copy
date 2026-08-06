@@ -146,6 +146,13 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "gid:policy", scope: "org_scoped" },
   { prefix: "gid:link", scope: "org_scoped" },
   { prefix: "gid:event", scope: "org_scoped" },
+  // Lead Discovery pipeline (Session 115). `leads85` is Session 85's own
+  // namespace, org-scoped since it shipped but never audited until now.
+  { prefix: "leads85", scope: "org_scoped" },
+  { prefix: "lead:pipe", scope: "org_scoped" },
+  { prefix: "lead:note", scope: "org_scoped" },
+  { prefix: "lead:noteidx", scope: "org_scoped" },
+  { prefix: "lead:hist", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // Google OAuth CSRF state is issued before any user — and therefore any

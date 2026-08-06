@@ -26,6 +26,7 @@ import { registerConversationOpsRoutes } from "./routes/conversationOps.js";
 import { registerAttachmentRoutes } from "./routes/attachments.js";
 import { registerProjectContinuityRoutes } from "./routes/projectContinuity.js";
 import { registerLeadDiscoveryRoutes } from "./routes/leadDiscovery.js";
+import { registerLeadPipelineRoutes } from "./routes/leadPipeline.js";
 import { registerPromptTemplateRoutes } from "./routes/promptTemplates.js";
 import { registerAIRoutes } from "./routes/ai.js";
 import { registerAgentRoutes } from "./routes/agents.js";
@@ -216,6 +217,13 @@ export function createApp() {
   registerProfileRoutes(v1);
   registerAttachmentRoutes(v1);
   registerProjectContinuityRoutes(v1);
+  // Session 115 — the lead pipeline shares the /lead-discovery prefix with
+  // Session 85's discovery endpoints. Its router is registered first and
+  // attaches `authenticate` per handler rather than with `router.use`, so an
+  // unmatched path falls through to Session 85's six endpoints unchanged.
+  const leadPipelineRouter = express.Router();
+  v1.use("/lead-discovery", leadPipelineRouter);
+  registerLeadPipelineRoutes(leadPipelineRouter);
   const leadDiscoveryRouter = express.Router();
   v1.use("/lead-discovery", leadDiscoveryRouter);
   registerLeadDiscoveryRoutes(leadDiscoveryRouter);

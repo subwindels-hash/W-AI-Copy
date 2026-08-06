@@ -40,7 +40,7 @@ Current counts that confirm the pattern is uniform (2026-08-06):
 - **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
 - **97** API test files; **26** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S113)
+## 4. The session-by-session arc (S1 → S115)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -147,6 +147,9 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **112** | `conversations` | **Conversations / Messaging completion** — the Sessions 2–4 thread was already real; this session added everything around it: the module's first shared `Conv*` contract, participant management, the first code that ever writes `ConversationParticipant.lastReadAt`, unread counts that declare their basis and exclude the caller's own messages, statistics that report `null` (not `0`) for usage no message recorded, case-insensitive substring message search labelled as such, author-only edits with an append-only trail, redaction that blanks a body while keeping the row, transcript export, an explicitly non-AI extractive digest, soft-delete listing + creator-only restore, and a dedicated `/app/conversations` console (`docs/SESSION_112_SPECIFICATION.md`) |
 | **113** | `derivatives` | **Derivatives & Fixed-Income Desk completion** — Session 81's four calculators were pure functions that stored nothing, so the module had no book, no portfolio exposure and no ladder. This session added an org-scoped Redis desk (option positions + bond holdings) that re-uses the Session 81 pricer for every number, exposure grouped per underlying with delta *notional* as the only cross-symbol total, full-reprice spot×vol scenario grids that report how many positions each cell could price, a sampled payoff curve with interpolated breakevens and explicit unbounded flags, a static delta hedge that refuses to call an unmeasured book flat, a put-call parity check that is not an arbitrage claim, a bond ladder whose weighted metrics are `null` (not `0`) when nothing can be valued, and a dedicated `/app/derivatives` desk. No market data is fetched: every mark is `operator_entered`, timestamped, and badged stale after 24h (`docs/SESSION_113_SPECIFICATION.md`) |
 
+| **114** | `googleAuth` | **Google Identity / OAuth completion** — the OpenID Connect flow (JWKS signature/`iss`/`aud`/`nonce`/`exp` verification, account linking, provisioning) was already real and is untouched, but nothing governed it: an organization could not restrict Google sign-in to its own domain, nothing recorded that a sign-in had happened, a departed employee's Google account kept working until the platform user was deleted, and the API's own post-callback redirect target `/auth/callback` **did not exist in the web app**. This session added the module's first shared contract, an org-scoped governance service (policy · linked-identity register · ledger · environment-only configuration report), a policy gate + ledger write inside the real callback (default `open`, so existing deployments are unaffected), fingerprinted Google subjects, and the missing `/auth/callback` page (`docs/SESSION_114_SPECIFICATION.md`) |
+| **115** | `leadDiscovery` | **Lead Discovery completion** — Session 85's discovery half was honest (real Places text search, `503` when unconfigured, no enrichment, `source_returned` labelling) and is untouched; everything after a lead was found was missing. No workflow, **no deduplication at all** despite the service's own comment referring to it, no explanation for the permanently empty `phone`/`website` columns (text search never returns them), no collection rename/delete, no record of what was searched on a paid API, and directory-sourced names written into CSV verbatim so a listing called `=HYPERLINK(...)` executed on open. This session added the module's first shared contract, an org-scoped pipeline service (status · owner · notes · provider-id deduplication that marks rather than deletes · coverage that explains its own zeroes · search ledger · export preview), a best-effort ledger write inside the real `search()`, a spreadsheet formula guard, and the `/app/lead-pipeline` console (`docs/SESSION_115_SPECIFICATION.md`) |
+
 ## 5. What's actually real vs simulated vs missing (honest state)
 
 **Real & tested core:** auth/JWT/RBAC, MFA/TOTP, Google OAuth, Postgres+Prisma,
@@ -210,13 +213,13 @@ milestone"):**
 **Priority C — verification & hardening:**
 3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
    repository-wide test/module counts in `PROGRESS.md`. Current audit
-   (`node audit/build-inventory.mjs`, 2026-08-05): 106 modules — 93 COMPLETE,
-   10 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 95 COMPLETE,
+   8 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
    Remaining PARTIAL modules, in the one-by-one completion order:
-   `googleAuth`, `leadDiscovery`, `mfa`, `mobile`, `opex`,
-   `promptTemplates`, `publicApi`, `sustainability`, `talk`, `usage`.
-   **Next module to complete: `googleAuth`.**
-4. Run the S1–S6 and S89–S113 runtime-validation tracks in a target
+   `mfa`, `mobile`, `opex`, `promptTemplates`, `publicApi`,
+   `sustainability`, `talk`, `usage`.
+   **Next module to complete: `mfa`.**
+4. Run the S1–S6 and S89–S115 runtime-validation tracks in a target
    environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
    any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 

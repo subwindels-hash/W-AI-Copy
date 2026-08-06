@@ -102,6 +102,24 @@ WINDELS AI OS exposes a strict, JSON-based RESTful API under the `/api/v1` names
 
 A Google account with no existing platform user provisions its own workspace, so it belongs to no organization at the moment the decision is made; no organization policy can gate that first sign-in. `GOOGLE_PROVISIONING_NOTE` says so in the policy payload rather than leaving the gap implied.
 
+### 2.9 Lead Discovery & Pipeline (Sessions 85 + 115)
+
+**Session 85 — discovery (unchanged):**
+*   `POST /api/v1/lead-discovery/search`: Google Places text search. Returns `503` when no `GOOGLE_PLACES_API_KEY` is configured rather than an empty list that would read as "we searched and found nobody". Stores only fields the provider returned; every record is `verificationStatus: "source_returned"` — it was listed, not verified.
+*   `GET /api/v1/lead-discovery/leads`, `GET|POST /api/v1/lead-discovery/collections`, `POST /api/v1/lead-discovery/collections/:id/leads`, `POST /api/v1/lead-discovery/export`: the original list, collection and eleven-column CSV endpoints.
+
+**Session 115 — the pipeline (authenticated; bulk and destructive operations require an administrator):**
+*   `GET /api/v1/lead-discovery/summary`: Reports records held **and** distinct provider listings as separate figures, so three copies of one shop are not presented as three businesses. `lastSearchAt` is `null` when nothing was recorded.
+*   `GET /api/v1/lead-discovery/pipeline`: Leads joined with pipeline state, filterable by `status`, `ownerId`, `unowned`, `hasContact`, `collectionId` and a substring `q`. `statusCounts` describes everything that matched, not the current page.
+*   `GET /api/v1/lead-discovery/leads/:id`, `PATCH …/status`, `PATCH …/owner`, `GET|POST …/notes`: One lead's record, its status, its owner and its append-only notes. A status is an operator's decision — `verificationStatus` is never rewritten, and `LEAD_STATUS_NOTE` says so in the payload. `duplicate` is not settable by hand; it carries a keeper pointer only the grouping pass can establish.
+*   `GET /api/v1/lead-discovery/duplicates`: Read-only grouping on the provider's place identifier **only** — two similarly named records are not treated as one business. The keeper is the earliest record, with ties (two searches in the same millisecond) broken by insertion order rather than by comparing ids.
+*   `POST /api/v1/lead-discovery/duplicates/resolve` *(admin)*: Marks the non-keepers as `duplicate`. **Nothing is deleted** — a marked record and its notes stay readable, and moving it to any other status returns it to the pipeline and clears the pointer.
+*   `GET /api/v1/lead-discovery/coverage`: Per-field coverage with `suppliedByProvider`. Places text search returns neither `phone` nor `website`, so those columns report zero *together with the reason they are zero*; `percentPresent` is `null`, not `0`, when there are no leads to measure.
+*   `GET /api/v1/lead-discovery/history`: Searches recorded since the ledger existed (earlier ones are not reconstructed), with how many returned listings were new to the organization and how many repeated one already held. The ledger write inside `search()` is best-effort — a failed bookkeeping write never fails a search the provider has already been paid for.
+*   `GET|PATCH /api/v1/lead-discovery/collections/:id`, `DELETE /api/v1/lead-discovery/collections/:id` *(admin)*, `DELETE …/collections/:id/leads/:leadId`: Collection detail, rename, delete and member removal — none of which previously existed. Deleting a grouping keeps every lead in it, and the detail response names member ids that no longer resolve in `missingLeadIds`.
+*   `POST /api/v1/lead-discovery/export/preview`: What the CSV would contain before it downloads — ids that do not resolve, duplicate ids in the selection, which columns will be empty, and how many cells the formula guard will rewrite. A column is only reported `alwaysEmpty` when at least one row resolved.
+*   `POST /api/v1/lead-discovery/export/csv`: CSV including the `status` and `ownerId` columns. Cells beginning with `=`, `+`, `-` or `@` are prefixed with an apostrophe: business names come from a public directory, and a leading `=` is executed as a formula when the file is opened.
+
 ---
 
 ## 3. ERROR SCHEMA

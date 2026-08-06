@@ -1004,6 +1004,7 @@
       "googleAuth.spec.ts",
       "governance.spec.ts",
       "infrastructure.spec.ts",
+      "leadPipeline.spec.ts",
       "marketplace.spec.ts",
       "mediaPublishing.spec.ts",
       "mlOps.spec.ts",
@@ -5421,34 +5422,41 @@
   },
   {
     "moduleKey": "leadDiscovery",
-    "title": "leadDiscovery",
-    "sessions": [],
-    "tier": "unknown",
+    "title": "Lead Discovery & Pipeline (S85/S115)",
+    "sessions": [
+      85,
+      115
+    ],
+    "tier": "feature",
     "routePrefix": "/api/v1/leadDiscovery",
     "backend": {
       "serviceDir": "apps/api/src/leadDiscovery",
       "serviceFile": {
         "file": "leadDiscovery.service.ts",
         "path": "/home/user/WIN/apps/api/src/leadDiscovery/leadDiscovery.service.ts",
-        "sloc": 36,
+        "sloc": 53,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 282,
+      "serviceTotalSloc": 2666,
       "serviceFiles": [
         "leadDiscovery.service.ts",
         "leadDiscovery.test.ts",
-        "leadDiscovery/leadDiscovery.service.ts"
+        "leadPipeline.service.ts",
+        "leadPipeline.test.ts",
+        "leadDiscovery/leadDiscovery.service.ts",
+        "leadDiscovery/leadPipeline.service.ts"
       ],
       "importedServiceFiles": [
-        "leadDiscovery/leadDiscovery.service.ts"
+        "leadDiscovery/leadDiscovery.service.ts",
+        "leadDiscovery/leadPipeline.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/leadDiscovery.ts",
-        "sloc": 15,
+        "sloc": 16,
         "counts": {
           "total": 6,
           "GET": 2,
@@ -5465,29 +5473,62 @@
           "POST /collections/:id/leads",
           "POST /export"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/leadPipeline.ts",
+        "sloc": 248,
+        "counts": {
+          "total": 17,
+          "GET": 8,
+          "POST": 4,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /summary",
+          "GET /coverage",
+          "GET /history",
+          "GET /pipeline",
+          "GET /leads/:id",
+          "PATCH /leads/:id/status",
+          "PATCH /leads/:id/owner",
+          "GET /leads/:id/notes",
+          "POST /leads/:id/notes",
+          "GET /duplicates",
+          "POST /duplicates/resolve",
+          "GET /collections/:id",
+          "PATCH /collections/:id",
+          "DELETE /collections/:id",
+          "DELETE /collections/:id/leads/:leadId",
+          "POST /export/preview",
+          "POST /export/csv"
+        ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/leadDiscovery.ts (452 LOC)",
     "web": {
-      "client": "apps/web/src/lib/leadDiscovery.ts (82 LOC)",
+      "client": "apps/web/src/lib/leadDiscovery.ts (192 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
-        "Organization"
+        "Organization",
+        "Activity"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "leadDiscovery/leadDiscovery.test.ts"
+      "leadDiscovery/leadDiscovery.test.ts",
+      "leadDiscovery/leadPipeline.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
       "Google"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "legal",
@@ -8316,11 +8357,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 404,
+        "sloc": 411,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 984,
+      "serviceTotalSloc": 998,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

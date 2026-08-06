@@ -30,6 +30,45 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 115 — Decisions Logged (Lead Discovery Completion)
+
+- **Module prefix:** `Lead*` types, `lead:*` Redis keys, the existing
+  `/api/v1/lead-discovery` route prefix, `apps/web/src/lib/leadDiscovery.ts`
+  client (extended, not replaced), `/app/lead-pipeline` route + sidebar label
+  "Lead Pipeline".
+- **Provider output and human judgement are stored separately.** The lead
+  record (`leads85:*`, Session 85) is never rewritten by this session; the
+  pipeline record (`lead:pipe:*`) holds everything a person decided. The
+  default pipeline record is materialised on read, so an untouched lead costs
+  no storage and Session 85's write path is unchanged.
+- **A status is a decision, never a verification.** `verificationStatus`
+  stays `source_returned` no matter what an operator sets, and the status
+  legend says so on the screen where statuses are set.
+- **`duplicate` is not hand-settable.** It carries a `duplicateOf` pointer only
+  the grouping pass can establish, so `LeadStatusUpdateSchema` accepts the
+  other four statuses only. The compiler flagged the resulting unreachable
+  branch during development, which is the intended feedback loop.
+- **Deduplicate on the provider's identifier or not at all.** Similar names and
+  addresses are not evidence that two listings are one business. Two branches
+  of a chain must remain two leads.
+- **Resolution marks, never deletes.** Destroying a record to tidy a list would
+  take its notes with it. Marking is reversible; deletion is not.
+- **Break timestamp ties with real ordering, not with an id comparison.** Two
+  searches inside one millisecond share a `discoveredAt`; the index list is an
+  insertion order the store already maintains. Sorting on UUID and calling the
+  winner "earliest" is a fabricated claim, and the tests are expected to catch
+  that class of shortcut.
+- **Report absence together with its cause.** A zero that is an artefact of the
+  API call made (`phone`, `website` from Places text search) must ship the
+  reason in the same payload; `percentPresent` is `null`, not `0`, when there
+  is nothing to measure.
+- **Bookkeeping never fails the paid operation.** The ledger write inside
+  `search()` is `.catch(() => {})` on purpose: the provider has already been
+  billed by then.
+- **Escape *and* neutralise on export.** Directory-sourced text is untrusted
+  input; a leading `=` is executed by spreadsheets. The apostrophe prefix is
+  visible rather than a silent rewrite, and the payload explains it.
+
 ## Session 114 — Decisions Logged (Google Identity Completion)
 
 - **Module prefix:** `Google*` types, `gid:*` Redis keys, the existing
