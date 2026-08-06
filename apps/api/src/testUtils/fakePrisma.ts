@@ -47,7 +47,7 @@ function loadSchemaDefaults(): Map<string, Row> {
       if (/autoincrement|cuid|uuid|dbgenerated/.test(raw)) continue;
       let value: any;
       if (isList) value = [];
-      else if (raw === "now()") value = undefined;         // set by create()
+      else if (/^now/.test(raw)) value = undefined;         // set by create()
       else if (raw === "true" || raw === "false") value = raw === "true";
       else if (/^-?\d+(\.\d+)?$/.test(raw)) value = Number(raw);
       else value = raw.replace(/^"|"$/g, "");              // string or enum member

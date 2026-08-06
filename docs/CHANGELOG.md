@@ -5,6 +5,16 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 104 — API Key Management Completion] — 2026-08-05
+
+### API keys completed as a secure shared vertical slice
+*   `packages/shared/src/apiKeys.ts` — `Ak` scope, list, one-time-create, mutation, query and ID contracts with Zod validation.
+*   `apps/api/src/publicApi/publicApi.service.ts` — scoped API-key detail/update lifecycle, irreversible revocation, SHA-256/CSPRNG handling and real audit-log records for create/update/revoke.
+*   Routes: `/api/v1/apikeys` now supports list/detail/create/update/revoke; existing `/developers/api-keys` compatibility paths remain intact.
+*   Web: typed `apiKeysApi`, dedicated `/app/api-keys` page with scope/expiry creation, one-time secret copy, prefix-only listing, rename, revoke and revoked-key visibility.
+*   Tests: `publicApi.test.ts` now has 10 passing cases covering plaintext/hash behavior, verification, expiry/revocation, detail, update/audit, cross-tenant isolation and contracts.
+*   Runtime validation against live PostgreSQL remains pending; Session 104 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 103 — AI Economy & GPU Capacity Ledger Completion] — 2026-08-05
 
 ### AI Economy completed as an honest org-scoped capacity ledger

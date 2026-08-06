@@ -611,11 +611,11 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 89,
+        "sloc": 148,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 89,
+      "serviceTotalSloc": 148,
       "serviceFiles": [
         "publicApi/publicApi.service.ts"
       ],
@@ -627,26 +627,28 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/apikey.ts",
-        "sloc": 51,
+        "sloc": 56,
         "counts": {
-          "total": 3,
-          "GET": 1,
+          "total": 5,
+          "GET": 2,
           "POST": 1,
           "PUT": 0,
-          "PATCH": 0,
+          "PATCH": 1,
           "DELETE": 1
         },
         "endpoints": []
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/apikey.ts (3 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Organization",
+        "Membership"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -656,7 +658,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "appBuilder",
@@ -2852,11 +2854,11 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 89,
+        "sloc": 148,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 262,
+      "serviceTotalSloc": 321,
       "serviceFiles": [
         "publicApi/publicApi.service.ts",
         "services/webhook.service.ts"
@@ -2892,7 +2894,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/developers.ts (71 LOC)",
       "pages": []
@@ -2910,7 +2912,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "devportal",
@@ -7012,11 +7014,11 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 89,
+        "sloc": 148,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1032,
+      "serviceTotalSloc": 1148,
       "serviceFiles": [
         "publicApi.service.ts",
         "publicApi.test.ts",
@@ -7051,7 +7053,7 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/apiKeys.ts (61 LOC, imported)",
     "web": {
       "client": null,
       "pages": []
@@ -7059,9 +7061,11 @@
     "db": {
       "prismaModels": [
         "User",
+        "UserProfile",
         "Organization",
         "Workspace",
         "Membership",
+        "AuditLog",
         "Agent",
         "Message",
         "TalkChannel",

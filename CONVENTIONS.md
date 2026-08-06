@@ -30,6 +30,21 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 104 — Decisions Logged (API Key Management Completion)
+
+- **Shared contract prefix:** `Ak` types and Zod schemas live in
+  `packages/shared/src/apiKeys.ts`; the public API service preserves its
+  `CreateApiKeySchema`/`UpdateApiKeySchema` aliases for existing consumers.
+- **Secret handling:** `wnd_` bearer tokens are generated with CSPRNG bytes;
+  only SHA-256 hashes and prefixes are persisted. Plaintext is returned once
+  from create and never from list/detail.
+- **Lifecycle:** API keys may be renamed or have scopes changed while active;
+  revocation is irreversible and all create/update/revoke transitions write
+  organization-scoped audit records.
+- **Isolation:** API key reads and mutations resolve the caller's membership
+  organization and fail closed for foreign key IDs. The dedicated client/page
+  uses `/api/v1/apikeys`; the existing Developer Portal remains compatible.
+
 ## Session 103 — Decisions Logged (AI Economy & GPU Capacity Ledger Completion)
 
 - **Shared contract prefix:** `AiEconomy*` types/schemas remain in
