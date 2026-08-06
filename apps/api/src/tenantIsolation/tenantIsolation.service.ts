@@ -127,8 +127,93 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // Autonomous Organization approval register (Session 106)
   { prefix: "aut:meta", scope: "org_scoped" },
   { prefix: "aut:decision", scope: "org_scoped" },
+  // Cognitive / World Model evidence register (Session 110)
+  { prefix: "cog:meta", scope: "org_scoped" },
+  { prefix: "cog:entity", scope: "org_scoped" },
+  { prefix: "cog:obs", scope: "org_scoped" },
+  { prefix: "cog:hypothesis", scope: "org_scoped" },
+  // Global Command Center operations register (Session 111)
+  { prefix: "cmd:meta", scope: "org_scoped" },
+  { prefix: "cmd:incident", scope: "org_scoped" },
+  { prefix: "cmd:region", scope: "org_scoped" },
+  { prefix: "cmd:briefing", scope: "org_scoped" },
+  { prefix: "cmd:initiative", scope: "org_scoped" },
+  { prefix: "cmd:dir", scope: "org_scoped" },
+  // Derivatives & Fixed-Income Desk (Session 113)
+  { prefix: "deriv:pos", scope: "org_scoped" },
+  { prefix: "deriv:bond", scope: "org_scoped" },
+  // Google Identity governance (Session 114)
+  { prefix: "gid:policy", scope: "org_scoped" },
+  { prefix: "gid:link", scope: "org_scoped" },
+  { prefix: "gid:event", scope: "org_scoped" },
+  // Lead Discovery pipeline (Session 115). `leads85` is Session 85's own
+  // namespace, org-scoped since it shipped but never audited until now.
+  { prefix: "leads85", scope: "org_scoped" },
+  { prefix: "lead:pipe", scope: "org_scoped" },
+  { prefix: "lead:note", scope: "org_scoped" },
+  { prefix: "lead:noteidx", scope: "org_scoped" },
+  { prefix: "lead:hist", scope: "org_scoped" },
+  // MFA assurance (Session 116) — organization-scoped half.
+  { prefix: "mfa:policy", scope: "org_scoped" },
+  { prefix: "mfa:exempt", scope: "org_scoped" },
+  { prefix: "mfa:exemptidx", scope: "org_scoped" },
+  { prefix: "mfa:event", scope: "org_scoped" },
+  // Mobile / PWA (Session 117) — the organization's mobile policy.
+  { prefix: "mob:policy", scope: "org_scoped" },
+  // Operational excellence (Session 118). `opex` is Session 73's own namespace
+  // (`opex:<org>:meta`, `opex:<org>:safety-alerts`), org-scoped since it
+  // shipped but never catalogued until now. The Session 118 namespaces are
+  // `opx:` rather than `opex:` on purpose: an `opex:alert:<org>:<id>` key would
+  // sit under the same root with the organization in the *third* segment, and
+  // the sweep reads the segment straight after the prefix — it would treat the
+  // literal string "alert" as an organization id and report a conformance check
+  // it never performed.
+  { prefix: "opex", scope: "org_scoped" },
+  { prefix: "opx:alert", scope: "org_scoped" },
+  { prefix: "opx:idx", scope: "org_scoped" },
+  { prefix: "opx:assess", scope: "org_scoped" },
+  { prefix: "opx:policy", scope: "org_scoped" },
+  { prefix: "opx:event", scope: "org_scoped" },
+  { prefix: "opx:imported", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
+  // MFA principal-scoped state — one key per *user* id, not per tenant. A
+  // person's second factor belongs to the person: the secret, its recovery
+  // digests, the enrolment record, the failure counter, the lock, the replay
+  // markers and the member's own ledger all key on the user id, and the login
+  // path that reads them has not resolved an organization yet. Cataloguing them
+  // as org_scoped would let the sweep treat a user id as an organization id and
+  // report conformance it has not checked. The first four predate Session 116
+  // and were never catalogued at all.
+  { prefix: "mfa:secret", scope: "shared" },
+  { prefix: "mfa:recovery", scope: "shared" },
+  { prefix: "mfa:enforced", scope: "shared" },
+  // Single-use, five-minute login challenge keyed by a CSPRNG token rather than
+  // by any principal; the payload carries the user id.
+  { prefix: "mfa:challenge", scope: "shared" },
+  { prefix: "mfa:enroll", scope: "shared" },
+  { prefix: "mfa:fail", scope: "shared" },
+  { prefix: "mfa:lock", scope: "shared" },
+  { prefix: "mfa:used", scope: "shared" },
+  { prefix: "mfa:uevent", scope: "shared" },
+  // Mobile / PWA principal-scoped state (Session 117) — one key per *user* id.
+  // A phone, the writes it queued while offline, its PIN lock and its push
+  // history belong to the person who signed in on it, not to a tenant: the same
+  // person may hold memberships in several organizations from the same handset,
+  // and the offline queue is read before an organization has been resolved.
+  // Every read filters on the caller's own user id and re-checks the decoded
+  // record's `userId`, so cataloguing these as org_scoped would make the sweep
+  // read a user id as an organization id and report a check it never made.
+  { prefix: "mob:action", scope: "shared" },
+  { prefix: "mob:actidx", scope: "shared" },
+  { prefix: "mob:actdev", scope: "shared" },
+  { prefix: "mob:pinfail", scope: "shared" },
+  { prefix: "mob:pinlock", scope: "shared" },
+  { prefix: "mob:event", scope: "shared" },
+  { prefix: "mob:pushlog", scope: "shared" },
+  // Google OAuth CSRF state is issued before any user — and therefore any
+  // organization — is known, so it is shared by design and short-lived (10 min).
+  { prefix: "google:state", scope: "shared" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {

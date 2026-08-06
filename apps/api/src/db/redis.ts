@@ -144,6 +144,41 @@ class MockRedis {
     return "OK";
   }
 
+  /**
+   * LREM with ioredis semantics (count > 0 from the head, < 0 from the tail,
+   * 0 removes all). The mock had no `lrem` at all, so every caller of it —
+   * media generation's pending queue, the global scheduler's dead letters and
+   * now Session 115's collection deletion — threw here rather than degrading.
+   */
+  async lrem(key: string, count: number, value: string) {
+    const list = this.store.get(key);
+    if (!list || !Array.isArray(list)) return 0;
+    const target = String(value);
+    let removed = 0;
+    let out: string[];
+    if (count === 0) {
+      out = list.filter((item: string) => {
+        if (item === target) { removed++; return false; }
+        return true;
+      });
+    } else if (count > 0) {
+      out = [];
+      for (const item of list) {
+        if (item === target && removed < count) { removed++; continue; }
+        out.push(item);
+      }
+    } else {
+      out = [];
+      for (let i = list.length - 1; i >= 0; i--) {
+        const item = list[i];
+        if (item === target && removed < -count) { removed++; continue; }
+        out.unshift(item);
+      }
+    }
+    this.store.set(key, out);
+    return removed;
+  }
+
   async zadd(key: string, score: number, member: string) {
     let zset = this.store.get(key);
     if (!zset || !Array.isArray(zset)) {

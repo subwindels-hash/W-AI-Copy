@@ -206,6 +206,41 @@ export class FakeKv {
     return l.length;
   }
 
+  /**
+   * LREM — remove elements equal to `value`, matching ioredis semantics:
+   * count > 0 removes that many from the head, count < 0 from the tail, and
+   * count === 0 removes every occurrence. Added for Session 115's collection
+   * deletion, which has to take an id back out of the per-org index list.
+   */
+  async lrem(key: string, count: number, value: string): Promise<number> {
+    const l = this.lists.get(key);
+    if (!l) return 0;
+    const target = String(value);
+    let removed = 0;
+    let out: string[];
+    if (count === 0) {
+      out = l.filter((item) => {
+        if (item === target) { removed++; return false; }
+        return true;
+      });
+    } else if (count > 0) {
+      out = [];
+      for (const item of l) {
+        if (item === target && removed < count) { removed++; continue; }
+        out.push(item);
+      }
+    } else {
+      out = [];
+      for (let i = l.length - 1; i >= 0; i--) {
+        const item = l[i]!;
+        if (item === target && removed < -count) { removed++; continue; }
+        out.unshift(item);
+      }
+    }
+    this.lists.set(key, out);
+    return removed;
+  }
+
   /** RPOP — remove and return the rightmost element of a list (or null). */
   async rpop(key: string): Promise<string | null> {
     const l = this.lists.get(key);

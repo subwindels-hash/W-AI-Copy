@@ -10,8 +10,11 @@ import { authenticate } from "./middleware/auth.js";
 import { registerHealthRoutes } from "./routes/health.js";
 import { registerAuthRoutes } from "./routes/auth.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
+import { registerMfaAssuranceRoutes } from "./routes/mfaAssurance.js";
 import { registerGoogleAuthRoutes } from "./routes/googleAuth.js";
+import { registerGoogleIdentityRoutes } from "./routes/googleIdentity.js";
 import { registerDerivativesRoutes } from "./routes/derivatives.js";
+import { registerDerivativesDeskRoutes } from "./routes/derivativesDesk.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
@@ -20,9 +23,11 @@ import { registerProfileRoutes } from "./routes/profile.js";
 import { registerWorkspaceRoutes } from "./routes/workspace.js";
 import { registerConversationRoutes } from "./routes/conversations.js";
 import { registerMessageRoutes } from "./routes/messages.js";
+import { registerConversationOpsRoutes } from "./routes/conversationOps.js";
 import { registerAttachmentRoutes } from "./routes/attachments.js";
 import { registerProjectContinuityRoutes } from "./routes/projectContinuity.js";
 import { registerLeadDiscoveryRoutes } from "./routes/leadDiscovery.js";
+import { registerLeadPipelineRoutes } from "./routes/leadPipeline.js";
 import { registerPromptTemplateRoutes } from "./routes/promptTemplates.js";
 import { registerAIRoutes } from "./routes/ai.js";
 import { registerAgentRoutes } from "./routes/agents.js";
@@ -42,6 +47,7 @@ import { registerPlatformRoutes } from "./routes/platform.js";
 import { registerSecurityRoutes } from "./routes/security.js";
 import { registerPublicApiRoutes } from "./routes/publicApi.js";
 import { registerMobileRoutes } from "./routes/mobile.js";
+import { registerMobileSyncRoutes } from "./routes/mobileSync.js";
 import { registerQaRoutes } from "./routes/qa.js";
 import { registerReleaseRoutes } from "./routes/release.js";
 import { registerProgramRoutes } from "./routes/program.js";
@@ -101,6 +107,7 @@ import { registerAiEconomyRoutes } from "./routes/aiEconomy.js";
 import { registerAutonomousRoutes } from "./routes/autonomous.js";
 import { registerCyberRoutes } from "./routes/cyber.js";
 import { registerOpexRoutes } from "./routes/opex.js";
+import { registerOpexAssuranceRoutes } from "./routes/opexAssurance.js";
 import { registerIndustryRoutes } from "./routes/industry.js";
 import { registerHealthEcosystemRoutes } from "./routes/healthEcosystem.js";
 import { registerEtlRoutes } from "./routes/etl.js";
@@ -185,8 +192,35 @@ export function createApp() {
   const v1 = express.Router();
   registerHealthRoutes(v1);
   registerAuthRoutes(v1);
+  // Session 116 — MFA assurance (policy, coverage, throttle, ledger) on a
+  // `/mfa` sub-router registered ahead of the original six endpoints. The
+  // sub-router attaches `authenticate` per handler rather than with
+  // `router.use`, so `/mfa/status`, `/mfa/enable`, `/mfa/confirm`,
+  // `/mfa/verify`, `/mfa/disable` and `/mfa/recovery-codes` fall through to
+  // their original handlers with their behaviour unchanged.
+  const mfaAssuranceRouter = express.Router();
+  v1.use("/mfa", mfaAssuranceRouter);
+  registerMfaAssuranceRoutes(mfaAssuranceRouter);
   registerMfaRoutes(v1);
+  // Session 114 Google identity governance (policy, linked identities, ledger,
+  // configuration report) on an `/auth/google` sub-router registered ahead of
+  // the OAuth endpoints themselves. The sub-router attaches `authenticate` per
+  // handler rather than with `router.use`, so `/auth/google`,
+  // `/auth/google/status` and `/auth/google/callback` fall through to the
+  // original handlers with their behaviour — including their unauthenticated
+  // status — unchanged.
+  const googleIdentityRouter = express.Router();
+  v1.use("/auth/google", googleIdentityRouter);
+  registerGoogleIdentityRoutes(googleIdentityRouter);
   registerGoogleAuthRoutes(v1);
+  // Session 113 desk (position book, portfolio exposure, scenarios, bond
+  // ladder) on a `/derivatives` sub-router, registered ahead of the Session 81
+  // calculators. The sub-router attaches `authenticate` per handler rather than
+  // with `router.use`, so an unmatched path falls through to Session 81's
+  // stateless endpoints with their behaviour unchanged.
+  const derivativesRouter = express.Router();
+  v1.use("/derivatives", derivativesRouter);
+  registerDerivativesDeskRoutes(derivativesRouter);
   registerDerivativesRoutes(v1);
   registerAdminRoutes(v1);
   registerMeRoutes(v1);
@@ -195,6 +229,13 @@ export function createApp() {
   registerProfileRoutes(v1);
   registerAttachmentRoutes(v1);
   registerProjectContinuityRoutes(v1);
+  // Session 115 — the lead pipeline shares the /lead-discovery prefix with
+  // Session 85's discovery endpoints. Its router is registered first and
+  // attaches `authenticate` per handler rather than with `router.use`, so an
+  // unmatched path falls through to Session 85's six endpoints unchanged.
+  const leadPipelineRouter = express.Router();
+  v1.use("/lead-discovery", leadPipelineRouter);
+  registerLeadPipelineRoutes(leadPipelineRouter);
   const leadDiscoveryRouter = express.Router();
   v1.use("/lead-discovery", leadDiscoveryRouter);
   registerLeadDiscoveryRoutes(leadDiscoveryRouter);
@@ -205,6 +246,9 @@ export function createApp() {
   // /conversations + /conversations/:id/messages share a sub-router
   const conversationsRouter = express.Router();
   v1.use("/conversations", conversationsRouter);
+  // Session 112 first: /search, /unread and /deleted are literal paths that the
+  // Session 2 router's `GET /:id` (cuid-validated) would otherwise reject.
+  registerConversationOpsRoutes(conversationsRouter);
   registerConversationRoutes(conversationsRouter);
   registerMessageRoutes(conversationsRouter);
 
@@ -1038,9 +1082,13 @@ export function createApp() {
   registerCyberRoutes(cybRouter);
 
   // /opex — Session 73: Operational Excellence & Responsible AI
+  // Session 118 registers its assurance handlers on the same router and *ahead*
+  // of Session 73's three, so an unmatched path falls straight through to
+  // /opex/dashboard/rollup and /opex/safety-alerts with their behaviour intact.
   const opexRouter = express.Router();
   v1.use("/opex", opexRouter);
   opexRouter.use(authenticate);
+  registerOpexAssuranceRoutes(opexRouter);
   registerOpexRoutes(opexRouter);
 
   // /industry — Session 74: Semantic Intelligence, Industry Solutions & Digital Operations
@@ -1184,6 +1232,14 @@ export function createApp() {
   registerEnterpriseFinOpsRoutes(enterpriseFinOpsRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
+  //
+  // Session 117's durable offline queue, device-trust and push-health routes are
+  // mounted on their own /mobile router *first*, so anything they do not serve
+  // falls straight through to the Session 21 endpoints with their paths,
+  // payloads and (for GET /mobile/config) their public access unchanged.
+  const mobileSyncRouter = express.Router();
+  v1.use("/mobile", mobileSyncRouter);
+  registerMobileSyncRoutes(mobileSyncRouter);
   registerMobileRoutes(v1);
 
   // /events — SSE real-time channel (Module 1: Gap 6)

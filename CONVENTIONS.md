@@ -30,6 +30,436 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 118 — Decisions Logged (Operational Excellence Completion)
+
+- **Module prefix:** `Opex*` types, **`opx:*` Redis keys**, the existing
+  `/api/v1/opex` route prefix, `apps/web/src/lib/opex.ts` client (appended),
+  `/app/opex` route + sidebar label "Operational Excellence".
+- **`opx:` and not `opex:` — a tenant-isolation constraint, not a style
+  choice.** The Session 89 sweep derives the organization's position in a key as
+  `ns.prefix.split(":").length`. Session 73's keys are `opex:<org>:meta` and
+  `opex:<org>:safety-alerts`, so the prefix `opex` puts the organization at
+  index 1. A new key named `opex:alert:<org>:<id>` catalogued under the prefix
+  `opex:alert` would still be matched by the shorter `opex` entry and the sweep
+  would read the literal string `alert` as an organization id — reporting a
+  check it never made. Any future session adding keys to a module whose legacy
+  prefix already occupies a segment must either use a distinct prefix or extend
+  the sweep; silently colliding is worse than either.
+- **A number that has not been measured is `null`, never `0`.** This is the
+  central rule of the session. On a 0-100 scale zero is a score, so an
+  unassessed `alignment` reads as catastrophic and an unassessed
+  `hallucinationRisk` — a *risk* dimension — reads as "no risk". Every published
+  number in a new surface is an `OpexMeasure` carrying `value: number | null`
+  plus the `basis` it was obtained on. **No `?? 0` in a value position**, in the
+  service or in the page.
+- **Rates are floored, never rounded.** 999 successes out of 1 000 is 99 %. A
+  reliability metric that rounds a failure away cannot be used to notice one.
+- **An empty denominator yields `null`, not `0`.** `opexRatePercent` returns
+  `null` when the denominator is zero: no evidence of reliability is not
+  evidence of unreliability, and no filings is not a 0 % closure rate.
+- **Refuse to publish a composite.** `OpexTrustReport.compositeScore` is typed
+  as the literal `null` so it cannot be filled in later by accident. Averaging
+  observed traffic statistics against unassessed dimensions produces a number
+  whose movement cannot be attributed to anything. Publish the parts and their
+  bases instead.
+- **Name the measurement, not the aspiration.** A closure rate is a closure
+  rate, not a "safety pass rate". A metric's label is part of its correctness.
+- **Never invent a timestamp during a migration.** Records adopted from an older
+  store that did not record transition times keep `null` for those fields, carry
+  an `importedFromLegacyRegister` flag, are counted separately, and are excluded
+  from every statistic that would need the missing time — with the exclusion
+  count and its reason shipped inside the payload.
+- **Adopt, do not destroy.** Legacy adoption reads the old blob, writes durable
+  records, sets a one-shot marker, and **leaves the old key in place**. A
+  malformed legacy value is tolerated, not fatal.
+- **Corrections append.** Reopening a resolved record adds a transition and
+  increments a counter; it never edits or removes the resolution it undoes. A
+  workflow with no correction path forces the correction to happen off the
+  record.
+- **A score without a method is an opinion.** An operator assessment requires
+  the method that produced it (≥ 10 characters), stores the author and time, and
+  goes `stale` at the policy's validity window rather than being trusted
+  indefinitely.
+- **Declared-but-unimplemented contract sections are named in the payload.**
+  When a shipped response type has fields nothing populates, deleting them is
+  not additive — so publish a provenance block that says, field by field, which
+  numbers are observed and which are structural zeros, and list the same
+  sections in the gap report.
+- **Hide the control the API will refuse.** Console reads are open to any member
+  because the endpoints are; write controls are rendered only for
+  administrators. A button that always fails is worse than no button.
+
+## Session 117 — Decisions Logged (Mobile App / PWA Completion)
+
+- **Module prefix:** `Mobile*` types, `mob:*` Redis keys (`mobile:*` was already
+  taken by unrelated Session 21 cache entries), the existing `/api/v1/mobile`
+  route prefix, `apps/web/src/lib/mobile/sync.ts` client, `/app/mobile-devices`
+  route + sidebar label "Mobile Devices".
+- **A queue that reports success must actually hold the data.** The previous
+  implementation counted the array and dropped it, and the client deleted its
+  local copy on the strength of that count. The rule this session encodes: **a
+  client may delete local work only for ids the server explicitly reports as
+  held**, and every receipt carries `retainLocally` so the negative case is
+  stated rather than inferred from an absence.
+- **Stored is not applied.** The queue records a write; it does not perform one.
+  The server deliberately does **not** re-dispatch a queued action internally:
+  that would execute a write with none of its authorization, validation or
+  rate-limit context re-established. Replay happens on the device, against the
+  ordinary authenticated API, and the note ships inside every queue payload.
+- **Order by the server's clock, return the device's.** A handset's clock is
+  attacker-controlled and frequently just wrong, so `receivedAt` orders the
+  replay plan and `queuedAt` is returned separately, labelled as the device's
+  own value. Never silently prefer client-supplied time for anything ordered.
+- **Refuse, do not truncate.** A body over the size cap is rejected with a
+  reason. Truncating would store a corrupted write that looks replayable.
+- **Expiry is not application.** A record dropped at the end of its retention
+  window is reported `expired`; folding it into `applied` or deleting it
+  silently would turn lost work into apparent success.
+- **A client-supplied identifier is not an authorization.** A device id arriving
+  in a request body is checked against its owner before anything is written to
+  it. An id belonging to nobody is not an error — that is how a new handset is
+  issued one — but an id belonging to *someone else* is a `403` and a ledger
+  entry, not an upsert.
+- **Never select a column the schema says never to select.** `pinHash` and
+  `pushTokenHash` leave the server in no payload; a test greps a full keyspace
+  dump to prove it, and the grep first asserts the dump is non-empty so it
+  cannot pass vacuously.
+- **A push endpoint is a bearer capability.** Health reports the endpoint
+  **host** only. Anyone holding the full endpoint can send to that subscription.
+- **Bookkeeping is best-effort and never fails the thing it observes.** Push
+  delivery and retirement records are wrapped and the mobile service is imported
+  lazily, so a Redis problem cannot turn a delivered notification into a 500.
+- **Advisory policy is labelled advisory.** Only the queue limits this API
+  enforces are enforced; a minimum app version is a message for the client to
+  act on, and this API does not refuse requests from an out-of-date build.
+- **Removing `@ts-nocheck` counts as completing the module.** A route file
+  excluded from the type checker is not covered by the repository's guarantees.
+  The rename of the local `r` router to `router` also makes the file legible to
+  the audit's route scanner, which matches `router.<verb>`.
+- **Principal-scoped keys are catalogued `shared`, with the reason written
+  down.** A phone and its queue belong to a person, not a tenant, and the queue
+  is read before an organization is resolved. Marking them `org_scoped` would
+  make the Session 89 sweep read a user id as an organization id and report a
+  check it never made.
+
+## Session 116 — Decisions Logged (Multi-Factor Authentication Completion)
+
+- **Module prefix:** `Mfa*` types, `mfa:*` Redis keys, the existing `/api/v1/mfa`
+  route prefix, `apps/web/src/lib/mfa.ts` client, `/app/mfa-assurance` route +
+  sidebar label "MFA Assurance".
+- **The new type is `MfaOrgPolicy`, not `MfaPolicy`.** `wakeIntel.ts` already
+  exports an `MfaPolicy` (wake-word factors: voice print, face, clap biometric).
+  The barrel re-exports every module, so the short name would be a TS2308
+  ambiguity. A new module takes the longer name; a shipped module does not get
+  renamed to make room for it.
+- **A correct cryptographic core is not a complete control.** The RFC 6238
+  implementation was pinned to the spec's published vectors and was left exactly
+  as it was. What was added is everything the standard also asks for and the
+  product needed: a per-principal attempt throttle, a single-use guard, a
+  confirmed enrolment state and a record of what happened.
+- **Per-IP rate limiting is not an attempt throttle.** `rateLimit("login")` keys
+  on the caller's address; the second-factor counter keys on the *principal*
+  being attacked (`mfa:fail:<userId>`), because that is the thing with a
+  guessable secret.
+- **Never store the credential you are guarding against.** The replay marker is
+  `SHA-256(token)` truncated to 32 hex characters, keyed per user and expiring
+  with the token's own validity window. A test greps the entire keyspace for any
+  token, recovery code or plaintext secret.
+- **Enforcement follows proof, not intent.** `enable` starts a *pending*
+  enrolment; only a successful verification confirms it. A pending enrolment can
+  be abandoned without a code (that is the lockout escape hatch); a confirmed one
+  still requires a valid code to disable (that is not a bypass).
+- **A pre-ledger secret is `unrecorded`, never `confirmed`.** Back-filling a
+  state the system never observed is a fabricated verdict.
+- **A security policy change must not be able to lock out the only person who
+  could revert it.** Blocking enforcement is refused when the caller would
+  themselves be blocked by it; `report_only` is unaffected, since it blocks
+  nobody.
+- **Assurance fails open on the login path.** Policy evaluation is wrapped so
+  that anything other than an explicit `block` lets the sign-in proceed. A bug
+  in a reporting feature must never become an outage of authentication.
+- **`not_required`, `exempt` and `covered` are three different answers.** An
+  organization with a permissive policy is not a protected one, and an exemption
+  is a documented decision — neither is folded into the covered count.
+  `requiredCoverageRatio` is `null` when the policy requires nobody.
+- **Principal-scoped keys are catalogued as `shared`, with the reason.** MFA keys
+  address a user id, not a tenant, and the login path that reads them has not
+  resolved an organization yet. Declaring them `org_scoped` would make the
+  Session 89 sweep read a user id as an organization id and report conformance it
+  never checked.
+- **The configuration report reads the environment and makes no network call.**
+  It reports "configured", never "working", and never echoes a key value.
+
+## Session 115 — Decisions Logged (Lead Discovery Completion)
+
+- **Module prefix:** `Lead*` types, `lead:*` Redis keys, the existing
+  `/api/v1/lead-discovery` route prefix, `apps/web/src/lib/leadDiscovery.ts`
+  client (extended, not replaced), `/app/lead-pipeline` route + sidebar label
+  "Lead Pipeline".
+- **Provider output and human judgement are stored separately.** The lead
+  record (`leads85:*`, Session 85) is never rewritten by this session; the
+  pipeline record (`lead:pipe:*`) holds everything a person decided. The
+  default pipeline record is materialised on read, so an untouched lead costs
+  no storage and Session 85's write path is unchanged.
+- **A status is a decision, never a verification.** `verificationStatus`
+  stays `source_returned` no matter what an operator sets, and the status
+  legend says so on the screen where statuses are set.
+- **`duplicate` is not hand-settable.** It carries a `duplicateOf` pointer only
+  the grouping pass can establish, so `LeadStatusUpdateSchema` accepts the
+  other four statuses only. The compiler flagged the resulting unreachable
+  branch during development, which is the intended feedback loop.
+- **Deduplicate on the provider's identifier or not at all.** Similar names and
+  addresses are not evidence that two listings are one business. Two branches
+  of a chain must remain two leads.
+- **Resolution marks, never deletes.** Destroying a record to tidy a list would
+  take its notes with it. Marking is reversible; deletion is not.
+- **Break timestamp ties with real ordering, not with an id comparison.** Two
+  searches inside one millisecond share a `discoveredAt`; the index list is an
+  insertion order the store already maintains. Sorting on UUID and calling the
+  winner "earliest" is a fabricated claim, and the tests are expected to catch
+  that class of shortcut.
+- **Report absence together with its cause.** A zero that is an artefact of the
+  API call made (`phone`, `website` from Places text search) must ship the
+  reason in the same payload; `percentPresent` is `null`, not `0`, when there
+  is nothing to measure.
+- **Bookkeeping never fails the paid operation.** The ledger write inside
+  `search()` is `.catch(() => {})` on purpose: the provider has already been
+  billed by then.
+- **Escape *and* neutralise on export.** Directory-sourced text is untrusted
+  input; a leading `=` is executed by spreadsheets. The apostrophe prefix is
+  visible rather than a silent rewrite, and the payload explains it.
+
+## Session 114 — Decisions Logged (Google Identity Completion)
+
+- **Module prefix:** `Google*` types, `gid:*` Redis keys, the existing
+  `/api/v1/auth/google` route prefix, `apps/web/src/lib/googleAuth.ts` client,
+  `/app/google-identity` route + sidebar label "Google Identity".
+- **New contract file, not an extension:** unlike Session 113, the module had
+  no shared contract at all, so `packages/shared/src/googleAuth.ts` is new and
+  exported from the barrel. Nothing was moved out of the API service into it.
+- **Governance is a separate service from the flow.** `services/googleAuth.service.ts`
+  keeps sole ownership of the OAuth exchange and ID-token verification;
+  `googleAuth/googleIdentity.service.ts` owns policy, register, ledger and
+  configuration. The flow calls the governance service at exactly two points
+  (gate before issuing a session, record after) and nowhere else.
+- **A default is labelled as a default.** When no policy record exists the API
+  returns the platform default with `isDefault: true`, so a UI can never
+  present "open" as a decision somebody made. Resetting a policy that was never
+  stored is a `404`, not a silent success.
+- **Enforcement fails closed; auditing fails open.** A policy read error
+  propagates and the sign-in fails (Redis is already required earlier in the
+  flow for the OAuth state). A ledger write failure is swallowed: the session
+  was already authorized, and losing an audit row must not lock a legitimate
+  user out. Both choices are stated in comments at the call sites.
+- **Secrets and subjects never leave the process.** The configuration report
+  returns booleans and a masked client id, never `GOOGLE_CLIENT_SECRET`;
+  Google's `sub` is stored only as a truncated SHA-256 fingerprint
+  (`GOOGLE_SUBJECT_FINGERPRINT_CHARS`).
+- **Environment reports do not reach the network.** Readiness is derived from
+  environment checks only, `ready = checks.every(pass)` (a `warn` is not a
+  pass), and the payload's own note says a passing check means "configured",
+  not "working". A test asserts `fetch` is never called.
+- **Ledger ordering is deterministic without lying about time.** Entries carry
+  a per-process append counter used only to break same-millisecond ties; it is
+  stripped before the record leaves the service, so no timestamp is nudged to
+  make sorting easier.
+- **Sub-router mounting (as Session 113):** `v1.use("/auth/google", router)`
+  registered *before* `registerGoogleAuthRoutes(v1)`, with `authenticate`
+  attached per handler rather than via `router.use`, so unmatched paths fall
+  through to the original endpoints and keep their unauthenticated status.
+- **Pre-login namespaces are catalogued too.** `google:state` was added to
+  `TI_NAMESPACE_CATALOG` as `shared` with a comment explaining why it cannot be
+  org-scoped, rather than being left uncatalogued.
+
+## Session 113 — Decisions Logged (Derivatives & Fixed-Income Desk Completion)
+
+- **Module prefix:** `Deriv` types, `deriv:*` Redis keys, `/api/v1/derivatives`
+  route prefix, `apps/web/src/lib/derivatives.ts` client, `/app/derivatives`
+  route + sidebar label "Derivatives Desk".
+- **Shared contract extended, not forked:** the `Deriv*` block was appended to
+  the existing `packages/shared/src/derivatives.ts` rather than added as a new
+  file, so the module keeps one contract and the Session 81 types stay exported
+  from the same place.
+- **Re-use the pricer, never re-derive it:** every number the desk reports goes
+  through `tradingIntel/derivatives.ts` (`blackScholes`, `bondAnalytics`,
+  `strategyPayoff`). A test asserts the desk's valuation *equals* the pricer at
+  the same inputs, so the two can never silently diverge.
+- **Storage:** Redis-backed, org-scoped (`deriv:<entity>:i:<org>:<id>` + ZSET
+  index `deriv:<entity>:idx:<org>`), following the `tenantStore` key shape so
+  the Session 89 namespace audit treats them as org-scoped. Reads fail closed
+  twice: org-addressed key **and** a re-check of the decoded
+  `organizationId`.
+- **Route mounting:** the Session 113 sub-router is registered before the
+  Session 81 calculators and attaches `authenticate` per handler instead of
+  `router.use(authenticate)`, so an unmatched path falls through with the
+  Session 81 behaviour (including its unauthenticated status) unchanged.
+  Mutations additionally require `requireAdmin`.
+- **No market data, ever:** every input is `markSource: "operator_entered"`
+  with a `markedAt` timestamp. Only a re-mark refreshes that timestamp —
+  renaming a position must not make a three-week-old spot look fresh. Marks
+  older than `DERIV_MARK_STALE_AFTER_HOURS` (24h) are reported `stale`.
+- **Un-priceable is reported, never zeroed:** a position missing a mark or a
+  volatility is excluded from every aggregate and listed with a prose reason.
+  `deltaNotional` and `unrealizedPnl` are `null` when nothing supports them,
+  because an unmeasured book is not a flat book.
+- **Cross-underlying aggregation:** raw delta/gamma sum only within one
+  underlying; the only portfolio-level directional total is delta *notional*.
+  `DERIV_AGGREGATION_NOTE` ships in the payload. Disagreeing marks on one
+  symbol set `markSpotConflict` rather than the desk choosing a spot.
+- **Scenario grids are a full reprice** (`method: "full_reprice"`), capped at
+  `DERIV_MAX_GRID_CELLS`; a shock that invalidates the model for a position
+  drops it from that cell and the cell's `pricedPositions` says so.
+- **Payoff extremes are range-labelled** (`maxProfitInRange`) with
+  `unboundedAbove`/`unboundedBelow` flags; breakevens are declared
+  interpolated.
+- **Fixed income refuses to guess a yield:** a holding needs a yield or a
+  price, on create and on update. Weighted ladder metrics are `null` when
+  nothing can be valued, and shifted-yield figures are a full reprice measured
+  against the model's own base valuation.
+- **Kernel events:** every write emits `derivatives.<entity>.<action>` via
+  `KernelService.dispatch` (best effort — never fails the write).
+- **No AI and no execution:** nothing in this module calls a model or places an
+  order.
+
+## Session 112 — Decisions Logged (Conversations / Messaging Completion)
+
+- **Module prefix:** `Conv` types and Zod contracts in
+  `packages/shared/src/conversations.ts`, `/api/v1/conversations` route prefix,
+  `apps/web/src/lib/conversations.ts` client (`conversationsApi`),
+  `/app/conversations` route + sidebar label "Conversation Ops".
+  `apps/web/src/lib/chat.ts` stays the Sessions 2–4 thread/stream client for
+  `/app/chat`; the two are complementary, not duplicates.
+- **Prisma-backed module, so isolation lives in the query layer.** This module
+  stores relational rows, not Redis blobs, so it has *no* `TI_NAMESPACE_CATALOG`
+  entry (that catalog audits Redis namespaces). Instead: every path filters on
+  the caller's `organizationId`, requires `createdById = caller` **or** a
+  participant row, and re-checks the loaded row's `organizationId` after the
+  query (fail-closed). Org membership alone never grants thread access.
+- **Additive route registration to avoid touching a working router.** New
+  collection paths (`/search`, `/unread`, `/deleted`) would be captured by the
+  Session 2 router's cuid-validated `GET /:id`, so the Session 112 router is
+  registered *first* in `server.ts` and attaches `authenticate` per route
+  (it runs ahead of the other router's `router.use(authenticate)`).
+- **A derived count must carry its definition.** Anything computed from state
+  the user can change ships the rule beside the number: `ConvReadState.basis`,
+  `excludesOwnMessages`, `ConvUnreadSummary.truncated` +
+  `inspectedConversations`, `ConvStats.measuredFrom`.
+- **`null` means "not recorded"; `0` means "measured zero".** Usage counters no
+  message stored come back `null` with `messagesMissingUsage` alongside, and the
+  UI renders "not recorded" rather than a fabricated zero.
+- **Name the matcher.** Substring search declares
+  `matchKind: "substring_case_insensitive"` and returns verbatim excerpts with
+  the real `matchOffset`, so no caller can mistake it for semantic search.
+- **Extractive means extractive.** The digest quotes stored bodies and counts
+  terms with a fixed stop-word list and a deterministic sort
+  (occurrences desc, term asc); it is labelled `kind:
+  "extractive_deterministic"`, `aiGenerated: false`, and carries
+  `CONV_DIGEST_DISCLAIMER` verbatim. No AI provider is invoked on this path.
+- **Corrections are append-only; nothing is destroyed.** Edits store lengths and
+  reasons in `Message.metadata.conv.edits` (never the replaced text); redaction
+  blanks the body and records `{redactedAt, redactedBy, reason, redactedLength}`
+  while the row, its ordering and its usage counters survive. Model output is
+  never editable. Conversation deletion stays a reversible soft delete.
+- **Audit mapping:** route files that extend an existing module get a
+  `ROUTE_OVERRIDES` entry in `audit/build-inventory.mjs`
+  (`conversationOps → conversations`), the same way `messages` already maps.
+
+## Session 111 — Decisions Logged (Global Command Center Completion)
+
+- **Module prefix:** `Cmd` types and Zod contracts in
+  `packages/shared/src/command.ts`, `cmd:*` Redis keys, `/api/v1/command` route
+  prefix, `apps/web/src/lib/command.ts` client (`commandApi`, with `gccApi` kept
+  as a Session 70 alias), `/app/command` route + sidebar label "Global Command
+  Center".
+- **Two command surfaces, kept separate:** `command.service.ts` projects live
+  *platform* activity (agents, workflows, tasks, AI requests, alerts) from real
+  tables; `operations.service.ts` is the organization's own incident/region/
+  briefing/initiative/directive register. `CommandService.operations()` is a
+  thin delegate so callers need one import.
+- **Storage:** `cmd:<entity>:i:<org>:<id>` + `cmd:<entity>:idx:<org>` ZSETs,
+  fail-closed reads that re-check the stored `organizationId`, CSPRNG ids
+  (`cmd_inc_`, `cmd_reg_`, `cmd_brf_`, `cmd_ini_`, and `cmd-` retained for
+  directives). Index scores use the record's own creation timestamp, so an edit
+  never reorders the board.
+- **Migration over replacement:** Session 70 directives were `tenantStore`
+  envelopes on the *same* key shape, so they are normalized in place on read and
+  rewritten once. The migration is idempotent, and fields the legacy envelope
+  never captured (`statusChangedBy`, `statusNote`) migrate as `null` rather than
+  being attributed to the issuer.
+- **MTTR is measured, not asserted.** `timeToResolveMinutes` comes from the
+  stored `openedAt`/`resolvedAt` pair; the rollup exposes
+  `meanTimeToResolveMinutes` (`null` when nothing is resolved), `mttrSampleSize`
+  and `mttrKind: "measured" | "none"` so a consumer can tell "no sample" apart
+  from "instant recovery". Session 70's hardcoded `mttrMinutes: 0` is gone.
+- **Unknown is a first-class state.** A region with no operator status report is
+  `health: "unreported"` with `servicesUp`/`latencyMs`/`activeUsers` `null` —
+  the platform probes nothing and never renders an unmeasured value as `0`.
+  Every region carries a `healthBasis` sentence naming the rule that fired.
+- **Errors over silent coercion.** Reporting more services up than a region
+  declares is a `400`, not a clamp; an incident naming an unregistered region is
+  a `404`, not a dangling reference; deleting a region with unresolved incidents
+  is a `409`, not a silent detach.
+- **Human-only lifecycle.** Incidents are born `open`; acknowledgement and
+  resolution both require a named user, resolution requires a written note, and
+  re-acknowledging / re-resolving / re-transitioning a directive is a `409`.
+- **Self-reported means labelled.** `CmdInitiative.progressKind` is always
+  `self_reported`, the rollup average is `self_reported_average` (or `none`),
+  and `ai_assisted` briefings carry `aiAssisted: true`, their own rollup bucket,
+  an advisory UI badge and an `[AI-assisted — advisory]` prefix in the legacy
+  `briefings` array.
+- **Rollup determinism:** counts, shares and measured durations only, no
+  `generatedAt`, no wall-clock arithmetic — pinned by a `JSON.stringify`
+  equality test across two reads.
+- **Kernel events** (`command.incident_declared`,
+  `command.incident_acknowledged`, `command.incident_resolved`,
+  `command.region_status_reported`, `command.directive_issued`) are best-effort
+  and emitted from write paths only.
+- **Contract widening is additive.** `RegionalStatus.health` gained
+  `"unreported"`, its numeric fields became nullable, `CommandIncident.status`
+  gained `"acknowledged"` and `strategicInitiatives[].due` became nullable —
+  existing producers and consumers keep compiling.
+- **No demo seed.** The register ships empty; an organization with no records is
+  displayed as empty.
+
+## Session 110 — Decisions Logged (Cognitive / World Model Completion)
+
+- **Module prefix:** `Cog` types and Zod contracts in
+  `packages/shared/src/cognitive.ts`, `cog:*` Redis keys, `/api/v1/cognitive`
+  route prefix, `apps/web/src/lib/cognitive.ts` client, `/app/cognitive` route
+  + sidebar label "Cognitive / World Model".
+- **Two cognitive surfaces, kept separate:** `cognitive.service.ts` projects
+  live *platform* activity (agents, workflows, AI requests, alerts) from real
+  tables; `worldModel.service.ts` is the organization's own evidence register.
+  `CognitiveService.worldModel()` is a thin delegate so callers need one import.
+- **Storage:** `cog:<entity>:i:<org>:<id>` + `cog:<entity>:idx:<org>` ZSETs,
+  fail-closed reads that re-check the stored `organizationId`, CSPRNG ids
+  (`cog_ent_`, `cog_obs_`, `cog_hyp_`).
+- **Migration over replacement:** Session 69 observations were `tenantStore`
+  envelopes on the *same* key shape, so they are normalized in place on read
+  and rewritten once. The migration is idempotent — unwrapping only happens
+  when a `data` envelope is present, and the index keeps one member per record.
+- **Confidence is never computed.** Every observation carries
+  `confidenceKind: "self_reported"`, and the rollup average is labelled
+  `self_reported_average`. With no observations the average is `null`, not `0`.
+- **AI output is advisory and labelled.** `origin: "ai_assisted"` +
+  `aiAssisted: true`, counted in its own rollup bucket and badged in the UI. It
+  never flows into a hypothesis outcome.
+- **Hypotheses are human-resolved.** Created `open`; only
+  `POST /hypotheses/:id/resolve` (admin) with a mandatory note can set
+  `supported`/`refuted`/`inconclusive`, stamping `resolvedBy`. Re-resolution is
+  a `409`.
+- **Referential honesty:** unknown observation ids are dropped at hypothesis
+  creation rather than stored as phantom support; deleting an observation
+  prunes it from citing hypotheses; deleting an entity that still has
+  observations is a `409`, not a silent detach.
+- **Rollup determinism:** counts/shares only, no `generatedAt`, no wall-clock
+  arithmetic — pinned by a `JSON.stringify` equality test across two reads.
+- **Kernel events** (`cognitive.entity_created`,
+  `cognitive.observation_recorded`, `cognitive.hypothesis_resolved`) are
+  best-effort and emitted from write paths only.
+- **No demo seed.** The register ships empty; an organization with no records
+  is displayed as empty.
+
 ## Session 109 — Decisions Logged (Canvas Collaboration Completion)
 
 - **Shared contract prefix:** `Cc` presence/cursor contracts live in

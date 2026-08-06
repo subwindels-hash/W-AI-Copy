@@ -107,13 +107,53 @@ export async function sendToUser(userId: string, payload: PushPayload) {
       }).catch(() => null);
       if (updated && updated.failures >= 8) {
         await prisma.pushSubscription.delete({ where: { id: s.id } }).catch(() => null);
+        // Session 117: a subscription used to vanish here with no record at
+        // all, so push simply stopped and nobody could find out why.
+        // Best-effort: a failed bookkeeping write must not fail the send.
+        await recordSubscriptionRetired(userId, s.endpoint, updated.failures);
       }
     }
   }
   if (delivered > 0) {
     await prisma.notification.update({ where: { id: notif.id }, data: { pushDelivered: true } }).catch(() => null);
   }
+  // Session 117: record the attempt so `GET /mobile/push/health` can report
+  // deliveries instead of silence. Best-effort by design.
+  await recordDelivery(userId, notif.id, delivered, subs.length);
   return { notifId: notif.id, delivered, total: subs.length };
+}
+
+/**
+ * Push delivery bookkeeping (Session 117).
+ *
+ * Imported lazily so this module keeps no load-time dependency on the mobile
+ * assurance service, and wrapped so that a bookkeeping failure can never turn a
+ * delivered notification into an error.
+ */
+async function recordDelivery(userId: string, notifId: string, accepted: number, attempted: number) {
+  try {
+    const { MobileSyncService } = await import("../mobile/mobileSync.service.js");
+    await MobileSyncService.recordPushDelivery(userId, {
+      notificationId: notifId,
+      accepted,
+      attempted,
+    });
+  } catch {
+    /* bookkeeping only */
+  }
+}
+
+async function recordSubscriptionRetired(userId: string, endpoint: string, failures: number) {
+  try {
+    const { MobileSyncService } = await import("../mobile/mobileSync.service.js");
+    const { mobilePushEndpointHost } = await import("@windels/shared/mobile");
+    await MobileSyncService.recordPushSubscriptionRetired(userId, {
+      endpointHost: mobilePushEndpointHost(endpoint),
+      failures,
+    });
+  } catch {
+    /* bookkeeping only */
+  }
 }
 
 async function dispatch(

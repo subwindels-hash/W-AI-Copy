@@ -34,9 +34,27 @@ export function registerGoogleAuthRoutes(router: Router) {
       const code = typeof req.query.code === "string" ? req.query.code : null;
       const state = typeof req.query.state === "string" ? req.query.state : null;
       if (!code || !state) return res.status(400).send("Missing code/state");
-      const result = await GoogleAuthService.handleCallback({ code, state });
-      // Redirect to frontend with token in hash fragment (avoids query-logging on servers)
       const fe = process.env.WEB_ORIGIN || process.env.API_CORS_ORIGIN || "http://localhost:5173";
+      let result: Awaited<ReturnType<typeof GoogleAuthService.handleCallback>>;
+      try {
+        result = await GoogleAuthService.handleCallback({ code, state });
+      } catch (err: any) {
+        // Session 114 — an organization's Google sign-in policy refused this
+        // account. That is a decision, not a fault: send the browser back to
+        // the frontend callback with the reason so it can be shown, rather
+        // than surfacing a 500 that says nothing. Every other failure keeps
+        // its original path through the error handler.
+        if (err?.code === "GOOGLE_SIGNIN_BLOCKED") {
+          const params = new URLSearchParams({
+            error: "policy_blocked",
+            outcome: String(err.outcome ?? "blocked"),
+            message: String(err.message ?? "Google sign-in was refused by this organization's policy."),
+          });
+          return res.redirect(302, `${fe}/auth/callback#${params.toString()}`);
+        }
+        throw err;
+      }
+      // Redirect to frontend with token in hash fragment (avoids query-logging on servers)
       res.redirect(302, `${fe}/auth/callback#token=${encodeURIComponent(result.token)}&isNewUser=${result.isNewUser}&redirect=${encodeURIComponent(result.redirectAfter)}`);
     } catch (e) { next(e); }
   });

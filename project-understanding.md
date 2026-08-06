@@ -1,7 +1,7 @@
-# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 109)
+# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 111)
 
 > Compiled from the master spec (`uploads/CLAUDE.md` ~15k lines), the per-session
-> addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-05),
+> addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-06),
 > the current `docs/` session specifications, and the workflow brief preserved in
 > `SESSION_WORKFLOW.patch`. Use this as the "what is really going on" map before
 > adding anything new.
@@ -36,11 +36,11 @@ For each module, in strict order:
 (`CONVENTIONS.md`) → progress log.
 
 Current counts that confirm the pattern is uniform (2026-08-06):
-- **118** route files (`apps/api/src/http/routes/*.ts`)
-- **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
-- **97** API test files; **26** Playwright specs in `tests/e2e/`
+- **124** route files (`apps/api/src/http/routes/*.ts`)
+- **118** web API clients/helpers at the top level of `apps/web/src/lib/*.ts` (**123** including the module subdirectories such as `lib/mobile/`)
+- **109** API test files; **33** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S109)
+## 4. The session-by-session arc (S1 → S117)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -106,7 +106,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | 75 | `healthEcosystem` | **Record-only** health (de-faked) |
 | 76 | `v76validation` | Final integration & validation |
 
-### Recent additive sessions (S77–109) — shipped as 🟡 VERIFIED (partial) pending runtime closure
+### Recent additive sessions (S77–111) — shipped as 🟡 VERIFIED (partial) pending runtime closure
 | Session | Module(s) | What it is |
 |---|---|---|
 | 77A | `expertsPlatform` | Experts platform |
@@ -142,6 +142,17 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **107** | `billing` | **Billing & Subscriptions completion** — shared contracts, real subscription/invoice lifecycle, audited payment actions, idempotent webhooks/dunning and dedicated billing console (`docs/SESSION_107_SPECIFICATION.md`) |
 | **108** | `camera` | **Camera Feed Registry & Alert Console completion** — shared feed/alert contracts, org-scoped records, corrected mounted routes, honest stream handoff and dedicated camera console (`docs/SESSION_108_SPECIFICATION.md`) |
 | **109** | `canvasCollab` | **Canvas Collaboration completion** — shared presence/cursor contracts, org-verified routes, org-scoped Redis state/channel migration and Canvas collaborator heartbeat UI (`docs/SESSION_109_SPECIFICATION.md`) |
+| **110** | `cognitive` | **Cognitive / World Model completion** — org-scoped entity/observation/hypothesis evidence register, idempotent Session 69 observation migration, deterministic coverage/blind-spot rollup, self-reported confidence and advisory AI labelling, human-only hypothesis resolution and dedicated `/app/cognitive` console (`docs/SESSION_110_SPECIFICATION.md`) |
+| **111** | `command` | **Global Command Center completion** — org-scoped incident/region/briefing/initiative/directive operations register, human-only acknowledge+resolve so MTTR is measured from stored timestamps, `unreported` regions until an operator files a status report, self-reported initiative progress, advisory AI-briefing labelling, idempotent Session 70 directive migration and dedicated `/app/command` console (`docs/SESSION_111_SPECIFICATION.md`) |
+| **112** | `conversations` | **Conversations / Messaging completion** — the Sessions 2–4 thread was already real; this session added everything around it: the module's first shared `Conv*` contract, participant management, the first code that ever writes `ConversationParticipant.lastReadAt`, unread counts that declare their basis and exclude the caller's own messages, statistics that report `null` (not `0`) for usage no message recorded, case-insensitive substring message search labelled as such, author-only edits with an append-only trail, redaction that blanks a body while keeping the row, transcript export, an explicitly non-AI extractive digest, soft-delete listing + creator-only restore, and a dedicated `/app/conversations` console (`docs/SESSION_112_SPECIFICATION.md`) |
+| **113** | `derivatives` | **Derivatives & Fixed-Income Desk completion** — Session 81's four calculators were pure functions that stored nothing, so the module had no book, no portfolio exposure and no ladder. This session added an org-scoped Redis desk (option positions + bond holdings) that re-uses the Session 81 pricer for every number, exposure grouped per underlying with delta *notional* as the only cross-symbol total, full-reprice spot×vol scenario grids that report how many positions each cell could price, a sampled payoff curve with interpolated breakevens and explicit unbounded flags, a static delta hedge that refuses to call an unmeasured book flat, a put-call parity check that is not an arbitrage claim, a bond ladder whose weighted metrics are `null` (not `0`) when nothing can be valued, and a dedicated `/app/derivatives` desk. No market data is fetched: every mark is `operator_entered`, timestamped, and badged stale after 24h (`docs/SESSION_113_SPECIFICATION.md`) |
+
+| **114** | `googleAuth` | **Google Identity / OAuth completion** — the OpenID Connect flow (JWKS signature/`iss`/`aud`/`nonce`/`exp` verification, account linking, provisioning) was already real and is untouched, but nothing governed it: an organization could not restrict Google sign-in to its own domain, nothing recorded that a sign-in had happened, a departed employee's Google account kept working until the platform user was deleted, and the API's own post-callback redirect target `/auth/callback` **did not exist in the web app**. This session added the module's first shared contract, an org-scoped governance service (policy · linked-identity register · ledger · environment-only configuration report), a policy gate + ledger write inside the real callback (default `open`, so existing deployments are unaffected), fingerprinted Google subjects, and the missing `/auth/callback` page (`docs/SESSION_114_SPECIFICATION.md`) |
+| **115** | `leadDiscovery` | **Lead Discovery completion** — Session 85's discovery half was honest (real Places text search, `503` when unconfigured, no enrichment, `source_returned` labelling) and is untouched; everything after a lead was found was missing. No workflow, **no deduplication at all** despite the service's own comment referring to it, no explanation for the permanently empty `phone`/`website` columns (text search never returns them), no collection rename/delete, no record of what was searched on a paid API, and directory-sourced names written into CSV verbatim so a listing called `=HYPERLINK(...)` executed on open. This session added the module's first shared contract, an org-scoped pipeline service (status · owner · notes · provider-id deduplication that marks rather than deletes · coverage that explains its own zeroes · search ledger · export preview), a best-effort ledger write inside the real `search()`, a spreadsheet formula guard, and the `/app/lead-pipeline` console (`docs/SESSION_115_SPECIFICATION.md`) |
+| **116** | `mfa` | **Multi-Factor Authentication completion** — the RFC 6238 TOTP core was genuinely good (generator pinned to the spec's published vectors, AES-256-GCM secret at rest, SHA-256 recovery digests, deliberate ±1 drift) and is untouched; everything around it was missing. **Nothing counted a failed second-factor attempt anywhere** and the only limit on `/auth/mfa/complete` was a per-IP rate limit; **an OTP could be replayed** for the rest of its ~90 s life, which RFC 6238 §5.2 requires a verifier to refuse; `POST /mfa/confirm` verified a code and **recorded nothing**, so enrolment was never confirmed and `enable` armed enforcement before the user had proved they could produce a code; the route file claimed authentication was handled globally when **no global `authenticate` is mounted**, so anonymous requests got a **500 instead of a 401**; and there was no organization policy, no coverage report and no audit trail. This session added the module's first shared contract (`MfaOrgPolicy`, since `wakeIntel.ts` already owns `MfaPolicy`), an org-scoped assurance service (throttle · replay guard · confirmed-enrolment lifecycle · policy · coverage · exemptions · fifteen-kind ledger · environment-only configuration report), a gate wired into the real verification and login paths that **fails open** so an assurance bug cannot take sign-in down, a self-lockout guard on blocking enforcement, and the `/app/mfa-assurance` console (`docs/SESSION_116_SPECIFICATION.md`) |
+| **117** | `mobile` | **Mobile App / PWA completion** — the WebAuthn core (`mobileAuth.service.ts`) is genuine: real signature verification over `authenticatorData || SHA-256(clientDataJSON)`, single-use time-bounded challenges, a sign-counter check, bcrypt PIN in a dedicated column. It is untouched. What sat around it destroyed user work. **`POST /mobile/offline/sync` stored nothing** — it updated `lastSeenAt`, answered `received: <n>` and dropped the actions array, while its own comment claimed they were "persisted … for auditing" — and the web client's `flush()` then **unconditionally deleted every action from IndexedDB without reading the response**, so a message written in a tunnel was destroyed the moment the phone found signal and the user was shown a successful sync. `POST /mobile/devices/register` upserted on a client-supplied device id with an **update branch not scoped by user** and **returned `pinHash`**; `POST /mobile/pin/verify` **counted nothing**; a push subscription deleted at eight consecutive failures **left no record**. This session added the module's first shared contract (826 LOC) and a durable queue service that **stores and never executes** — receipts with `retainLocally`, explicit rejection reasons, dedupe, expiry reported as expiry, and a replay plan ordered by the **server's** receipt time because a handset's clock is attacker-controlled — plus the matching client fix (delete only what the server confirms it holds, replay through the ordinary authenticated API, report each outcome), a per-device PIN throttle and PIN removal, device-ownership assertion with secret-free views, push health by endpoint host with retirement recorded, an advisory organization policy, an eighteen-kind ledger, a configuration report naming the committed development VAPID pair, and the `/app/mobile-devices` console. `@ts-nocheck` removed from `routes/mobile.ts` (`docs/SESSION_117_SPECIFICATION.md`) |
+
+| **118** | `opex` | **Operational Excellence / Responsible AI completion** — Session 73's three endpoints keep their paths, bodies, status codes and response shapes; what was wrong is that several of their numbers were false, and two were false in the direction that makes a system look safer than it is. **The whole safety register was one JSON array in one Redis string**, so every file was a read-modify-write and two administrators filing at the same instant silently lost one of them. **There was no resolution timestamp at all** — the record stored only the filing time — so `mitigations24h` filtered on `at` and counted *filings*: a finding filed three days ago and closed a minute ago did **not** count, while one filed two hours ago and closed ninety minutes ago **did**. `reliability` used `Math.round`, so **999 successes out of 1 000 reported 100 %**; `dataFreshnessHours` was `0` when nothing had ever run, and 0 hours old is the value for *perfectly fresh*; `humanApprovalRate` divided last-30-days completions by every open task ever created. Five trust dimensions (`alignment`, `compliance`, `transparency`, `explainability`, `hallucinationRisk`) were the **literal number 0** — on a 0-100 scale a score, not a gap, and `hallucinationRisk: 0` on a *risk* dimension reads as "this system does not hallucinate". One signal was published under three names, the closure rate was labelled "safety pass rate", and **a resolved finding could never be reopened**. This session appended ~690 LOC to the shared contract around `OpexMeasure` (`value: number | null` plus the basis it was obtained on), added a durable one-key-per-finding register with an append-only index and transition history, adopted the legacy blob **once** with `null` transition times rather than inventing them, floored every rate and returned `null` on an empty denominator, published `compositeScore: null` as a typed literal with the reason, added operator assessments that require their method, a reopen path that appends and never erases, an advisory policy, a provenance block naming the seven declared-but-unimplemented rollup sections, and the `/app/opex` console. New keys use `opx:` rather than `opex:` because the S89 sweep derives the org segment from the prefix length (`docs/SESSION_118_SPECIFICATION.md`) |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -179,7 +190,7 @@ deleted `SESSION_CONTINUITY.md`). The README's dead links are a concrete cleanup
 
 ## 7. Repo/environment facts
 
-- Branch: `arena/019fd4f2-win` (Arena session branch; push only here, never main).
+- Branch: `arena/019fd574-win` (Arena session branch; push only here, never main).
 - Git history is session-tracked through the current Arena branch and the
   authoritative `PROGRESS.md` / `docs/SESSION_*_SPECIFICATION.md` records.
 - Environment here: Node v22.22.3 and Corepack pnpm 10.34.5 are available;
@@ -205,8 +216,14 @@ milestone"):**
 
 **Priority C — verification & hardening:**
 3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
-   repository-wide test/module counts in `PROGRESS.md`.
-4. Run the S1–S6 and S89–S109 runtime-validation tracks in a target
+   repository-wide test/module counts in `PROGRESS.md`. Current audit
+   (`node audit/build-inventory.mjs`, 2026-08-06): 106 modules — 98 COMPLETE,
+   5 PARTIAL, 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+   Remaining PARTIAL modules, in the one-by-one completion order:
+   `promptTemplates`, `publicApi`,
+   `sustainability`, `talk`, `usage`.
+   **Next module to complete: `promptTemplates`.**
+4. Run the S1–S6 and S89–S118 runtime-validation tracks in a target
    environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
    any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 

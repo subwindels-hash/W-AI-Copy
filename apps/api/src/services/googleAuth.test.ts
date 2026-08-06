@@ -332,3 +332,113 @@ describe("account provisioning and linking", () => {
     expect(() => jwt.verify(res.token, "a-different-secret")).toThrow();
   });
 });
+
+/* ------------------------------------------------------------------ *
+ * Session 114 — the governance layer, exercised through the real
+ * callback rather than against the service in isolation.
+ *
+ * These cases exist because the interesting failure is at the seam: a
+ * policy that is enforced only when something remembers to call it, or a
+ * ledger that is written only in a unit test, protects nobody.
+ * ------------------------------------------------------------------ */
+const { GoogleIdentityService } = await import("../googleAuth/googleIdentity.service.js");
+const { GoogleAuthPolicyUpdateSchema, GoogleIdentityQuerySchema, GoogleEventQuerySchema } =
+  await import("@windels/shared/googleAuth");
+
+describe("Session 114 — organization policy gate", () => {
+  it("records the provisioning sign-in in the new workspace's register and ledger", async () => {
+    const res = await callbackWith(goodClaims());
+    const org = res.user.organizationId as string;
+    expect(org).toBeTruthy();
+
+    const list = await GoogleIdentityService.listIdentities(org, GoogleIdentityQuerySchema.parse({}));
+    expect(list.total).toBe(1);
+    expect(list.identities[0]!.email).toBe("person@example.com");
+    expect(list.identities[0]!.provisionedByGoogle).toBe(true);
+    expect(list.identities[0]!.recordedSignIns).toBe(1);
+    // Google's subject is fingerprinted, never stored in the clear.
+    expect(list.identities[0]!.subjectFingerprint).not.toContain("google-sub-12345");
+
+    const ledger = await GoogleIdentityService.listEvents(org, GoogleEventQuerySchema.parse({}));
+    expect(ledger.events.map((e) => e.kind)).toContain("provision");
+  });
+
+  it("counts the second sign-in against the same identity instead of creating another", async () => {
+    const first = await callbackWith(goodClaims());
+    const org = first.user.organizationId as string;
+    await callbackWith(goodClaims());
+
+    const list = await GoogleIdentityService.listIdentities(org, GoogleIdentityQuerySchema.parse({}));
+    expect(list.total).toBe(1);
+    expect(list.identities[0]!.recordedSignIns).toBe(2);
+  });
+
+  it("refuses a returning user once the organization disables Google sign-in", async () => {
+    const first = await callbackWith(goodClaims());
+    const org = first.user.organizationId as string;
+    await GoogleIdentityService.updatePolicy(
+      org,
+      GoogleAuthPolicyUpdateSchema.parse({ mode: "disabled" }),
+      "admin-1",
+    );
+
+    await expect(callbackWith(goodClaims())).rejects.toMatchObject({
+      code: "GOOGLE_SIGNIN_BLOCKED",
+      outcome: "blocked_disabled",
+    });
+
+    // The refusal is visible to an administrator afterwards.
+    const blocked = await GoogleIdentityService.listEvents(org, GoogleEventQuerySchema.parse({ kind: "blocked" }));
+    expect(blocked.returned).toBe(1);
+    expect(blocked.events[0]!.outcome).toBe("blocked_disabled");
+  });
+
+  it("refuses a returning user whose domain is not on the allowlist", async () => {
+    const first = await callbackWith(goodClaims());
+    const org = first.user.organizationId as string;
+    await GoogleIdentityService.updatePolicy(
+      org,
+      GoogleAuthPolicyUpdateSchema.parse({ mode: "domain_allowlist", allowedDomains: ["windels.ai"] }),
+      "admin-1",
+    );
+
+    await expect(callbackWith(goodClaims())).rejects.toMatchObject({
+      code: "GOOGLE_SIGNIN_BLOCKED",
+      outcome: "blocked_domain",
+    });
+  });
+
+  it("refuses a returning user whose identity has been revoked", async () => {
+    const first = await callbackWith(goodClaims());
+    const org = first.user.organizationId as string;
+    const list = await GoogleIdentityService.listIdentities(org, GoogleIdentityQuerySchema.parse({}));
+    await GoogleIdentityService.revokeIdentity(org, list.identities[0]!.id, "admin-1", "Offboarded");
+
+    await expect(callbackWith(goodClaims())).rejects.toMatchObject({
+      code: "GOOGLE_SIGNIN_BLOCKED",
+      outcome: "blocked_revoked",
+    });
+  });
+
+  it("still admits the user after the identity is restored", async () => {
+    const first = await callbackWith(goodClaims());
+    const org = first.user.organizationId as string;
+    const list = await GoogleIdentityService.listIdentities(org, GoogleIdentityQuerySchema.parse({}));
+    await GoogleIdentityService.revokeIdentity(org, list.identities[0]!.id, "admin-1");
+    await GoogleIdentityService.restoreIdentity(org, list.identities[0]!.id, "admin-1");
+
+    const again = await callbackWith(goodClaims());
+    expect(again.token).toBeTruthy();
+    expect(again.isNewUser).toBe(false);
+  });
+
+  it("leaves an unconfigured deployment behaving exactly as before (default policy allows)", async () => {
+    // No policy is written at any point in this case.
+    const first = await callbackWith(goodClaims());
+    const org = first.user.organizationId as string;
+    expect((await GoogleIdentityService.getPolicy(org)).isDefault).toBe(true);
+    const second = await callbackWith(goodClaims());
+    expect(second.isNewUser).toBe(false);
+    expect(second.token).toBeTruthy();
+  });
+});

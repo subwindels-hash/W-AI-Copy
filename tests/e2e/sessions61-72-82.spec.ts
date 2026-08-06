@@ -114,19 +114,52 @@ test.describe("Sessions 61-72 + 82 API", () => {
     expect(Array.isArray(papers.data)).toBe(true);
   });
 
-  test("S69 cognitive/world: components + reasoning + innovation", async () => {
+  test("S69/S110 cognitive/world: observability rollup + world-model register", async () => {
     const d = await get("/cognitive/dashboard/rollup");
     expect(d.ok).toBe(true);
-    expect(d.data.selfEvolutionHealth).toBeGreaterThan(0);
+    // Session 110: `selfEvolutionHealth` has no backing store and honestly
+    // reports 0, so the old `> 0` assertion was asserting fabricated data.
+    expect(typeof d.data.selfEvolutionHealth).toBe("number");
     expect(Array.isArray(d.data.reasoning)).toBe(true);
+    expect(Array.isArray(d.data.observations)).toBe(true);
+    expect(d.data.worldModel.domains.length).toBe(12);
+    expect(d.data.worldModel.confidenceKind).toMatch(/self_reported_average|none/);
+
+    const wm = await get("/cognitive/world-model");
+    expect(wm.ok).toBe(true);
+    expect(wm.data.entityCount).toBeGreaterThanOrEqual(0);
+    // Deterministic: an unchanged register projects identically twice.
+    const again = await get("/cognitive/world-model");
+    expect(JSON.stringify(again.data)).toBe(JSON.stringify(wm.data));
+
+    const entities = await get("/cognitive/entities");
+    expect(Array.isArray(entities.data)).toBe(true);
+    const hypotheses = await get("/cognitive/hypotheses");
+    expect(Array.isArray(hypotheses.data)).toBe(true);
   });
 
-  test("S70 global command center: regions + incidents + briefings", async () => {
+  test("S70/S111 global command center: register-backed rollup", async () => {
     const d = await get("/command/dashboard/rollup");
     expect(d.ok).toBe(true);
     expect(Array.isArray(d.data.regions)).toBe(true);
     expect(Array.isArray(d.data.incidents)).toBe(true);
     expect(Array.isArray(d.data.briefings)).toBe(true);
+    expect(Array.isArray(d.data.directives)).toBe(true);
+    // Session 111: MTTR is measured, so a zero must be accompanied by
+    // `mttrKind: "none"` rather than presented as instant recovery.
+    const ops = d.data.operations;
+    expect(ops).toBeTruthy();
+    expect(["measured", "none"]).toContain(ops.mttrKind);
+    if (ops.mttrKind === "none") expect(ops.meanTimeToResolveMinutes).toBeNull();
+    expect(ops.regions.every((r: any) => r.servicesUp !== null || r.health === "unreported")).toBe(true);
+    expect(typeof ops.note).toBe("string");
+
+    const incidents = await get("/command/incidents");
+    expect(Array.isArray(incidents.data)).toBe(true);
+    const regions = await get("/command/regions");
+    expect(Array.isArray(regions.data)).toBe(true);
+    const initiatives = await get("/command/initiatives");
+    expect(Array.isArray(initiatives.data)).toBe(true);
   });
 
   test("S71 AI economy: GPU offers + allocations", async () => {

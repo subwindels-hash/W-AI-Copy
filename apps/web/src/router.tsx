@@ -25,6 +25,10 @@ const MediaFactoryPage = lazy(() => import("./pages/media/MediaFactoryPage").the
 const LearnPage = lazy(() => import("./pages/learn/LearnPage").then((m) => ({ default: m.LearnPage })));
 const ProjectsPage = lazy(() => import("./pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
 const LeadsPage = lazy(() => import("./pages/leads/LeadsPage").then((m) => ({ default: m.LeadsPage })));
+const LeadPipelinePage = lazy(() => import("./pages/leads/LeadPipelinePage").then((m) => ({ default: m.LeadPipelinePage })));
+const MfaAssurancePage = lazy(() => import("./pages/security/MfaAssurancePage").then((m) => ({ default: m.MfaAssurancePage })));
+const MobileDevicesPage = lazy(() => import("./pages/mobile/MobileDevicesPage").then((m) => ({ default: m.MobileDevicesPage })));
+const OpexAssurancePage = lazy(() => import("./pages/admin/OpexAssurancePage").then((m) => ({ default: m.OpexAssurancePage })));
 const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ default: m.FilesPage })));
 const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
@@ -53,6 +57,12 @@ const AttachmentsPage = lazy(() => import("./pages/attachments/AttachmentsPage")
 const AutonomousPage = lazy(() => import("./pages/autonomous/AutonomousPage").then((m) => ({ default: m.AutonomousPage })));
 const BillingPage = lazy(() => import("./pages/billing/BillingPage").then((m) => ({ default: m.BillingPage })));
 const CameraPage = lazy(() => import("./pages/camera/CameraPage").then((m) => ({ default: m.CameraPage })));
+const CognitivePage = lazy(() => import("./pages/cognitive/CognitivePage").then((m) => ({ default: m.CognitivePage })));
+const CommandCenterPage = lazy(() => import("./pages/command/CommandCenterPage").then((m) => ({ default: m.CommandCenterPage })));
+const ConversationsPage = lazy(() => import("./pages/conversations/ConversationsPage").then((m) => ({ default: m.ConversationsPage })));
+const DerivativesPage = lazy(() => import("./pages/derivatives/DerivativesPage").then((m) => ({ default: m.DerivativesPage })));
+const GoogleIdentityPage = lazy(() => import("./pages/googleAuth/GoogleIdentityPage").then((m) => ({ default: m.GoogleIdentityPage })));
+const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then((m) => ({ default: m.GoogleCallbackPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -177,6 +187,9 @@ export const router = createBrowserRouter([
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },
   { path: "/auth/login", element: withSuspense(<LoginPage />) },
   { path: "/auth/register", element: withSuspense(<RegisterPage />) },
+  // Session 114 — the API has always redirected here after a Google sign-in;
+  // until now the route did not exist and the token in the fragment was lost.
+  { path: "/auth/callback", element: withSuspense(<GoogleCallbackPage />) },
   { path: "/auth/forgot", element: placeholder("Password reset", "Password reset flow is implemented when auth is hardened in later slices.") },
 
   // Desktop App (/d/*) — Session 16
@@ -251,6 +264,10 @@ export const router = createBrowserRouter([
       { path: "learn", element: withSuspense(<LearnPage />) },
       { path: "projects", element: withSuspense(<ProjectsPage />) },
       { path: "leads", element: withSuspense(<LeadsPage />) },
+      { path: "lead-pipeline", element: withSuspense(<LeadPipelinePage />) },
+      { path: "mfa-assurance", element: withSuspense(<MfaAssurancePage />) },
+      { path: "mobile-devices", element: withSuspense(<MobileDevicesPage />) },
+      { path: "opex", element: withSuspense(<OpexAssurancePage />) },
       { path: "ads", element: withSuspense(<AdsPage />) },
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },
@@ -279,6 +296,11 @@ export const router = createBrowserRouter([
       { path: "autonomous", element: withSuspense(<AutonomousPage />) },
       { path: "billing", element: withSuspense(<BillingPage />) },
       { path: "camera", element: withSuspense(<CameraPage />) },
+      { path: "cognitive", element: withSuspense(<CognitivePage />) },
+      { path: "command", element: withSuspense(<CommandCenterPage />) },
+      { path: "conversations", element: withSuspense(<ConversationsPage />) },
+      { path: "derivatives", element: withSuspense(<DerivativesPage />) },
+      { path: "google-identity", element: withSuspense(<GoogleIdentityPage />) },
     ],
   },
   {
