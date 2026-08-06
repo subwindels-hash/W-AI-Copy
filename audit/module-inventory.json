@@ -995,6 +995,7 @@
       "collaboration.spec.ts",
       "conversations.spec.ts",
       "dataPlatform.spec.ts",
+      "derivatives.spec.ts",
       "devPortal.spec.ts",
       "engineering.spec.ts",
       "enterprise.spec.ts",
@@ -2874,25 +2875,32 @@
   },
   {
     "moduleKey": "derivatives",
-    "title": "derivatives",
-    "sessions": [],
-    "tier": "unknown",
+    "title": "Derivatives & Fixed Income (S81/S113)",
+    "sessions": [
+      81,
+      113
+    ],
+    "tier": "feature",
     "routePrefix": "/api/v1/derivatives",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/derivatives",
       "serviceFile": {
-        "file": "derivatives.ts",
-        "path": "/home/user/WIN/apps/api/src/tradingIntel/derivatives.ts",
-        "sloc": 226,
+        "file": "derivativesDesk.service.ts",
+        "path": "/home/user/WIN/apps/api/src/derivatives/derivativesDesk.service.ts",
+        "sloc": 886,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 226,
+      "serviceTotalSloc": 2468,
       "serviceFiles": [
-        "tradingIntel/derivatives.ts"
+        "derivativesDesk.service.ts",
+        "derivativesDesk.test.ts",
+        "tradingIntel/derivatives.ts",
+        "derivatives/derivativesDesk.service.ts"
       ],
       "importedServiceFiles": [
-        "tradingIntel/derivatives.ts"
+        "tradingIntel/derivatives.ts",
+        "derivatives/derivativesDesk.service.ts"
       ],
       "bootstrapFile": null
     },
@@ -2914,25 +2922,43 @@
           "POST /derivatives/option-payoff",
           "POST /fixed-income/bond-analytics"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/derivativesDesk.ts",
+        "sloc": 168,
+        "counts": {
+          "total": 17,
+          "GET": 7,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 2
+        },
+        "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/derivatives.ts (136 LOC)",
+    "sharedTypes": "packages/shared/src/derivatives.ts (645 LOC)",
     "web": {
-      "client": "apps/web/src/lib/tradingIntel.ts (69 LOC, serves /derivatives)",
+      "client": "apps/web/src/lib/derivatives.ts (115 LOC)",
       "pages": []
     },
     "db": {
-      "prismaModels": [],
+      "prismaModels": [
+        "User",
+        "Organization"
+      ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "derivatives.spec.ts",
+      "derivatives/derivativesDesk.test.ts",
       "tradingIntel/derivatives.test.ts",
       "tradingIntel/derivativesContract.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "developers",
@@ -8247,11 +8273,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 394,
+        "sloc": 397,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 964,
+      "serviceTotalSloc": 970,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

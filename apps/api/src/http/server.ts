@@ -12,6 +12,7 @@ import { registerAuthRoutes } from "./routes/auth.js";
 import { registerMfaRoutes } from "./routes/mfa.js";
 import { registerGoogleAuthRoutes } from "./routes/googleAuth.js";
 import { registerDerivativesRoutes } from "./routes/derivatives.js";
+import { registerDerivativesDeskRoutes } from "./routes/derivativesDesk.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
@@ -188,6 +189,14 @@ export function createApp() {
   registerAuthRoutes(v1);
   registerMfaRoutes(v1);
   registerGoogleAuthRoutes(v1);
+  // Session 113 desk (position book, portfolio exposure, scenarios, bond
+  // ladder) on a `/derivatives` sub-router, registered ahead of the Session 81
+  // calculators. The sub-router attaches `authenticate` per handler rather than
+  // with `router.use`, so an unmatched path falls through to Session 81's
+  // stateless endpoints with their behaviour unchanged.
+  const derivativesRouter = express.Router();
+  v1.use("/derivatives", derivativesRouter);
+  registerDerivativesDeskRoutes(derivativesRouter);
   registerDerivativesRoutes(v1);
   registerAdminRoutes(v1);
   registerMeRoutes(v1);

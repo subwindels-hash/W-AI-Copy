@@ -30,6 +30,56 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 113 — Decisions Logged (Derivatives & Fixed-Income Desk Completion)
+
+- **Module prefix:** `Deriv` types, `deriv:*` Redis keys, `/api/v1/derivatives`
+  route prefix, `apps/web/src/lib/derivatives.ts` client, `/app/derivatives`
+  route + sidebar label "Derivatives Desk".
+- **Shared contract extended, not forked:** the `Deriv*` block was appended to
+  the existing `packages/shared/src/derivatives.ts` rather than added as a new
+  file, so the module keeps one contract and the Session 81 types stay exported
+  from the same place.
+- **Re-use the pricer, never re-derive it:** every number the desk reports goes
+  through `tradingIntel/derivatives.ts` (`blackScholes`, `bondAnalytics`,
+  `strategyPayoff`). A test asserts the desk's valuation *equals* the pricer at
+  the same inputs, so the two can never silently diverge.
+- **Storage:** Redis-backed, org-scoped (`deriv:<entity>:i:<org>:<id>` + ZSET
+  index `deriv:<entity>:idx:<org>`), following the `tenantStore` key shape so
+  the Session 89 namespace audit treats them as org-scoped. Reads fail closed
+  twice: org-addressed key **and** a re-check of the decoded
+  `organizationId`.
+- **Route mounting:** the Session 113 sub-router is registered before the
+  Session 81 calculators and attaches `authenticate` per handler instead of
+  `router.use(authenticate)`, so an unmatched path falls through with the
+  Session 81 behaviour (including its unauthenticated status) unchanged.
+  Mutations additionally require `requireAdmin`.
+- **No market data, ever:** every input is `markSource: "operator_entered"`
+  with a `markedAt` timestamp. Only a re-mark refreshes that timestamp —
+  renaming a position must not make a three-week-old spot look fresh. Marks
+  older than `DERIV_MARK_STALE_AFTER_HOURS` (24h) are reported `stale`.
+- **Un-priceable is reported, never zeroed:** a position missing a mark or a
+  volatility is excluded from every aggregate and listed with a prose reason.
+  `deltaNotional` and `unrealizedPnl` are `null` when nothing supports them,
+  because an unmeasured book is not a flat book.
+- **Cross-underlying aggregation:** raw delta/gamma sum only within one
+  underlying; the only portfolio-level directional total is delta *notional*.
+  `DERIV_AGGREGATION_NOTE` ships in the payload. Disagreeing marks on one
+  symbol set `markSpotConflict` rather than the desk choosing a spot.
+- **Scenario grids are a full reprice** (`method: "full_reprice"`), capped at
+  `DERIV_MAX_GRID_CELLS`; a shock that invalidates the model for a position
+  drops it from that cell and the cell's `pricedPositions` says so.
+- **Payoff extremes are range-labelled** (`maxProfitInRange`) with
+  `unboundedAbove`/`unboundedBelow` flags; breakevens are declared
+  interpolated.
+- **Fixed income refuses to guess a yield:** a holding needs a yield or a
+  price, on create and on update. Weighted ladder metrics are `null` when
+  nothing can be valued, and shifted-yield figures are a full reprice measured
+  against the model's own base valuation.
+- **Kernel events:** every write emits `derivatives.<entity>.<action>` via
+  `KernelService.dispatch` (best effort — never fails the write).
+- **No AI and no execution:** nothing in this module calls a model or places an
+  order.
+
 ## Session 112 — Decisions Logged (Conversations / Messaging Completion)
 
 - **Module prefix:** `Conv` types and Zod contracts in

@@ -139,6 +139,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "cmd:briefing", scope: "org_scoped" },
   { prefix: "cmd:initiative", scope: "org_scoped" },
   { prefix: "cmd:dir", scope: "org_scoped" },
+  // Derivatives & Fixed-Income Desk (Session 113)
+  { prefix: "deriv:pos", scope: "org_scoped" },
+  { prefix: "deriv:bond", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

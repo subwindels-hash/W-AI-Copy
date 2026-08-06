@@ -63,6 +63,25 @@ WINDELS AI OS exposes a strict, JSON-based RESTful API under the `/api/v1` names
 *   `POST /api/v1/conversations/:id/restore`: Creator-only restore of a soft-deleted thread (`409` if not deleted, `403` if not the creator).
 *   `GET|PATCH|DELETE /api/v1/conversations/:id/messages/:messageId`: Single message with its audit trail; `PATCH` is an author-only edit of a **user** message (`409` on model output, `403` on another author) recording an append-only trail; `DELETE` redacts the body (author or thread creator), keeping the row, its ordering and its usage counters.
 
+### 2.7 Derivatives & Fixed Income (Sessions 81 + 113)
+
+**Session 81 — stateless calculators (unchanged, still unauthenticated):**
+*   `POST /api/v1/derivatives/option-greeks`: Black-Scholes Greeks. May legitimately return `OPTIONS_CHAIN_REQUIRED` rather than invent a volatility.
+*   `POST /api/v1/derivatives/implied-vol`: Newton-Raphson IV solver; `iv` is `null` when the solver cannot converge — never a clamped boundary presented as a solution.
+*   `POST /api/v1/derivatives/option-payoff`: Multi-leg payoff at one spot.
+*   `POST /api/v1/fixed-income/bond-analytics`: Duration / convexity / sensitivity from supplied terms.
+
+**Session 113 — the desk (authenticated; mutations require an administrator):**
+*   `GET /api/v1/derivatives/desk`: Rollup across both books. Declares `marketDataSource: "none_operator_entered_only"` and carries the valuation disclaimer verbatim.
+*   `GET|POST /api/v1/derivatives/positions`, `GET|PATCH|DELETE /api/v1/derivatives/positions/:id`: The option book. Every mark is `markSource: "operator_entered"` with a `markedAt` timestamp; only a re-mark refreshes it. `markSpot`, `impliedVol`, `riskFreeRate` and `premiumPerShare` are `null` when nobody supplied them.
+*   `GET /api/v1/derivatives/portfolio`: Exposure grouped per underlying (raw delta/gamma are summed only within a symbol) with delta *notional* as the only cross-symbol directional total. Positions that cannot be priced are excluded and listed in `unpriceable[]` with a reason; `deltaNotional` and `unrealizedPnl` are `null` when nothing supports them. Marks older than 24h report `markFreshness: "stale"`.
+*   `POST /api/v1/derivatives/portfolio/scenarios`: Spot × volatility grid, `method: "full_reprice"` (not a Taylor expansion), capped at 400 cells. Each cell reports `pricedPositions`, which drops where a shock invalidates the model for a position.
+*   `POST /api/v1/derivatives/portfolio/hedge`: Static delta-neutral share count, `method: "static_delta_neutral"`, gamma explicitly ignored. A book with nothing priced is reported as unmeasured, not flat.
+*   `POST /api/v1/derivatives/payoff-curve`: Sampled expiry payoff with linearly-interpolated breakevens. Extremes are named `maxProfitInRange`/`maxLossInRange`, and `unboundedAbove`/`unboundedBelow` flag payoffs that keep moving past the sampled boundary.
+*   `POST /api/v1/derivatives/parity-check`: Put-call parity residual with the rich leg named. States in the payload that it is not an arbitrage claim.
+*   `GET|POST /api/v1/derivatives/bonds`, `GET|PATCH|DELETE /api/v1/derivatives/bonds/:id`: Fixed-income holdings. A holding needs a yield or a price; creating or updating into a state with neither is `400`.
+*   `GET /api/v1/derivatives/bonds/ladder`: Market-value weighted duration/convexity/yield (`null`, not `0`, when nothing can be valued), maturity buckets, contractual cashflows, and `shiftsBps` parallel shifts computed as a full reprice against the model's own base valuation.
+
 ---
 
 ## 3. ERROR SCHEMA

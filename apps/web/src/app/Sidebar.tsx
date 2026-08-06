@@ -45,6 +45,7 @@ import {
   Brain,
   Radar,
   Inbox,
+  Sigma,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -93,6 +94,7 @@ const navItems = [
   { to: "/app/cognitive", icon: Brain, label: "Cognitive / World Model" },
   { to: "/app/command", icon: Radar, label: "Global Command Center" },
   { to: "/app/conversations", icon: Inbox, label: "Conversation Ops" },
+  { to: "/app/derivatives", icon: Sigma, label: "Derivatives Desk" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
