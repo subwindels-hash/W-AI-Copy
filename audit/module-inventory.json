@@ -7826,11 +7826,11 @@
       "serviceFile": {
         "file": "quantum.service.ts",
         "path": "/home/user/WIN/apps/api/src/quantum/quantum.service.ts",
-        "sloc": 131,
+        "sloc": 139,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 268,
+      "serviceTotalSloc": 284,
       "serviceFiles": [
         "bootstrap.ts",
         "quantum.service.ts",
@@ -7884,23 +7884,13 @@
       "sessions61-72-82.spec.ts",
       "config/seedGate.test.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "quantum.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": false,
-        "ungatedSeed": true,
-        "liveRng": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "release",
