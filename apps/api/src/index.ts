@@ -371,6 +371,14 @@ async function main() {
         } catch (e) { logger.warn("enterprise-search bootstrap failed", { err: e }); }
       }, 28000);
 
+      // Session 99 — Software Factory Studios & Build Farm (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapSoftwareFactory } = await import("./softwareFactory/bootstrap.js");
+          await bootstrapSoftwareFactory(logger);
+        } catch (e) { logger.warn("software-factory bootstrap failed", { err: e }); }
+      }, 29000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

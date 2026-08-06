@@ -111,6 +111,7 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_96_SPECIFICATION.md](./docs/SESSION_96_SPECIFICATION.md) | Session 96 — AI Software Factory (implements the V3.0 Application Builder spec core) |
 | [docs/SESSION_97_SPECIFICATION.md](./docs/SESSION_97_SPECIFICATION.md) | Session 97 — Business Intelligence (live KPI values, report builder, CSV export) |
 | [docs/SESSION_98_SPECIFICATION.md](./docs/SESSION_98_SPECIFICATION.md) | Session 98 — Enterprise Search (unified search over module records, facets, history) |
+| [docs/SESSION_99_SPECIFICATION.md](./docs/SESSION_99_SPECIFICATION.md) | Session 99 — Factory Studios & Build Farm (completes the V3.0 spec §3–§4) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |

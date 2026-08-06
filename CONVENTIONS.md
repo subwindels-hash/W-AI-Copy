@@ -30,6 +30,29 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 99 — Decisions Logged (Software Factory: Five Studios & Build Farm)
+
+- **Module prefix:** `Sf` types, `sf:plan:*` Redis keys (plans only —
+  compile targets are a pure projection, never stored), `/api/v1/builder`
+  extended routes (additive second router on the same prefix), web client
+  `apps/web/src/lib/softwareFactory.ts`, `/app/software-factory` route +
+  sidebar label "Factory Studios".
+- **The five studios** (spec §3) are a real static catalog with their
+  defined deliverables; studio plans validate deliverables against the
+  catalog (unknown items rejected) and require a real S96 project.
+- **Plan lifecycle honest:** `planned → in_progress → completed`;
+  `completedAt` stamped only on entering completed, cleared when reopened.
+- **Compile targets are a pure projection** (spec §4): targetType →
+  declared targets (real mapping), deterministic file names + real
+  node:crypto SHA-256 manifests, and status DERIVED from the run's real
+  state (pending → compiling → built | failed). `binaryEmitted` is always
+  honestly false with a `requiresToolchain` note — the platform never
+  pretends a binary exists when none was compiled. Identical run state ⇒
+  identical targets.
+- **Studio coverage** (per project) and the factory rollup are computed per
+  read — never invented.
+- **Demo seed:** idempotent, seeds `org-demo-sf` (5 plans + runs).
+
 ## Session 98 — Decisions Logged (Enterprise Search)
 
 - **Module prefix:** `Es` types, `es:history:<org>` Redis key (the only

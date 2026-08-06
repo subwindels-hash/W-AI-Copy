@@ -5,6 +5,43 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 99 — Software Factory: Five Studios & Build Farm] — 2026-08-05
+
+### Completes AI_APPLICATION_BUILDER_SPECIFICATION.md V3.0 §3–§4
+*   `packages/shared/src/softwareFactory.ts` — `Sf` types + Zod contracts;
+    the **five enterprise studios** (spec §3) as a real static catalog with
+    their defined deliverables; the **build farm target map** (spec §4) —
+    targetType → declared compilation targets (WEB bundle; DESKTOP .exe/
+    .msix/.app/.dmg/.deb/.rpm/.AppImage; MOBILE .apk/.aab/.ipa; API/
+    MICROSERVICE docker image; BROWSER_EXTENSION .crx; CLI binaries).
+*   `apps/api/src/softwareFactory/softwareFactory.service.ts` — org-scoped
+    **studio plans** (project-linked, deliverables validated against the
+    studio catalog, honest lifecycle `planned → in_progress → completed`
+    with `completedAt` stamped only on the transition); **project studio
+    coverage** computed per read; and **per-run compile targets** as a pure
+    projection of the run's real state — deterministic file names, real
+    node:crypto SHA-256 manifests, status derived (pending → compiling →
+    built | failed), and `binaryEmitted` always honestly `false` with a
+    `requiresToolchain` note (real binaries require the external build farm).
+*   Routes: `apps/api/src/http/routes/softwareFactory.ts` mounted on the
+    existing `/api/v1/builder` prefix (8 new endpoints: `/studios`,
+    `/studios/plans*`, `/projects/:id/studios`, `/builds/:id/targets`).
+    Session 89 catalog gains the `sf:plan` namespace as `org_scoped`.
+*   Web: `apps/web/src/lib/softwareFactory.ts` client + `pages/softwareFactory/
+    StudiosPage.tsx` (five-studio grid, project selection, studio coverage
+    board, plans with Start/Complete/Reopen, build-run targets with real
+    SHA-256 + honest "binary not emitted" notes), `/app/software-factory`
+    route + sidebar entry.
+*   Tests: `apps/api/src/softwareFactory/softwareFactory.test.ts` (13) —
+    catalog, plan lifecycle + deliverable validation, coverage math,
+    compile-target derivation (pending/compiling/built/failed from real run
+    state + SHA-256 verification), rollup determinism, cross-tenant
+    isolation, demo-seed idempotency, schema contracts.
+*   Demo seed (`apps/api/src/softwareFactory/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA`.
+*   **105 modules** in the inventory (78 COMPLETE).
+*   Spec: `docs/SESSION_99_SPECIFICATION.md`.
+
 ## [Session 98 — Enterprise Search] — 2026-08-05
 
 ### New module: Unified Organization Search

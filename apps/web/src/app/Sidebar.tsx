@@ -33,6 +33,7 @@ import {
   LifeBuoy,
   Factory,
   Search,
+  Layers,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -70,6 +71,7 @@ const navItems = [
   { to: "/app/app-builder", icon: Factory, label: "Software Factory" },
   { to: "/app/bi", icon: PieChart, label: "Business Intel" },
   { to: "/app/search", icon: Search, label: "Search" },
+  { to: "/app/software-factory", icon: Layers, label: "Factory Studios" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },

@@ -115,6 +115,7 @@ import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
 import { registerHelpdeskRoutes } from "./routes/helpdesk.js";
 import { registerAppBuilderRoutes } from "./routes/appBuilder.js";
 import { registerBusinessIntelligenceRoutes } from "./routes/businessIntelligence.js";
+import { registerSoftwareFactoryRoutes } from "./routes/softwareFactory.js";
 import { registerEnterpriseSearchRoutes } from "./routes/enterpriseSearch.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
@@ -1154,6 +1155,13 @@ export function createApp() {
   const appBuilderRouter = express.Router();
   v1.use("/builder", appBuilderRouter);
   registerAppBuilderRoutes(appBuilderRouter);
+
+  // /builder (extended) — Session 99: Software Factory Studios & Build Farm
+  // (five-studio catalog + org-scoped studio plans + project coverage +
+  // per-run compilation targets derived honestly from run state).
+  const softwareFactoryRouter = express.Router();
+  v1.use("/builder", softwareFactoryRouter);
+  registerSoftwareFactoryRoutes(softwareFactoryRouter);
 
   // /bi — Session 97: Enterprise Business Intelligence & Report Builder
   // (data sources, live KPI values computed from the real module stores,

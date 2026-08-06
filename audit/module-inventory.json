@@ -7736,6 +7736,77 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "softwareFactory",
+    "title": "softwareFactory",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/softwareFactory",
+    "backend": {
+      "serviceDir": "apps/api/src/softwareFactory",
+      "serviceFile": {
+        "file": "softwareFactory.service.ts",
+        "path": "/home/user/WIN/apps/api/src/softwareFactory/softwareFactory.service.ts",
+        "sloc": 334,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 978,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "softwareFactory.service.ts",
+        "softwareFactory.test.ts",
+        "softwareFactory/softwareFactory.service.ts"
+      ],
+      "importedServiceFiles": [
+        "softwareFactory/softwareFactory.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/softwareFactory/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/softwareFactory.ts",
+        "sloc": 85,
+        "counts": {
+          "total": 8,
+          "GET": 5,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /studios",
+          "GET /studios/plans",
+          "POST /studios/plans",
+          "GET /studios/plans/:id",
+          "PATCH /studios/plans/:id",
+          "DELETE /studios/plans/:id",
+          "GET /projects/:projectId/studios",
+          "GET /builds/:runId/targets"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/softwareFactory.ts (183 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/softwareFactory.ts (92 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "softwareFactory/softwareFactory.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "spatial",
     "title": "Spatial Computing (S58)",
     "sessions": [
@@ -7981,11 +8052,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 361,
+        "sloc": 363,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 898,
+      "serviceTotalSloc": 902,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
