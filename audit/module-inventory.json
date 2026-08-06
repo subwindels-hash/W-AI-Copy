@@ -3058,6 +3058,94 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "emailIntel",
+    "title": "emailIntel",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/emailIntel",
+    "backend": {
+      "serviceDir": "apps/api/src/emailIntel",
+      "serviceFile": {
+        "file": "emailIntel.service.ts",
+        "path": "/home/user/WIN/apps/api/src/emailIntel/emailIntel.service.ts",
+        "sloc": 739,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2233,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "emailIntel.service.ts",
+        "emailIntel.test.ts",
+        "smtp.client.test.ts",
+        "smtp.client.ts",
+        "emailIntel/emailIntel.service.ts"
+      ],
+      "importedServiceFiles": [
+        "emailIntel/emailIntel.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/emailIntel/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/emailIntel.ts",
+        "sloc": 171,
+        "counts": {
+          "total": 17,
+          "GET": 6,
+          "POST": 7,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "POST /intelligence/draft",
+          "POST /intelligence/summarize",
+          "POST /intelligence/triage",
+          "GET /mailboxes",
+          "POST /mailboxes",
+          "GET /mailboxes/:id",
+          "PATCH /mailboxes/:id",
+          "DELETE /mailboxes/:id",
+          "POST /mailboxes/:id/test",
+          "GET /threads",
+          "GET /threads/:threadId",
+          "GET /messages",
+          "POST /messages",
+          "PATCH /messages/:id",
+          "DELETE /messages/:id",
+          "POST /messages/:id/send"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/emailIntel.ts (201 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/emailIntel.ts (194 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Activity",
+        "Conversation",
+        "Message",
+        "Meeting",
+        "Invoice",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "emailIntel/emailIntel.test.ts",
+      "emailIntel/smtp.client.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "engineering",
     "title": "Engineering / Observability (S26)",
     "sessions": [
@@ -7397,11 +7485,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 328,
+        "sloc": 332,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 832,
+      "serviceTotalSloc": 840,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

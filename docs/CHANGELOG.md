@@ -5,6 +5,46 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 91 — Enterprise Email Intelligence] — 2026-08-05
+
+### New module: Enterprise Email Intelligence (first email surface on the platform)
+*   `packages/shared/src/emailIntel.ts` — Zod contracts + types for mailboxes,
+    threaded messages, threads, rollup and intelligence outputs (prefixed `Ei`).
+*   `apps/api/src/emailIntel/emailIntel.service.ts` — real, org-scoped CRUD
+    backed by Redis (`ei:<entity>:i:<org>:<id>`); replies thread by
+    `inReplyTo` chain then normalized subject; outbox lifecycle
+    (queued → sending → sent | failed) with honest `SMTP_NOT_CONFIGURED`.
+*   `apps/api/src/emailIntel/smtp.client.ts` — dependency-free SMTP client over
+    `node:net`/`node:tls` (greeting → EHLO → AUTH PLAIN → MAIL → RCPT* →
+    DATA → QUIT). Verified by a real protocol round-trip against an
+    in-process SMTP server (deliver, multi-recipient, AUTH, recipient
+    rejection, connection refused, timeout).
+*   AI intelligence via the existing ProviderRegistry: draft/summarize/triage
+    carry `modelSource: real|echo-demo`, `summaryKind: ai|deterministic`,
+    `triageKind: ai|heuristic`; deterministic heuristics are explicit.
+*   Credential hygiene: mailbox passwords stored only through `encrypt()`;
+    reads return `hasCredentials`; `POST /mailboxes/:id/test` does a real TCP
+    reachability probe (never a fabricated pass).
+*   Deterministic inbox-analytics rollup (`GET /api/v1/email-intel/dashboard/
+    rollup`): counts, unread, top senders, threads, avg response time measured
+    from real sent/received pairs — no `Math.random`, honest zeros.
+*   CRM integration: linking a message to a contact/deal/company writes a real
+    `email` activity into the Session 90 CRM ledger.
+*   Routes: `apps/api/src/http/routes/emailIntel.ts` mounted at
+    `/api/v1/email-intel` (17 endpoints). Session 89 catalog gains the
+    `ei:*` namespaces as `org_scoped`.
+*   Web: `apps/web/src/lib/emailIntel.ts` client + `pages/emailIntel/
+    EmailIntelPage.tsx` (stats, threads, thread detail + triage/summary,
+    outbox with Send, compose, mailbox registry, AI draft with demo banner),
+    `/app/email-intel` route + sidebar entry.
+*   Tests: `emailIntel.test.ts` (16) + `smtp.client.test.ts` (6) — CRUD,
+    threading, outbox lifecycle, rollup determinism, labeled intelligence,
+    cross-tenant isolation, demo-seed idempotency, schema contracts, real SMTP
+    wire protocol.
+*   Demo seed (`apps/api/src/emailIntel/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA`; production starts with an empty inbox.
+*   Spec: `docs/SESSION_91_SPECIFICATION.md`.
+
 ## [Session 90 — Enterprise CRM] — 2026-08-05
 
 ### New module: Enterprise CRM (first CRM surface on the platform)

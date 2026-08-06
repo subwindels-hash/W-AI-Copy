@@ -30,6 +30,38 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 91 — Decisions Logged (Enterprise Email Intelligence)
+
+- **Module prefix:** `Ei` types, `ei:*` Redis keys, `/api/v1/email-intel`
+  route prefix, `apps/web/src/lib/emailIntel.ts` client, `/app/email-intel`
+  route + sidebar label "Email Intel".
+- **Threading:** messages group by reply chain (`inReplyTo`/`references`
+  matching an existing messageId) first, then by normalized subject within a
+  mailbox, else a new thread. The thread index is a cached cache of facts
+  recomputed from the real message records on every write — never a source of
+  truth on its own.
+- **SMTP outbox:** a dependency-free SMTP client (`emailIntel/smtp.client.ts`)
+  over `node:net`/`node:tls` speaks the real wire protocol (EHLO/MAIL/RCPT/
+  DATA/QUIT). Key lessons baked in: consume CRLF fully when framing lines,
+  buffer out-of-order/early lines FIFO (multi-line responses arrive faster
+  than callers re-queue readers), and only treat a `250-…` continuation as
+  final when the 4th char is not `-`.
+- **Sending is honest:** no SMTP host → `SMTP_NOT_CONFIGURED`, message stays
+  `queued`; real failures store the SMTP error code + message; `ALREADY_SENT`
+  is reported idempotently.
+- **Credentials:** mailbox passwords stored only via `encrypt()` (AES-256-GCM
+  envelope); read endpoints return `hasCredentials`, never the blob.
+- **Intelligence honesty:** AI drafts/summaries/triage via the ProviderRegistry
+  carry `modelSource: real|echo-demo`; deterministic fallbacks carry
+  `summaryKind: deterministic` / `triageKind: heuristic` so the UI can never
+  mistake heuristic output for AI output.
+- **CRM integration:** linking a message to a contact/deal/company writes a
+  real `email` activity into the Session 90 CRM ledger (best-effort).
+- **Rollup:** computed per read; avg response time measured from real
+  `sentAt − receivedAt` pairs in the same thread; `null` when unmeasurable.
+- **Demo seed:** idempotent, seeds `org-demo-ei`, gated behind
+  `WINDELS_DEMO_DATA`.
+
 ## Session 90 — Decisions Logged (Enterprise CRM)
 
 - **Module prefix:** `Crm` types, `crm:*` Redis keys, `/api/v1/crm` route

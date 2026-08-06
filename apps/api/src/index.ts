@@ -307,6 +307,14 @@ async function main() {
         } catch (e) { logger.warn("crm bootstrap failed", { err: e }); }
       }, 20000);
 
+      // Session 91 — Enterprise Email Intelligence (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapEmailIntel } = await import("./emailIntel/bootstrap.js");
+          await bootstrapEmailIntel(logger);
+        } catch (e) { logger.warn("email-intel bootstrap failed", { err: e }); }
+      }, 21000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

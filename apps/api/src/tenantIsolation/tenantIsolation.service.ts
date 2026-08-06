@@ -73,6 +73,10 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "crm:company", scope: "org_scoped" },
   { prefix: "crm:deal", scope: "org_scoped" },
   { prefix: "crm:activity", scope: "org_scoped" },
+  // Enterprise Email Intelligence (Session 91)
+  { prefix: "ei:mailbox", scope: "org_scoped" },
+  { prefix: "ei:message", scope: "org_scoped" },
+  { prefix: "ei:thread", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];
