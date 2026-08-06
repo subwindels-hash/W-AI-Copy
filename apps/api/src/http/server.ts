@@ -110,6 +110,7 @@ import { registerTenantIsolationRoutes } from "./routes/tenantIsolation.js";
 import { registerCrmRoutes } from "./routes/crm.js";
 import { registerEmailIntelRoutes } from "./routes/emailIntel.js";
 import { registerErpRoutes } from "./routes/erp.js";
+import { registerWebsiteBuilderRoutes } from "./routes/websiteBuilder.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1119,6 +1120,13 @@ export function createApp() {
   const erpRouter = express.Router();
   v1.use("/erp", erpRouter);
   registerErpRoutes(erpRouter);
+
+  // /website-builder — Session 93: Website Builder (org-scoped sites, pages
+  // + typed blocks, deterministic block→HTML renderer, publish pipeline with
+  // real snapshots, AI copy with honest provider labeling).
+  const websiteBuilderRouter = express.Router();
+  v1.use("/website-builder", websiteBuilderRouter);
+  registerWebsiteBuilderRoutes(websiteBuilderRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

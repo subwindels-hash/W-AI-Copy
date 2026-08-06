@@ -84,6 +84,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "erp:supplier", scope: "org_scoped" },
   { prefix: "erp:po", scope: "org_scoped" },
   { prefix: "erp:so", scope: "org_scoped" },
+  // Website Builder (Session 93)
+  { prefix: "wb:site", scope: "org_scoped" },
+  { prefix: "wb:page", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

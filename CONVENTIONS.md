@@ -30,6 +30,29 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 93 — Decisions Logged (Website Builder)
+
+- **Module prefix:** `Wb` types, `wb:*` Redis keys, `/api/v1/website-builder`
+  route prefix, `apps/web/src/lib/websiteBuilder.ts` client,
+  `/app/website-builder` route + sidebar label "Website Builder".
+- **Blocks are typed:** a Zod discriminated union per block type (hero/text/
+  image/button/features/cta/divider/html) is the single validation point;
+  `z.input` types make defaulted fields (hero `align`) optional on create and
+  the service normalizes to the output type.
+- **Renderer is pure & deterministic:** `renderPageHtml()` escapes all text
+  fields and hrefs (the `html` block is an explicit, labeled raw-content
+  escape hatch). `preview` and `publish` both call it, so `renderedHtml`
+  snapshots are exactly renderer output — never fabricated.
+- **Publish honesty:** status flips + `publishedAt` stamped only on the
+  transition; re-publishing is idempotent and re-snapshots current output;
+  publishing an archived site and publishing a site with no pages fail.
+- **Slug/path uniqueness** enforced per org (site slug, page path within a
+  site); `isHome` derived from `path === "/"`.
+- **Rollup:** computed per read (counts, published pages, total rendered
+  bytes); deterministic across reads.
+- **Demo seed:** idempotent, seeds `org-demo-wb`, gated behind
+  `WINDELS_DEMO_DATA`.
+
 ## Session 92 — Decisions Logged (Enterprise ERP)
 
 - **Module prefix:** `Erp` types, `erp:*` Redis keys, `/api/v1/erp` route

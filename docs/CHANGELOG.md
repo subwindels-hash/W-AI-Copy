@@ -5,6 +5,38 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 93 — Website Builder] — 2026-08-05
+
+### New module: Website Builder (next named Phase-3 Enterprise Application)
+*   `packages/shared/src/websiteBuilder.ts` — Zod contracts + types for
+    sites, pages and typed blocks (prefixed `Wb`); block props are a
+    discriminated union (hero/text/image/button/features/cta/divider/html);
+    loose `WbBlockPatchSchema` for block edits.
+*   `apps/api/src/websiteBuilder/renderer.ts` — pure, deterministic
+    block→HTML renderer with output escaping (text fields + hrefs; the `html`
+    block is an explicit raw-content escape hatch). Preview and publish both
+    use it, so `renderedHtml` snapshots are real renderer output.
+*   `apps/api/src/websiteBuilder/websiteBuilder.service.ts` — org-scoped
+    Redis-backed sites/pages/blocks with slug & path uniqueness, ordered
+    blocks (add/update/remove/reorder), honest publish pipeline (status +
+    `publishedAt` stamped only on transition; idempotent re-publish; archived
+    or empty sites fail honestly), AI copy with `modelSource` labeling and a
+    deterministic fallback.
+*   Routes: `apps/api/src/http/routes/websiteBuilder.ts` mounted at
+    `/api/v1/website-builder` (21 endpoints). Session 89 catalog gains the
+    `wb:site` / `wb:page` namespaces as `org_scoped`.
+*   Web: `apps/web/src/lib/websiteBuilder.ts` client + `pages/websiteBuilder/
+    WebsiteBuilderPage.tsx` (sites list, page editor with block add/reorder/
+    remove, preview iframe of real renderer output, publish, AI copy with
+    demo banner), `/app/website-builder` route + sidebar entry.
+*   Tests: `apps/api/src/websiteBuilder/websiteBuilder.test.ts` (17) — CRUD,
+    renderer escaping + determinism, publish snapshots equal renderer output,
+    block ordering, AI copy labeling, rollup determinism, cross-tenant
+    isolation, demo-seed idempotency, schema contracts.
+*   Demo seed (`apps/api/src/websiteBuilder/bootstrap.ts`) gated behind
+    `WINDELS_DEMO_DATA`; production starts with no sites.
+*   Spec: `docs/SESSION_93_SPECIFICATION.md`.
+
 ## [Session 92 — Enterprise ERP] — 2026-08-05
 
 ### New module: Enterprise ERP (last major named Phase-3 Enterprise Application)

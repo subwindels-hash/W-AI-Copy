@@ -2145,7 +2145,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1404,
+      "serviceTotalSloc": 1406,
       "serviceFiles": [
         "bootstrap.ts",
         "crm.service.ts",
@@ -3068,11 +3068,11 @@
       "serviceFile": {
         "file": "emailIntel.service.ts",
         "path": "/home/user/WIN/apps/api/src/emailIntel/emailIntel.service.ts",
-        "sloc": 739,
+        "sloc": 741,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2233,
+      "serviceTotalSloc": 2240,
       "serviceFiles": [
         "bootstrap.ts",
         "emailIntel.service.ts",
@@ -7580,11 +7580,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 339,
+        "sloc": 342,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 854,
+      "serviceTotalSloc": 860,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -8534,5 +8534,93 @@
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "STUB"
+  },
+  {
+    "moduleKey": "websiteBuilder",
+    "title": "websiteBuilder",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/websiteBuilder",
+    "backend": {
+      "serviceDir": "apps/api/src/websiteBuilder",
+      "serviceFile": {
+        "file": "websiteBuilder.service.ts",
+        "path": "/home/user/WIN/apps/api/src/websiteBuilder/websiteBuilder.service.ts",
+        "sloc": 490,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1440,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "renderer.ts",
+        "websiteBuilder.service.ts",
+        "websiteBuilder.test.ts",
+        "websiteBuilder/websiteBuilder.service.ts"
+      ],
+      "importedServiceFiles": [
+        "websiteBuilder/websiteBuilder.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/websiteBuilder/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/websiteBuilder.ts",
+        "sloc": 194,
+        "counts": {
+          "total": 21,
+          "GET": 7,
+          "POST": 8,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 3
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "POST /intelligence/copy",
+          "GET /sites",
+          "POST /sites",
+          "GET /sites/:id",
+          "GET /sites/:id/detail",
+          "PATCH /sites/:id",
+          "DELETE /sites/:id",
+          "POST /sites/:id/publish",
+          "POST /sites/:id/archive",
+          "GET /sites/:id/pages",
+          "POST /sites/:id/pages",
+          "GET /pages/:id",
+          "PATCH /pages/:id",
+          "DELETE /pages/:id",
+          "POST /pages/:id/publish",
+          "GET /pages/:id/preview",
+          "POST /pages/:pageId/blocks",
+          "PATCH /pages/:pageId/blocks/:blockId",
+          "DELETE /pages/:pageId/blocks/:blockId",
+          "POST /pages/:pageId/blocks/reorder"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/websiteBuilder.ts (202 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/websiteBuilder.ts (131 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Message",
+        "Alert"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "websiteBuilder/websiteBuilder.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
   }
 ]

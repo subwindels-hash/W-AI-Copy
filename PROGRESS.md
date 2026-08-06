@@ -28,6 +28,7 @@
 | 90 | Enterprise CRM | 🟡 | full vertical slice (contacts/companies/deals/activities + rollup); 12 tests; `crm:*` namespaces audited by S89; runtime pending |
 | 91 | Email Intelligence | 🟡 | full vertical slice (mailboxes, threaded messages, outbox + real SMTP connector, AI draft/summarize/triage with honest labeling); 22 tests incl. real SMTP round-trip; `ei:*` namespaces audited by S89; runtime pending |
 | 92 | Enterprise ERP | 🟡 | full vertical slice (products, warehouses, movements ledger → computed stock, suppliers, PO/SO lifecycles, CRM won-deal hook); 17 tests; `erp:*` namespaces audited by S89; runtime pending |
+| 93 | Website Builder | 🟡 | full vertical slice (sites, typed block pages, pure deterministic block→HTML renderer, publish snapshots, AI copy with honest labeling); 17 tests; `wb:*` namespaces audited by S89; runtime pending |
 
 ### Repository-wide cleanup passes (cross-session)
 - **Pre-existing test failures**: all 12 resolved in-repo (9 env-blocked suites unblocked via `prismaClientMock`; 3 genuine demo-data/ESG bugs fixed). See `docs/PRE_EXISTING_TEST_FAILURES.md`.
@@ -36,12 +37,12 @@
 - **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`.
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **985 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 86 files).
+- API unit/integration-style suite: **1002 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 88 files).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
 - `make verify` (prisma offline generate + build + typecheck + test): **green on a fresh clone**.
 - Web typecheck: clean.
 - Remaining API typecheck errors: 76 env-only (`@prisma/client` generated types require `prisma generate`, which needs the blocked engine download).
-- Module inventory (regenerated): **98 modules** — 71 COMPLETE, 24 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+- Module inventory (regenerated): **99 modules** — 72 COMPLETE, 24 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
 
 ## Blocked Gates (require target deployment environment)
 - `prisma generate` (native engine download from `binaries.prisma.sh` is network-blocked here).

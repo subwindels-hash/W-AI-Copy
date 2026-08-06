@@ -59,6 +59,7 @@ const navItems = [
   { to: "/app/crm", icon: UsersRound, label: "CRM" },
   { to: "/app/email-intel", icon: Mail, label: "Email Intel" },
   { to: "/app/erp", icon: Package, label: "ERP" },
+  { to: "/app/website-builder", icon: Globe2, label: "Website Builder" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },

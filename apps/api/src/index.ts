@@ -323,6 +323,14 @@ async function main() {
         } catch (e) { logger.warn("erp bootstrap failed", { err: e }); }
       }, 22000);
 
+      // Session 93 — Website Builder (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapWebsiteBuilder } = await import("./websiteBuilder/bootstrap.js");
+          await bootstrapWebsiteBuilder(logger);
+        } catch (e) { logger.warn("website-builder bootstrap failed", { err: e }); }
+      }, 23000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

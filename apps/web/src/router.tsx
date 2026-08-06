@@ -38,6 +38,7 @@ const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage
 const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
 const EmailIntelPage = lazy(() => import("./pages/emailIntel/EmailIntelPage").then((m) => ({ default: m.EmailIntelPage })));
 const ErpPage = lazy(() => import("./pages/erp/ErpPage").then((m) => ({ default: m.ErpPage })));
+const WebsiteBuilderPage = lazy(() => import("./pages/websiteBuilder/WebsiteBuilderPage").then((m) => ({ default: m.WebsiteBuilderPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -250,6 +251,7 @@ export const router = createBrowserRouter([
       { path: "crm", element: withSuspense(<CrmPage />) },
       { path: "email-intel", element: withSuspense(<EmailIntelPage />) },
       { path: "erp", element: withSuspense(<ErpPage />) },
+      { path: "website-builder", element: withSuspense(<WebsiteBuilderPage />) },
     ],
   },
   {
