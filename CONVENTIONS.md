@@ -984,3 +984,36 @@
 - **The S89 catalog covers every module's keys.** `esg` was missing entirely
   and is now catalogued org-scoped with a comment stating the org-segment
   position for every key shape.
+
+## Session 122 — Decisions Logged (Talk Completion)
+
+- **Module prefix:** `Talk*` types in `packages/shared/src/talk.ts`, the existing
+  `/api/v1/talk` route prefix (23 endpoints unchanged), `apps/web/src/lib/talk.ts`
+  (types now re-exported from the shared contract; old names kept as aliases),
+  existing `/app/talk` page + sidebar entry.
+- **A hardcoded 0 in a read position is a lie.** `unreadCount` was always 0
+  ("computed live when needed" — it never was) and the sidebar showed the total
+  message count as if it were unread. Unread is now measured (messages after
+  lastReadAt, excluding the caller's own and deleted ones) or **`null`** when
+  the caller has no membership row — no read position is not "all caught up".
+  UI badges render only when a real number says so.
+- **Cross-org references are refused before anything is persisted.** Channel
+  members, DM peers and AI participants must belong to the caller's
+  organization; a foreign id answers 400 naming the ids, and no dead member
+  row or unusable DM is ever created. The rule generalises: any id the caller
+  pastes into a payload that will live inside their tenant must be
+  tenant-validated on write, not merely inaccessible on read.
+- **A status field with no lifecycle is a trap.** Meetings accepted every
+  status transition and stamped startedAt/endedAt accordingly, so a CANCELLED
+  meeting could be resurrected. Lifecycles are now explicit state machines
+  (`TALK_MEETING_TRANSITIONS` in the shared contract), terminal states are
+  terminal, re-sending the current status is idempotent, and a refused
+  transition answers 409 naming the allowed ones.
+- **AI-generated content must be labelled at the payload and the UI.** The
+  notetaker already stored `metadata.aiGenerated`; serializers now surface it
+  as `aiGenerated` on every action item and the UI badges "AI-extracted".
+- **Shared contracts hold the Zod; services re-export under the old names.**
+  The ten talk schemas moved to `packages/shared/src/talk.ts` and both
+  services re-export them, so route files and tests keep compiling untouched.
+  Caller-facing input types use `z.input`, not `z.infer`, so defaulted fields
+  stay optional exactly as the same-file inference behaved.

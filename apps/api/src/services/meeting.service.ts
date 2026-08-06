@@ -1,55 +1,29 @@
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
-import { z } from "zod";
 import type { PaginationQuery } from "@windels/shared/api";
 import { MeetingStatus, NotetakerStatus, ActionItemStatus, ActionItemPriority } from "@prisma/client";
 import { sendMessage as sendTalkMessage } from "./talk.service.js";
 
-export const CreateMeetingSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  channelId: z.string().cuid().optional(),
-  scheduledStart: z.string().datetime().optional(),
-  notetakerAgentId: z.string().cuid().optional(),
-  participantIds: z.array(z.string().cuid()).optional(),
-  agentParticipantIds: z.array(z.string().cuid()).optional(),
-});
-
-export const UpdateMeetingSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional(),
-  status: z.enum(["SCHEDULED", "LIVE", "ENDED", "CANCELLED"]).optional(),
-  scheduledStart: z.string().datetime().optional(),
-  notetakerAgentId: z.string().cuid().nullable().optional(),
-});
-
-export const CreateActionItemSchema = z.object({
-  title: z.string().min(1).max(200),
-  description: z.string().max(2000).optional(),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).default("MEDIUM"),
-  dueDate: z.string().datetime().optional(),
-  assigneeId: z.string().cuid().optional(),
-  agentAssigneeId: z.string().cuid().optional(),
-  channelId: z.string().cuid().optional(),
-  meetingId: z.string().cuid().optional(),
-  sourceMessageId: z.string().cuid().optional(),
-});
-
-export const UpdateActionItemSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  description: z.string().max(2000).optional(),
-  status: z.enum(["OPEN", "IN_PROGRESS", "DONE", "CANCELLED"]).optional(),
-  priority: z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]).optional(),
-  dueDate: z.string().datetime().nullable().optional(),
-  assigneeId: z.string().cuid().nullable().optional(),
-  agentAssigneeId: z.string().cuid().nullable().optional(),
-});
-
-export const AddTranscriptSchema = z.object({
-  text: z.string().min(1).max(20000),
-  final: z.boolean().default(false),
-});
+// Session 122 — the schemas moved to the shared contract; the old names are
+// re-exported so every existing importer keeps compiling.
+export {
+  TalkCreateMeetingSchema as CreateMeetingSchema,
+  TalkUpdateMeetingSchema as UpdateMeetingSchema,
+  TalkCreateActionItemSchema as CreateActionItemSchema,
+  TalkUpdateActionItemSchema as UpdateActionItemSchema,
+  TalkAddTranscriptSchema as AddTranscriptSchema,
+} from "@windels/shared/talk";
+import {
+  TALK_MEETING_TRANSITIONS,
+} from "@windels/shared/talk";
+import type {
+  TalkAddTranscriptInput,
+  TalkCreateActionItemInput,
+  TalkCreateMeetingInput,
+  TalkUpdateActionItemInput,
+  TalkUpdateMeetingInput,
+} from "@windels/shared/talk";
 
 async function assertMeeting(userId: string, meetingId: string) {
   const ctx = await resolveUserContext(userId);
@@ -144,6 +118,9 @@ export async function getMeeting(userId: string, meetingId: string) {
       status: ai.status.toLowerCase(),
       priority: ai.priority.toLowerCase(),
       dueDate: ai.dueDate,
+      // Session 122 — surface that the notetaker extracted this item from a
+      // transcript (heuristic or model) rather than a person typing it.
+      aiGenerated: Boolean((ai.metadata as any)?.aiGenerated) ?? false,
       assignee: ai.assignee ? { id: ai.assignee.id, displayName: ai.assignee.profile?.displayName ?? ai.assignee.email } : null,
       agentAssignee: ai.agentAssignee ? { id: ai.agentAssignee.id, name: ai.agentAssignee.name } : null,
     })),
@@ -152,7 +129,7 @@ export async function getMeeting(userId: string, meetingId: string) {
   };
 }
 
-export async function createMeeting(userId: string, input: z.infer<typeof CreateMeetingSchema>) {
+export async function createMeeting(userId: string, input: TalkCreateMeetingInput) {
   const ctx = await resolveUserContext(userId);
   // If bound to a channel, verify access.
   if (input.channelId) {
@@ -200,14 +177,36 @@ export async function createMeeting(userId: string, input: z.infer<typeof Create
   return m;
 }
 
-export async function updateMeeting(userId: string, meetingId: string, input: z.infer<typeof UpdateMeetingSchema>) {
-  await assertMeeting(userId, meetingId);
+export async function updateMeeting(userId: string, meetingId: string, input: TalkUpdateMeetingInput) {
+  const { meeting } = await assertMeeting(userId, meetingId);
+  // Session 122 — the status lifecycle is a real state machine, not an
+  // anything-goes setter. Before this session a CANCELLED meeting could be
+  // flipped LIVE and an ENDED meeting resurrected, with startedAt/endedAt
+  // stamped accordingly. Re-sending the current status stays idempotent;
+  // ENDED and CANCELLED are terminal.
+  if (input.status && input.status !== meeting.status) {
+    const allowed = TALK_MEETING_TRANSITIONS[meeting.status] ?? [];
+    if (!allowed.includes(input.status)) {
+      throw AppError.conflict(
+        `Cannot move a ${meeting.status.toLowerCase()} meeting to ${input.status.toLowerCase()}; ` +
+        `allowed transitions: ${allowed.map((s) => s.toLowerCase()).join(", ")}`,
+      );
+    }
+  }
   const data: any = { ...input };
   if (input.scheduledStart) data.scheduledStart = new Date(input.scheduledStart);
   if (input.notetakerAgentId === null) data.notetakerAgentId = null;
   if (input.status === "LIVE") data.startedAt = data.startedAt ?? new Date();
   if (input.status === "ENDED") data.endedAt = new Date();
-  const m = await prisma.meeting.update({ where: { id: meetingId }, data });
+  let m;
+  try {
+    m = await prisma.meeting.update({ where: { id: meetingId }, data });
+  } catch (e) {
+    // Check-then-act race: the meeting vanished between the assert and the
+    // update. Answer 404, not a 500.
+    if ((e as { code?: string })?.code === "P2025") throw AppError.notFound("Meeting not found");
+    throw e;
+  }
   // When meeting ends, run notetaker summarization.
   if (input.status === "ENDED") {
     runNotetakerSummarize(meetingId).catch(() => {});
@@ -215,7 +214,7 @@ export async function updateMeeting(userId: string, meetingId: string, input: z.
   return m;
 }
 
-export async function addTranscript(userId: string, meetingId: string, input: z.infer<typeof AddTranscriptSchema>) {
+export async function addTranscript(userId: string, meetingId: string, input: TalkAddTranscriptInput) {
   const { meeting } = await assertMeeting(userId, meetingId);
   const current = meeting.transcript ? `${meeting.transcript}\n` : "";
   await prisma.meeting.update({
@@ -395,6 +394,9 @@ export async function listActionItems(userId: string, q: PaginationQuery & { sta
       priority: a.priority.toLowerCase(),
       dueDate: a.dueDate,
       completedAt: a.completedAt,
+      // Session 122 — surface AI-extracted items (the notetaker's heuristic
+      // or model output) instead of presenting them as human-typed.
+      aiGenerated: Boolean((a.metadata as any)?.aiGenerated) ?? false,
       assignee: a.assignee ? { id: a.assignee.id, displayName: a.assignee.profile?.displayName ?? a.assignee.email, avatarUrl: a.assignee.profile?.avatarUrl } : null,
       agentAssignee: a.agentAssignee ? { id: a.agentAssignee.id, name: a.agentAssignee.name, emoji: a.agentAssignee.emoji } : null,
       createdBy: { id: a.createdBy.id, displayName: a.createdBy.profile?.displayName ?? a.createdBy.email },
@@ -406,7 +408,7 @@ export async function listActionItems(userId: string, q: PaginationQuery & { sta
   };
 }
 
-export async function createActionItem(userId: string, input: z.infer<typeof CreateActionItemSchema>) {
+export async function createActionItem(userId: string, input: TalkCreateActionItemInput) {
   const ctx = await resolveUserContext(userId);
   if (input.channelId) {
     const ch = await prisma.talkChannel.findFirst({ where: { id: input.channelId, organizationId: ctx.organizationId } });
@@ -435,7 +437,7 @@ export async function createActionItem(userId: string, input: z.infer<typeof Cre
   return a;
 }
 
-export async function updateActionItem(userId: string, id: string, input: z.infer<typeof UpdateActionItemSchema>) {
+export async function updateActionItem(userId: string, id: string, input: TalkUpdateActionItemInput) {
   const ctx = await resolveUserContext(userId);
   const existing = await prisma.actionItem.findFirst({ where: { id, organizationId: ctx.organizationId } });
   if (!existing) throw AppError.notFound("Action item not found");

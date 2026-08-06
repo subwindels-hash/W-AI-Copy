@@ -1,131 +1,70 @@
+/**
+ * Session 5–6 — Talk client (Session 122 completion).
+ *
+ * The method surface is unchanged; the types now come from the shared
+ * contract (`@windels/shared/talk`) so the API and the web app compile
+ * against one definition. Notable widenings: `TalkChannel.unreadCount` is
+ * `number | null` (null = the caller has not joined the channel — never a
+ * fabricated 0), and `TalkActionItem.aiGenerated` states that the meeting
+ * notetaker extracted the item rather than a person typing it.
+ */
 import { api } from "./api";
+import type {
+  TalkActionItem,
+  TalkActionItemList,
+  TalkChannel,
+  TalkChannelList,
+  TalkCreateChannelInput,
+  TalkCreateMeetingInput,
+  TalkMeetingDetail,
+  TalkMeetingList,
+  TalkMeetingSummary,
+  TalkMessage,
+  TalkMessageList,
+  TalkReactions,
+  TalkUpdateChannelInput,
+  TalkUpdateMeetingInput,
+} from "@windels/shared/talk";
 
+export type {
+  TalkActionItem,
+  TalkActionItemList,
+  TalkChannel,
+  TalkChannelList,
+  TalkCreateChannelInput,
+  TalkCreateMeetingInput,
+  TalkMeetingDetail,
+  TalkMeetingList,
+  TalkMeetingSummary,
+  TalkMessage,
+  TalkMessageList,
+  TalkReactions,
+  TalkUpdateChannelInput,
+  TalkUpdateMeetingInput,
+} from "@windels/shared/talk";
+
+// Backwards-compatible aliases for the Session 5–6 names the rest of the app
+// imports.
 export type ChannelType = "dm" | "channel";
 export type ChannelAccess = "public" | "private";
-
-export interface TalkMember {
-  id: string;
-  userId: string | null;
-  agentId: string | null;
-  isMuted: boolean;
-  isPinned: boolean;
-  lastReadAt?: string | null;
-  user: { id: string; displayName: string; avatarUrl?: string | null; email: string } | null;
-  agent: { id: string; name: string; emoji: string; color: string } | null;
-}
-
-export interface TalkChannel {
-  id: string;
-  type: ChannelType;
-  access: ChannelAccess;
-  name: string;
-  displayName: string;
-  topic?: string | null;
-  workspaceId?: string | null;
-  isArchived: boolean;
-  lastMessageAt: string;
-  membersCount: number;
-  messagesCount: number;
-  unreadCount: number;
-  peer?: { id: string; displayName: string; avatarUrl?: string | null } | null;
-  members: TalkMember[];
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface TalkReactions {
-  [emoji: string]: string[];
-}
-
-export interface TalkAttachment {
-  id: string;
-  filename: string;
-  mimeType: string;
-  sizeBytes: number;
-}
-
-export interface TalkMessage {
-  id: string;
-  channelId: string;
-  type: string;
-  content: string;
-  userId: string | null;
-  agentId: string | null;
-  threadParentId: string | null;
-  replyCount: number;
-  lastReplyAt: string | null;
-  reactions: TalkReactions;
-  meetingId: string | null;
-  editedAt: string | null;
-  deletedAt: string | null;
-  attachments: TalkAttachment[];
-  user: { id: string; displayName: string; avatarUrl?: string | null; email: string } | null;
-  agent: { id: string; name: string; emoji: string; color: string } | null;
-  createdAt: string;
-  updatedAt: string;
-}
-
-export interface Meeting {
-  id: string;
-  title: string;
-  description?: string | null;
-  status: "scheduled" | "live" | "ended" | "cancelled";
-  scheduledStart?: string | null;
-  startedAt?: string | null;
-  endedAt?: string | null;
-  channelId?: string | null;
-  channelName?: string | null;
-  notetakerAgentId?: string | null;
-  notetakerAgent: { id: string; name: string; emoji: string; color: string } | null;
-  notetakerStatus: string;
-  transcript?: string | null;
-  summary?: string | null;
-  decisions?: string[] | null;
-  createdBy: { id: string; displayName: string } | null;
-  participantsCount: number;
-  actionItemsCount: number;
-  createdAt: string;
-  participants?: any[];
-  actionItems?: any[];
-}
-
-export interface ActionItem {
-  id: string;
-  title: string;
-  description?: string | null;
-  status: "open" | "in_progress" | "done" | "cancelled";
-  priority: "low" | "medium" | "high" | "urgent";
-  dueDate?: string | null;
-  completedAt?: string | null;
-  assignee: { id: string; displayName: string; avatarUrl?: string | null } | null;
-  agentAssignee: { id: string; name: string; emoji: string } | null;
-  createdBy: { id: string; displayName: string };
-  meeting?: { id: string; title: string } | null;
-  channel?: { id: string; name: string } | null;
-  createdAt: string;
-}
+export type TalkMember = TalkChannel["members"][number];
+export type TalkAttachment = NonNullable<TalkMessage["attachments"]>[number];
+export type Meeting = TalkMeetingDetail;
+export type ActionItem = TalkActionItem;
 
 export const talkApi = {
   listChannels: (params?: { q?: string; type?: "DM" | "CHANNEL"; page?: number; perPage?: number }) =>
-    api.get<{ items: TalkChannel[]; pagination: any }>("/talk/channels", params),
-  createChannel: (input: {
-    type: "DM" | "CHANNEL";
-    name?: string;
-    topic?: string;
-    access?: "PUBLIC" | "PRIVATE";
-    peerUserId?: string;
-    memberUserIds?: string[];
-    memberAgentIds?: string[];
-  }) => api.post<TalkChannel>("/talk/channels", input),
+    api.get<TalkChannelList>("/talk/channels", params),
+  createChannel: (input: TalkCreateChannelInput) => api.post<TalkChannel>("/talk/channels", input),
   getChannel: (id: string) => api.get<TalkChannel>(`/talk/channels/${id}`),
-  updateChannel: (id: string, input: any) => api.patch<TalkChannel>(`/talk/channels/${id}`, input),
+  updateChannel: (id: string, input: TalkUpdateChannelInput) => api.patch<TalkChannel>(`/talk/channels/${id}`, input),
   archiveChannel: (id: string) => api.del<void>(`/talk/channels/${id}`),
   addMembers: (id: string, userIds: string[] = [], agentIds: string[] = []) =>
     api.post<void>(`/talk/channels/${id}/members`, { userIds, agentIds }),
   removeMember: (id: string, memberId: string) => api.del<void>(`/talk/channels/${id}/members/${memberId}`),
 
   listMessages: (channelId: string, params?: { threadParentId?: string; page?: number; perPage?: number }) =>
-    api.get<{ items: TalkMessage[]; pagination: any }>(`/talk/channels/${channelId}/messages`, params),
+    api.get<TalkMessageList>(`/talk/channels/${channelId}/messages`, params),
   sendMessage: (channelId: string, input: { content: string; threadParentId?: string; attachmentIds?: string[] }) =>
     api.post<TalkMessage>(`/talk/channels/${channelId}/messages`, input),
   editMessage: (id: string, content: string) => api.patch<TalkMessage>(`/talk/messages/${id}`, { content }),
@@ -134,18 +73,10 @@ export const talkApi = {
     api.post<TalkReactions>(`/talk/messages/${id}/reactions`, { emoji }),
 
   listMeetings: (params?: { status?: string; channelId?: string; page?: number; perPage?: number }) =>
-    api.get<{ items: Meeting[]; pagination: any }>("/talk/meetings", params),
-  createMeeting: (input: {
-    title: string;
-    description?: string;
-    channelId?: string;
-    scheduledStart?: string;
-    notetakerAgentId?: string;
-    participantIds?: string[];
-    agentParticipantIds?: string[];
-  }) => api.post<Meeting>("/talk/meetings", input),
-  getMeeting: (id: string) => api.get<Meeting>(`/talk/meetings/${id}`),
-  updateMeeting: (id: string, input: any) => api.patch<Meeting>(`/talk/meetings/${id}`, input),
+    api.get<TalkMeetingList>("/talk/meetings", params),
+  createMeeting: (input: TalkCreateMeetingInput) => api.post<TalkMeetingSummary>("/talk/meetings", input),
+  getMeeting: (id: string) => api.get<TalkMeetingDetail>(`/talk/meetings/${id}`),
+  updateMeeting: (id: string, input: TalkUpdateMeetingInput) => api.patch<TalkMeetingSummary>(`/talk/meetings/${id}`, input),
   addTranscript: (id: string, text: string, final = false) =>
     api.post<void>(`/talk/meetings/${id}/transcript`, { text, final }),
 
@@ -157,9 +88,9 @@ export const talkApi = {
     mine?: boolean;
     page?: number;
     perPage?: number;
-  }) => api.get<{ items: ActionItem[]; pagination: any }>("/talk/action-items", params),
-  createActionItem: (input: any) => api.post<ActionItem>("/talk/action-items", input),
-  updateActionItem: (id: string, input: any) => api.patch<ActionItem>(`/talk/action-items/${id}`, input),
+  }) => api.get<TalkActionItemList>("/talk/action-items", params),
+  createActionItem: (input: any) => api.post<TalkActionItem>("/talk/action-items", input),
+  updateActionItem: (id: string, input: any) => api.patch<TalkActionItem>(`/talk/action-items/${id}`, input),
   deleteActionItem: (id: string) => api.del<void>(`/talk/action-items/${id}`),
 
   availableAgents: () => api.get<{ id: string; name: string; role: string; emoji: string; color: string; isBuiltIn: boolean }[]>("/talk/available-agents"),

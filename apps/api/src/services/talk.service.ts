@@ -2,7 +2,6 @@ import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 import { resolveUserContext } from "./workspace.service.js";
 import { logger } from "../config/logger.js";
-import { z } from "zod";
 import { claimTalkAttachments } from "../attachments/attachments.service.js";
 import type { PaginationQuery } from "@windels/shared/api";
 import {
@@ -14,39 +13,83 @@ import {
 } from "@prisma/client";
 
 // ─── Zod schemas ────────────────────────────────────────────────
-export const CreateChannelSchema = z.object({
-  type: z.enum(["DM", "CHANNEL"]),
-  name: z.string().min(1).max(80).optional(),
-  topic: z.string().max(300).optional(),
-  access: z.enum(["PUBLIC", "PRIVATE"]).default("PUBLIC"),
-  workspaceId: z.string().cuid().optional(),
-  peerUserId: z.string().cuid().optional(), // DM target
-  memberUserIds: z.array(z.string().cuid()).optional(),
-  memberAgentIds: z.array(z.string().cuid()).optional(),
-});
-
-export const UpdateChannelSchema = z.object({
-  name: z.string().min(1).max(80).optional(),
-  topic: z.string().max(300).optional(),
-  access: z.enum(["PUBLIC", "PRIVATE"]).optional(),
-  isArchived: z.boolean().optional(),
-});
-
-export const CreateMessageSchema = z.object({
-  content: z.string().min(1).max(10000),
-  threadParentId: z.string().cuid().optional(),
-  attachmentIds: z.array(z.string().cuid()).optional(),
-});
-
-export const UpdateMessageSchema = z.object({
-  content: z.string().min(1).max(10000),
-});
-
-export const AddReactionSchema = z.object({
-  emoji: z.string().min(1).max(16),
-});
+// Session 122 — the schemas moved to the shared contract so the API and the
+// web client compile against one definition. The old names are re-exported so
+// every existing importer keeps compiling.
+export {
+  TalkCreateChannelSchema as CreateChannelSchema,
+  TalkUpdateChannelSchema as UpdateChannelSchema,
+  TalkCreateMessageSchema as CreateMessageSchema,
+  TalkUpdateMessageSchema as UpdateMessageSchema,
+  TalkAddReactionSchema as AddReactionSchema,
+  TalkCreateMeetingSchema as CreateMeetingSchema,
+  TalkUpdateMeetingSchema as UpdateMeetingSchema,
+  TalkCreateActionItemSchema as CreateActionItemSchema,
+  TalkUpdateActionItemSchema as UpdateActionItemSchema,
+  TalkAddTranscriptSchema as AddTranscriptSchema,
+  TALK_MEETING_TRANSITIONS,
+} from "@windels/shared/talk";
+import type {
+  TalkCreateChannelInput,
+  TalkCreateMessageInput,
+  TalkUpdateChannelInput,
+  TalkUpdateMessageInput,
+} from "@windels/shared/talk";
 
 // ─── Access helpers ─────────────────────────────────────────────
+/**
+ * Session 122 — same-organization validation for peer/member references.
+ * Before this session `createChannel` / `getOrCreateDM` / `addChannelMembers`
+ * accepted user and agent ids from ANY organization: an org A channel could
+ * gain a member from org B (who can never access it — every lookup is
+ * org-scoped — leaving a permanently dead member row) and a DM to a peer in
+ * another org was created and then unusable. Peers and members must belong to
+ * the caller's organization.
+ */
+async function assertUsersInOrg(ctx: Awaited<ReturnType<typeof resolveUserContext>>, userIds: string[], what: string) {
+  if (!userIds.length) return;
+  const memberships = await prisma.membership.findMany({
+    where: { userId: { in: userIds }, organizationId: ctx.organizationId },
+    select: { userId: true },
+  });
+  const found = new Set(memberships.map((m) => m.userId));
+  const missing = userIds.filter((id) => !found.has(id));
+  if (missing.length) {
+    throw AppError.badRequest(`${what} not in your organization: ${missing.join(", ")}`);
+  }
+}
+
+async function assertAgentsInOrg(ctx: Awaited<ReturnType<typeof resolveUserContext>>, agentIds: string[], what: string) {
+  if (!agentIds.length) return;
+  const agents = await prisma.agent.findMany({
+    where: { id: { in: agentIds }, organizationId: ctx.organizationId },
+    select: { id: true },
+  });
+  const found = new Set(agents.map((a) => a.id));
+  const missing = agentIds.filter((id) => !found.has(id));
+  if (missing.length) {
+    throw AppError.badRequest(`${what} not in your organization: ${missing.join(", ")}`);
+  }
+}
+
+/**
+ * Session 122 — real unread count for a channel: messages after the caller's
+ * lastReadAt, excluding their own, excluding deleted. `null` when the caller
+ * has no membership row (e.g. a public channel they have not joined) — never
+ * a fabricated 0.
+ */
+async function unreadCountFor(channelId: string, currentUserId: string, member: any): Promise<number | null> {
+  if (!member) return null;
+  return prisma.talkMessage.count({
+    where: {
+      channelId,
+      deletedAt: null,
+      createdAt: { gt: member.lastReadAt ?? new Date(0) },
+      NOT: { userId: currentUserId },
+    },
+  });
+}
+
 export async function assertChannelAccess(userId: string, channelId: string) {
   const ctx = await resolveUserContext(userId);
   const channel = await prisma.talkChannel.findFirst({
@@ -66,6 +109,9 @@ export async function assertChannelAccess(userId: string, channelId: string) {
 
 async function getOrCreateDM(userId: string, peerUserId: string, ctx: Awaited<ReturnType<typeof resolveUserContext>>) {
   if (peerUserId === userId) throw AppError.badRequest("Cannot DM yourself");
+  // Session 122 — a DM with a peer outside the org would be created but
+  // permanently unusable (every lookup is org-scoped); refuse it up front.
+  await assertUsersInOrg(ctx, [peerUserId], "Peer user");
   // Look up existing DM between these two users (direction-agnostic).
   const dm = await prisma.talkChannel.findFirst({
     where: {
@@ -124,13 +170,22 @@ export async function listChannels(userId: string, q: PaginationQuery & { q?: st
     }),
     prisma.talkChannel.count({ where }),
   ]);
+  // Session 122 — real unread counts (null for channels the caller has not
+  // joined); previously the payload hardcoded 0, which read as "all caught
+  // up" for every channel.
+  const withUnread = await Promise.all(
+    items.map(async (c: any) => {
+      const member = c.members.find((m: any) => m.userId === userId) ?? null;
+      return serializeChannel(c, userId, await unreadCountFor(c.id, userId, member));
+    }),
+  );
   return {
-    items: items.map((c: any) => serializeChannel(c, userId)),
+    items: withUnread,
     pagination: { page: q.page, perPage: q.perPage, total, totalPages: Math.ceil(total / q.perPage) },
   };
 }
 
-function serializeChannel(c: any, currentUserId: string) {
+function serializeChannel(c: any, currentUserId: string, unread: number | null = null) {
   const isDM = c.type === "DM";
   const otherMember = isDM ? c.members.find((m: any) => m.userId && m.userId !== currentUserId) : null;
   return {
@@ -149,7 +204,9 @@ function serializeChannel(c: any, currentUserId: string) {
     lastMessageAt: c.lastMessageAt,
     membersCount: c._count.members,
     messagesCount: c._count.messages,
-    unreadCount: 0, // computed live when needed
+    // Real unread count, or null when the caller is not a member of this
+    // channel. Never a fabricated 0.
+    unreadCount: unread,
     peer: otherMember ? {
       id: otherMember.user.id,
       displayName: otherMember.user.profile?.displayName ?? otherMember.user.email,
@@ -186,10 +243,11 @@ export async function getChannel(userId: string, channelId: string) {
       _count: { select: { messages: true } },
     },
   });
-  return serializeChannel(full!, userId);
+  const member = full!.members.find((m: any) => m.userId === userId) ?? null;
+  return serializeChannel(full!, userId, await unreadCountFor(channelId, userId, member));
 }
 
-export async function createChannel(userId: string, input: z.infer<typeof CreateChannelSchema>) {
+export async function createChannel(userId: string, input: TalkCreateChannelInput) {
   const ctx = await resolveUserContext(userId);
   if (input.type === "DM") {
     if (!input.peerUserId) throw AppError.badRequest("DM requires a peer user");
@@ -199,6 +257,9 @@ export async function createChannel(userId: string, input: z.infer<typeof Create
   if (!name) throw AppError.badRequest("Channel name required");
   const memberIds = Array.from(new Set([userId, ...(input.memberUserIds ?? [])]));
   const agentIds = Array.from(new Set(input.memberAgentIds ?? []));
+  // Session 122 — members and AI participants must belong to the org.
+  await assertUsersInOrg(ctx, memberIds, "Member");
+  await assertAgentsInOrg(ctx, agentIds, "Agent");
   const slug = name.toLowerCase().replace(/\s+/g, "-").replace(/[^a-z0-9-_]/g, "");
   const ch = await prisma.talkChannel.create({
     data: {
@@ -218,10 +279,11 @@ export async function createChannel(userId: string, input: z.infer<typeof Create
     },
     include: { members: { include: { user: { include: { profile: true } }, agent: true } }, _count: { select: { messages: true, members: true } } },
   });
-  return serializeChannel(ch, userId);
+  const creatorMember = ch.members.find((m: any) => m.userId === userId) ?? null;
+  return serializeChannel(ch, userId, await unreadCountFor(ch.id, userId, creatorMember));
 }
 
-export async function updateChannel(userId: string, channelId: string, input: z.infer<typeof UpdateChannelSchema>) {
+export async function updateChannel(userId: string, channelId: string, input: TalkUpdateChannelInput) {
   await assertChannelAccess(userId, channelId);
   const data: any = {};
   if (input.name !== undefined) data.name = input.name.startsWith("#") ? input.name : `#${input.name.replace(/\s+/g, "-")}`;
@@ -238,8 +300,11 @@ export async function archiveChannel(userId: string, channelId: string) {
 }
 
 export async function addChannelMembers(userId: string, channelId: string, memberUserIds: string[] = [], memberAgentIds: string[] = []) {
-  const { channel } = await assertChannelAccess(userId, channelId);
+  const { channel, ctx } = await assertChannelAccess(userId, channelId);
   if (channel.type === TalkChannelType.DM) throw AppError.badRequest("Cannot add members to a DM");
+  // Session 122 — same-organization validation for added users/agents.
+  await assertUsersInOrg(ctx, memberUserIds, "Member");
+  await assertAgentsInOrg(ctx, memberAgentIds, "Agent");
   for (const uid of memberUserIds) {
     const existing = await prisma.talkMember.findFirst({ where: { channelId, userId: uid } });
     if (!existing) await prisma.talkMember.create({ data: { channelId, userId: uid } });
@@ -328,7 +393,7 @@ export async function getMessage(userId: string, messageId: string) {
   return serializeMessage(m);
 }
 
-export async function sendMessage(userId: string, channelId: string, input: z.infer<typeof CreateMessageSchema>, opts: { agentId?: string } = {}) {
+export async function sendMessage(userId: string, channelId: string, input: TalkCreateMessageInput, opts: { agentId?: string } = {}) {
   const { channel } = await assertChannelAccess(userId, channelId);
   if (input.threadParentId) {
     const parent = await prisma.talkMessage.findUnique({ where: { id: input.threadParentId } });
@@ -362,7 +427,7 @@ export async function sendMessage(userId: string, channelId: string, input: z.in
   return serializeMessage(m);
 }
 
-export async function editMessage(userId: string, messageId: string, input: z.infer<typeof UpdateMessageSchema>) {
+export async function editMessage(userId: string, messageId: string, input: TalkUpdateMessageInput) {
   const m = await prisma.talkMessage.findUnique({ where: { id: messageId } });
   if (!m) throw AppError.notFound("Message not found");
   if (m.userId !== userId) throw AppError.forbidden("You can only edit your own messages");

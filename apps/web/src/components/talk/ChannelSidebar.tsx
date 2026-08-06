@@ -98,8 +98,14 @@ function ChannelItem({ channel, active, onClick }: { channel: TalkChannel; activ
         <Hash className="h-3.5 w-3.5 text-text-muted" />
       )}
       <span className="truncate flex-1">{channel.displayName}</span>
-      {channel.messagesCount > 0 && !active && (
-        <span className="text-[10px] text-text-muted">{channel.messagesCount > 99 ? "99+" : channel.messagesCount}</span>
+      {/* Session 122 — real unread count (messages after lastReadAt, excluding
+          the caller's own). null = not a member of this channel; 0 = caught
+          up; neither is shown. (Previously the badge showed the total message
+          count, which read as "unread".) */}
+      {(channel.unreadCount ?? 0) > 0 && !active && (
+        <span className="shrink-0 rounded-full bg-azure/80 px-1.5 py-0.5 text-[10px] font-medium text-white">
+          {channel.unreadCount! > 99 ? "99+" : channel.unreadCount}
+        </span>
       )}
     </button>
   );

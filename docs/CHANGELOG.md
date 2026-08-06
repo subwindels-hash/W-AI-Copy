@@ -5,6 +5,19 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 122 — Talk Completion] — 2026-08-06
+
+### Unread counts were a lie, members could come from anywhere, and a meeting could be resurrected
+*   `packages/shared/src/talk.ts` (new, 340 LOC) — the module's first shared contract: every wire type (`TalkChannel` with `unreadCount: number | null`, `TalkMember`, `TalkMessage`, `TalkReactions`, `TalkAttachment`, `TalkMeetingSummary`/`TalkMeetingDetail`, `TalkActionItem` with `aiGenerated: boolean`, paginated lists) and all ten Zod schemas moved verbatim from the service files (limits extracted as constants). The services re-export the schemas under their old names so every route keeps compiling; input types use `z.input` so defaulted fields stay optional for callers. `TALK_MEETING_TRANSITIONS` lives in the contract.
+*   **`unreadCount` was hardcoded `0`** in every channel payload ("computed live when needed" — it never was), and the channel sidebar rendered the *total message count* as the badge. Every channel read as "all caught up" while the badge showed something else. `listChannels`/`getChannel` now compute messages after the caller's `lastReadAt`, excluding the caller's own messages and deleted ones; a caller with **no membership row** gets **`null`** (no read position — never a fabricated 0). The sidebar shows the real unread badge only when > 0.
+*   **`createChannel` / DMs / `addChannelMembers` accepted users and agents from ANY organization.** A DM to a peer in another org was created and permanently unusable (every lookup is org-scoped → 404 forever); an org A channel could gain dead member rows from org B. New `assertUsersInOrg`/`assertAgentsInOrg` helpers refuse cross-org references with a 400 naming the ids, before anything is persisted.
+*   **The meeting status was an anything-goes setter** — a CANCELLED meeting could be flipped LIVE and an ENDED meeting resurrected, with `startedAt`/`endedAt` stamped accordingly. `updateMeeting` now validates against `TALK_MEETING_TRANSITIONS` (SCHEDULED → LIVE/ENDED/CANCELLED; LIVE → ENDED; ENDED and CANCELLED terminal), re-sending the current status stays idempotent, an invalid transition answers **409** naming the allowed ones, and the check-then-act P2025 race maps to 404 instead of a 500.
+*   **AI-extracted action items were indistinguishable from human-typed ones** — the notetaker stored `metadata.aiGenerated` but no serializer surfaced it. Both action-item serializers now emit `aiGenerated: boolean` (additive; absent = false) and the ActionItems sidebar shows an "AI-extracted" badge with a tooltip.
+*   Web: `apps/web/src/lib/talk.ts` imports every type from the shared contract (method surface unchanged; old names preserved as aliases so all components compile).
+*   Tests: `services/talk.completion.test.ts` (21) — unread arithmetic (own-message exclusion, deleted exclusion, null for non-members, getChannel parity), same-org validation with nothing persisted, lifecycle in both directions + idempotency + P2025→404, aiGenerated surfacing in list and detail, shared-schema parity. Plus `tests/e2e/talk.spec.ts` (5 Playwright cases). The two existing suites pass unchanged.
+*   Inventory: `talk` PARTIAL → COMPLETE (routes 23, dedicated shared contract 340 LOC, 3 unit suites + 1 e2e spec, web client + page). Repository totals: **102 COMPLETE / 1 PARTIAL (`usage`) / 2 STUB-by-design / 1 DEMO DATA** across 106 modules. Repository suite: **1706 passing, 51 skipped, 0 failures** (113 → 114 files).
+*   Runtime validation against live PostgreSQL 17/Redis 8 remains pending; Session 122 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 121 — Sustainability/ESG Completion] — 2026-08-06
 
 ### The ledger lost writes, the changes were measured against the wrong windows, and the ESG scores were invented

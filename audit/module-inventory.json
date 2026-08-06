@@ -897,6 +897,7 @@
     },
     "tests": [
       "attachments/attachments.test.ts",
+      "services/talk.completion.test.ts",
       "services/talk.test.ts"
     ],
     "syntheticData": [],
@@ -1035,6 +1036,7 @@
       "sessions73-75.spec.ts",
       "smoke.spec.ts",
       "sustainability.spec.ts",
+      "talk.spec.ts",
       "tenantIsolation.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
@@ -8474,11 +8476,11 @@
       "serviceFile": {
         "file": "talk.service.ts",
         "path": "/home/user/WIN/apps/api/src/services/talk.service.ts",
-        "sloc": 479,
+        "sloc": 544,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1009,
+      "serviceTotalSloc": 1076,
       "serviceFiles": [
         "services/talk.service.ts",
         "services/meeting.service.ts"
@@ -8528,9 +8530,9 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/talk.ts (340 LOC)",
     "web": {
-      "client": "apps/web/src/lib/talk.ts (186 LOC)",
+      "client": "apps/web/src/lib/talk.ts (117 LOC)",
       "pages": []
     },
     "db": {
@@ -8545,12 +8547,14 @@
     },
     "tests": [
       "publicApi.spec.ts",
+      "talk.spec.ts",
       "services/meeting.service.test.ts",
+      "services/talk.completion.test.ts",
       "services/talk.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "tenantIsolation",
