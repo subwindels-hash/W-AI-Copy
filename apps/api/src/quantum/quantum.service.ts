@@ -8,6 +8,7 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { QuantumDashboard, CryptoInventoryEntry, QuantumOptimizationJob, QuantumConnector, PQ_ALGORITHMS, QuantumReadiness } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 
 // Deterministic demo RNG — stable per (module, seed) so dashboard
 // reads return the same numbers within a running process.
@@ -36,6 +37,7 @@ const SYSTEMS = [
 
 export const QuantumService = {
   async ensureBootstrapped(logger?:any, oid="org-windels"){
+    if (!demoDataEnabled()) return skipDemoSeed("quantum", logger);
     _rng.reseed(`ensureBootstrapped:${logger}`);
     if (await redis.exists(K.meta(oid))) return;
     const now = new Date().toISOString();
@@ -88,6 +90,12 @@ export const QuantumService = {
     return out;
   },
   async connectors(oid="org-windels"):Promise<QuantumConnector[]>{
+    if (!demoDataEnabled()) {
+      return VENDORS.map((v,i)=>({
+        id:"qc-"+i, vendor:v, status:"disconnected",
+        queueDepth: 0, qubitsAvailable: 0,
+      }));
+    }
     _rng.reseed(`connectors:${oid}`);
     // connectors aren't stored as a set to avoid adding a new key; scan meta? instead we just re-seed on demand by returning deterministic connectors
     return VENDORS.map((v,i)=>({

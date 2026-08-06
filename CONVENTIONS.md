@@ -1124,3 +1124,20 @@
   `hasPermission`, `requireSuperAdmin`, the Kernel event bus and the Memory
   Fabric are all reused — the module owns only its governed records and the
   rules around them.
+
+### Session 126 — Real-Time SSE Channel (`events`) & Inbound Webhook Receiver (`webhook`) Completion
+- **Fail-closed real-time stream scoping.** An event targeted at an organization must never be broadcast to a client session without an organization (`organizationId = null`). Only genuinely global system broadcasts (`organizationId = null` on the event) are delivered globally.
+- **Ring buffer replay on reconnect.** SSE events are persisted to `evt:hist:idx:<org>` (sorted set by timestamp) and `evt:hist:i:<org>:<id>`, capped at 200 events. Reconnecting clients passing `Last-Event-ID` or `?since=` receive stored missed events before new broadcasts.
+- **Constant-time webhook secret verification.** Inbound webhook HMACs and secret headers are compared using `crypto.timingSafeEqual`, and never fall back to `JWT_SECRET` when `WEBHOOK_SECRET` is unset.
+- **Inbound webhook inbox logging.** Inbound webhooks are recorded in `whk:inbox:idx:<org>` and `whk:inbox:i:<org>:<id>`, capped at 500 events, and dispatched to `EventBus` (`webhook.inbound_received`) for downstream consumers. Replay re-emits to `EventBus` and marks the inbox entry status as `"replayed"`.
+- **Tenant-isolation 2-segment rule.** Both `evt:hist` and `whk:inbox` are catalogued with their full 2-segment prefix so `prefix.split(":").length = 2` matches `<org>` at index 2. Bare roots (`evt`, `whk`) are omitted to prevent shifting the org segment.
+
+### Session 127 — Quantum Computing (`quantum`) Gating & 100% Module Completion (108/108 COMPLETE)
+- **No ungated synthetic RNG in read paths.** Every module that seeds initial or demo records (including `quantum.service.ts` `ensureBootstrapped` and `connectors`) must check `demoDataEnabled()` (`WINDELS_DEMO_DATA=true`). When unset, services return empty arrays or honest static unconfigured defaults, never auto-generated synthetic records.
+- **100% Module Completion Charter.** With zero ungated demo data, `node audit/build-inventory.mjs` promotes `quantum` to `COMPLETE`, bringing the repository to **108 COMPLETE / 0 PARTIAL / 0 STUB / 0 DEMO DATA / 0 MISSING (100% COMPLETE)**. Every module in WINDELS AI OS is implemented, typed, web-integrated, and tested.
+### Session 128 — Multi-Provider Payment Gateways (`payments`)
+- **Native African, Global, and On-Chain Checkout Support.** Every enterprise checkout order can route dynamically across Flutterwave (NGN, GHS, KES, ZAR, USD card/mobile money), Paystack (African card & bank transfer), PayPal (International orders), or sovereign on-chain Crypto (Bitcoin BTC, Tron TRC-20, Ethereum ERC-20, BNB Chain).
+- **Constant-Time Callback & Webhook Verification.** All incoming payment webhook signatures (`verif-hash` for Flutterwave, `x-paystack-signature` SHA512 HMAC for Paystack, PayPal transmission signatures, and Blockonomics callback secrets) must be verified in constant time (`crypto.timingSafeEqual`).
+- **Confirmation Threshold Rules.** On-chain crypto checkouts must track block confirmations and only transition to `completed` once network-specific confirmation thresholds are satisfied (`btc: 1`, `tron_trc20: 19`, `eth_erc20: 12`, `bnb_chain: 15`).
+- **Automated Billing Invoice Settlement.** Paid transactions in `payments` containing an `invoiceId` must automatically invoke `billing.markInvoicePaid(orgId, invoiceId)`, keeping the payment ledger (`pay:tx`) and subscription billing ledger synchronized without manual intervention.
+- **Tenant Isolation 2-Segment Catalog Rule.** `pay:tx` is catalogued with its full 2-segment prefix so `prefix.split(":").length = 2` correctly isolates `<org>` at index 2. Bare root (`pay`) is omitted.

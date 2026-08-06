@@ -1141,7 +1141,9 @@
       "engineering.spec.ts",
       "enterprise.spec.ts",
       "enterpriseFoundation.spec.ts",
+      "events-webhook.spec.ts",
       "extensions.spec.ts",
+      "geoBilling.spec.ts",
       "googleAuth.spec.ts",
       "governance.spec.ts",
       "identityKnowledge.spec.ts",
@@ -1153,6 +1155,7 @@
       "mlOps.spec.ts",
       "mobileSync.spec.ts",
       "opexAssurance.spec.ts",
+      "payments.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
       "promptTemplates.spec.ts",
@@ -1397,6 +1400,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "events-webhook.spec.ts",
       "platformServices.spec.ts",
       "billing/billing.integration.test.ts",
       "billing/billing.test.ts",
@@ -4276,6 +4280,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "events-webhook.spec.ts",
       "etl/etl.test.ts"
     ],
     "syntheticData": [],
@@ -4289,44 +4294,52 @@
     "tier": "unknown",
     "routePrefix": "/api/v1/events",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/events",
       "serviceFile": {
-        "file": "eventBus.ts",
-        "path": "/home/user/WIN/apps/api/src/services/eventBus.ts",
-        "sloc": 45,
+        "file": "events.service.ts",
+        "path": "/home/user/WIN/apps/api/src/events/events.service.ts",
+        "sloc": 235,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 45,
+      "serviceTotalSloc": 694,
       "serviceFiles": [
-        "services/eventBus.ts"
+        "events.service.ts",
+        "events.test.ts",
+        "services/eventBus.ts",
+        "events/events.service.ts"
       ],
       "importedServiceFiles": [
-        "services/eventBus.ts"
+        "services/eventBus.ts",
+        "events/events.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/events.ts",
-        "sloc": 210,
+        "sloc": 277,
         "counts": {
-          "total": 2,
-          "GET": 2,
-          "POST": 0,
+          "total": 6,
+          "GET": 4,
+          "POST": 1,
           "PUT": 0,
           "PATCH": 0,
-          "DELETE": 0
+          "DELETE": 1
         },
         "endpoints": [
           "GET /stream",
-          "GET /health"
+          "GET /health",
+          "GET /history",
+          "GET /clients",
+          "POST /publish",
+          "DELETE /clients/:id"
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/events.ts (75 LOC)",
     "web": {
-      "client": "apps/web/src/lib/events.ts (55 LOC)",
+      "client": "apps/web/src/lib/events.ts (109 LOC)",
       "pages": []
     },
     "db": {
@@ -4347,16 +4360,18 @@
     },
     "tests": [
       "enterprise.spec.ts",
+      "events-webhook.spec.ts",
       "googleAuth.spec.ts",
       "mfaAssurance.spec.ts",
       "mobileSync.spec.ts",
       "opexAssurance.spec.ts",
       "usage.spec.ts",
+      "events/events.test.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "STUB"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "expertsPlatform",
@@ -4643,6 +4658,69 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "geoBilling",
+    "title": "geoBilling",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/geoBilling",
+    "backend": {
+      "serviceDir": "apps/api/src/geoBilling",
+      "serviceFile": {
+        "file": "geoBilling.service.ts",
+        "path": "/home/user/WIN/apps/api/src/geoBilling/geoBilling.service.ts",
+        "sloc": 595,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1338,
+      "serviceFiles": [
+        "geoBilling.service.ts",
+        "geoBilling.test.ts",
+        "geoBilling/geoBilling.service.ts"
+      ],
+      "importedServiceFiles": [
+        "geoBilling/geoBilling.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/geoBilling.ts",
+        "sloc": 167,
+        "counts": {
+          "total": 9,
+          "GET": 4,
+          "POST": 4,
+          "PUT": 1,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/geoBilling.ts (156 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/geoBilling.ts (115 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "geoBilling/geoBilling.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "Stripe"
+    ],
     "status": "COMPLETE"
   },
   {
@@ -7110,6 +7188,90 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "payments",
+    "title": "payments",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/payments",
+    "backend": {
+      "serviceDir": "apps/api/src/payments",
+      "serviceFile": {
+        "file": "crypto.service.ts",
+        "path": "/home/user/WIN/apps/api/src/payments/crypto.service.ts",
+        "sloc": 128,
+        "mathRandom": false,
+        "externalFetch": true
+      },
+      "serviceTotalSloc": 2465,
+      "serviceFiles": [
+        "crypto.service.ts",
+        "flutterwave.service.ts",
+        "payments.service.ts",
+        "payments.test.ts",
+        "paypal.service.ts",
+        "paystack.service.ts",
+        "stripe.service.ts",
+        "payments/payments.service.ts",
+        "payments/flutterwave.service.ts",
+        "payments/paystack.service.ts",
+        "payments/stripe.service.ts",
+        "payments/paypal.service.ts",
+        "payments/crypto.service.ts"
+      ],
+      "importedServiceFiles": [
+        "payments/payments.service.ts",
+        "payments/flutterwave.service.ts",
+        "payments/paystack.service.ts",
+        "payments/stripe.service.ts",
+        "payments/paypal.service.ts",
+        "payments/crypto.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/payments.ts",
+        "sloc": 383,
+        "counts": {
+          "total": 19,
+          "GET": 7,
+          "POST": 12,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/payments.ts (76 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/payments.ts (108 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message",
+        "ApiKey",
+        "Invoice",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "payments.spec.ts",
+      "payments/payments.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "Stripe",
+      "Google"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "platform",
     "title": "Platform Admin UI Shell",
     "sessions": [],
@@ -7813,11 +7975,11 @@
       "serviceFile": {
         "file": "quantum.service.ts",
         "path": "/home/user/WIN/apps/api/src/quantum/quantum.service.ts",
-        "sloc": 131,
+        "sloc": 139,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 268,
+      "serviceTotalSloc": 284,
       "serviceFiles": [
         "bootstrap.ts",
         "quantum.service.ts",
@@ -7871,23 +8033,13 @@
       "sessions61-72-82.spec.ts",
       "config/seedGate.test.ts"
     ],
-    "syntheticData": [
-      {
-        "file": "quantum.service.ts",
-        "mathRandom": false,
-        "rndHelper": false,
-        "seedKeywords": false,
-        "ungatedSeed": true,
-        "liveRng": true,
-        "externalHttp": false
-      }
-    ],
+    "syntheticData": [],
     "externalIntegrations": [
       "AWS",
       "Azure",
       "Google"
     ],
-    "status": "DEMO DATA"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "release",
@@ -8793,11 +8945,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 511,
+        "sloc": 518,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1198,
+      "serviceTotalSloc": 1212,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -9726,42 +9878,66 @@
     "tier": "unknown",
     "routePrefix": "/api/v1/webhook",
     "backend": {
-      "serviceDir": null,
-      "serviceFile": null,
-      "serviceTotalSloc": 0,
-      "serviceFiles": [],
-      "importedServiceFiles": [],
+      "serviceDir": "apps/api/src/webhook",
+      "serviceFile": {
+        "file": "webhookReceiver.service.ts",
+        "path": "/home/user/WIN/apps/api/src/webhook/webhookReceiver.service.ts",
+        "sloc": 307,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 757,
+      "serviceFiles": [
+        "webhookReceiver.service.ts",
+        "webhookReceiver.test.ts",
+        "webhook/webhookReceiver.service.ts"
+      ],
+      "importedServiceFiles": [
+        "webhook/webhookReceiver.service.ts"
+      ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/webhook.ts",
-        "sloc": 25,
+        "sloc": 170,
         "counts": {
-          "total": 1,
-          "GET": 0,
-          "POST": 1,
+          "total": 6,
+          "GET": 2,
+          "POST": 3,
           "PUT": 0,
           "PATCH": 0,
-          "DELETE": 0
+          "DELETE": 1
         },
         "endpoints": []
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/webhook.ts (48 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/webhook.ts (60 LOC)",
       "pages": []
     },
     "db": {
-      "prismaModels": [],
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message",
+        "Invoice",
+        "Alert"
+      ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "events-webhook.spec.ts",
+      "geoBilling.spec.ts",
+      "webhook/webhookReceiver.test.ts"
+    ],
     "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "STUB"
+    "externalIntegrations": [
+      "Stripe"
+    ],
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "websiteBuilder",

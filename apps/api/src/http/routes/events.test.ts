@@ -59,6 +59,9 @@ function streamHandler(): StreamHandler {
       return router;
     },
     post() { return router; },
+    delete() { return router; },
+    patch() { return router; },
+    put() { return router; },
   };
   registerSSERoutes(router as never);
   if (found.length === 0) throw new Error("stream route not registered");

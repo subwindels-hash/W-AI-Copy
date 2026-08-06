@@ -24,7 +24,21 @@ const CLIENT_DIR = path.join(API, "node_modules/.prisma/client");
 
 function clientExists() {
   try {
-    return fs.existsSync(path.join(CLIENT_DIR, "index.js")) || fs.existsSync(path.join(CLIENT_DIR, "index.d.ts"));
+    if (fs.existsSync(path.join(CLIENT_DIR, "index.js")) || fs.existsSync(path.join(CLIENT_DIR, "index.d.ts"))) {
+      return true;
+    }
+    const pnpmDir = path.join(ROOT, "node_modules/.pnpm");
+    if (fs.existsSync(pnpmDir)) {
+      for (const entry of fs.readdirSync(pnpmDir)) {
+        if (entry.startsWith("@prisma+client@")) {
+          const p = path.join(pnpmDir, entry, "node_modules/.prisma/client");
+          if (fs.existsSync(path.join(p, "index.js")) || fs.existsSync(path.join(p, "index.d.ts"))) {
+            return true;
+          }
+        }
+      }
+    }
+    return false;
   } catch {
     return false;
   }
