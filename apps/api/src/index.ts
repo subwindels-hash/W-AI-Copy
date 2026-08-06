@@ -379,6 +379,14 @@ async function main() {
         } catch (e) { logger.warn("software-factory bootstrap failed", { err: e }); }
       }, 29000);
 
+      // Session 100 — org-scoped Enterprise FinOps depth (demo seed gated)
+      setTimeout(async () => {
+        try {
+          const { bootstrapEnterpriseFinOps } = await import("./enterpriseFinOps/bootstrap.js");
+          await bootstrapEnterpriseFinOps(logger);
+        } catch (e) { logger.warn("enterprise-finops bootstrap failed", { err: e }); }
+      }, 30000);
+
       // Session 80 — Global Multi-Currency & Localization
       setTimeout(async () => {
         try {

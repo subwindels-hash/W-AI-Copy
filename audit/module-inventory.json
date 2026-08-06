@@ -3544,6 +3544,93 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "enterpriseFinOps",
+    "title": "enterpriseFinOps",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/enterpriseFinOps",
+    "backend": {
+      "serviceDir": "apps/api/src/enterpriseFinOps",
+      "serviceFile": {
+        "file": "enterpriseFinOps.service.ts",
+        "path": "/home/user/WIN/apps/api/src/enterpriseFinOps/enterpriseFinOps.service.ts",
+        "sloc": 546,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1351,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "enterpriseFinOps.service.ts",
+        "enterpriseFinOps.test.ts",
+        "enterpriseFinOps/enterpriseFinOps.service.ts"
+      ],
+      "importedServiceFiles": [
+        "enterpriseFinOps/enterpriseFinOps.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/enterpriseFinOps/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/enterpriseFinOps.ts",
+        "sloc": 162,
+        "counts": {
+          "total": 19,
+          "GET": 9,
+          "POST": 4,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 4
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /cost-centers",
+          "POST /cost-centers",
+          "GET /cost-centers/:id",
+          "PATCH /cost-centers/:id",
+          "DELETE /cost-centers/:id",
+          "GET /budgets",
+          "POST /budgets",
+          "GET /budgets/:id",
+          "PATCH /budgets/:id",
+          "DELETE /budgets/:id",
+          "GET /costs",
+          "POST /costs",
+          "GET /costs/:id",
+          "DELETE /costs/:id",
+          "GET /allocations",
+          "POST /allocations",
+          "DELETE /allocations/:id",
+          "GET /chargebacks"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/enterpriseFinOps.ts (196 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/enterpriseFinOps.ts (55 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "enterpriseFinOps/enterpriseFinOps.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS",
+      "GCP",
+      "Azure"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "enterpriseFoundation",
     "title": "Enterprise Foundation",
     "sessions": [],
@@ -8052,11 +8139,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 363,
+        "sloc": 368,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 902,
+      "serviceTotalSloc": 912,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

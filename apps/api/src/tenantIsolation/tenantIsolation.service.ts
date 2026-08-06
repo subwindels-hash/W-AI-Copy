@@ -108,6 +108,11 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "es:history", scope: "org_scoped" },
   // Software Factory Studios (Session 99)
   { prefix: "sf:plan", scope: "org_scoped" },
+  // Enterprise FinOps depth (Session 100)
+  { prefix: "efo:center", scope: "org_scoped" },
+  { prefix: "efo:budget", scope: "org_scoped" },
+  { prefix: "efo:cost", scope: "org_scoped" },
+  { prefix: "efo:allocation", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
 ];

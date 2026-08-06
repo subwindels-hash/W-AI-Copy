@@ -30,6 +30,29 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 100 — Decisions Logged (Enterprise FinOps Depth)
+
+- **Module prefix:** `Efo` types, `efo:center|budget|cost|allocation:*` Redis
+  namespaces, `/api/v1/finops` routes, `apps/web/src/lib/enterpriseFinOps.ts`
+  client, `/app/finops` route + sidebar label "Enterprise FinOps". This is
+  additive and intentionally separate from the historical global Session 31
+  `FinOpsService` under `/enterprise-foundation`.
+- **Accounting precision:** budgets, actual costs and allocations persist
+  integer `amountMinor` values plus an explicit three-letter currency. There
+  is no implicit FX conversion and a cost center's currency is locked once it
+  has budgets or allocations.
+- **Ledger separation:** provider observations are stored once as costs;
+  chargeback ownership is represented by separate allocation rows. Direct
+  allocation is a convenience on cost creation, while shared/usage/proportional
+  splits are explicit and conservation-checked (sum allocations cannot exceed
+  source cost).
+- **Computed statements:** budget utilization, variance, status, by-method
+  totals, unallocated spend and the rollup are computed per read from live
+  ledgers. Chargebacks are never stored as a duplicated fact.
+- **Demo seed:** idempotent synthetic records are gated behind
+  `WINDELS_DEMO_DATA` in `org-demo-efo` (3 centers, 3 budgets, 3 costs, 4
+  allocations); fresh organizations remain empty.
+
 ## Session 99 — Decisions Logged (Software Factory: Five Studios & Build Farm)
 
 - **Module prefix:** `Sf` types, `sf:plan:*` Redis keys (plans only —

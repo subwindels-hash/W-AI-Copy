@@ -1,8 +1,8 @@
-# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 88+)
+# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 100)
 
 > Compiled from the master spec (`uploads/CLAUDE.md` ~15k lines), the per-session
-> addendum specs (uploads 77–82, docs 83–87), `audit/module-inventory.json` (87
-> modules), `docs/` (41 manuals), and the workflow brief preserved in
+> addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-06),
+> the current `docs/` session specifications, and the workflow brief preserved in
 > `SESSION_WORKFLOW.patch`. Use this as the "what is really going on" map before
 > adding anything new.
 
@@ -13,9 +13,8 @@
 **WINDELS AI OS** is an "AI-native operating system for work" — a pnpm/Turborepo
 monorepo (Express + Prisma backend, React 19 + Vite web, Electron desktop,
 PostgreSQL 17, Redis 8) built *session-by-session* against a master specification,
-where ~87 enterprise modules (trading, voice, media, health, robotics, quantum,
-legal, education, ETL, camera, cybersecurity, gift cards, project continuity…)
-each ship as a full vertical slice.
+where 106 audited enterprise modules (including CRM, ERP, BI, Enterprise Search,
+Factory Studios and Enterprise FinOps) ship as additive vertical slices.
 
 ## 2. Three governing rules (from the master spec — must not be violated)
 
@@ -36,12 +35,12 @@ For each module, in strict order:
 → sidebar/nav entry → unit tests (vitest) + e2e (Playwright) → decision log
 (`CONVENTIONS.md`) → progress log.
 
-Current counts that confirm the pattern is uniform:
-- **99** route modules (`apps/api/src/http/routes/*.ts`)
-- **90** web API clients (`apps/web/src/lib/*.ts`)
-- **62** API unit test files; **26** Playwright specs in `tests/e2e/`
+Current counts that confirm the pattern is uniform (2026-08-06):
+- **118** route files (`apps/api/src/http/routes/*.ts`)
+- **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
+- **96** API test files; **26** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S88)
+## 4. The session-by-session arc (S1 → S100)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -107,7 +106,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | 75 | `healthEcosystem` | **Record-only** health (de-faked) |
 | 76 | `v76validation` | Final integration & validation |
 
-### Recent additive sessions (S77–88) — shipped
+### Recent additive sessions (S77–100) — shipped as 🟡 VERIFIED (partial) pending runtime closure
 | Session | Module(s) | What it is |
 |---|---|---|
 | 77A | `expertsPlatform` | Experts platform |
@@ -133,7 +132,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **97** | `businessIntelligence` | **Business Intelligence** — data sources, live KPI values from real module stores, report builder + deterministic evaluation + CSV export (`docs/SESSION_97_SPECIFICATION.md`) |
 | **98** | `enterpriseSearch` | **Enterprise Search** — unified org-scoped search over real module records, deterministic relevance ranking, facets, recent-search history (`docs/SESSION_98_SPECIFICATION.md`) |
 | **99** | `softwareFactory` | **Factory Studios & Build Farm** — completes `AI_APPLICATION_BUILDER_SPECIFICATION.md` V3.0 §3–§4: five studios + plans, project coverage, per-run compile targets (`docs/SESSION_99_SPECIFICATION.md`) |
-| **88+** | — | **88 is the open next-roadmap slot; Sessions 89–91 shipped additive milestones** |
+| **100** | `enterpriseFinOps` | **Enterprise FinOps depth** — org-scoped cost centers, integer minor-unit budgets, actual cost ledger, conservation-checked allocation ledger and computed chargebacks (`docs/SESSION_100_SPECIFICATION.md`) |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -171,13 +170,14 @@ deleted `SESSION_CONTINUITY.md`). The README's dead links are a concrete cleanup
 
 ## 7. Repo/environment facts
 
-- Branch: `arena/019fd16b-win` (push only here; never main).
-- Git history is **squashed to one commit** (`86d9243 "Delete ARCHITECTURE.md"`) —
-  no per-session history in git; session history lives in docs/specs only.
-- Environment here: Node v22.22.3 present; **pnpm not installed; no `node_modules`**
-  — a `pnpm install` + `make verify` would be needed to confirm the claimed green
-  state (README claims 652 unit tests / 57 Playwright, 2026-08-01).
-- `pnpm install && make verify` is the documented fresh-clone green check.
+- Branch: `arena/019fd4f2-win` (Arena session branch; push only here, never main).
+- Git history is session-tracked through the current Arena branch and the
+  authoritative `PROGRESS.md` / `docs/SESSION_*_SPECIFICATION.md` records.
+- Environment here: Node v22.22.3 and Corepack pnpm 10.34.5 are available;
+  dependencies can be restored with `corepack pnpm install --frozen-lockfile`.
+  Prisma engine download and live Postgres/Redis remain target-environment gates.
+- `corepack pnpm install --frozen-lockfile && make verify` is the fresh-clone
+  verification path; this sandbox records runtime-dependent sessions as 🟡.
 
 ## 8. Recommended next steps — "add more and update"
 
@@ -195,22 +195,21 @@ milestone"):**
    ELN/LIMS S68; voice cloning (ElevenLabs/XTTS) S44.
 
 **Priority C — verification & hardening:**
-3. Run `pnpm install && make verify` to confirm the fresh-clone green claim (652 unit
-   tests / 57 Playwright) and log the real numbers.
-4. Track the remaining infra-pinned tests (chat-e2e, core-platform, lecturer,
-   ai-runtime) that need a live server + Redis/Postgres.
+3. Run `corepack pnpm install --frozen-lockfile && make verify`; record the
+   repository-wide test/module counts in `PROGRESS.md`.
+4. Run the S1–S6 and S89–S100 runtime-validation tracks in a target
+   environment with live PostgreSQL 17, Redis 8 and a reachable Prisma engine before changing
+   any session from 🟡 VERIFIED (partial) to 🟢 PRODUCTION COMPLETE.
 
-**Priority D — new roadmap sessions (89+):**
-5. Sessions 89+ have **no spec in-repo yet**. To add one: write an additive
-   addendum (same style as `docs/SESSIONS_84_86_ADDENDUM.md`), then implement via
-   the §3 delivery pattern and the S84-style acceptance gate (IMPLEMENTED → BUILT →
-   TESTED → VERIFIED → INTEGRATED). Candidate themes the master spec already hints
-   at (without a full spec): deeper provider integrations, agent marketplace,
-   multi-tenancy enforcement, federated/edge camera deployments.
+**Priority D — next roadmap work:**
+5. Continue the runtime-validation track, deepen Enterprise Resilience/DR
+   drill automation, or de-fake the provider-blocked modules. Any new session
+   must add an authoritative spec and follow the IMPLEMENTED → BUILT → TESTED →
+   VERIFIED → INTEGRATED gate; do not rebuild the completed S90–S100 slices.
 
 ---
 
 ### Quick reference — "what session do I touch?"
 S1–36 foundation/platform · S37–76 V8 enterprise · S77 experts/media · S78 UX ·
 S79 gift cards · S80 currency · S81 trading · S82 cyber · S83 ETL · S84 project
-continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation (S88 = open slot) · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory · S97 business intelligence · S98 enterprise search · S99 factory studios & build farm**.
+continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory · S97 business intelligence · S98 enterprise search · S99 factory studios & build farm · S100 enterprise FinOps depth**.

@@ -112,6 +112,8 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_97_SPECIFICATION.md](./docs/SESSION_97_SPECIFICATION.md) | Session 97 — Business Intelligence (live KPI values, report builder, CSV export) |
 | [docs/SESSION_98_SPECIFICATION.md](./docs/SESSION_98_SPECIFICATION.md) | Session 98 — Enterprise Search (unified search over module records, facets, history) |
 | [docs/SESSION_99_SPECIFICATION.md](./docs/SESSION_99_SPECIFICATION.md) | Session 99 — Factory Studios & Build Farm (completes the V3.0 spec §3–§4) |
+| [docs/SESSION_100_SPECIFICATION.md](./docs/SESSION_100_SPECIFICATION.md) | Session 100 — Enterprise FinOps depth (org-scoped budgets, cost allocation and computed chargebacks) |
+| [docs/SESSION_100_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_100_RUNTIME_VALIDATION_CHECKLIST.md) | Session 100 runtime validation (PostgreSQL/Redis, ledger conservation, chargeback and tenant-isolation gates) |
 | [docs/DEVELOPER_CONTRIBUTING.md](./docs/DEVELOPER_CONTRIBUTING.md) | Code conventions used across monorepo |
 | [docs/FINAL_COMPLETION_REPORT.md](./docs/FINAL_COMPLETION_REPORT.md) | Session-by-session shipping log (see audit for reality) |
 | [.local/SESSIONS_1_88_FINAL_AUDIT.md](./.local/SESSIONS_1_88_FINAL_AUDIT.md) | S1–S88 integration/validation status |

@@ -117,6 +117,7 @@ import { registerAppBuilderRoutes } from "./routes/appBuilder.js";
 import { registerBusinessIntelligenceRoutes } from "./routes/businessIntelligence.js";
 import { registerSoftwareFactoryRoutes } from "./routes/softwareFactory.js";
 import { registerEnterpriseSearchRoutes } from "./routes/enterpriseSearch.js";
+import { registerEnterpriseFinOpsRoutes } from "./routes/enterpriseFinOps.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
@@ -1175,6 +1176,12 @@ export function createApp() {
   const enterpriseSearchRouter = express.Router();
   v1.use("/search", enterpriseSearchRouter);
   registerEnterpriseSearchRoutes(enterpriseSearchRouter);
+
+  // /finops — Session 100: org-scoped Enterprise FinOps depth (cost centers,
+  // budgets, actual cost ledger, allocation ledger and computed chargebacks).
+  const enterpriseFinOpsRouter = express.Router();
+  v1.use("/finops", enterpriseFinOpsRouter);
+  registerEnterpriseFinOpsRoutes(enterpriseFinOpsRouter);
 
   // /mobile (device registration, push subscriptions, biometrics, offline sync)
   registerMobileRoutes(v1);

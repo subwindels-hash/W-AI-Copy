@@ -5,6 +5,17 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 100 — Enterprise FinOps Depth] — 2026-08-06
+
+### Org-scoped budgets, cost allocation and chargebacks
+*   `packages/shared/src/enterpriseFinOps.ts` — `Efo` records and Zod contracts for cost centers, period budgets, integer minor-unit actual costs, allocation ledger rows, computed chargebacks and rollups.
+*   `apps/api/src/enterpriseFinOps/enterpriseFinOps.service.ts` — fail-closed Redis-backed `efo:*` CRUD; CSPRNG identifiers; currency/period/conservation validation; direct, shared, usage and proportional allocations; live budget utilization, variance, method totals and unallocated spend computed per read. The historical global Session 31 FinOps service is unchanged.
+*   Routes: `apps/api/src/http/routes/enterpriseFinOps.ts` mounted at `/api/v1/finops` with cost-center, budget, cost, allocation and computed chargeback endpoints. Session 89 catalog now audits `efo:center`, `efo:budget`, `efo:cost` and `efo:allocation` as `org_scoped`.
+*   Web: typed `enterpriseFinOpsApi`, `/app/finops` page and unique Wallet Cards sidebar entry. The UI labels minor units honestly and distinguishes actual costs, allocation rows and computed chargeback statements.
+*   Tests: `enterpriseFinOps.test.ts` (13) — CRUD, duplicate/currency/period validation, direct and shared allocation conservation, chargeback math and date filtering, deterministic rollup, cross-tenant isolation, cascade deletion, gated seed idempotency and Zod contracts.
+*   Demo seed (`org-demo-efo`) is opt-in only via `WINDELS_DEMO_DATA=true`; fresh organizations remain empty.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending in this sandbox; Session 100 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 99 — Software Factory: Five Studios & Build Farm] — 2026-08-05
 
 ### Completes AI_APPLICATION_BUILDER_SPECIFICATION.md V3.0 §3–§4

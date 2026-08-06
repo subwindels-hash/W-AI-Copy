@@ -89,3 +89,4 @@ export * from "./appBuilder.js";
 export * from "./businessIntelligence.js";
 export * from "./enterpriseSearch.js";
 export * from "./softwareFactory.js";
+export * from "./enterpriseFinOps.js";
