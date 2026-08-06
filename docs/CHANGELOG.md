@@ -5,6 +5,17 @@ All notable changes, bug fixes, and feature integrations are documented here.
 ---
 ---
 
+## [Session 101 — Admin Console Completion] — 2026-08-05
+
+### Admin Utilities completed as a real vertical slice
+*   `packages/shared/src/admin.ts` — `Adm` stats, user-directory, pagination, role/status filter and mutation contracts with shared Zod validation.
+*   `apps/api/src/services/admin.service.ts` — organization-scoped directory/detail reads, super-admin platform scope, search/filter/pagination support, audited suspension/reactivation and role changes with self/super-admin protection.
+*   Routes: existing `/api/v1/admin` endpoints remain compatible; added `GET /users/:id` and optional role/status filters. All authorization remains server-side through RBAC and Membership checks.
+*   Web: typed `adminApi`, dedicated `/admin` Admin Console with live stats, search, filters, pagination, suspend/reactivate controls, super-admin role controls, loading/error/empty states and honest audit messaging. Added Admin Console sidebar entry.
+*   Tests: `apps/api/src/services/admin.test.ts` (8) — scoped/platform stats, directory pagination/filtering, cross-tenant isolation, user detail, mutation guards, audit rows and Zod contracts.
+*   FakePrisma now mirrors Prisma's reverse one-to-one `User.profile` shape for reliable service tests.
+*   Runtime validation against live PostgreSQL 17 + Redis remains pending; Session 101 is recorded 🟡 VERIFIED (partial).
+
 ## [Session 100 — Enterprise FinOps Depth] — 2026-08-06
 
 ### Org-scoped budgets, cost allocation and chargebacks

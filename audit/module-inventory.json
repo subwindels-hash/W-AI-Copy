@@ -10,11 +10,11 @@
       "serviceFile": {
         "file": "admin.service.ts",
         "path": "/home/user/WIN/apps/api/src/services/admin.service.ts",
-        "sloc": 76,
+        "sloc": 131,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 76,
+      "serviceTotalSloc": 131,
       "serviceFiles": [
         "services/admin.service.ts"
       ],
@@ -26,10 +26,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/admin.ts",
-        "sloc": 29,
+        "sloc": 41,
         "counts": {
-          "total": 4,
-          "GET": 2,
+          "total": 5,
+          "GET": 3,
           "POST": 1,
           "PUT": 0,
           "PATCH": 1,
@@ -38,9 +38,9 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/admin.ts (67 LOC)",
     "web": {
-      "client": "apps/web/src/lib/admin.ts (38 LOC)",
+      "client": "apps/web/src/lib/admin.ts (17 LOC)",
       "pages": []
     },
     "db": {
@@ -51,11 +51,12 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "services/admin.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "advertising",

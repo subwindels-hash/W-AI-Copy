@@ -219,10 +219,17 @@ export class FakePrisma {
         out[field] = found ? this.hydrate(target, found, typeof spec === "object" ? spec as Row : {}) : null;
         continue;
       }
-      // to-many
+      // Reverse one-to-one relations (currently User.profile) do not carry a
+      // `<field>Id` on the parent row. Mirror Prisma's object/null shape
+      // instead of exposing the related row as a one-item array.
       const target = this.relatedModel(field, model);
-      out[field] = this.relatedRows(model, row, field)
-        .map((r) => this.hydrate(target, r, typeof spec === "object" ? spec as Row : {}));
+      const related = this.relatedRows(model, row, field);
+      if (field === "profile") {
+        out[field] = related[0] ? this.hydrate(target, related[0], typeof spec === "object" ? spec as Row : {}) : null;
+      } else {
+        // to-many
+        out[field] = related.map((r) => this.hydrate(target, r, typeof spec === "object" ? spec as Row : {}));
+      }
     }
     if (opts.select) {
       const sel: Row = {};

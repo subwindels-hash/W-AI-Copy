@@ -2,11 +2,36 @@ import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 import type { PublicRole } from "./auth.service.js";
 import type { Role as PrismaRole } from "@prisma/client";
+import type {
+  AdmRole,
+  AdmStats,
+  AdmUserList,
+  AdmUserListQuery,
+  AdmUserMutationResult,
+  AdmUserRow,
+} from "@windels/shared/admin";
 
 const publicToPrisma: Record<PublicRole, PrismaRole> = { user: "USER", admin: "ADMIN", super_admin: "SUPER_ADMIN" };
 const prismaToPublic: Record<PrismaRole, PublicRole> = { USER: "user", ADMIN: "admin", SUPER_ADMIN: "super_admin" };
 
 type AdminScope = { actorId: string; organizationId: string | null };
+export type { AdminScope };
+
+function iso(value: Date | string): string {
+  return value instanceof Date ? value.toISOString() : new Date(value).toISOString();
+}
+
+function toUserRow(user: any): AdmUserRow {
+  return {
+    id: user.id,
+    email: user.email,
+    role: prismaToPublic[user.role],
+    isActive: user.isActive,
+    isSuspended: user.isSuspended,
+    createdAt: iso(user.createdAt),
+    profile: user.profile ? { displayName: user.profile.displayName ?? null } : null,
+  };
+}
 
 async function scopeFor({ actorId, organizationId }: AdminScope) {
   const actor = await prisma.user.findUnique({ where: { id: actorId } });
@@ -19,7 +44,7 @@ async function scopeFor({ actorId, organizationId }: AdminScope) {
   return { actor, organizationId };
 }
 
-export async function getAdminStats(scope: AdminScope) {
+export async function getAdminStats(scope: AdminScope): Promise<AdmStats> {
   const access = await scopeFor(scope);
   const memberWhere = access.organizationId ? { memberships: { some: { organizationId: access.organizationId } } } : {};
   const [totalUsers, activeUsers, suspendedUsers, organizations] = await Promise.all([
@@ -31,17 +56,39 @@ export async function getAdminStats(scope: AdminScope) {
   return { totalUsers, activeUsers, suspendedUsers, organizations };
 }
 
-export async function listUsers(scope: AdminScope, input: { q?: string; page: number; perPage: number }) {
+export async function listUsers(scope: AdminScope, input: AdmUserListQuery): Promise<AdmUserList> {
   const access = await scopeFor(scope);
+  const statusWhere = input.status === "active"
+    ? { isActive: true, isSuspended: false }
+    : input.status === "suspended"
+      ? { isSuspended: true }
+      : input.status === "inactive"
+        ? { isActive: false }
+        : {};
   const where = {
     ...(access.organizationId ? { memberships: { some: { organizationId: access.organizationId } } } : {}),
-    ...(input.q ? { OR: [{ email: { contains: input.q, mode: "insensitive" as const } }, { profile: { is: { displayName: { contains: input.q, mode: "insensitive" as const } } } }] } : {}),
+    ...(input.role ? { role: publicToPrisma[input.role] } : {}),
+    ...statusWhere,
+    ...(input.q ? {
+      OR: [
+        { email: { contains: input.q, mode: "insensitive" as const } },
+        { profile: { is: { displayName: { contains: input.q, mode: "insensitive" as const } } } },
+      ],
+    } : {}),
   };
   const [users, total] = await prisma.$transaction([
     prisma.user.findMany({ where, include: { profile: true }, orderBy: { createdAt: "desc" }, skip: (input.page - 1) * input.perPage, take: input.perPage }),
     prisma.user.count({ where }),
   ]);
-  return { users: users.map((u) => ({ id: u.id, email: u.email, role: prismaToPublic[u.role], isActive: u.isActive, isSuspended: u.isSuspended, profile: u.profile ? { displayName: u.profile.displayName } : null })), pagination: { page: input.page, perPage: input.perPage, total, totalPages: Math.ceil(total / input.perPage) } };
+  return {
+    users: users.map(toUserRow),
+    pagination: {
+      page: input.page,
+      perPage: input.perPage,
+      total,
+      totalPages: Math.ceil(total / input.perPage),
+    },
+  };
 }
 
 async function assertTargetInScope(access: Awaited<ReturnType<typeof scopeFor>>, userId: string) {
@@ -54,7 +101,15 @@ async function assertTargetInScope(access: Awaited<ReturnType<typeof scopeFor>>,
   return target;
 }
 
-export async function setUserSuspended(scope: AdminScope, userId: string, suspended: boolean) {
+export async function getAdminUser(scope: AdminScope, userId: string): Promise<AdmUserRow> {
+  const access = await scopeFor(scope);
+  const target = await assertTargetInScope(access, userId);
+  const withProfile = await prisma.user.findUnique({ where: { id: target.id }, include: { profile: true } });
+  if (!withProfile) throw AppError.notFound("User not found");
+  return toUserRow(withProfile);
+}
+
+export async function setUserSuspended(scope: AdminScope, userId: string, suspended: boolean): Promise<AdmUserMutationResult> {
   const access = await scopeFor(scope);
   const target = await assertTargetInScope(access, userId);
   if (target.id === access.actor.id) throw AppError.badRequest("You cannot suspend your own account");
@@ -64,7 +119,7 @@ export async function setUserSuspended(scope: AdminScope, userId: string, suspen
   return { id: updated.id, isActive: updated.isActive, isSuspended: updated.isSuspended };
 }
 
-export async function promoteUser(scope: AdminScope, userId: string, role: PublicRole) {
+export async function promoteUser(scope: AdminScope, userId: string, role: AdmRole): Promise<AdmUserMutationResult> {
   const access = await scopeFor(scope);
   if (access.actor.role !== "SUPER_ADMIN") throw AppError.forbidden("Only super admins can change roles");
   const target = await assertTargetInScope(access, userId);

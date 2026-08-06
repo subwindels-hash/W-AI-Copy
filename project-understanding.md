@@ -1,7 +1,7 @@
-# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 100)
+# WINDELS AI OS — Project Understanding & Continuation Brief (Sessions 1 → 101)
 
 > Compiled from the master spec (`uploads/CLAUDE.md` ~15k lines), the per-session
-> addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-06),
+> addendum specs and `audit/module-inventory.json` (106 modules as of 2026-08-05),
 > the current `docs/` session specifications, and the workflow brief preserved in
 > `SESSION_WORKFLOW.patch`. Use this as the "what is really going on" map before
 > adding anything new.
@@ -38,9 +38,9 @@ For each module, in strict order:
 Current counts that confirm the pattern is uniform (2026-08-06):
 - **118** route files (`apps/api/src/http/routes/*.ts`)
 - **111** web API clients/helpers (`apps/web/src/lib/*.ts`)
-- **96** API test files; **26** Playwright specs in `tests/e2e/`
+- **97** API test files; **26** Playwright specs in `tests/e2e/`
 
-## 4. The session-by-session arc (S1 → S100)
+## 4. The session-by-session arc (S1 → S101)
 
 ### Foundation & core infrastructure — real & tested
 | Session | Module | What it is |
@@ -106,7 +106,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | 75 | `healthEcosystem` | **Record-only** health (de-faked) |
 | 76 | `v76validation` | Final integration & validation |
 
-### Recent additive sessions (S77–100) — shipped as 🟡 VERIFIED (partial) pending runtime closure
+### Recent additive sessions (S77–101) — shipped as 🟡 VERIFIED (partial) pending runtime closure
 | Session | Module(s) | What it is |
 |---|---|---|
 | 77A | `expertsPlatform` | Experts platform |
@@ -133,6 +133,7 @@ modules not tied to one session: `platform`, `platformServices`, `infrastructure
 | **98** | `enterpriseSearch` | **Enterprise Search** — unified org-scoped search over real module records, deterministic relevance ranking, facets, recent-search history (`docs/SESSION_98_SPECIFICATION.md`) |
 | **99** | `softwareFactory` | **Factory Studios & Build Farm** — completes `AI_APPLICATION_BUILDER_SPECIFICATION.md` V3.0 §3–§4: five studios + plans, project coverage, per-run compile targets (`docs/SESSION_99_SPECIFICATION.md`) |
 | **100** | `enterpriseFinOps` | **Enterprise FinOps depth** — org-scoped cost centers, integer minor-unit budgets, actual cost ledger, conservation-checked allocation ledger and computed chargebacks (`docs/SESSION_100_SPECIFICATION.md`) |
+| **101** | `admin` | **Admin Console completion** — shared contracts, scoped user directory/detail reads, role/status filters, audited suspension/reactivation, super-admin role changes and dedicated UI (`docs/SESSION_101_SPECIFICATION.md`) |
 
 ## 5. What's actually real vs simulated vs missing (honest state)
 
@@ -212,4 +213,4 @@ milestone"):**
 ### Quick reference — "what session do I touch?"
 S1–36 foundation/platform · S37–76 V8 enterprise · S77 experts/media · S78 UX ·
 S79 gift cards · S80 currency · S81 trading · S82 cyber · S83 ETL · S84 project
-continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory · S97 business intelligence · S98 enterprise search · S99 factory studios & build farm · S100 enterprise FinOps depth**.
+continuity · S85 lead discovery · S86 branding · S87 camera · **S89 tenant isolation · S90 enterprise CRM · S91 email intelligence · S92 enterprise ERP · S93 website builder · S94 social platform · S95 helpdesk · S96 AI software factory · S97 business intelligence · S98 enterprise search · S99 factory studios & build farm · S100 enterprise FinOps depth · S101 Admin Console**.

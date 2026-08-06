@@ -30,6 +30,26 @@
 7. **Amounts** are integer minor units (`amountCents`) + ISO 4217 currency.
 8. **IDs** are `randomUUID()`-derived (CSPRNG), never `Math.random`.
 
+## Session 101 — Decisions Logged (Admin Console Completion)
+
+- **Shared contract prefix:** `Adm` types and Zod schemas in
+  `packages/shared/src/admin.ts`; the existing `/api/v1/admin` route family is
+  retained and the web client now consumes the shared output types.
+- **Scope is enforced by the database relationship:** organization admins can
+  read and mutate only users with a `Membership` in their active organization;
+  super admins retain platform-wide scope. No new Redis namespace is needed
+  because this surface operates on the core Prisma User/Membership/AuditLog
+  models.
+- **Admin actions are audited and guarded:** suspension/reactivation writes an
+  audit row; role changes are super-admin-only; actors cannot suspend or change
+  their own account; super-admin accounts cannot be suspended.
+- **Directory contract:** user list responses use `{ users, pagination }` with
+  optional search, role and status filters. The new detail endpoint and filters
+  are additive; existing stats and mutation paths remain compatible.
+- **UI:** `/admin` now renders the dedicated real-data Admin Console with
+  search, filters, pagination and guarded actions. The historical
+  `AdminDashboard` component remains in place for compatibility.
+
 ## Session 100 — Decisions Logged (Enterprise FinOps Depth)
 
 - **Module prefix:** `Efo` types, `efo:center|budget|cost|allocation:*` Redis

@@ -1,6 +1,6 @@
 # PROGRESS — WINDELS AI OS
 
-> **Status of this document:** Accurate as of 2026-08-06 on branch
+> **Status of this document:** Accurate as of 2026-08-05 on branch
 > `arena/019fd4f2-win`. It is the single source of truth for session
 > certification state. **PRODUCTION COMPLETE is only granted after the Phase 6
 > runtime validation checklist for a session passes in the target deployment
@@ -36,6 +36,7 @@
 | 98 | Enterprise Search | 🟡 | full vertical slice (unified search over real module records, deterministic relevance ranking, facets, org-scoped history); 11 tests; `es:history` audited by S89; runtime pending |
 | 99 | Software Factory Studios & Build Farm | 🟡 | completes `AI_APPLICATION_BUILDER_SPECIFICATION.md` V3.0 §3–§4 (five-studio catalog + studio plans with honest lifecycle, project coverage, per-run compile targets as pure honest projection); 13 tests; `sf:plan` audited by S89; runtime pending |
 | 100 | Enterprise FinOps Depth | 🟡 | full vertical slice (org-scoped cost centers, integer-minor-unit budgets and actual cost ledger, conservation-checked direct/shared/usage/proportional allocations, computed chargebacks and budget rollup); 13 tests; `efo:center`, `efo:budget`, `efo:cost`, `efo:allocation` audited by S89; runtime pending |
+| 101 | Admin Console | 🟡 | completed Admin Utilities vertical slice (shared `Adm` contracts, scoped directory/detail reads, filters/pagination, audited suspension/reactivation, super-admin role controls and dedicated Admin Console UI); 8 tests; runtime pending |
 
 ### Repository-wide cleanup passes (cross-session)
 - **Pre-existing test failures**: all 12 resolved in-repo (9 env-blocked suites unblocked via `prismaClientMock`; 3 genuine demo-data/ESG bugs fixed). See `docs/PRE_EXISTING_TEST_FAILURES.md`.
@@ -44,12 +45,12 @@
 - **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`.
 
 ## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **1096 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 96 files: 93 passed + 3 skipped).
+- API unit/integration-style suite: **1104 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 97 files: 94 passed + 3 skipped).
 - Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
 - `make verify` (Prisma offline generate + build + typecheck + test): **green** in this sandbox; the preflight's blocked engine fetch is non-fatal by design.
 - Web typecheck: clean.
 - Remaining API typecheck errors: environment-only Prisma generated-type errors (`prisma generate` needs the blocked engine download).
-- Module inventory (regenerated 2026-08-06): **106 modules** — 79 COMPLETE, 24 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`).
+- Module inventory (regenerated 2026-08-05): **106 modules** — 80 COMPLETE, 23 PARTIAL (heuristic — mostly consolidated-UI false positives), 2 STUB-by-design (`events`, `webhook`), 1 DEMO DATA (`quantum`). Admin Utilities is now classified COMPLETE by the inventory.
 
 ## Blocked Gates (require target deployment environment)
 - `prisma generate` (native engine download from `binaries.prisma.sh` is network-blocked here).

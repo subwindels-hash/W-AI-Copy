@@ -90,3 +90,4 @@ export * from "./businessIntelligence.js";
 export * from "./enterpriseSearch.js";
 export * from "./softwareFactory.js";
 export * from "./enterpriseFinOps.js";
+export * from "./admin.js";

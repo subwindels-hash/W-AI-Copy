@@ -8,6 +8,7 @@ const LoginPage = lazy(() => import("./pages/auth/LoginPage").then((m) => ({ def
 const RegisterPage = lazy(() => import("./pages/auth/RegisterPage").then((m) => ({ default: m.RegisterPage })));
 const UserDashboard = lazy(() => import("./pages/dashboard/UserDashboard").then((m) => ({ default: m.UserDashboard })));
 const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard").then((m) => ({ default: m.AdminDashboard })));
+const AdminPage = lazy(() => import("./pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const SuperAdminDashboard = lazy(() => import("./pages/dashboard/SuperAdminDashboard").then((m) => ({ default: m.SuperAdminDashboard })));
 const ChatPage = lazy(() => import("./pages/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
@@ -276,7 +277,7 @@ export const router = createBrowserRouter([
       </ProtectedRoute>
     ),
     children: [
-      { index: true, element: withSuspense(<AdminDashboard />) },
+      { index: true, element: withSuspense(<AdminPage />) },
       { path: "governance", element: withSuspense(<GovernancePage />) },
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
