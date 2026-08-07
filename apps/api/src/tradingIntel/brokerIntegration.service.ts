@@ -81,6 +81,7 @@ const AGENT_DEFS: Array<Omit<BrokerTradingAgent, "lastHeartbeat" | "runs24h" | "
 const s2 = (o: unknown) => JSON.stringify(o);
 const j = <T>(s: string | null): T | null => (s ? (JSON.parse(s) as T) : null);
 const now = () => new Date().toISOString();
+const round2 = (n: number) => Math.round(n * 100) / 100;
 
 const BROKER_LABEL: Record<string, string> = {
   mt5: "MetaTrader 5", mt5_simulator: "MetaTrader 5 (Deterministic Simulator)", mt4: "MetaTrader 4", ctrader: "cTrader", fix: "FIX Protocol",
@@ -881,8 +882,8 @@ export const BrokerIntegrationService = {
     const positions: BrokerPosition[] = [];
     const pendingOrders: BrokerPendingOrder[] = [];
     for (const a of accounts) {
-      positions.push(...await this.listPositions(oid, a.id));
-      pendingOrders.push(...await this.listOrders(oid, a.id));
+      try { positions.push(...await this.listPositions(oid, a.id)); } catch {}
+      try { pendingOrders.push(...await this.listOrders(oid, a.id)); } catch {}
     }
     const strategies = await this.listStrategies(oid);
     const risk = await this.getRiskControls(oid);
@@ -893,8 +894,13 @@ export const BrokerIntegrationService = {
     const exposurePct = totalEquity > 0 ? Math.round((exposureUsd / totalEquity) * 100) : 0;
     const dailyPnL = accounts.reduce((s, a) => s + a.account.dailyPnl, 0);
     const connected = accounts.filter((a) => a.status === "connected").length;
+    let eaConnected = 0; let eaTotal = 0;
+    try {
+      const { EaService } = await import("./ea.service.js");
+      const eas = await EaService.listEa(oid); eaTotal = eas.length; eaConnected = eas.filter((e) => e.connected).length;
+    } catch { /* optional */ }
     const aiRecommendations = recentExecutions.length === 0
-      ? ["Connect a broker account (MT5 supported via ZMQ bridge, HTTP bridge, or MetaApi cloud) to start."]
+      ? ["Connect a broker account (MT5 supported via ZMQ bridge, HTTP bridge, MetaApi cloud, or Simulator) to start."]
       : ["Review pending approvals (assisted mode).", "Run portfolio intelligence for concentration check.", connected === accounts.length ? "All broker accounts connected." : `${accounts.length - connected} account(s) not connected.`];
     return {
       accounts, totalEquity, totalBalance, openPositions: positions, pendingOrders,
@@ -902,7 +908,69 @@ export const BrokerIntegrationService = {
       tradeConfidence: recentExecutions.length ? Math.round(recentExecutions.reduce((s, e) => s + e.confidence, 0) / recentExecutions.length * 100) : 0,
       portfolioRisk: { exposureUsd, exposurePct, dailyPnL, drawdownPct: Math.max(0, Math.round(dailyPnL < 0 ? (Math.abs(dailyPnL) / Math.max(1, totalEquity)) * 100 : 0)) },
       riskControls: risk, recentExecutions, aiRecommendations,
-      systemHealth: { brokerConnected: connected, brokerTotal: accounts.length, ffmpeg: false, lastSyncAt: accounts.some((a) => a.lastSyncAt) ? accounts.map((a) => a.lastSyncAt!).sort().slice(-1)[0] : undefined },
+      systemHealth: { brokerConnected: connected, brokerTotal: accounts.length, ffmpeg: false, lastSyncAt: accounts.some((a) => a.lastSyncAt) ? accounts.map((a) => a.lastSyncAt!).sort().slice(-1)[0] : undefined, eaConnected, eaTotal },
+    };
+  },
+
+  /**
+   * Dashboard rollup — aggregates everything the trading UI needs in one call.
+   */
+  async dashboard(oid: string): Promise<{
+    generatedAt: string;
+    accounts: BrokerAccount[]; positions: BrokerPosition[]; orders: BrokerPendingOrder[];
+    executions: TradeExecution[]; deals: BrokerDeal[]; strategies: TradingStrategy[]; eas: any[];
+    risk: BrokerRiskControls; portfolio: PortfolioIntelligence;
+    health: { connectedAccounts: number; totalAccounts: number; connectedEas: number; totalEas: number; recentErrors: number; uptimePct: number };
+    pnl: { today: number; week: number; month: number; allTime: number };
+    winRate: { day: number; week: number };
+    connectors: { broker: string; label: string; available: boolean; transport?: string }[];
+  }> {
+    const accounts = await this.listAccounts(oid);
+    const positions: BrokerPosition[] = [];
+    const orders: BrokerPendingOrder[] = [];
+    const deals: BrokerDeal[] = [];
+    for (const a of accounts) {
+      try { positions.push(...await this.listPositions(oid, a.id)); } catch {}
+      try { orders.push(...await this.listOrders(oid, a.id)); } catch {}
+      try { deals.push(...(await this.listDeals(oid, a.id, { days: 30 }))); } catch {}
+    }
+    const executions = await this.listExecutions(oid, 50);
+    const strategies = await this.listStrategies(oid);
+    const risk = await this.getRiskControls(oid);
+    const portfolio = await this.portfolioIntelligence(oid);
+
+    let eas: any[] = [];
+    try {
+      const { EaService } = await import("./ea.service.js");
+      eas = await EaService.listEa(oid);
+    } catch {}
+
+    const now = Date.now();
+    const day = 24*3600*1000, week = 7*day, month = 30*day;
+    const sumPnl = (fromMs: number) => deals
+      .filter((d) => Date.parse(d.time) >= now - fromMs)
+      .reduce((s, d) => s + (d.profit ?? 0), 0);
+    const pnl = { today: round2(sumPnl(day)), week: round2(sumPnl(week)), month: round2(sumPnl(month)), allTime: round2(sumPnl(1e15)) };
+    const winRate = (fromMs: number) => {
+      const w = deals.filter((d) => Date.parse(d.time) >= now - fromMs && d.entry === "out");
+      if (!w.length) return 0;
+      const wins = w.filter((d) => (d.profit ?? 0) >= 0).length;
+      return Math.round((wins / w.length) * 1000) / 10;
+    };
+    const connectedAccounts = accounts.filter((a) => a.status === "connected");
+    const connAvail = await connectorRegistry.probeAvailability();
+    const connectors = connAvail.map((c) => ({ broker: c.broker, label: BROKER_LABEL[c.broker] ?? c.broker, available: c.available, transport: c.transports?.[0] }));
+    const recentErrors = executions.filter((e) => e.status === "failed" || e.status === "blocked").length;
+
+    return {
+      generatedAt: new Date().toISOString(),
+      accounts, positions, orders, executions, deals, strategies, eas, risk, portfolio,
+      health: {
+        connectedAccounts: connectedAccounts.length, totalAccounts: accounts.length,
+        connectedEas: eas.filter((e) => e.connected).length, totalEas: eas.length,
+        recentErrors, uptimePct: accounts.length ? Math.round((connectedAccounts.length / Math.max(1, accounts.length)) * 1000) / 10 : 100,
+      },
+      pnl, winRate: { day: winRate(day), week: winRate(week) }, connectors,
     };
   },
 

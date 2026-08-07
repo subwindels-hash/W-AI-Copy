@@ -1,10 +1,16 @@
 /** WINDELS AI OS — Broker Integration Layer client (Trading Intel upgrade). */
 import { api } from "./api";
 
-export type BrokerType = "mt5" | "mt4" | "fix" | "rest" | "websocket" | "crypto";
-export type BrokerConnectionStatus = "disconnected" | "connecting" | "connected" | "error" | "requires_config";
+export type BrokerType =
+  | "mt5" | "mt5_simulator" | "mt4" | "ctrader" | "fix" | "rest" | "websocket"
+  | "binance" | "bybit" | "okx" | "coinbase" | "kraken" | "kucoin" | "bitget"
+  | "gateio" | "mexc" | "htx" | "cryptocom" | "hyperliquid"
+  | "interactive_brokers" | "alpaca" | "tradestation" | "oanda" | "ig";
+
+export type BrokerConnectionStatus = "disconnected" | "connecting" | "connected" | "error" | "requires_config" | "syncing" | "reconnecting";
+export type ConnectorTransport = "native_python_zmq" | "http_bridge" | "metaapi_cloud" | "exchange_rest" | "exchange_ws" | "ea" | "simulator";
 export type TradingMode = "analysis_only" | "assisted" | "semi_autonomous" | "fully_autonomous";
-export type TradeExecutionStatus = "rejected" | "pending_approval" | "approved" | "submitted" | "filled" | "failed" | "blocked";
+export type TradeExecutionStatus = "submitted" | "pending_approval" | "approved" | "filled" | "failed" | "blocked" | "rejected";
 export type StrategyType = "rule" | "ml" | "rl" | "hybrid";
 
 export interface BrokerAccount {
@@ -17,23 +23,36 @@ export interface BrokerAccount {
   server: string;
   mode: TradingMode;
   status: BrokerConnectionStatus;
+  transport?: ConnectorTransport;
+  environment?: "demo" | "live" | "contest" | "sandbox";
   connectedAt?: string;
+  lastSyncAt?: string;
   error?: string;
   currency: string;
   leverage: number;
-  account: { balance: number; equity: number; margin: number; freeMargin: number; profit: number; dailyPnl: number };
+  account: { balance: number; equity: number; margin: number; freeMargin: number; profit: number; dailyPnl: number; marginLevel?: number; credit?: number };
+  connectorConfig?: { allowedSymbols?: string[]; deniedSymbols?: string[]; readOnly?: boolean };
   createdAt: string;
   updatedAt: string;
 }
 
 export interface BrokerPosition {
-  id: string; accountId: string; symbol: string; side: "long" | "short"; volume: number;
-  openPrice: number; currentPrice: number; sl?: number; tp?: number; openTime: string; profit: number;
+  id: string; ticket?: string; accountId: string; symbol: string; side: "long" | "short";
+  volume: number; openPrice: number; currentPrice: number; sl?: number; tp?: number;
+  openTime: string; profit: number; swap?: number; commission?: number; magic?: number;
 }
 
 export interface BrokerPendingOrder {
-  id: string; accountId: string; symbol: string; type: string; volume: number;
-  price: number; sl?: number; tp?: number; openTime: string; status: string;
+  id: string; ticket?: string; accountId: string; symbol: string;
+  type: "buy_limit" | "sell_limit" | "buy_stop" | "sell_stop" | "buy_stop_limit" | "sell_stop_limit";
+  volume: number; price: number; sl?: number; tp?: number; openTime: string; status: string;
+  comment?: string; magic?: number;
+}
+
+export interface BrokerDeal {
+  id: string; ticket?: string; orderId?: string; accountId: string; symbol: string;
+  side: "long" | "short"; entry: "in" | "out" | "inout"; volume: number; price: number;
+  profit: number; swap?: number; commission?: number; time: string; comment?: string;
 }
 
 export interface TradeExecution {
@@ -41,17 +60,21 @@ export interface TradeExecution {
   symbol: string; side: "long" | "short"; volume: number; source: string;
   strategyId?: string; confidence: number; mode: TradingMode; status: TradeExecutionStatus;
   decision: string; riskChecks: { rule: string; pass: boolean; reason?: string }[];
-  price?: number; stopLoss?: number; takeProfit?: number; approvedBy?: string; error?: string;
+  price?: number; stopLoss?: number; takeProfit?: number; brokerTicket?: string;
+  brokerDealId?: string; fillPrice?: number; filledVolume?: number;
+  approvedBy?: string; error?: string; connectorTransport?: ConnectorTransport;
   createdAt: string; updatedAt: string;
 }
 
+export interface EaSummary {
+  eaId: string; brokerAccountId: string; magic: number; terminalName: string;
+  mt5Login: string; connected: boolean; lastPollAt?: string; createdAt: string;
+}
+
 export interface TradingStrategy {
-  id: string; organizationId: string; name: string; description: string; type: StrategyType;
-  enabled: boolean; logic: Record<string, any>; accountIds: string[];
-  versions: { version: number; name: string; at: string; note?: string }[];
-  currentVersion: number;
+  id: string; name: string; description: string; type: StrategyType; enabled: boolean;
+  logic: Record<string, any>; accountIds: string[]; currentVersion: number;
   backtest?: { winRate: number; trades: number; totalReturnPct: number; maxDrawdownPct: number; at: string };
-  paper?: { trades: number; winRate: number; pnl: number; at: string };
   createdAt: string; updatedAt: string;
 }
 
@@ -66,7 +89,8 @@ export interface PortfolioIntelligence {
   exposureBySymbol: Record<string, number>; exposureByAssetClass: Record<string, number>;
   currencyExposure: Record<string, number>;
   correlation: { symbolA: string; symbolB: string; corr: number }[];
-  diversificationScore: number; attribution: { symbol: string; pnl: number; contributionPct: number }[];
+  diversificationScore: number;
+  attribution: { symbol: string; pnl: number; contributionPct: number }[];
   concentrationRisk: { symbol: string; weightPct: number; flag: string }[];
   recommendations: string[];
 }
@@ -78,30 +102,59 @@ export interface TradingCommandCenter {
   portfolioRisk: { exposureUsd: number; exposurePct: number; dailyPnL: number; drawdownPct: number };
   riskControls: BrokerRiskControls; recentExecutions: TradeExecution[];
   aiRecommendations: string[];
-  systemHealth: { brokerConnected: number; brokerTotal: number; ffmpeg: boolean; lastSyncAt?: string };
+  systemHealth: { brokerConnected: number; brokerTotal: number; eaConnected: number; eaTotal: number; lastSyncAt?: string };
+}
+
+export interface DashboardSummary {
+  generatedAt: string;
+  accounts: BrokerAccount[];
+  positions: BrokerPosition[];
+  orders: BrokerPendingOrder[];
+  executions: TradeExecution[];
+  deals: BrokerDeal[];
+  strategies: TradingStrategy[];
+  eas: EaSummary[];
+  risk: BrokerRiskControls;
+  portfolio: PortfolioIntelligence;
+  health: { connectedAccounts: number; totalAccounts: number; connectedEas: number; totalEas: number; recentErrors: number; uptimePct: number };
+  pnl: { today: number; week: number; month: number; allTime: number };
+  winRate: { day: number; week: number };
+  connectors: { broker: string; label: string; available: boolean; transport?: string }[];
 }
 
 export type BrokerAgentKey = "trade-execution-supervisor" | "strategy-optimizer" | "portfolio-risk" | "broker-connectivity" | "trade-validator" | "trading-compliance";
 
 export interface BrokerTradingAgent {
-  key: BrokerAgentKey;
-  name: string;
-  description: string;
-  routable: true;
-  status: "online" | "paused";
-  lastHeartbeat: string;
-  runs24h: number;
-  decisions24h: number;
-  blocked24h: number;
+  key: BrokerAgentKey; name: string; description: string;
+  status: "online" | "paused"; lastHeartbeat: string;
+  runs24h: number; decisions24h: number; blocked24h: number;
 }
 
 export const BROKER_TYPES: { value: BrokerType; label: string }[] = [
   { value: "mt5", label: "MetaTrader 5" },
+  { value: "mt5_simulator", label: "MT5 Simulator (Paper / Backtest)" },
   { value: "mt4", label: "MetaTrader 4" },
+  { value: "ctrader", label: "cTrader" },
+  { value: "binance", label: "Binance" },
+  { value: "bybit", label: "Bybit" },
+  { value: "okx", label: "OKX" },
+  { value: "coinbase", label: "Coinbase" },
+  { value: "kraken", label: "Kraken" },
+  { value: "kucoin", label: "KuCoin" },
+  { value: "bitget", label: "Bitget" },
+  { value: "gateio", label: "Gate.io" },
+  { value: "mexc", label: "MEXC" },
+  { value: "htx", label: "HTX (Huobi)" },
+  { value: "cryptocom", label: "Crypto.com" },
+  { value: "hyperliquid", label: "Hyperliquid" },
+  { value: "interactive_brokers", label: "Interactive Brokers" },
+  { value: "alpaca", label: "Alpaca" },
+  { value: "tradestation", label: "TradeStation" },
+  { value: "oanda", label: "OANDA" },
+  { value: "ig", label: "IG" },
   { value: "fix", label: "FIX Protocol" },
   { value: "rest", label: "REST Broker API" },
   { value: "websocket", label: "WebSocket Broker API" },
-  { value: "crypto", label: "Cryptocurrency Exchange" },
 ];
 
 export const TRADING_MODES: { value: TradingMode; label: string; blurb: string }[] = [
@@ -112,17 +165,32 @@ export const TRADING_MODES: { value: TradingMode; label: string; blurb: string }
 ];
 
 export const brokerApi = {
-  connectors: () => api<{ broker: string; name: string; protocol: string; requiresConfig: boolean }[]>("/brokers/connectors"),
+  connectors: () => api<{ catalog: any[]; live: { broker: string; label: string; transports: string[]; available: boolean; reason?: string }[] }>("/brokers/connectors"),
   accounts: () => api<BrokerAccount[]>("/brokers/accounts"),
-  createAccount: (input: { name: string; broker: BrokerType; login: string; server: string; password: string; mode?: TradingMode; currency?: string; leverage?: number }) =>
+  createAccount: (input: { name: string; broker: BrokerType; login: string; server: string; password: string; mode?: TradingMode; currency?: string; leverage?: number; environment?: "demo" | "live" | "contest" | "sandbox" }) =>
     api<BrokerAccount>("/brokers/accounts", { method: "POST", json: input }),
   updateAccount: (id: string, patch: { name?: string; mode?: TradingMode }) =>
     api<BrokerAccount>(`/brokers/accounts/${id}`, { method: "PATCH", json: patch }),
   removeAccount: (id: string) => api<void>(`/brokers/accounts/${id}`, { method: "DELETE" }),
   verify: (id: string) => api<{ valid: boolean; login: string }>(`/brokers/accounts/${id}/verify`, { method: "POST" }),
+  connect: (id: string, opts: { force?: boolean; transport?: ConnectorTransport } = {}) =>
+    api<BrokerAccount>(`/brokers/accounts/${id}/connect`, { method: "POST", json: opts }),
+  disconnect: (id: string) => api<BrokerAccount>(`/brokers/accounts/${id}/disconnect`, { method: "POST" }),
+  sync: (id: string, scope: string[] = ["account","symbols","positions","orders","history"]) =>
+    api<BrokerAccount>(`/brokers/accounts/${id}/sync`, { method: "POST", json: { scope } }),
+  health: (id: string) => api<{ health: any; state: any }>(`/brokers/accounts/${id}/health`),
   positions: (id: string) => api<BrokerPosition[]>(`/brokers/accounts/${id}/positions`),
   orders: (id: string) => api<BrokerPendingOrder[]>(`/brokers/accounts/${id}/orders`),
-  trade: (signal: { accountId: string; symbol: string; side: "long" | "short"; volume: number; source?: string; strategyId?: string; confidence?: number; stopLoss?: number; takeProfit?: number }) =>
+  symbols: (id: string) => api<any[]>(`/brokers/accounts/${id}/symbols`),
+  deals: (id: string, params: { days?: number; symbol?: string } = {}) =>
+    api<BrokerDeal[]>(`/brokers/accounts/${id}/deals`, { params }),
+  closePosition: (id: string, ticket: string, volume?: number) =>
+    api<TradeExecution>(`/brokers/accounts/${id}/positions/${ticket}/close`, { method: "POST", json: { volume } }),
+  modifyPosition: (id: string, ticket: string, patch: { sl?: number; tp?: number }) =>
+    api<TradeExecution>(`/brokers/accounts/${id}/positions/${ticket}`, { method: "PATCH", json: patch }),
+  sendOrder: (id: string, order: { symbol: string; side: "long" | "short"; volume: number; type?: string; price?: number; sl?: number; tp?: number; slippage?: number; comment?: string; magic?: number }) =>
+    api<TradeExecution>(`/brokers/accounts/${id}/orders`, { method: "POST", json: order }),
+  trade: (signal: { accountId: string; symbol: string; side: "long" | "short"; volume: number; source?: string; strategyId?: string; confidence?: number; stopLoss?: number; takeProfit?: number; price?: number; orderType?: string; slippage?: number }) =>
     api<TradeExecution>("/brokers/trade", { method: "POST", json: signal }),
   executions: () => api<TradeExecution[]>("/brokers/executions"),
   approve: (id: string) => api<TradeExecution>(`/brokers/executions/${id}/approve`, { method: "POST" }),
@@ -138,6 +206,10 @@ export const brokerApi = {
   killSwitch: (active: boolean) => api<BrokerRiskControls>("/brokers/risk/kill-switch", { method: "POST", json: { active } }),
   portfolio: (accountId?: string) => api<PortfolioIntelligence>("/brokers/portfolio", accountId ? { params: { accountId } } : {}),
   commandCenter: () => api<TradingCommandCenter>("/brokers/command-center"),
+  dashboard: () => api<DashboardSummary>("/brokers/dashboard"),
   agents: () => api<BrokerTradingAgent[]>("/brokers/agents"),
   runAgent: (key: string, payload?: Record<string, any>) => api<{ agent: string; verdict: string; detail: string; data?: any }>(`/brokers/agents/${key}/run`, { method: "POST", json: payload ?? {} }),
+  eas: () => api<EaSummary[]>("/ea"),
+  revokeEa: (eaId: string) => api<void>(`/ea/${eaId}`, { method: "DELETE" }),
+  audit: (limit = 100) => api<any[]>("/brokers/audit", { params: { limit } }),
 };

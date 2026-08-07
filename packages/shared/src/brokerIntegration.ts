@@ -460,7 +460,7 @@ export interface TradingCommandCenter {
   riskControls: BrokerRiskControls;
   recentExecutions: TradeExecution[];
   aiRecommendations: string[];
-  systemHealth: { brokerConnected: number; brokerTotal: number; ffmpeg: boolean; lastSyncAt?: string };
+  systemHealth: { brokerConnected: number; brokerTotal: number; ffmpeg: boolean; lastSyncAt?: string; eaConnected?: number; eaTotal?: number };
 }
 
 /* ── AI Broker Trading agents (chat-routable workforce) ────────── */

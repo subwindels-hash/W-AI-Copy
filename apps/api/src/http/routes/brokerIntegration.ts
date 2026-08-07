@@ -231,6 +231,12 @@ export function registerBrokerIntegrationRoutes(router: Router) {
     catch (e) { next(e); }
   });
 
+  // Dashboard rollup (single call for the trading dashboard UI).
+  router.get("/brokers/dashboard", async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.dashboard(oid(req)), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+
   // AI Broker Trading agents
   router.get("/brokers/agents", async (req, res, next) => {
     try { res.json({ ok: true, data: await BrokerIntegrationService.listAgents(oid(req)), meta: { requestId: req.requestId } }); }
