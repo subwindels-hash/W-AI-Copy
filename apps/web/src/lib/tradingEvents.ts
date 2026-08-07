@@ -40,6 +40,12 @@ export interface TradingLiveState {
   accountUpdates: LiveAccount[];
   /** Per-symbol latest tick keyed by `${accountId}:${symbol}`. */
   latestTickByKey: Record<string, LiveTick>;
+  /**
+   * Per-account latest account_state, keyed by accountId. Allows the UI to
+   * show per-connector health (connected/error/disconnected) driven by SSE
+   * account_state events from both crypto and MT5 connectors.
+   */
+  accountStateByAccount: Record<string, LiveAccount>;
 }
 
 const RING = 50;
@@ -84,7 +90,7 @@ export function useTradingEvents(opts: { enabled?: boolean } = {}) {
     connected: false, readyAt: null, lastEventAt: null,
     recentTicks: [], recentExecutions: [],
     orderUpdates: [], positionUpdates: [], accountUpdates: [],
-    latestTickByKey: {},
+    latestTickByKey: {}, accountStateByAccount: {},
   }));
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -133,10 +139,12 @@ export function useTradingEvents(opts: { enabled?: boolean } = {}) {
               }
               case "account_state": {
                 const d = data?.data ?? {};
-                next.accountUpdates = pushRing(s.accountUpdates, {
+                const evt: LiveAccount = {
                   accountId: acctId, status: String(d.status ?? ""),
                   lastSyncAt: d.lastSyncAt, latencyMs: d.latencyMs, error: d.error, at: now,
-                });
+                };
+                next.accountUpdates = pushRing(s.accountUpdates, evt);
+                next.accountStateByAccount = { ...s.accountStateByAccount, [acctId]: evt };
                 return next;
               }
               default:

@@ -90,6 +90,16 @@ export class Mt5Connector implements IBrokerConnector {
     for (const h of this.stateHandlers) {
       try { h(acct.state.accountId, status, error); } catch (e) { logger.warn("[mt5] state handler threw", { err: e }); }
     }
+    // Fan state transitions to the org hub so the SSE dashboard reacts.
+    const oid = (acct.opts.config as any)?._oid;
+    if (oid) {
+      try {
+        tradingEvents.emit(oid, {
+          kind: "account_state", accountId: acct.state.accountId,
+          data: { status, lastSyncAt: acct.state.lastSyncAt, latencyMs: acct.transport === undefined ? undefined : 0, error },
+        });
+      } catch { /* best-effort */ }
+    }
   }
 
   isConnected(accountId: string): boolean {

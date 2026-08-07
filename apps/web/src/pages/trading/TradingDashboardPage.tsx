@@ -40,6 +40,7 @@ const statusColor: Record<string, string> = {
   disconnected: "bg-slate-500/15 text-slate-300 border-slate-500/30",
   error: "bg-rose-500/15 text-rose-300 border-rose-500/30",
   requires_config: "bg-amber-500/15 text-amber-300 border-amber-500/30",
+  idle: "bg-slate-500/15 text-slate-300 border-slate-500/30",
 };
 
 const execStatusColor: Record<string, string> = {
@@ -152,6 +153,15 @@ export function TradingDashboardPage() {
   const { accounts, positions, orders, executions, eas, risk, pnl, winRate, health, connectors } = data;
   const pendingApprovals = executions.filter((e) => e.status === "pending_approval");
 
+  // Override per-account status from SSE account_state events when fresher
+  // than the last polled snapshot. This lets the dashboard react to connector
+  // error/disconnect events instantly without waiting for the next refresh.
+  const accountsWithLive = useMemo(() => accounts.map((a) => {
+    const la = live.accountStateByAccount[a.id];
+    if (!la) return a;
+    return { ...a, status: la.status as typeof a.status, error: la.error ?? a.error, lastSyncAt: la.lastSyncAt ?? a.lastSyncAt };
+  }), [accounts, live.accountStateByAccount]);
+
   // Merge live executions from SSE that aren't yet in the polled list.
   const mergedExecutions = useMemo(() => {
     const seen = new Set(executions.map((e) => e.id));
@@ -252,7 +262,7 @@ export function TradingDashboardPage() {
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Kpi label="Total Equity"    value={usd(accounts.reduce((s, a) => s + a.account.equity, 0))} sub={`${accounts.length} account(s)`} icon={Wallet} />
+        <Kpi label="Total Equity"    value={usd(accountsWithLive.reduce((s, a) => s + a.account.equity, 0))} sub={`${accountsWithLive.length} account(s)`} icon={Wallet} />
         <Kpi label="P&L Today"       value={usd(pnl.today)}   tone={pnl.today >= 0 ? "pos" : "neg"} icon={TrendingUp} />
         <Kpi label="Win Rate (24h)"  value={pct(winRate.day)} sub={`${pct(winRate.week)} 7d`} icon={Target} tone={winRate.day >= 50 ? "pos" : "warn"} />
         <Kpi label="Exposure"        value={usd(openPositions.reduce((s, p) => s + Math.abs(p.volume * p.currentPrice), 0))} sub={`${openPositions.length} open positions`} icon={Layers} />
@@ -273,10 +283,10 @@ export function TradingDashboardPage() {
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-white/5">
-              {accounts.length === 0 && (
+              {accountsWithLive.length === 0 && (
                 <p className="p-6 text-sm text-slate-400">No broker accounts configured. Connect one from the Command Center.</p>
               )}
-              {accounts.map((a) => (
+              {accountsWithLive.map((a) => (
                 <div key={a.id} className="flex items-center justify-between gap-3 p-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">

@@ -497,6 +497,17 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
     const a = this.accounts.get(id);
     if (a) { a.status = status; if (err) a.lastError = err; else a.lastError = undefined; }
     for (const h of this.stateHandlers) { try { h(id, status, err); } catch { /* ignore */ } }
+    // Fan state transitions out to the org hub so the dashboard can reflect
+    // connector health (connected/error/disconnected) without polling.
+    const oid = (a?.opts.config as any)?._oid;
+    if (oid) {
+      try {
+        tradingEvents.emit(oid, {
+          kind: "account_state", accountId: id,
+          data: { status, lastSyncAt: a?.lastSyncAt, latencyMs: a?.latencyMs, error: err },
+        });
+      } catch { /* best-effort */ }
+    }
   }
 
   protected dispatchTick(sess: CryptoAccountSession, symbol: string, bid: number, ask: number) {
