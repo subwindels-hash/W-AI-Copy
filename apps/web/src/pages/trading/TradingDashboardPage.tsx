@@ -16,9 +16,10 @@ import { Badge } from "@/components/ui/Badge";
 import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bot, CheckCircle2,
-  CircleSlash, Gauge, Hand, Layers, Loader2, Power, Radio, RefreshCw, ShieldAlert,
+  CircleSlash, Eye, EyeOff, Gauge, Hand, Layers, Loader2, Lock, Power, Radio, RefreshCw, ShieldAlert,
   Target, TrendingUp, Wallet, Wifi, WifiOff, XCircle, Zap,
 } from "lucide-react";
+import { Switch } from "@/components/ui/Switch";
 
 const usd = (n: number) =>
   `${n < 0 ? "-" : ""}$${Math.abs(n).toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
@@ -122,6 +123,15 @@ export function TradingDashboardPage() {
     catch (e: any) { setErr(e?.message ?? "pause autonomous failed"); }
     finally { setBusy(null); }
   }, [autoPaused, load]);
+
+  const toggleAccountReadOnly = useCallback(async (acctId: string, readOnly: boolean) => {
+    setBusy(`ro:${acctId}`);
+    try {
+      await brokerApi.updateAccount(acctId, { connectorConfig: { readOnly } });
+      await load();
+    } catch (e: any) { setErr(e?.message ?? "update failed"); }
+    finally { setBusy(null); }
+  }, [load]);
 
   const act = useCallback(async (id: string, verb: "approve" | "reject") => {
     setBusy(id);
@@ -372,28 +382,50 @@ export function TradingDashboardPage() {
               {accountsWithLive.length === 0 && (
                 <p className="p-6 text-sm text-slate-400">No broker accounts configured. Connect one from the Command Center.</p>
               )}
-              {accountsWithLive.map((a) => (
+              {accountsWithLive.map((a) => {
+                const readOnly = !!a.connectorConfig?.readOnly;
+                const busyKey = `ro:${a.id}`;
+                return (
                 <div key={a.id} className="flex items-center justify-between gap-3 p-4">
-                  <div className="min-w-0">
-                    <div className="flex items-center gap-2">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
                       <StatusDot connected={a.status === "connected"} />
                       <p className="font-medium truncate">{a.name}</p>
                       <Badge className={statusColor[a.status] ?? ""}>{a.status}</Badge>
                       {a.transport && <Badge className="bg-slate-700/50 text-slate-300">{a.transport}</Badge>}
+                      {readOnly && (
+                        <Badge className="bg-amber-500/15 text-amber-300 border-amber-500/30">
+                          <Lock className="h-3 w-3 mr-1" />read-only
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-slate-500 mt-1 truncate">
                       {a.brokerLabel} · {a.login}@{a.server} · {a.currency} · {a.leverage}:1 · mode={a.mode} · sync {timeAgo(a.lastSyncAt)}
                     </p>
                   </div>
-                  <div className="text-right tabular-nums">
-                    <p className="font-semibold">{usd(a.account.equity)}</p>
-                    <p className={`text-xs ${a.account.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
-                      {a.account.profit >= 0 ? <ArrowUpRight className="inline h-3 w-3" /> : <ArrowDownRight className="inline h-3 w-3" />}
-                      {" "}{usd(a.account.profit)} · bal {usd(a.account.balance)}
-                    </p>
+                  <div className="flex items-center gap-4 shrink-0">
+                    <Switch
+                      id={`ro-${a.id}`}
+                      checked={readOnly}
+                      disabled={!!busy || busy === busyKey}
+                      onChange={(v) => toggleAccountReadOnly(a.id, v)}
+                      label={
+                        <span className="inline-flex items-center gap-1 text-xs text-slate-300">
+                          {readOnly ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
+                          {readOnly ? "Locked (no new orders)" : "Trading enabled"}
+                        </span>
+                      }
+                    />
+                    <div className="text-right tabular-nums min-w-[120px]">
+                      <p className="font-semibold">{usd(a.account.equity)}</p>
+                      <p className={`text-xs ${a.account.profit >= 0 ? "text-emerald-400" : "text-rose-400"}`}>
+                        {a.account.profit >= 0 ? <ArrowUpRight className="inline h-3 w-3" /> : <ArrowDownRight className="inline h-3 w-3" />}
+                        {" "}{usd(a.account.profit)} · bal {usd(a.account.balance)}
+                      </p>
+                    </div>
                   </div>
                 </div>
-              ))}
+              );})}
             </div>
           </CardContent>
         </Card>

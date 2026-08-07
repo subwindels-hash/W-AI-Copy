@@ -113,9 +113,21 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
   readonly supportedTransports: ConnectorTransport[];
   readonly capabilities: CryptoConnectorCapabilities;
   readonly exchange: CryptoExchangeId;
-  private accounts = new Map<string, CryptoAccountSession>();
+  protected accounts = new Map<string, CryptoAccountSession>();
   private stateHandlers: ConnectionStateHandler[] = [];
   private initialized = false;
+
+  /**
+   * Patch the live session's connector config in-place so toggles like
+   * readOnly take effect without forcing a reconnect. Called from
+   * BrokerIntegrationService.updateAccount after persisting the change.
+   */
+  _patchSessionConfig(accountId: string, patch: Record<string, any>): void {
+    const sess = this.accounts.get(accountId);
+    if (!sess) return;
+    const merged = { ...(sess.opts.config ?? {}), ...patch, _oid: (sess.opts.config as any)?._oid };
+    sess.opts = { ...sess.opts, config: merged };
+  }
 
   constructor(opts: BaseCryptoOpts) {
     super();

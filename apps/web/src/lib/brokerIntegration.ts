@@ -178,7 +178,7 @@ export const brokerApi = {
   accounts: () => api<BrokerAccount[]>("/brokers/accounts"),
   createAccount: (input: { name: string; broker: BrokerType; login: string; server: string; password: string; mode?: TradingMode; currency?: string; leverage?: number; environment?: "demo" | "live" | "contest" | "sandbox" }) =>
     api<BrokerAccount>("/brokers/accounts", { method: "POST", json: input }),
-  updateAccount: (id: string, patch: { name?: string; mode?: TradingMode }) =>
+  updateAccount: (id: string, patch: { name?: string; mode?: TradingMode; connectorConfig?: { readOnly?: boolean; allowedSymbols?: string[]; deniedSymbols?: string[] } }) =>
     api<BrokerAccount>(`/brokers/accounts/${id}`, { method: "PATCH", json: patch }),
   removeAccount: (id: string) => api<void>(`/brokers/accounts/${id}`, { method: "DELETE" }),
   verify: (id: string) => api<{ valid: boolean; login: string }>(`/brokers/accounts/${id}/verify`, { method: "POST" }),

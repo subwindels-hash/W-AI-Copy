@@ -197,6 +197,17 @@ export const BrokerIntegrationService = {
     if (patch.connectorConfig) rec.connectorConfig = { ...rec.connectorConfig, ...patch.connectorConfig };
     rec.updatedAt = now();
     await redis.set(K.account(oid, id), s2(rec));
+    // Propagate connectorConfig changes (e.g. readOnly toggle) into any live
+    // connector session so the change takes effect without requiring a manual
+    // reconnect. Connectors that care (BaseCryptoConnector, Mt5Connector)
+    // read opts.config on every sendOrder; patching the object reference
+    // makes the next call see the new value.
+    try {
+      const conn = connectorRegistry.get(rec.broker);
+      if (conn && typeof (conn as any)._patchSessionConfig === "function") {
+        (conn as any)._patchSessionConfig(id, rec.connectorConfig ?? {});
+      }
+    } catch (e) { logger.warn("[bri] live session config patch failed", { err: (e as Error).message }); }
     return rec;
   },
 

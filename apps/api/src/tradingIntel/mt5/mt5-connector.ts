@@ -56,9 +56,21 @@ export class Mt5Connector implements IBrokerConnector {
   readonly label = "MetaTrader 5";
   readonly supportedTransports: ConnectorTransport[] = ["native_python_zmq", "http_bridge", "metaapi_cloud"];
 
-  private readonly accounts = new Map<string, AccountRuntime>();
+  readonly accounts = new Map<string, AccountRuntime>();
   private readonly stateHandlers: ConnectionStateHandler[] = [];
   private initialized = false;
+
+  /**
+   * Patch live session connectorConfig (readOnly toggle, etc.) without
+   * forcing a reconnect, so the next sendOrder/closePosition/cancelOrder
+   * call sees the new value.
+   */
+  _patchSessionConfig(accountId: string, patch: Record<string, any>): void {
+    const a = this.accounts.get(accountId);
+    if (!a) return;
+    const merged = { ...(a.opts.config ?? {}), ...patch, _oid: (a.opts.config as any)?._oid };
+    a.opts = { ...a.opts, config: merged };
+  }
 
   async isAvailable(): Promise<boolean> {
     const hasBridge = !!(env.WINDELS_MT5_BRIDGE_ZMQ || env.WINDELS_MT5_BRIDGE_HTTP);
