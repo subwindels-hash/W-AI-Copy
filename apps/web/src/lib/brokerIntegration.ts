@@ -30,6 +30,8 @@ export interface BrokerAccount {
   error?: string;
   currency: string;
   leverage: number;
+  /** Most recent observed connector latency in ms (REST RTT or WS round trip). */
+  latencyMs?: number;
   account: { balance: number; equity: number; margin: number; freeMargin: number; profit: number; dailyPnl: number; marginLevel?: number; credit?: number };
   connectorConfig?: { allowedSymbols?: string[]; deniedSymbols?: string[]; readOnly?: boolean };
   createdAt: string;

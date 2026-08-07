@@ -275,6 +275,13 @@ export const BrokerIntegrationService = {
       if (result.snapshot.leverage) rec.leverage = result.snapshot.leverage;
     }
     rec.error = undefined; rec.updatedAt = now(); rec.lastSyncAt = now();
+    // Surface connector latency (most recent REST/WS RTT) onto the account
+    // record so the dashboard can render per-account health without a
+    // second call. The connector's health() method returns the latest ms.
+    try {
+      const ch = connector.health(id);
+      rec.latencyMs = ch.latencyMs;
+    } catch { /* best-effort */ }
     await redis.set(K.account(oid, id), s2(rec));
     // Kick off initial full sync.
     await this.syncAccountFromConnector(oid, id);
@@ -331,6 +338,10 @@ export const BrokerIntegrationService = {
     if (result.deals) await this.persistDeals(oid, id, result.deals);
     rec.status = "connected"; rec.error = undefined;
     rec.lastSyncAt = now(); rec.updatedAt = now();
+    try {
+      const ch = connector.health(id);
+      rec.latencyMs = ch.latencyMs;
+    } catch { /* best-effort */ }
     await redis.set(K.account(oid, id), s2(rec));
     try { Metrics.timing("bri.sync.latency_ms", Date.now() - start, { broker: rec.broker }); } catch {}
     await Mt5Monitor.audit(oid, id, "sync", {

@@ -55,6 +55,8 @@ export interface BrokerAccount {
   error?: string;
   /** Transport actually used (native ZMQ bridge, MetaApi cloud, REST, etc.). */
   transport?: ConnectorTransport;
+  /** Most recent observed connector round-trip latency in ms (REST/WS RTT). */
+  latencyMs?: number;
   /** Environment: demo / live / contest / sandbox. */
   environment?: AccountEnvironment;
   currency: string;

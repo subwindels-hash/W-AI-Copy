@@ -169,7 +169,13 @@ export function TradingDashboardPage() {
   const accountsWithLive = useMemo(() => accounts.map((a) => {
     const la = live.accountStateByAccount[a.id];
     if (!la) return a;
-    return { ...a, status: la.status as typeof a.status, error: la.error ?? a.error, lastSyncAt: la.lastSyncAt ?? a.lastSyncAt };
+    return {
+      ...a,
+      status: la.status as typeof a.status,
+      error: la.error ?? a.error,
+      lastSyncAt: la.lastSyncAt ?? a.lastSyncAt,
+      liveLatencyMs: la.latencyMs as number | undefined,
+    };
   }), [accounts, live.accountStateByAccount]);
 
   // For action buttons (close/cancel) we resolve the owning account per row.
@@ -593,28 +599,65 @@ export function TradingDashboardPage() {
         </CardContent>
       </Card>
 
-      {/* Connector health */}
-      <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Gauge className="h-4 w-4" />Connector Health</CardTitle></CardHeader>
-        <CardContent>
-          <div className="flex flex-wrap gap-2">
-            {connectors.map((c) => (
-              <Badge key={c.broker} className={c.available ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" : "bg-slate-500/15 text-slate-400 border-slate-500/30"}>
-                {c.label}{c.transport ? ` · ${c.transport}` : ""}: {c.available ? "ready" : "unavailable"}
-              </Badge>
-            ))}
-          </div>
-          <div className="mt-4 grid gap-3 text-xs text-slate-400 md:grid-cols-3">
-            <div>Daily loss limit: <span className="text-slate-200">{risk.maxDailyLossPct}%</span></div>
-            <div>Max position size: <span className="text-slate-200">${risk.maxPositionSizeUsd.toLocaleString()}</span></div>
-            <div>Max leverage: <span className="text-slate-200">{risk.maxLeverage}:1</span></div>
-            <div>Max drawdown: <span className="text-slate-200">{risk.maxDrawdownPct}%</span></div>
-            <div>Session: <span className="text-slate-200">{risk.tradingSessionStart}–{risk.tradingSessionEnd}</span></div>
-            <div>Block news events: <span className="text-slate-200">{risk.blockNewsEvents ? "yes" : "no"}</span></div>
-            <div>AI autonomous: <span className={risk.pauseAutonomousTrading ? "text-amber-300" : "text-emerald-300"}>{risk.pauseAutonomousTrading ? "PAUSED" : "running"}</span></div>
-          </div>
-        </CardContent>
-      </Card>
+      {/* Connector health + latency */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <Card className="lg:col-span-2">
+          <CardHeader><CardTitle className="flex items-center gap-2"><Gauge className="h-4 w-4" />Connector Health</CardTitle></CardHeader>
+          <CardContent>
+            <div className="flex flex-wrap gap-2">
+              {connectors.map((c) => (
+                <Badge key={c.broker} className={c.available ? "bg-emerald-500/15 text-emerald-300 border-emerald-500/30" : "bg-slate-500/15 text-slate-400 border-slate-500/30"}>
+                  {c.label}{c.transport ? ` · ${c.transport}` : ""}: {c.available ? "ready" : "unavailable"}
+                </Badge>
+              ))}
+            </div>
+            <div className="mt-4 grid gap-3 text-xs text-slate-400 md:grid-cols-3">
+              <div>Daily loss limit: <span className="text-slate-200">{risk.maxDailyLossPct}%</span></div>
+              <div>Max position size: <span className="text-slate-200">${risk.maxPositionSizeUsd.toLocaleString()}</span></div>
+              <div>Max leverage: <span className="text-slate-200">{risk.maxLeverage}:1</span></div>
+              <div>Max drawdown: <span className="text-slate-200">{risk.maxDrawdownPct}%</span></div>
+              <div>Session: <span className="text-slate-200">{risk.tradingSessionStart}–{risk.tradingSessionEnd}</span></div>
+              <div>Block news events: <span className="text-slate-200">{risk.blockNewsEvents ? "yes" : "no"}</span></div>
+              <div>AI autonomous: <span className={risk.pauseAutonomousTrading ? "text-amber-300" : "text-emerald-300"}>{risk.pauseAutonomousTrading ? "PAUSED" : "running"}</span></div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2"><Zap className="h-4 w-4" />Latency Monitor</CardTitle>
+            <CardDescription>Per-account REST/WS round-trip time as reported by the connectors. Updated on every sync and SSE account_state event.</CardDescription>
+          </CardHeader>
+          <CardContent className="p-0">
+            <div className="divide-y divide-white/5">
+              {accountsWithLive.length === 0 && <p className="p-4 text-sm text-slate-400">No accounts connected.</p>}
+              {accountsWithLive.map((a) => {
+                const lat = (a as any).liveLatencyMs as number | undefined;
+                const polled = a.latencyMs;
+                const ms = lat ?? polled;
+                const tone = ms == null
+                  ? "text-slate-500"
+                  : ms < 150 ? "text-emerald-300"
+                  : ms < 500 ? "text-sky-300"
+                  : ms < 1500 ? "text-amber-300"
+                  : "text-rose-300";
+                const label = ms == null ? "—" : ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
+                return (
+                  <div key={a.id} className="flex items-center justify-between p-3">
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm truncate">{a.brokerLabel} · {a.name}</p>
+                      <p className="text-[11px] text-slate-500">sync {timeAgo(a.lastSyncAt)}</p>
+                    </div>
+                    <div className={`text-right tabular-nums font-mono text-sm ${tone}`} title="Last observed connector round-trip latency">
+                      {label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </CardContent>
+        </Card>
+      </div>
     </div>
   );
 }
