@@ -782,8 +782,11 @@ export function cryptoPositionsToBroker(
   const out: BrokerPosition[] = [];
   for (const p of pos.values()) {
     const m = markets.get(p.symbol);
-    const mult = p.side === "short" ? -1 : 1;
-    const signedQty = p.quantity * (p.side === "net" ? (p.quantity >= 0 ? 1 : -1) : mult);
+    // Net (one-way/hedge-off) positions carry signed quantity directly;
+    // explicit long/short use positive qty with side flag.
+    const signedQty = p.side === "net"
+      ? p.quantity
+      : p.quantity * (p.side === "short" ? -1 : 1);
     out.push({
       id: p.symbol,
       accountId: "",
@@ -901,7 +904,9 @@ function cryptoOrderToBrokerOrder(o: CryptoOrder, accountId: string): BrokerPend
 
 /** Convert a single CryptoPosition to the shared BrokerPosition shape for hub events. */
 function cryptoPositionToBrokerPosition(p: CryptoPosition, accountId: string): BrokerPosition {
-  const signedQty = p.quantity * (p.side === "net" ? (p.quantity >= 0 ? 1 : -1) : (p.side === "short" ? -1 : 1));
+  const signedQty = p.side === "net"
+    ? p.quantity
+    : p.quantity * (p.side === "short" ? -1 : 1);
   return {
     id: p.symbol, accountId, ticket: p.symbol, symbol: p.symbol,
     side: signedQty >= 0 ? "long" : "short",

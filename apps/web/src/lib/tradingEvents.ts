@@ -46,6 +46,19 @@ export interface TradingLiveState {
    * account_state events from both crypto and MT5 connectors.
    */
   accountStateByAccount: Record<string, LiveAccount>;
+  /**
+   * Most recent order_update payload keyed by `${accountId}:${rowId}` where
+   * rowId prefers broker ticket then falls back to order id. Lets the
+   * dashboard merge live order state into the polled pending-orders list
+   * without waiting for the next polling refresh.
+   */
+  latestOrderById: Record<string, LiveOrder>;
+  /**
+   * Most recent position_update payload keyed by `${accountId}:${rowId}`
+   * (ticket preferred). Drives real-time position P/L, volume, SL/TP, and
+   * removal of closed positions between polls.
+   */
+  latestPositionById: Record<string, LivePosition>;
 }
 
 const RING = 50;
@@ -91,6 +104,7 @@ export function useTradingEvents(opts: { enabled?: boolean } = {}) {
     recentTicks: [], recentExecutions: [],
     orderUpdates: [], positionUpdates: [], accountUpdates: [],
     latestTickByKey: {}, accountStateByAccount: {},
+    latestOrderById: {}, latestPositionById: {},
   }));
   const stateRef = useRef(state);
   stateRef.current = state;
@@ -129,12 +143,18 @@ export function useTradingEvents(opts: { enabled?: boolean } = {}) {
               }
               case "order_update": {
                 if (!data?.data) return s;
-                next.orderUpdates = pushRing(s.orderUpdates, { accountId: acctId, data: data.data, at: now });
+                const lo: LiveOrder = { accountId: acctId, data: data.data, at: now };
+                next.orderUpdates = pushRing(s.orderUpdates, lo);
+                const oKey = `${acctId}:${data.data.ticket ?? data.data.id}`;
+                next.latestOrderById = { ...s.latestOrderById, [oKey]: lo };
                 return next;
               }
               case "position_update": {
                 if (!data?.data) return s;
-                next.positionUpdates = pushRing(s.positionUpdates, { accountId: acctId, data: data.data, at: now });
+                const lp: LivePosition = { accountId: acctId, data: data.data, at: now };
+                next.positionUpdates = pushRing(s.positionUpdates, lp);
+                const pKey = `${acctId}:${data.data.ticket ?? data.data.id}`;
+                next.latestPositionById = { ...s.latestPositionById, [pKey]: lp };
                 return next;
               }
               case "account_state": {

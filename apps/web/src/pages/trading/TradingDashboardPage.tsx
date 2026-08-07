@@ -8,7 +8,7 @@
  * Integration Service's /brokers/dashboard rollup endpoint.
  */
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { brokerApi, type DashboardSummary, type TradeExecution } from "@/lib/brokerIntegration";
+import { brokerApi, type BrokerPendingOrder, type BrokerPosition, type DashboardSummary, type TradeExecution } from "@/lib/brokerIntegration";
 import { useTradingEvents } from "@/lib/tradingEvents";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -201,14 +201,78 @@ export function TradingDashboardPage() {
     return [...liveOnly.slice().reverse(), ...executions];
   }, [executions, live.recentExecutions]);
 
+  // Merge position_update events from private WS/REST fan-out into the polled
+  // positions list. Live updates overlay volume, price, SL/TP, profit; a
+  // position with effective volume <= 0 (fully closed) is dropped so the
+  // dashboard reflects closes between polls.
+  const positionsMerged = useMemo(() => {
+    const out: BrokerPosition[] = [];
+    const seen = new Set<string>();
+    for (const p of positions) {
+      const key = `${p.accountId}:${p.ticket ?? p.id}`;
+      const lp = live.latestPositionById[key];
+      seen.add(key);
+      if (!lp) { out.push(p); continue; }
+      const merged: BrokerPosition = { ...p, ...lp.data, accountId: p.accountId };
+      out.push(merged);
+    }
+    // Add brand-new positions that showed up over the live stream but aren't
+    // in the last poll yet (e.g. newly opened by AI/manual action).
+    for (const lp of live.positionUpdates.slice(-200)) {
+      const key = `${lp.accountId}:${lp.data.ticket ?? lp.data.id}`;
+      if (seen.has(key)) continue;
+      const v = Number(lp.data.volume) || 0;
+      if (v <= 0) continue;
+      out.push({ ...lp.data, accountId: lp.accountId });
+      seen.add(key);
+    }
+    return out;
+  }, [positions, live.latestPositionById, live.positionUpdates]);
+
   // Overlay latest live tick prices on positions for near-real-time P/L.
-  const positionsWithLive = useMemo(() => positions.map((p) => {
+  const positionsWithLive = useMemo(() => positionsMerged.map((p) => {
     const t = live.latestTickByKey[`${p.accountId}:${p.symbol}`];
+    const key = `${p.accountId}:${p.ticket ?? p.id}`;
+    const lp = live.latestPositionById[key];
+    // Use the live currentPrice if it's newer/more complete, fall back to
+    // tick-derived bid/ask, otherwise keep polled currentPrice.
+    const liveCurrent = lp?.data.currentPrice;
+    if (!t && typeof liveCurrent === "number" && liveCurrent > 0) return p;
     if (!t) return p;
     return { ...p, currentPrice: p.side === "long" ? t.bid : t.ask };
-  }), [positions, live.latestTickByKey]);
+  }), [positionsMerged, live.latestTickByKey, live.latestPositionById]);
 
-  const openPositions = positionsWithLive.filter((p) => p.currentPrice > 0);
+  const openPositions = positionsWithLive.filter((p) => {
+    const v = Number(p.volume) || 0;
+    if (v <= 0) return false;
+    return p.currentPrice > 0;
+  });
+
+  // Merge order_update events into the pending-orders list. Terminal statuses
+  // (filled/cancelled/expired/rejected) remove the row between polls; partial
+  // overlays filledVolume; active orders keep the freshest fields.
+  const ordersMerged = useMemo(() => {
+    const TERMINAL = new Set(["filled", "cancelled", "canceled", "expired", "rejected"]);
+    const out: BrokerPendingOrder[] = [];
+    const seen = new Set<string>();
+    for (const o of orders) {
+      const key = `${o.accountId}:${o.ticket ?? o.id}`;
+      const lo = live.latestOrderById[key];
+      seen.add(key);
+      if (!lo) { out.push(o); continue; }
+      const merged: BrokerPendingOrder = { ...o, ...lo.data, accountId: o.accountId };
+      if (TERMINAL.has(String(merged.status ?? ""))) continue;
+      out.push(merged);
+    }
+    for (const lo of live.orderUpdates.slice(-200)) {
+      const key = `${lo.accountId}:${lo.data.ticket ?? lo.data.id}`;
+      if (seen.has(key)) continue;
+      if (TERMINAL.has(String(lo.data.status ?? ""))) continue;
+      out.push({ ...lo.data, accountId: lo.accountId });
+      seen.add(key);
+    }
+    return out;
+  }, [orders, live.latestOrderById, live.orderUpdates]);
 
   return (
     <div className="space-y-6 p-6">
@@ -274,6 +338,8 @@ export function TradingDashboardPage() {
           <div className="flex items-center gap-2 shrink-0 text-xs text-slate-400">
             <Zap className="h-3.5 w-3.5 text-violet-400" />
             <span>{live.recentExecutions.length} live execs</span>
+            <span>·</span>
+            <span>{Object.keys(live.latestOrderById).length + Object.keys(live.latestPositionById).length} live book updates</span>
             <span>·</span>
             <span>{Object.keys(live.latestTickByKey).length} symbols tracked</span>
           </div>
@@ -363,7 +429,12 @@ export function TradingDashboardPage() {
       {/* Positions + Orders */}
       <div className="grid gap-6 lg:grid-cols-2">
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Layers className="h-4 w-4" />Open Positions ({openPositions.length})</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Layers className="h-4 w-4" />Open Positions ({openPositions.length})
+              {live.connected && <Badge className="ml-1 bg-emerald-500/15 text-emerald-300 border-emerald-500/30"><Radio className="h-3 w-3 mr-1" />LIVE</Badge>}
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead className="text-xs uppercase text-slate-500"><tr>
@@ -372,13 +443,20 @@ export function TradingDashboardPage() {
               </tr></thead>
               <tbody className="divide-y divide-white/5">
                 {openPositions.length === 0 && <tr><td colSpan={8} className="p-6 text-slate-400 text-center">No open positions.</td></tr>}
-                {openPositions.map((p) => (
-                  <tr key={p.ticket ?? p.id}>
-                    <td className="p-3 font-medium">{p.symbol}</td>
+                {openPositions.map((p) => {
+                  const pKey = p.ticket ?? p.id;
+                  const justUpdated = live.latestPositionById[`${p.accountId}:${pKey}`];
+                  const cur = p.currentPrice > 0 ? p.currentPrice : p.openPrice;
+                  return (
+                  <tr key={pKey} className={justUpdated ? "bg-emerald-500/5 transition-colors" : ""}>
+                    <td className="p-3 font-medium">
+                      {p.symbol}
+                      {justUpdated && <span className="ml-1 inline-block h-1.5 w-1.5 rounded-full bg-emerald-400" title="Updated live" />}
+                    </td>
                     <td><Badge className={p.side === "long" ? "bg-emerald-500/15 text-emerald-300" : "bg-rose-500/15 text-rose-300"}>{p.side}</Badge></td>
                     <td className="text-right tabular-nums">{p.volume.toFixed(2)}</td>
                     <td className="text-right tabular-nums">{p.openPrice.toFixed(p.openPrice < 10 ? 5 : 2)}</td>
-                    <td className="text-right tabular-nums">{p.currentPrice.toFixed(p.currentPrice < 10 ? 5 : 2)}</td>
+                    <td className="text-right tabular-nums">{cur.toFixed(cur < 10 ? 5 : 2)}</td>
                     <td className="text-right tabular-nums text-slate-400 text-xs">
                       {p.sl ? p.sl.toFixed(p.sl < 10 ? 5 : 2) : "—"} / {p.tp ? p.tp.toFixed(p.tp < 10 ? 5 : 2) : "—"}
                     </td>
@@ -386,41 +464,50 @@ export function TradingDashboardPage() {
                     <td className="p-3 text-right">
                       <Button size="sm" variant="ghost" title="Close position"
                               disabled={!!busy || killSwitch}
-                              onClick={() => closePosition(p.accountId, p.ticket ?? p.id)}>
-                        {busy === `close:${p.ticket ?? p.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
+                              onClick={() => closePosition(p.accountId, pKey)}>
+                        {busy === `close:${pKey}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
                       </Button>
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </CardContent>
         </Card>
 
         <Card>
-          <CardHeader><CardTitle className="flex items-center gap-2"><Target className="h-4 w-4" />Pending Orders ({orders.length})</CardTitle></CardHeader>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Target className="h-4 w-4" />Pending Orders ({ordersMerged.length})
+              {live.connected && <Badge className="ml-1 bg-emerald-500/15 text-emerald-300 border-emerald-500/30"><Radio className="h-3 w-3 mr-1" />LIVE</Badge>}
+            </CardTitle>
+          </CardHeader>
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead className="text-xs uppercase text-slate-500"><tr>
-                <th className="text-left p-3">Symbol</th><th className="text-left">Type</th><th className="text-right">Vol</th><th className="text-right">Price</th><th className="text-right p-3 w-8" />
+                <th className="text-left p-3">Symbol</th><th className="text-left">Type</th><th className="text-left">Status</th><th className="text-right">Vol</th><th className="text-right">Price</th><th className="text-right p-3 w-8" />
               </tr></thead>
               <tbody className="divide-y divide-white/5">
-                {orders.length === 0 && <tr><td colSpan={5} className="p-6 text-slate-400 text-center">No pending orders.</td></tr>}
-                {orders.map((o) => (
-                  <tr key={o.ticket ?? o.id}>
+                {ordersMerged.length === 0 && <tr><td colSpan={6} className="p-6 text-slate-400 text-center">No pending orders.</td></tr>}
+                {ordersMerged.map((o) => {
+                  const oKey = o.ticket ?? o.id;
+                  const justUpdated = live.latestOrderById[`${o.accountId}:${oKey}`];
+                  return (
+                  <tr key={oKey} className={justUpdated ? "bg-emerald-500/5 transition-colors" : ""}>
                     <td className="p-3 font-medium">{o.symbol}</td>
                     <td><Badge className="bg-sky-500/15 text-sky-300">{o.type.replace("_", " ")}</Badge></td>
+                    <td><Badge className={o.status === "active" ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}>{o.status}</Badge></td>
                     <td className="text-right tabular-nums">{o.volume.toFixed(2)}</td>
                     <td className="text-right tabular-nums">{o.price.toFixed(o.price < 10 ? 5 : 2)}</td>
                     <td className="p-3 text-right">
                       <Button size="sm" variant="ghost" title="Cancel order"
-                              disabled={!!busy || killSwitch}
-                              onClick={() => cancelOrder(o.accountId, o.ticket ?? o.id)}>
-                        {busy === `cancel:${o.ticket ?? o.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 text-amber-400" />}
+                              disabled={!!busy || killSwitch || o.status !== "active"}
+                              onClick={() => cancelOrder(o.accountId, oKey)}>
+                        {busy === `cancel:${oKey}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 text-amber-400" />}
                       </Button>
                     </td>
                   </tr>
-                ))}
+                );})}
               </tbody>
             </table>
           </CardContent>
