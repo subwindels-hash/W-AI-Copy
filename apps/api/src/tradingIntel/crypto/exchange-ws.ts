@@ -23,7 +23,13 @@ export interface WsClientOptions {
    *  level ping, leave unset (the client answers ws pongs automatically). */
   pingMessage?: string | object | (() => string | object);
   pingIntervalMs?: number;
-  /** Optional authentication step to run on every (re)connect. */
+  /** Optional hook: invoked BEFORE the TCP connect on every (re)connect.
+   *  Returns the final URL to use (allows listenKey-style REST bootstrap
+   *  where the WS URL path contains a freshly-issued token). Resolved URL
+   *  is cached on the session; use it for both the initial open and every
+   *  automatic reconnect. */
+  prepareUrl?: () => string | Promise<string>;
+  /** Optional authentication step to run immediately after onopen. */
   onConnect?: (send: (payload: string | object) => void) => void | Promise<void>;
   /** Parser: given a raw message string/Buffer, return 0..n routed events. */
   parser?: (raw: string) => Array<{ channel: string; payload: unknown }>;
@@ -67,9 +73,17 @@ export class ExchangeWsClient extends EventEmitter {
   }
 
   private async open(): Promise<void> {
-    return new Promise<void>((resolve) => {
+    return new Promise<void>(async (resolve) => {
       try {
-        const ws = new WebSocket(this.opts.url);
+        // If a prepareUrl hook is provided (listenKey bootstrap, etc.),
+        // resolve the URL before opening the TCP connection. Errors here
+        // fall through to the reconnect path.
+        let url = this.opts.url;
+        if (this.opts.prepareUrl) {
+          try { url = await this.opts.prepareUrl(); }
+          catch (e) { this.emit("error", e); this.scheduleReconnect(); resolve(); return; }
+        }
+        const ws = new WebSocket(url);
         this.ws = ws;
 
         const opened = () => {

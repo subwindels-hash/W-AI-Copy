@@ -645,19 +645,28 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
 
   private startPrivateWs(sess: CryptoAccountSession, url?: string) {
     if (!url || !this.capabilities.hasPrivateWs) return;
+    const usesListenKey = !!this.capabilities.privateWsUsesListenKey;
     const ws = new ExchangeWsClient({
       url,
       label: `${this.exchange}:private`,
       parser: (raw) => this.parsePrivateMessage(sess, raw),
+      prepareUrl: usesListenKey
+        ? async () => {
+            // Obtain a fresh listenKey on every (re)connect so the WS URL
+            // contains a valid token. Schedule a keepalive on first issue.
+            sess.privateListenKey = await this.createListenKey(sess);
+            if (sess.privateListenKeyTimer) clearInterval(sess.privateListenKeyTimer);
+            sess.privateListenKeyTimer = setInterval(() => {
+              this.keepAliveListenKey(sess).catch((e) =>
+                logger.warn("[crypto] listenKey keepalive failed", { exchange: this.exchange, err: (e as Error).message }),
+              );
+            }, 30 * 60_000);
+            // Binance/MEXC style: wss://host/ws/<listenKey>
+            return url.replace(/\/+$/, "") + "/" + (sess.privateListenKey ?? "");
+          }
+        : undefined,
       onConnect: async (send) => {
         try {
-          // Exchanges that use a listenKey (Binance style) create one before connecting.
-          if (this.capabilities.privateWsUsesListenKey) {
-            sess.privateListenKey = await this.createListenKey(sess);
-            // Subclasses may need to refresh — schedule a keep-alive.
-            if (sess.privateListenKeyTimer) clearInterval(sess.privateListenKeyTimer);
-            sess.privateListenKeyTimer = setInterval(() => { this.keepAliveListenKey(sess).catch((e) => logger.warn("[crypto] listenKey keepalive failed", { err: (e as Error).message })); }, 30 * 60_000);
-          }
           await this.authenticatePrivateWs(sess, send);
           await this.afterPrivateAuth(sess, send);
         } catch (e) {
@@ -678,7 +687,6 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
       if (!oid) return;
       try {
         if (channel === "order") {
-          // payload may be single order or array; emit most recent order_update.
           const o = Array.isArray(payload) ? (payload as any[])[payload.length - 1] : payload;
           if (o) tradingEvents.emit(oid, { kind: "order_update", accountId: sess.id, data: cryptoOrderToBrokerOrder(o, sess.id) });
         } else if (channel === "position") {
