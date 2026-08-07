@@ -41,14 +41,15 @@ describe("crypto exchange connectors", () => {
     }
   });
 
-  it("registerBundledConnectors() loads all 12 crypto connectors + MT5 + simulator", async () => {
+  it("registerBundledConnectors() loads all 12 crypto connectors + MT5", async () => {
     // Reset registry to avoid double-registrations from prior tests.
     (connectorRegistry as any).connectors.clear();
     await registerBundledConnectors();
     const list = connectorRegistry.list();
     const brokerIds = new Set(list.map((c) => c.broker));
-    // Simulator always loads; MT5 may fail when zeromq native binding isn't built.
-    expect(brokerIds.has("mt5_simulator")).toBe(true);
+    // MT5 loads when zeromq native binding is built.
+    // No internal simulator is registered — WINDELS is an AI agent, not a broker.
+    expect(brokerIds.has("mt5_simulator")).toBe(false);
     // All 12 crypto connectors must be present.
     for (const [id] of CONNECTORS) expect(brokerIds.has(id)).toBe(true);
     // Capabilities expose REST transports.

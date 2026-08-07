@@ -13,8 +13,8 @@ signals, toggle the kill switch, revoke EAs) directly.
 |---|---|
 | `apps/api/src/tradingIntel/brokerIntegration.service.ts` | New `dashboard()` rollup aggregator; `commandCenter()` extended with EA health; `round2()` helper. |
 | `apps/api/src/http/routes/brokerIntegration.ts` | `GET /api/v1/brokers/dashboard` endpoint (session-auth). |
-| `packages/shared/src/brokerIntegration.ts` | `TradingCommandCenter.systemHealth` extended with `eaConnected`/`eaTotal`; `CONNECTOR_TRANSPORTS` includes `simulator`; broker list includes `mt5_simulator`; `BrokerSyncState.status` widened. |
-| `apps/web/src/lib/brokerIntegration.ts` | Typed client: full broker-type union (23 brokers), simulator/EA transports, typed `DashboardSummary`, `brokerApi.dashboard()`, `brokerApi.eas()`, `brokerApi.revokeEa()`, `brokerApi.connect()`, `brokerApi.disconnect()`, `brokerApi.sync()`, `brokerApi.health()`, `brokerApi.closePosition()`, `brokerApi.modifyPosition()`, `brokerApi.sendOrder()`, `brokerApi.audit()`. |
+| `packages/shared/src/brokerIntegration.ts` | `TradingCommandCenter.systemHealth` extended with `eaConnected`/`eaTotal`; `CONNECTOR_TRANSPORTS` does not include internal simulators — WINDELS is an AI agent, not a broker; `BrokerSyncState.status` widened. |
+| `apps/web/src/lib/brokerIntegration.ts` | Typed client: full broker-type union (23 brokers), EA transports, typed `DashboardSummary`, `brokerApi.dashboard()`, `brokerApi.eas()`, `brokerApi.revokeEa()`, `brokerApi.connect()`, `brokerApi.disconnect()`, `brokerApi.sync()`, `brokerApi.health()`, `brokerApi.closePosition()`, `brokerApi.modifyPosition()`, `brokerApi.sendOrder()`, `brokerApi.audit()`. |
 | `apps/web/src/pages/trading/TradingDashboardPage.tsx` | New page: KPI tiles, accounts panel, EAs panel, positions table, pending orders table, executions + one-click approve/reject, kill switch toggle, connector health, risk-control summary. |
 | `apps/web/src/router.tsx` | Route `trading/dashboard` mounted via lazy load. |
 | `docs/MT5_PHASE4_DASHBOARD.md` | This file. |
@@ -39,7 +39,7 @@ single source of truth for the dashboard UI and contains:
 | `health` | `{ connectedAccounts, totalAccounts, connectedEas, totalEas, recentErrors, uptimePct }`. |
 | `pnl` | `{ today, week, month, allTime }` computed from closed deals. |
 | `winRate` | `{ day, week }` percentage of out-trades with profit ≥ 0. |
-| `connectors[]` | Probed availability of every registered connector (MT5, simulator, future exchanges). |
+| `connectors[]` | Probed availability of every registered connector (MT5, external exchanges, future brokers). |
 
 Governance: the endpoint is behind session auth, same as the rest of
 `/brokers/*`. The kill-switch toggle calls the existing
@@ -58,8 +58,8 @@ The page composes:
 4. **KPI row 2** — Accounts Online, Attached EAs, Uptime, Recent Errors.
 5. **Broker Accounts card** — per-account transport badge
    (`native_python_zmq` / `http_bridge` / `metaapi_cloud` / `ea` /
-   `simulator`), status pill, live equity + floating P&L, last-sync
-   indicator.
+   `exchange_rest` / `exchange_ws`), status pill, live equity + floating P&L,
+   last-sync indicator. (No in-house simulator appears — WINDELS is not a broker.)
 6. **Expert Advisors card** — connected/disallowed dot, EA id (mono),
    magic, last poll, revoke button.
 7. **Open Positions table** — symbol, side badge, volume, open price,
@@ -69,31 +69,31 @@ The page composes:
    manual, strategy, EA), with status pill, decision note, and one-click
    Approve / Reject buttons on rows in `pending_approval`. Revokes block
    the order through the risk engine; approve routes it to the connector
-   / EA / simulator exactly as if the user clicked Approve in the Command
+   / EA exactly as if the user clicked Approve in the Command
    Center.
 10. **Connector Health + Risk summary** — badges for every registered
     connector (ready / unavailable) plus a grid of current risk ceilings.
 
 ## Honest-state rules
 
-- Numbers come directly from the broker/EA/simulator via the service layer;
+- Numbers come directly from the broker/EA via the service layer;
   the dashboard never invents prices or balances.
 - When a connector is unavailable the status pill shows `disconnected` or
   `error` in red; positions/orders from the last sync remain visible with
   their `lastSyncAt` timestamp so the operator knows they may be stale.
 - The kill switch button reflects `risk.killSwitch`; toggling it flips the
-  global hard stop (which is enforced server-side for all three execution
-  paths: live connector, EA, and simulator).
+  global hard stop (which is enforced server-side for every execution
+  path: live connector, EA, and crypto exchanges).
 - Pending approvals are highlighted with an amber badge and require an
   explicit click — no auto-approval.
-- EA-connected accounts show `transport: "ea"`; simulator accounts show
-  `transport: "simulator"` — visually distinct from live ZMQ/MetaApi so
+- EA-connected accounts show `transport: "ea"`; 
+  
   operators can tell paper/demo from real money at a glance.
 
 ## Tests & build
 
 - Server trading-intel suite: **139 tests passing** (8 EA, 13 BRI, 19 MT5
-  connector, 11 simulator, plus indicators/derivatives/risk/market-data).
+  connector,  indicators/derivatives/risk/market-data).
 - `pnpm --filter @windels/web typecheck` passes with zero errors.
 - `pnpm --filter @windels/web build` completes successfully (the new page
   ships as `TradingDashboardPage-*.js` in the web bundle).
@@ -110,7 +110,7 @@ deep-configuration surface.
 ## Phase 4 certification checklist
 
 - [x] Aggregated dashboard endpoint returns honest live data (no mock, no placeholder).
-- [x] All three execution paths (live MT5, EA, simulator) surface through the same UI.
+- [x] All three execution paths (live MT5, EA) surface through the same UI.
 - [x] Kill switch wired through to server-side enforcement.
 - [x] One-click approve/reject for `pending_approval` executions.
 - [x] EA list + revoke control.

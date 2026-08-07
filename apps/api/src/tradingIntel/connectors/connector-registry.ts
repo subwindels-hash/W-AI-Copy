@@ -1,14 +1,27 @@
 /**
  * WINDELS AI OS — Broker Connector Registry.
  *
+ * WINDELS AI OS IS NOT A BROKER, EXCHANGE, DEALING DESK, LIQUIDITY PROVIDER,
+ * OR CUSTODIAN. It is an Enterprise AI Trading Agent that connects to the
+ * user's own external brokers/exchanges via their official APIs. All trade
+ * execution occurs at the external broker/exchange; WINDELS never holds
+ * funds, runs an internal order book, matches orders, settles trades, or
+ * acts as counterparty. Strategy backtesting lives in
+ * tradingIntel/backtest (market-data replay for AI evaluation) and is
+ * explicitly not a trading venue — it has no balances, fills, or margin.
+ *
+ * Every IBrokerConnector registered here talks to an external provider:
+ *   Forex/CFDs: MT5 (native ZMQ/HTTP bridge or MetaApi cloud). Future: MT4/cTrader.
+ *   Crypto:     Binance, Bybit, OKX, Coinbase, Kraken, KuCoin, Bitget, Gate.io,
+ *               MEXC, HTX, Crypto.com, Hyperliquid (Phase 1).
+ *   Traditional: IBKR, Alpaca, TradeStation, OANDA, IG (future).
+ *
+ * Paper/demo trading uses the external broker/exchange's own demo/testnet
+ * accounts — not an internal simulator.
+ *
  * Central registry for IBrokerConnector implementations. The API and service
  * layers never import a concrete connector directly; they go through the
  * registry, which selects the appropriate connector based on BrokerType.
- *
- * Phase 1 ships the MT5 connector (native_python_zmq + metaapi_cloud transports).
- * Crypto exchanges (Binance, Bybit, OKX, Coinbase, Kraken, KuCoin, Bitget,
- * Gate.io, MEXC, HTX, Crypto.com, Hyperliquid) and traditional brokers (IBKR,
- * Alpaca, Tradestation, OANDA, IG) plug in here in their respective phases.
  */
 import type { BrokerType } from "@windels/shared/brokerIntegration";
 import type { IBrokerConnector } from "./broker-connector.js";
@@ -81,10 +94,15 @@ class ConnectorRegistry {
 export const connectorRegistry = new ConnectorRegistry();
 
 // ── Register bundled connectors ──────────────────────────────────
-// Forex/CFDs vertical: MT5 + deterministic MT5 simulator.
-// Crypto vertical: 12 launch exchanges.
-// Traditional-markets connectors (IBKR/Alpaca/TradeStation/OANDA/IG) are
-// registered in their own phase once built.
+// Every connector below talks to an EXTERNAL broker or exchange via its
+// official API. There is no in-process broker/simulator registered here —
+// WINDELS is not a trading venue. Paper trading uses external demo/testnet
+// accounts; strategy backtesting is a separate analytical utility (see
+// tradingIntel/backtest) that does not execute trades.
+//
+// Forex / CFDs: MT5.
+// Crypto:      12 launch exchanges.
+// Traditional: IBKR/Alpaca/TradeStation/OANDA/IG (future).
 // Imports are dynamic so missing optional deps don't hard-crash boot.
 export async function registerBundledConnectors() {
   // Forex / CFDs
@@ -92,10 +110,6 @@ export async function registerBundledConnectors() {
     const { Mt5Connector } = await import("../mt5/mt5-connector.js");
     connectorRegistry.register(new Mt5Connector());
   } catch (e) { logger.warn("[connectors] MT5 connector failed to load", { err: e }); }
-  try {
-    const { Mt5Simulator } = await import("../mt5/mt5-simulator.js");
-    connectorRegistry.register(new Mt5Simulator());
-  } catch (e) { logger.warn("[connectors] MT5 simulator failed to load", { err: e }); }
 
   // Crypto — 12 exchange connectors (Phase 1 of crypto vertical).
   // Dynamic imports are typed `any` because each module has a named

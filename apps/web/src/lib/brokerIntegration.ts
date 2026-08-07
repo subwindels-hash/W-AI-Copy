@@ -2,13 +2,13 @@
 import { api } from "./api";
 
 export type BrokerType =
-  | "mt5" | "mt5_simulator" | "mt4" | "ctrader" | "fix" | "rest" | "websocket"
+  | "mt5" | "mt4" | "ctrader" | "fix" | "rest" | "websocket"
   | "binance" | "bybit" | "okx" | "coinbase" | "kraken" | "kucoin" | "bitget"
   | "gateio" | "mexc" | "htx" | "cryptocom" | "hyperliquid"
   | "interactive_brokers" | "alpaca" | "tradestation" | "oanda" | "ig";
 
 export type BrokerConnectionStatus = "disconnected" | "connecting" | "connected" | "error" | "requires_config" | "syncing" | "reconnecting";
-export type ConnectorTransport = "native_python_zmq" | "http_bridge" | "metaapi_cloud" | "exchange_rest" | "exchange_ws" | "ea" | "simulator";
+export type ConnectorTransport = "native_python_zmq" | "http_bridge" | "metaapi_cloud" | "exchange_rest" | "exchange_ws" | "ea";
 export type TradingMode = "analysis_only" | "assisted" | "semi_autonomous" | "fully_autonomous";
 export type TradeExecutionStatus = "submitted" | "pending_approval" | "approved" | "filled" | "failed" | "blocked" | "rejected";
 export type StrategyType = "rule" | "ml" | "rl" | "hybrid";
@@ -131,10 +131,11 @@ export interface BrokerTradingAgent {
 }
 
 export const BROKER_TYPES: { value: BrokerType; label: string }[] = [
+  // Forex / CFDs — connect to your own external broker account via official API
   { value: "mt5", label: "MetaTrader 5" },
-  { value: "mt5_simulator", label: "MT5 Simulator (Paper / Backtest)" },
   { value: "mt4", label: "MetaTrader 4" },
   { value: "ctrader", label: "cTrader" },
+  // Crypto — connect to your own exchange account via official API
   { value: "binance", label: "Binance" },
   { value: "bybit", label: "Bybit" },
   { value: "okx", label: "OKX" },
@@ -147,15 +148,20 @@ export const BROKER_TYPES: { value: BrokerType; label: string }[] = [
   { value: "htx", label: "HTX (Huobi)" },
   { value: "cryptocom", label: "Crypto.com" },
   { value: "hyperliquid", label: "Hyperliquid" },
+  // Traditional markets
   { value: "interactive_brokers", label: "Interactive Brokers" },
   { value: "alpaca", label: "Alpaca" },
   { value: "tradestation", label: "TradeStation" },
   { value: "oanda", label: "OANDA" },
   { value: "ig", label: "IG" },
+  // Generic (future)
   { value: "fix", label: "FIX Protocol" },
   { value: "rest", label: "REST Broker API" },
   { value: "websocket", label: "WebSocket Broker API" },
 ];
+
+/** Paper/demo note: WINDELS does NOT hold funds or run an internal simulator.
+ *  Paper trading uses the broker/exchange's own demo/testnet accounts. */
 
 export const TRADING_MODES: { value: TradingMode; label: string; blurb: string }[] = [
   { value: "analysis_only", label: "Analysis Only", blurb: "Analyze + recommend, never execute." },

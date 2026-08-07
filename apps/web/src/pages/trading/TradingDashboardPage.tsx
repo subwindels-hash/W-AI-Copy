@@ -180,7 +180,7 @@ export function TradingDashboardPage() {
         <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle className="flex items-center gap-2"><Activity className="h-4 w-4" />Broker Accounts</CardTitle>
-            <CardDescription>Real MT5, deterministic simulator, and pure-EA deployments.</CardDescription>
+            <CardDescription>Connect your own brokers/exchanges via official APIs — MT5 (ZMQ/HTTP/MetaApi), EAs, and 12 crypto exchanges. WINDELS acts as your AI Trading Agent; execution always happens at the broker.</CardDescription>
           </CardHeader>
           <CardContent className="p-0">
             <div className="divide-y divide-white/5">
