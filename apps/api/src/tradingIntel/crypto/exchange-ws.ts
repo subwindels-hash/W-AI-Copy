@@ -21,7 +21,7 @@ export interface WsClientOptions {
   url: string;
   /** Send this as a ping frame every N ms. If the exchange uses a protocol-
    *  level ping, leave unset (the client answers ws pongs automatically). */
-  pingMessage?: string | (() => string | object);
+  pingMessage?: string | object | (() => string | object);
   pingIntervalMs?: number;
   /** Optional authentication step to run on every (re)connect. */
   onConnect?: (send: (payload: string | object) => void) => void | Promise<void>;

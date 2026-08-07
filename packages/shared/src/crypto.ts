@@ -175,6 +175,7 @@ export interface CryptoOrder {
   side: CryptoOrderSide;
   type: CryptoOrderType;
   price: number | null;
+  triggerPrice?: number | null;
   quantity: number;
   filledQuantity: number;
   remainingQuantity: number;
@@ -183,6 +184,9 @@ export interface CryptoOrder {
   timeInForce: CryptoTimeInForce | null;
   reduceOnly: boolean;
   leverage?: number;
+  stopLoss?: { price: number; type?: "market" | "limit" } | null;
+  takeProfit?: { price: number; type?: "market" | "limit" } | null;
+  positionSide?: CryptoPositionSide;
   createdTime: string;
   updatedTime: string;
   fee: number;
@@ -320,10 +324,13 @@ export interface WsEvent {
 /* ── Auth & credentials ──────────────────────────────────────── */
 
 export type CryptoAuthScheme =
-  | "hmac_sha256_header"    // key + secret → HMAC-SHA256 signature in headers (Binance, OKX, Bybit, KuCoin, Gate, MEXC, HTX, Crypto.com, Bitget)
+  | "hmac_sha256_header"    // key + secret → HMAC-SHA256 signature in headers (Binance, OKX, Bybit, KuCoin, Gate, MEXC, Bitget)
+  | "hmac_sha256_query"     // signature appended to query string (HTX/Huobi style)
+  | "hmac_sha256_body"      // signature placed in JSON body (Crypto.com style)
   | "hmac_sha256_jwt"       // Coinbase Advanced: key name + JWT over uri+method+body
   | "hmac_sha512_header"    // Kraken: API-Sign = HMAC-SHA512(nonce+postdata, base64_secret) over uri path
-  | "ed25519_wallet"        // Hyperliquid: wallet private key → ECDSA / agent wallet
+  | "ecdsa_secp256k1"       // Hyperliquid: EIP-712 secp256k1 over wallet private key
+  | "ed25519_wallet"        // ED25519 wallet signing
   | "none";                 // public-only, no auth
 
 export interface CryptoCredentials {
@@ -362,6 +369,15 @@ export interface CryptoConnectorCapabilities {
   publicWsUrl?: string;
   /** Private/user-data WS URL. */
   privateWsUrl?: string;
+  /** Testnet public WS URL (if different base host than testnet REST). */
+  testnetPublicWsUrl?: string;
+  /** Testnet private WS URL. */
+  testnetPrivateWsUrl?: string;
+  /** Optional ping interval for WS (ms) when exchange app-level ping is required. */
+  publicWsPingIntervalMs?: number;
+  privateWsPingIntervalMs?: number;
+  /** True when private user-data stream requires REST-issued listenKey (Binance/MEXC style). */
+  privateWsUsesListenKey?: boolean;
   /** Default rate-limit budget: requests per minute (weighted where applicable). */
   defaultReqPerMin: number;
   /** Server-time drift correction needed? (Binance/OKX/etc. send serverTime we latch onto). */

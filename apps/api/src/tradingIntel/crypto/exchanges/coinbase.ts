@@ -10,14 +10,16 @@ import type { CryptoAccountSession } from "../base-crypto-connector.js";
 import type { OrderResult } from "../../connectors/broker-connector.js";
 import type { HttpSigner } from "../exchange-http.js";
 import { hmacSha256Hex } from "../signing.js";
-import { phase1Gate, majorPairs, mapStatusStd } from "./common.js";
+import { notCertified, majorPairs, mapStatusStd } from "./common.js";
 
 const CAPS: CryptoConnectorCapabilities = {
   markets: ["spot", "perp", "futures"],
   auth: ["hmac_sha256_header"], hasPublicWs: true, hasPrivateWs: true, hasBatchQueries: false, hasTransfers: true,
   restBaseUrl: "https://api.coinbase.com",
+  testnetRestUrl: "https://api.coinbase.com",
   publicWsUrl: "wss://advanced-trade-ws.coinbase.com",
   privateWsUrl: "wss://advanced-trade-ws.coinbase.com",
+  publicWsPingIntervalMs: 25_000,
   defaultReqPerMin: 600, correctsClockDrift: false,
 };
 
@@ -59,9 +61,39 @@ export class CoinbaseConnector extends BaseCryptoConnector {
     }));
     return { accountId: sess.login, accountType: "advanced", canTrade: true, canWithdraw: true, equityUsd: balances.reduce((s, b) => s + (b.asset === "USD" || b.asset === "USDC" ? b.total : 0), 0), unrealizedPnlUsd: 0, balances, positions, openOrders };
   }
-  protected async placeOrder(_s: CryptoAccountSession, _r: CryptoOrderRequest): Promise<OrderResult> { return phase1Gate("coinbase"); }
-  protected async modifyOrder(_s: CryptoAccountSession, _id: string, _p: any): Promise<OrderResult> { return phase1Gate("coinbase"); }
-  protected async closePositionImpl(_s: CryptoAccountSession, _id: string, _v?: number): Promise<OrderResult> { return phase1Gate("coinbase"); }
+  protected async placeOrder(sess: CryptoAccountSession, req: CryptoOrderRequest): Promise<OrderResult> {
+    const m = sess.markets.get(req.symbol); if (!m) return { ok: false, error: "unknown symbol" };
+    const clientId = req.clientOrderId ?? this.genClientOrderId(sess);
+    const body: Record<string, any> = {
+      client_order_id: clientId, product_id: m.rawSymbol, side: req.side.toUpperCase(),
+      order_configuration: {},
+    };
+    if (req.type === "market") {
+      body.order_configuration.market_market_ioc = { quote_size: String((req.quantity * (req.price ?? 0)).toFixed(2)), base_size: String(req.quantity) };
+    } else if (req.type === "limit") {
+      body.order_configuration.limit_limit_gtc = { base_size: String(req.quantity), limit_price: String(req.price), post_only: !!req.postOnly };
+    } else {
+      return notCertified("coinbase:stop-orders");
+    }
+    try {
+      const r = await sess.http.request<any>({ method: "POST", path: "/api/v3/brokerage/orders", body });
+      if (!r.data?.success) return { ok: false, error: r.data?.error_response?.message || "order rejected", retcode: -1 };
+      const res = r.data.success_response || r.data;
+      return { ok: true, ticket: res.order_id ?? clientId, comment: clientId };
+    } catch (e: any) { return { ok: false, error: e.message }; }
+  }
+  protected async modifyOrder(_s: CryptoAccountSession, _id: string, _p: any): Promise<OrderResult> { return notCertified("coinbase:modify"); }
+  protected async closePositionImpl(sess: CryptoAccountSession, orderIdOrSymbol: string, volume?: number): Promise<OrderResult> {
+    const sym = orderIdOrSymbol.includes("/") || orderIdOrSymbol.includes("-") ? orderIdOrSymbol.replace("-", "/") : (sess.openOrders.get(orderIdOrSymbol)?.symbol);
+    if (!sym) return { ok: false, error: "not found" };
+    const m = sess.markets.get(sym); if (!m) return { ok: false, error: "market not found" };
+    const pos = sess.positions.get(sym);
+    const bal = sess.balances.get(m.base);
+    const qty = volume ?? pos?.quantity ?? bal?.free;
+    if (!qty || qty <= 0) return { ok: false, error: "no size" };
+    return this.placeOrder(sess, { symbol: sym, marketType: "spot", side: "sell", type: "market", quantity: qty });
+  }
+  protected publicPingMessage(): string { return JSON.stringify({ type: "heartbeat" }); }
   protected async fetchCandles(sess: CryptoAccountSession, symbol: string, tf: string, count: number): Promise<CryptoCandle[]> {
     const m = sess.markets.get(symbol); if (!m) return [];
     const productId = m.rawSymbol;

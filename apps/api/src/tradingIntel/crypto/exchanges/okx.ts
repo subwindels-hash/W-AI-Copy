@@ -10,14 +10,17 @@ import type { CryptoAccountSession } from "../base-crypto-connector.js";
 import type { OrderResult } from "../../connectors/broker-connector.js";
 import type { HttpSigner } from "../exchange-http.js";
 import { hmacSha256Base64 } from "../signing.js";
-import { phase1Gate, majorPairs, mapStatusStd } from "./common.js";
+import { notCertified, majorPairs, mapStatusStd } from "./common.js";
 
 const CAPS: CryptoConnectorCapabilities = {
   markets: ["spot", "margin", "perp", "futures", "options"],
   auth: ["hmac_sha256_header"], hasPublicWs: true, hasPrivateWs: true, hasBatchQueries: true, hasTransfers: false,
   restBaseUrl: "https://www.okx.com",
+  testnetRestUrl: "https://www.okx.com",
   publicWsUrl: "wss://ws.okx.com:8443/ws/v5/public",
   privateWsUrl: "wss://ws.okx.com:8443/ws/v5/private",
+  publicWsPingIntervalMs: 20_000,
+  privateWsPingIntervalMs: 20_000,
   defaultReqPerMin: 600, correctsClockDrift: false,
 };
 
@@ -80,9 +83,72 @@ export class OkxConnector extends BaseCryptoConnector {
     const equityUsd = balances.reduce((s, b) => s + (b.usdValue ?? 0), 0);
     return { accountId: sess.login, accountType: "unified", canTrade: true, canWithdraw: false, equityUsd, unrealizedPnlUsd: positions.reduce((s, p) => s + p.unrealizedPnl, 0), balances, positions, openOrders };
   }
-  protected async placeOrder(_s: CryptoAccountSession, _r: CryptoOrderRequest): Promise<OrderResult> { return phase1Gate("okx"); }
-  protected async modifyOrder(_s: CryptoAccountSession, _id: string, _p: any): Promise<OrderResult> { return phase1Gate("okx"); }
-  protected async closePositionImpl(_s: CryptoAccountSession, _id: string, _v?: number): Promise<OrderResult> { return phase1Gate("okx"); }
+  protected async placeOrder(sess: CryptoAccountSession, req: CryptoOrderRequest): Promise<OrderResult> {
+    const m = sess.markets.get(req.symbol); if (!m) return { ok: false, error: "unknown symbol" };
+    const instId = m.rawSymbol;
+    const tdMode = m.type === "spot" ? "cash" : "cross";
+    const side = req.side === "buy" ? "buy" : "sell";
+    const ordType = mapOkxOrdType(req.type);
+    const body: Record<string, any> = {
+      instId, tdMode, side, ordType, sz: String(req.quantity),
+      clOrdId: req.clientOrderId ?? this.genClientOrderId(sess),
+    };
+    if (req.price && (ordType === "limit" || ordType === "post_only")) body.px = String(req.price);
+    if (req.reduceOnly) body.reduceOnly = true;
+    if (req.takeProfit?.price) { body.tpTriggerPx = String(req.takeProfit.price); body.tpOrdPx = "-1"; }
+    if (req.stopLoss?.price) { body.slTriggerPx = String(req.stopLoss.price); body.slOrdPx = "-1"; }
+    if (req.postOnly || ordType === "post_only") { body.ordType = "post_only"; }
+    if (req.timeInForce === "IOC" || req.timeInForce === "FOK") body.tgtCcy = undefined;
+    // Simulated trading for demo environment.
+    if (sess.environment !== "live") { /* OKX simulated uses x-simulated-trading header */ }
+    try {
+      const r = await sess.http.request<any>({ method: "POST", path: "/api/v5/trade/order", body, headers: sess.environment !== "live" ? { "x-simulated-trading": "1" } : undefined });
+      const d = r.data?.data?.[0];
+      if (!d || d.sCode !== "0") return { ok: false, retcode: Number(d?.sCode) || -1, error: d?.sMsg || "order rejected" };
+      return { ok: true, ticket: d.ordId, comment: d.clOrdId };
+    } catch (e: any) { return { ok: false, error: e.message }; }
+  }
+  protected async modifyOrder(sess: CryptoAccountSession, orderId: string, patch: { sl?: number; tp?: number; comment?: string }): Promise<OrderResult> {
+    const o = sess.openOrders.get(orderId); if (!o) return { ok: false, error: "not found" };
+    const m = sess.markets.get(o.symbol); if (!m) return { ok: false, error: "market not found" };
+    const body: any = { instId: m.rawSymbol, ordId: orderId };
+    if (patch.sl) { body.slTriggerPx = String(patch.sl); body.slOrdPx = "-1"; }
+    if (patch.tp) { body.tpTriggerPx = String(patch.tp); body.tpOrdPx = "-1"; }
+    try {
+      const r = await sess.http.request<any>({ method: "POST", path: "/api/v5/trade/amend-order", body });
+      const d = r.data?.data?.[0];
+      if (!d || d.sCode !== "0") return { ok: false, retcode: Number(d?.sCode), error: d?.sMsg || "amend failed" };
+      return { ok: true, ticket: orderId };
+    } catch (e: any) { return { ok: false, error: e.message }; }
+  }
+  protected async closePositionImpl(sess: CryptoAccountSession, orderIdOrSymbol: string, volume?: number): Promise<OrderResult> {
+    const sym = orderIdOrSymbol.includes("/") ? orderIdOrSymbol : (sess.openOrders.get(orderIdOrSymbol)?.symbol ?? orderIdOrSymbol);
+    const pos = sess.positions.get(sym); const m = sess.markets.get(sym);
+    if (!m || (!pos && m.type !== "spot")) return { ok: false, error: "no position" };
+    const side = pos ? (pos.side === "long" ? "sell" : "buy") : "sell";
+    const sz = volume ?? pos?.quantity ?? sess.balances.get(m.base)?.free;
+    if (!sz || sz <= 0) return { ok: false, error: "no size to close" };
+    const body: Record<string, any> = { instId: m.rawSymbol, tdMode: m.type === "spot" ? "cash" : "cross", side, ordType: "market", sz: String(sz), reduceOnly: m.type !== "spot", clOrdId: this.genClientOrderId(sess) };
+    if (m.type === "spot") delete body.reduceOnly;
+    try {
+      const r = await sess.http.request<any>({ method: "POST", path: "/api/v5/trade/order", body });
+      const d = r.data?.data?.[0];
+      if (!d || d.sCode !== "0") return { ok: false, retcode: Number(d?.sCode), error: d?.sMsg || "close failed" };
+      return { ok: true, ticket: d.ordId };
+    } catch (e: any) { return { ok: false, error: e.message }; }
+  }
+  protected async cancelOrderImpl(sess: CryptoAccountSession, orderId: string): Promise<OrderResult> {
+    const o = sess.openOrders.get(orderId); if (!o) return { ok: false, error: "not found" };
+    const m = sess.markets.get(o.symbol); if (!m) return { ok: false, error: "market not found" };
+    try {
+      const r = await sess.http.request<any>({ method: "POST", path: "/api/v5/trade/cancel-order", body: { instId: m.rawSymbol, ordId: orderId } });
+      const d = r.data?.data?.[0];
+      if (!d || d.sCode !== "0") return { ok: false, error: d?.sMsg };
+      return { ok: true, ticket: orderId };
+    } catch (e: any) { return { ok: false, error: e.message }; }
+  }
+  protected publicPingMessage(): string { return "ping"; }
+  protected privatePingMessage(): string { return "ping"; }
   protected async fetchCandles(sess: CryptoAccountSession, symbol: string, tf: string, count: number): Promise<CryptoCandle[]> {
     const m = sess.markets.get(symbol); if (!m) return [];
     const instId = m.rawSymbol;
@@ -110,4 +176,16 @@ export class OkxConnector extends BaseCryptoConnector {
     const sig = hmacSha256Base64(sess.creds.apiSecret, ts + "GET" + "/users/self/verify");
     send({ op: "login", args: [{ apiKey: sess.creds.apiKey, passphrase: sess.creds.passphrase ?? "", timestamp: ts, sign: sig }] });
   }
+}
+
+function mapOkxOrdType(t: string): string {
+  const u = String(t).toLowerCase();
+  if (u === "market") return "market";
+  if (u === "limit") return "limit";
+  if (u === "post_only") return "post_only";
+  if (u === "ioc") return "ioc";
+  if (u === "fok") return "fok";
+  if (u.startsWith("stop")) return "market"; // OKX uses algo orders for stops
+  if (u.startsWith("take_profit")) return "market";
+  return "limit";
 }

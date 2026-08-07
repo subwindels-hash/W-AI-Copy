@@ -14,7 +14,7 @@ describe("ExchangeHttpClient", () => {
     });
     expect(r.status).toBe(200);
     expect(r.data).toEqual({ ok: true, items: [1, 2, 3] });
-    const url = fetchSpy.mock.calls[0][0];
+    const url = (fetchSpy.mock.calls[0] as any[])[0];
     expect(String(url)).toMatch(/a=1/);
     expect(String(url)).toMatch(/b=hello/);
   });
@@ -36,11 +36,11 @@ describe("ExchangeHttpClient", () => {
       },
     });
     await c.request({ method: "GET", path: "/v1/account" });
-    expect(fetchSpy.mock.calls[0][0]).toMatch(/sig=abc/);
-    expect(fetchSpy.mock.calls[0][1].headers["X-Signed"]).toBe("yes");
+    expect((fetchSpy.mock.calls[0] as any[])[0]).toMatch(/sig=abc/);
+    expect(((fetchSpy.mock.calls[0] as any[])[1] as any).headers["X-Signed"]).toBe("yes");
 
     await c.request({ method: "POST", path: "/v1/order", body: { qty: 1 } });
-    const bodySent = fetchSpy.mock.calls[1][1].body as string;
+    const bodySent = ((fetchSpy.mock.calls[1] as any[])[1] as any).body as string;
     expect(bodySent).toContain("sig=abc");
   });
 

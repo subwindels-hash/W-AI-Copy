@@ -49,7 +49,7 @@ describe("crypto exchange connectors", () => {
     const brokerIds = new Set(list.map((c) => c.broker));
     // MT5 loads when zeromq native binding is built.
     // No internal simulator is registered — WINDELS is an AI agent, not a broker.
-    expect(brokerIds.has("mt5_simulator")).toBe(false);
+    expect(brokerIds.has("mt5_simulator" as any)).toBe(false);
     // All 12 crypto connectors must be present.
     for (const [id] of CONNECTORS) expect(brokerIds.has(id)).toBe(true);
     // Capabilities expose REST transports.
@@ -100,7 +100,7 @@ describe("crypto exchange connectors", () => {
     (c as any).mustGet = () => { throw new Error("not connected"); };
     // We don't actually connect because fetch would go to real network. Just confirm connector structure.
     expect(c.exchange).toBe("hyperliquid");
-    expect(c.capabilities.auth).toContain("ed25519_wallet");
+    expect(c.capabilities.auth).toContain("ecdsa_secp256k1");
   });
 
   it("markets() returns non-empty major pairs for each connector", async () => {

@@ -4,10 +4,8 @@
  * no fills, no custody, no IBrokerConnector) and behaves deterministically.
  */
 import { describe, it, expect } from "vitest";
-import { runBacktest, type StrategyFn, type BrokerCandle } from "./strategy-backtest.js";
-
-// Note: BrokerCandle is from @windels/shared — use a small local shape for tests
-// to avoid cross-module import churn.
+import { runBacktest, type StrategyFn } from "./strategy-backtest.js";
+import type { BrokerCandle } from "@windels/shared/brokerIntegration";
 function makeCandle(time: string, open: number, high: number, low: number, close: number, volume = 1000) {
   return { symbol: "BTCUSDT", timeframe: "H1" as const, time, open, high, low, close, tickVolume: Math.floor(volume), spread: 0 } as unknown as BrokerCandle;
 }

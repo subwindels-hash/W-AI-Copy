@@ -21,6 +21,12 @@ export function hmacSha512Base64(secretB64: string, data: string): string {
 export function sha256Hex(data: string): string {
   return createHash("sha256").update(data).digest("hex");
 }
+export function sha512Hex(data: string): string {
+  return createHash("sha512").update(data).digest("hex");
+}
+export function hmacSha512Hex(secret: string, data: string): string {
+  return createHmac("sha512", secret).update(data).digest("hex");
+}
 
 export interface ClockState {
   /** Last known server time (ms). */
