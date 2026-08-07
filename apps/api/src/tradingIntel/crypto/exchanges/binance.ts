@@ -21,6 +21,7 @@ import type { OrderResult } from "../../connectors/broker-connector.js";
 import type { HttpSigner } from "../exchange-http.js";
 import { hmacSha256Hex } from "../signing.js";
 import { buildOrderParams, resultFromCreateResponse, cancelByDelete } from "../order-utils.js";
+import { majorPairs } from "./common.js";
 
 type BinanceSession = CryptoAccountSession & { clock: { serverTimeMs?: number; localSampleMs?: number } };
 
@@ -92,24 +93,22 @@ export class BinanceConnector extends BaseCryptoConnector {
   }
 
   protected async fetchMarkets(_sess: BinanceSession): Promise<CryptoMarket[]> {
-    const pairs = ["BTCUSDT", "ETHUSDT", "BNBUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT", "DOTUSDT", "LTCUSDT", "BCHUSDT", "ATOMUSDT", "UNIUSDT"];
-    return pairs.map<CryptoMarket>((r) => {
-      const base = r.replace(/USDT$/, "");
-      return {
-        symbol: `${base}/USDT`, rawSymbol: r, type: "spot",
-        base, quote: "USDT", settle: "", contractSize: 1, active: true,
-        pricePrecision: 2, qtyPrecision: 5, minQty: 0.00001, minNotional: 10,
-        maxLeverage: 1, tickSize: 0.01, stepSize: 0.00001,
-      };
-    }).concat(pairs.map<CryptoMarket>((r) => {
-      const base = r.replace(/USDT$/, "");
-      return {
-        symbol: `${base}/USDT:USDT`, rawSymbol: r, type: "perp",
-        base, quote: "USDT", settle: "USDT", contractSize: 1, active: true,
-        pricePrecision: 2, qtyPrecision: 3, minQty: 0.001, minNotional: 5,
-        maxLeverage: 125, tickSize: 0.01, stepSize: 0.001,
-      };
-    }));
+    // Use the extended curated major pairs list for both spot + perp.
+    const { perp, spot } = majorPairs("USDT");
+    // Binance raw symbol is e.g. "BTCUSDT" (no separators) — map from spot entries.
+    return spot.map<CryptoMarket>((m) => ({
+      ...m,
+      rawSymbol: m.base + "USDT",
+      type: "spot",
+      pricePrecision: 2, qtyPrecision: 5, minQty: 0.00001, minNotional: 10,
+      maxLeverage: 1, tickSize: 0.01, stepSize: 0.00001,
+    })).concat(perp.map<CryptoMarket>((m) => ({
+      ...m,
+      rawSymbol: m.base + "USDT",
+      type: "perp",
+      pricePrecision: 2, qtyPrecision: 3, minQty: 0.001, minNotional: 5,
+      maxLeverage: 125, tickSize: 0.01, stepSize: 0.001,
+    })));
   }
 
   protected async fetchAccountSnapshot(sess: BinanceSession): Promise<CryptoAccountSnapshot> {

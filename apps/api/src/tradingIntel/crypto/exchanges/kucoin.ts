@@ -41,9 +41,14 @@ export class KucoinConnector extends BaseCryptoConnector {
   }
 
   protected async fetchMarkets(): Promise<CryptoMarket[]> {
-    const pairs = ["BTC-USDT", "ETH-USDT", "SOL-USDT", "XRP-USDT", "DOGE-USDT", "ADA-USDT", "AVAX-USDT", "LINK-USDT", "MATIC-USDT", "DOT-USDT", "LTC-USDT", "BNB-USDT"];
-    return pairs.map((r) => {
-      const [b] = r.split("-");
+    const bases = [
+      "BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "AVAX", "LINK", "MATIC", "DOT", "LTC", "BNB",
+      "BCH", "ETC", "FIL", "ATOM", "NEAR", "APT", "ARB", "OP", "SUI", "SEI", "INJ", "TIA",
+      "PEPE", "WIF", "SHIB", "TRX", "UNI", "AAVE", "MKR", "LDO", "RNDR", "IMX", "STX",
+      "FET", "GRT", "PYTH", "WLD", "TON",
+    ];
+    return bases.map((b) => {
+      const r = `${b}-USDT`;
       return mkMarket(`${b}/USDT`, r, "spot", b, "USDT", "", 0.01, 0.00001, 5, 0.00001, 10, 2, 5);
     });
   }

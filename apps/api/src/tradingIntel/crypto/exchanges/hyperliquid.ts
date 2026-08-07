@@ -32,7 +32,12 @@ export class HyperliquidConnector extends BaseCryptoConnector {
     return { sign() { /* Hyperliquid uses POST body signatures done at call-site. */ } };
   }
   protected async fetchMarkets(): Promise<CryptoMarket[]> {
-    const pairs = ["BTC", "ETH", "SOL", "ARB", "AVAX", "DOGE", "LINK", "MATIC", "XRP", "BNB"];
+    const pairs = [
+      "BTC", "ETH", "SOL", "ARB", "AVAX", "DOGE", "LINK", "MATIC", "XRP", "BNB",
+      "ADA", "DOT", "LTC", "BCH", "ATOM", "NEAR", "APT", "OP", "SUI", "SEI",
+      "INJ", "TIA", "PEPE", "WIF", "TRX", "UNI", "AAVE", "MKR", "LDO", "STX",
+      "FET", "GRT", "PYTH", "JUP", "WLD", "TON",
+    ];
     return pairs.map((b) => mkMarket(`${b}/USDC:USDC`, b, "perp", b, "USDC", "USDC", 0.01, 0.001, 50, 0.001, 10, 2, 3));
   }
   protected async fetchAccountSnapshot(sess: CryptoAccountSession): Promise<CryptoAccountSnapshot> {

@@ -49,9 +49,13 @@ export class KrakenConnector extends BaseCryptoConnector {
     };
   }
   protected async fetchMarkets(): Promise<CryptoMarket[]> {
-    const bases = ["BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "AVAX", "LINK", "DOT", "LTC", "MATIC"];
+    const bases = [
+      "BTC", "ETH", "SOL", "XRP", "DOGE", "ADA", "AVAX", "LINK", "DOT", "LTC", "MATIC",
+      "BCH", "ETC", "FIL", "ATOM", "NEAR", "APT", "ARB", "OP", "SUI",
+      "SEI", "INJ", "PEPE", "SHIB", "TRX", "UNI", "AAVE", "MKR", "LDO", "GRT",
+    ];
     return bases.map((b) => mkMarket(`${b}/USD`, `${b}USD`, "spot", b, "USD", "", 0.01, 0.00001, 5, 0.00001, 10, 2, 5))
-      .concat(bases.map((b) => mkMarket(`${b}/USDT`, `X${b}ZUSD`, "spot", b, "USD", "", 0.01, 0.00001, 5, 0.00001, 10, 2, 5)));
+      .concat(bases.map((b) => mkMarket(`${b}/USDT`, `${b}USDT`, "spot", b, "USDT", "", 0.01, 0.00001, 5, 0.00001, 10, 2, 5)));
   }
   protected async fetchAccountSnapshot(sess: CryptoAccountSession): Promise<CryptoAccountSnapshot> {
     const b = await sess.http.request<any>({ method: "POST", path: "/0/private/Balance" });

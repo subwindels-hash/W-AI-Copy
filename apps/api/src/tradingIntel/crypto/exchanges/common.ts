@@ -32,7 +32,20 @@ export function mkMarket(
 }
 
 export function majorPairs(suffix: string) {
-  const bases = ["BTC", "ETH", "SOL", "XRP", "DOGE", "BNB", "ADA", "AVAX", "LINK", "MATIC", "DOT", "LTC"];
+  // Curated list of high-volume crypto assets. WINDELS does not list every
+  // long-tail market at boot (that would slow startup and waste WS
+  // subscriptions) — these are the pairs most traders will encounter in
+  // practice. Additional markets can be fetched live from /exchangeInfo at
+  // connector startup in a future phase; for now the curated list keeps
+  // bootstrap fast and predictable.
+  const bases = [
+    "BTC", "ETH", "SOL", "XRP", "DOGE", "BNB", "ADA", "AVAX", "LINK", "MATIC",
+    "DOT", "LTC",
+    // Extended majors (Phase 9)
+    "BCH", "ETC", "FIL", "ATOM", "NEAR", "APT", "ARB", "OP", "SUI", "SEI",
+    "INJ", "TIA", "PEPE", "WIF", "SHIB", "TRX", "UNI", "AAVE", "MKR", "LDO",
+    "RNDR", "IMX", "STX", "FET", "GRT", "PYTH", "JUP", "WLD", "ENS", "TON",
+  ];
   return {
     perp: bases.map((b) => mkMarket(`${b}/${suffix}:${suffix}`, `${b}${suffix}`, "perp", b, suffix, suffix, 0.01, 0.001, 100, 0.001, 5)),
     spot: bases.map((b) => mkMarket(`${b}/${suffix}`, `${b}${suffix}`, "spot", b, suffix, "", 0.01, 0.00001, 1, 0.00001, 10, 2, 5)),

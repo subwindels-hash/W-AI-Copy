@@ -10,6 +10,7 @@ import type { CryptoAccountSession } from "../base-crypto-connector.js";
 import type { OrderResult } from "../../connectors/broker-connector.js";
 import type { HttpSigner } from "../exchange-http.js";
 import { hmacSha256Hex } from "../signing.js";
+import { majorPairs } from "./common.js";
 import { buildOrderParams, resultFromCreateResponse } from "../order-utils.js";
 
 const CAPS: CryptoConnectorCapabilities = {
@@ -51,14 +52,17 @@ export class BybitConnector extends BaseCryptoConnector {
     };
   }
   protected async fetchMarkets(_sess: CryptoAccountSession): Promise<CryptoMarket[]> {
-    const pairs = ["BTCUSDT", "ETHUSDT", "SOLUSDT", "XRPUSDT", "DOGEUSDT", "ADAUSDT", "AVAXUSDT", "LINKUSDT", "MATICUSDT", "DOTUSDT", "LTCUSDT", "BNBUSDT"];
-    return pairs.flatMap((r) => {
-      const base = r.replace(/USDT$/, "");
-      return [
-        { symbol: `${base}/USDT`, rawSymbol: r, type: "spot" as const, base, quote: "USDT", settle: "", contractSize: 1, active: true, pricePrecision: 2, qtyPrecision: 5, minQty: 0.00001, minNotional: 10, maxLeverage: 1, tickSize: 0.01, stepSize: 0.00001 },
-        { symbol: `${base}/USDT:USDT`, rawSymbol: r, type: "perp" as const, base, quote: "USDT", settle: "USDT", contractSize: 1, active: true, pricePrecision: 2, qtyPrecision: 3, minQty: 0.001, minNotional: 5, maxLeverage: 100, tickSize: 0.01, stepSize: 0.001 },
-      ];
-    });
+    const { perp, spot } = majorPairs("USDT");
+    return [
+      ...spot.map((m) => ({
+        ...m, pricePrecision: 2, qtyPrecision: 5, minQty: 0.00001, minNotional: 10,
+        maxLeverage: 1, tickSize: 0.01, stepSize: 0.00001, type: "spot" as const,
+      })),
+      ...perp.map((m) => ({
+        ...m, pricePrecision: 2, qtyPrecision: 3, minQty: 0.001, minNotional: 5,
+        maxLeverage: 100, tickSize: 0.01, stepSize: 0.001, type: "perp" as const,
+      })),
+    ];
   }
 
   protected async fetchAccountSnapshot(sess: CryptoAccountSession): Promise<CryptoAccountSnapshot> {
