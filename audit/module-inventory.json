@@ -1191,7 +1191,7 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/permissions.ts (25 LOC, imported)",
+    "sharedTypes": "packages/shared/src/permissions.ts (60 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/api.ts (261 LOC, serves /auth)",
       "pages": []
@@ -1239,6 +1239,7 @@
       "notifications.spec.ts",
       "opexAssurance.spec.ts",
       "payments.spec.ts",
+      "permissions.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
       "promptTemplates.spec.ts",
@@ -7608,9 +7609,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 267,
+      "serviceTotalSloc": 281,
       "serviceFiles": [
         "permissions.module.ts",
+        "permissions.test.ts",
         "services/permissions.service.ts"
       ],
       "importedServiceFiles": [
@@ -7640,9 +7642,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/permissions.ts (25 LOC)",
+    "sharedTypes": "packages/shared/src/permissions.ts (60 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/permissions.ts (8 LOC)",
       "pages": []
     },
     "db": {
@@ -7657,11 +7659,13 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "permissions.spec.ts",
+      "permissions/permissions.test.ts",
       "services/permissions.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "platform",

@@ -29,8 +29,8 @@ import {
   grantPermission as coreGrantPermission,
   revokePermission as coreRevokePermission,
   ensureRolePermissions,
-  type Permission,
 } from "../services/permissions.service.js";
+import type { Permission } from "@prisma/client";
 import type { Prisma } from "@prisma/client";
 
 // ─── Permission List ─────────────────────────────────────────────────────────
@@ -138,7 +138,7 @@ export const permissionsModule = {
   getPermissionCatalog(): Record<string, Permission[]> {
     return {
       ...PERMISSION_CATEGORIES,
-      all: ALL_PERMISSIONS as Permission[],
+      all: [...ALL_PERMISSIONS] as Permission[],
     };
   },
 
