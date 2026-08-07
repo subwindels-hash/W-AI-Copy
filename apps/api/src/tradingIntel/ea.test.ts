@@ -80,7 +80,7 @@ describe("ea registration + auth", () => {
   it("rejects registration when mt5 login does not match broker account", async () => {
     await expect(EaService.register(ORG, {
       brokerAccountId: acct.id, eaPublicKey: "x".repeat(32),
-      mt5Login: "99999", mt5Server: MT5_SERVER, terminalName: "DESKTOP-1",
+      mt5Login: "99999", mt5Server: MT5_SERVER, terminalName: "DESKTOP-1", terminalVersion: "4000", eaVersion: "1.0.0",
     })).rejects.toMatchObject({ code: "BAD_REQUEST" });
   });
 
@@ -89,7 +89,7 @@ describe("ea registration + auth", () => {
     for (const existing of before) await EaService.revoke(ORG, existing.eaId).catch(() => {});
     const sess = await EaService.register(ORG, {
       brokerAccountId: acct.id, eaPublicKey: "x".repeat(32),
-      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1",
+      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1", terminalVersion: "4000", eaVersion: "1.0.0",
     });
     let list = await EaService.listEa(ORG);
     expect(list).toHaveLength(1);
@@ -125,7 +125,7 @@ describe("signals + HMAC", () => {
   it("enqueues signed signals for poll; HMAC verifies with the session secret", async () => {
     const sess = await EaService.register(ORG, {
       brokerAccountId: acct.id, eaPublicKey: "x".repeat(32),
-      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1",
+      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1", terminalVersion: "4000", eaVersion: "1.0.0",
     });
     const authed = await EaService.authenticateToken(sess.token);
 
@@ -144,13 +144,15 @@ describe("signals + HMAC", () => {
     expect(sig.sig).toHaveLength(64);
 
     // Verify HMAC (replicating what the MQL5 EA does).
-    const payload = buildEaSignableString({ ...sig, sig: undefined }, acct.id);
+    const { sig: _sig, ...sigRest } = sig;
+    void _sig;
+    const payload = buildEaSignableString(sigRest, acct.id);
     const expected = createHmac("sha256", authed.secret).update(payload, "utf8").digest("hex");
     expect(expected).toBe(sig.sig);
 
     // Tampered signature would fail.
-    const tampered = { ...sig, volume: 99 };
-    const tamperedPayload = buildEaSignableString({ ...tampered, sig: undefined }, acct.id);
+    const tampered = { ...sigRest, volume: 99 };
+    const tamperedPayload = buildEaSignableString(tampered, acct.id);
     const tamperedSig = createHmac("sha256", authed.secret).update(tamperedPayload, "utf8").digest("hex");
     expect(tamperedSig).not.toBe(sig.sig);
   });
@@ -158,7 +160,7 @@ describe("signals + HMAC", () => {
   it("advances watermark on fill ack and marks execution filled", async () => {
     const sess = await EaService.register(ORG, {
       brokerAccountId: acct.id, eaPublicKey: "x".repeat(32),
-      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1",
+      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1", terminalVersion: "4000", eaVersion: "1.0.0",
     });
     const authed = await EaService.authenticateToken(sess.token);
 
@@ -187,7 +189,7 @@ describe("signals + HMAC", () => {
   it("replay protection: signals at/below watermark are not re-delivered", async () => {
     const sess = await EaService.register(ORG, {
       brokerAccountId: acct.id, eaPublicKey: "x".repeat(32),
-      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1",
+      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1", terminalVersion: "4000", eaVersion: "1.0.0",
     });
     const authed = await EaService.authenticateToken(sess.token);
     await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: acct.id, symbol: "EURUSD", side: "long", volume: 0.1 });
@@ -208,7 +210,7 @@ describe("heartbeat (pure-EA path)", () => {
   it("applies EA positions + account snapshot when no live connector is present", async () => {
     const sess = await EaService.register(ORG, {
       brokerAccountId: acct.id, eaPublicKey: "x".repeat(32),
-      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1",
+      mt5Login: MT5_LOGIN, mt5Server: MT5_SERVER, terminalName: "DESKTOP-1", terminalVersion: "4000", eaVersion: "1.0.0",
     });
     const authed = await EaService.authenticateToken(sess.token);
     const now = new Date().toISOString();

@@ -81,14 +81,20 @@ class ConnectorRegistry {
 export const connectorRegistry = new ConnectorRegistry();
 
 // ── Register bundled connectors ──────────────────────────────────
-// Phase 1: MT5. Crypto / traditional-broker connectors are registered in their
-// own phases once built. Import is dynamic so missing optional deps don't
-// hard-crash boot.
+// Phase 1: MT5. Phase 3: Deterministic MT5 Simulator. Crypto /
+// traditional-broker connectors are registered in their own phases once
+// built. Import is dynamic so missing optional deps don't hard-crash boot.
 export async function registerBundledConnectors() {
   try {
     const { Mt5Connector } = await import("../mt5/mt5-connector.js");
     connectorRegistry.register(new Mt5Connector());
   } catch (e) {
     logger.warn("[connectors] MT5 connector failed to load", { err: e });
+  }
+  try {
+    const { Mt5Simulator } = await import("../mt5/mt5-simulator.js");
+    connectorRegistry.register(new Mt5Simulator());
+  } catch (e) {
+    logger.warn("[connectors] MT5 simulator failed to load", { err: e });
   }
 }

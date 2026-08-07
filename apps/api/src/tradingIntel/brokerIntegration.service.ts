@@ -83,7 +83,7 @@ const j = <T>(s: string | null): T | null => (s ? (JSON.parse(s) as T) : null);
 const now = () => new Date().toISOString();
 
 const BROKER_LABEL: Record<string, string> = {
-  mt5: "MetaTrader 5", mt4: "MetaTrader 4", ctrader: "cTrader", fix: "FIX Protocol",
+  mt5: "MetaTrader 5", mt5_simulator: "MetaTrader 5 (Deterministic Simulator)", mt4: "MetaTrader 4", ctrader: "cTrader", fix: "FIX Protocol",
   rest: "REST Broker API", websocket: "WebSocket Broker API",
   binance: "Binance", bybit: "Bybit", okx: "OKX", coinbase: "Coinbase", kraken: "Kraken",
   kucoin: "KuCoin", bitget: "Bitget", gateio: "Gate.io", mexc: "MEXC", htx: "HTX (Huobi)",
@@ -95,6 +95,7 @@ const BROKER_LABEL: Record<string, string> = {
 /** Broker connector registry entry (exported for diagnostics/UI). */
 export const CONNECTOR_CATALOG = [
   { broker: "mt5", name: "MetaTrader 5", protocol: "native Python bridge (ZMQ/HTTP) or MetaApi cloud", requiresConfig: false },
+  { broker: "mt5_simulator", name: "MetaTrader 5 (Deterministic Simulator)", protocol: "in-process deterministic matching engine for paper trading / backtests", requiresConfig: false },
   { broker: "mt4", name: "MetaTrader 4", protocol: "planned — future phase", requiresConfig: true },
   { broker: "ctrader", name: "cTrader", protocol: "planned — future phase", requiresConfig: true },
   { broker: "binance", name: "Binance", protocol: "planned — crypto connector phase", requiresConfig: true },

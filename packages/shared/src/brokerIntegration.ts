@@ -12,7 +12,7 @@ import { z } from "zod";
 /* ── Broker / account ──────────────────────────────────────────── */
 
 export const BROKER_TYPES = [
-  "mt5", "mt4", "ctrader", "fix", "rest", "websocket",
+  "mt5", "mt5_simulator", "mt4", "ctrader", "fix", "rest", "websocket",
   // crypto exchanges (plug-in via same IBrokerConnector)
   "binance", "bybit", "okx", "coinbase", "kraken", "kucoin", "bitget",
   "gateio", "mexc", "htx", "cryptocom", "hyperliquid",
@@ -22,7 +22,7 @@ export const BROKER_TYPES = [
 export type BrokerType = (typeof BROKER_TYPES)[number];
 
 /** Transport used by a broker connector. */
-export const CONNECTOR_TRANSPORTS = ["native_python_zmq", "http_bridge", "metaapi_cloud", "exchange_rest", "exchange_ws", "ea"] as const;
+export const CONNECTOR_TRANSPORTS = ["native_python_zmq", "http_bridge", "metaapi_cloud", "exchange_rest", "exchange_ws", "ea", "simulator"] as const;
 export type ConnectorTransport = (typeof CONNECTOR_TRANSPORTS)[number];
 
 export const BROKER_CONNECTION_STATUS = ["disconnected", "connecting", "connected", "error", "requires_config", "syncing", "reconnecting"] as const;
@@ -246,7 +246,7 @@ export interface BrokerCandle {
 /** Sync state for an account. */
 export interface BrokerSyncState {
   accountId: string;
-  status: "idle" | "syncing" | "error";
+  status: BrokerConnectionStatus | "idle" | "syncing" | "error";
   lastSyncAt?: string;
   lastTickAt?: string;
   lastError?: string;
