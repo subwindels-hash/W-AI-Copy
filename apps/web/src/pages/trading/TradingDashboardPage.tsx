@@ -7,16 +7,17 @@
  * controls, kill switch, connector health. Honest numbers from the Broker
  * Integration Service's /brokers/dashboard rollup endpoint.
  */
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { brokerApi, type DashboardSummary, type TradeExecution } from "@/lib/brokerIntegration";
+import { useTradingEvents } from "@/lib/tradingEvents";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bot, CheckCircle2,
-  CircleSlash, Gauge, Layers, Loader2, Power, RefreshCw, ShieldAlert, Target,
-  TrendingUp, Wallet, XCircle,
+  CircleSlash, Gauge, Layers, Loader2, Power, Radio, RefreshCw, ShieldAlert, Target,
+  TrendingUp, Wallet, Wifi, WifiOff, XCircle, Zap,
 } from "lucide-react";
 
 const usd = (n: number) =>
@@ -87,6 +88,11 @@ export function TradingDashboardPage() {
   const [err, setErr] = useState<string | null>(null);
   const [killSwitch, setKillSwitch] = useState(false);
 
+  // Live SSE stream — updates tick/execution state between polling refreshes.
+  // WINDELS is an AI Trading Agent; this feed only relays events originating
+  // from the user's own connected broker/exchange.
+  const live = useTradingEvents({ enabled: true });
+
   const load = useCallback(async () => {
     setLoading(true); setErr(null);
     try {
@@ -136,7 +142,34 @@ export function TradingDashboardPage() {
 
   const { accounts, positions, orders, executions, eas, risk, pnl, winRate, health, connectors } = data;
   const pendingApprovals = executions.filter((e) => e.status === "pending_approval");
-  const openPositions = positions.filter((p) => p.currentPrice > 0);
+
+  // Merge live executions from SSE that aren't yet in the polled list.
+  const mergedExecutions = useMemo(() => {
+    const seen = new Set(executions.map((e) => e.id));
+    const liveOnly = live.recentExecutions
+      .filter((le) => !seen.has(le.id))
+      .map((le): TradeExecution => ({
+        id: le.id, organizationId: "", accountId: le.accountId, accountName: "",
+        symbol: le.symbol, side: (le.side === "sell" || le.side === "short" ? "short" : "long"),
+        volume: le.volume, source: "live", confidence: 1, mode: "semi_autonomous",
+        status: (le.status === "filled" || le.status === "submitted" || le.status === "failed" || le.status === "blocked" || le.status === "rejected" || le.status === "approved" || le.status === "pending_approval"
+          ? (le.status as TradeExecution["status"]) : "submitted"),
+        decision: le.decision, riskChecks: [],
+        brokerTicket: le.brokerTicket, error: le.error,
+        createdAt: le.at, updatedAt: le.at,
+      }));
+    // Live executions first (newest), then polled list.
+    return [...liveOnly.slice().reverse(), ...executions];
+  }, [executions, live.recentExecutions]);
+
+  // Overlay latest live tick prices on positions for near-real-time P/L.
+  const positionsWithLive = useMemo(() => positions.map((p) => {
+    const t = live.latestTickByKey[`${p.accountId}:${p.symbol}`];
+    if (!t) return p;
+    return { ...p, currentPrice: p.side === "long" ? t.bid : t.ask };
+  }), [positions, live.latestTickByKey]);
+
+  const openPositions = positionsWithLive.filter((p) => p.currentPrice > 0);
 
   return (
     <div className="space-y-6 p-6">
@@ -144,7 +177,7 @@ export function TradingDashboardPage() {
         <div>
           <h1 className="text-2xl font-semibold">Trading Dashboard</h1>
           <p className="text-sm text-slate-400">
-            MT5 • MQL5 EA • Deterministic Simulator — all governor-gated through one supervisor.
+            MT5 • MQL5 EA • 12 Crypto Exchanges • Deterministic Backtest — all governor-gated through one supervisor. Live SSE stream shows ticks & fills as they happen at your broker.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -160,6 +193,39 @@ export function TradingDashboardPage() {
       {risk.killSwitch && (
         <DataBanner variant="no-data" title="Kill Switch Engaged" message="No new orders will be sent until the kill switch is released. Existing positions may be closed per policy." />
       )}
+
+      {/* Live events status + ticker tape */}
+      <Card>
+        <CardContent className="p-3 flex flex-wrap items-center gap-3">
+          <div className="flex items-center gap-2 shrink-0">
+            {live.connected
+              ? <><Wifi className="h-4 w-4 text-emerald-400" /><span className="text-xs uppercase tracking-wider text-emerald-300">Live</span></>
+              : <><WifiOff className="h-4 w-4 text-amber-400" /><span className="text-xs uppercase tracking-wider text-amber-300">Connecting…</span></>}
+            {live.readyAt && <span className="text-[11px] text-slate-500">since {timeAgo(live.readyAt)}</span>}
+            {live.lastEventAt && <span className="text-[11px] text-slate-500">· last event {timeAgo(live.lastEventAt)}</span>}
+          </div>
+          <div className="flex-1 overflow-hidden">
+            <div className="flex items-center gap-3 overflow-x-auto whitespace-nowrap text-xs scrollbar-hide" style={{ maskImage: "linear-gradient(90deg, transparent, #000 24px, #000 calc(100% - 24px), transparent)" }}>
+              {live.recentTicks.length === 0 && <span className="text-slate-500">Awaiting market ticks from connected brokers/exchanges…</span>}
+              {live.recentTicks.slice(-20).map((t, i) => (
+                <span key={`${t.accountId}:${t.symbol}:${i}`} className="inline-flex items-center gap-1 font-mono shrink-0">
+                  <Radio className="h-3 w-3 text-sky-400" />
+                  <span className="text-slate-300">{t.symbol}</span>
+                  <span className="text-slate-400">{t.bid.toFixed(t.bid < 10 ? 5 : 2)}</span>
+                  <span className="text-slate-500">/</span>
+                  <span className="text-slate-400">{t.ask.toFixed(t.ask < 10 ? 5 : 2)}</span>
+                </span>
+              ))}
+            </div>
+          </div>
+          <div className="flex items-center gap-2 shrink-0 text-xs text-slate-400">
+            <Zap className="h-3.5 w-3.5 text-violet-400" />
+            <span>{live.recentExecutions.length} live execs</span>
+            <span>·</span>
+            <span>{Object.keys(live.latestTickByKey).length} symbols tracked</span>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* KPIs */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
@@ -302,6 +368,7 @@ export function TradingDashboardPage() {
             <CardDescription>Every order from AI / manual / strategy sources is logged here.</CardDescription>
           </div>
           {pendingApprovals.length > 0 && <Badge className="bg-amber-500/15 text-amber-300">{pendingApprovals.length} awaiting approval</Badge>}
+          {live.connected && <Badge className="bg-emerald-500/15 text-emerald-300 border-emerald-500/30"><Radio className="h-3 w-3 mr-1" />LIVE</Badge>}
         </CardHeader>
         <CardContent className="p-0">
           <table className="w-full text-sm">
@@ -310,8 +377,8 @@ export function TradingDashboardPage() {
               <th>Source</th><th>Status</th><th>Decision</th><th className="text-right p-3">Actions</th>
             </tr></thead>
             <tbody className="divide-y divide-white/5">
-              {executions.length === 0 && <tr><td colSpan={8} className="p-6 text-slate-400 text-center">No executions yet.</td></tr>}
-              {executions.map((e: TradeExecution) => (
+              {mergedExecutions.length === 0 && <tr><td colSpan={8} className="p-6 text-slate-400 text-center">No executions yet.</td></tr>}
+              {mergedExecutions.slice(0, 50).map((e: TradeExecution) => (
                 <tr key={e.id}>
                   <td className="p-3 text-slate-400 whitespace-nowrap">{timeAgo(e.createdAt)}</td>
                   <td className="font-medium">{e.symbol}</td>
