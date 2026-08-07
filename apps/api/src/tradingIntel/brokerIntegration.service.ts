@@ -41,6 +41,7 @@ import { DEFAULT_RISK_CONTROLS } from "@windels/shared/brokerIntegration";
 import { connectorRegistry } from "./connectors/connector-registry.js";
 import { Mt5Monitor } from "./mt5/mt5-monitor.js";
 import { Metrics } from "../observability/metrics.js";
+import { tradingEvents } from "./trading-events.js";
 
 const K = {
   accounts: (oid: string) => `bri:${oid}:accounts`,
@@ -235,9 +236,11 @@ export const BrokerIntegrationService = {
     rec.status = "connecting"; rec.error = undefined; rec.updatedAt = now();
     await redis.set(K.account(oid, id), s2(rec));
     const transport = opts?.transport ?? rec.connectorConfig?.bridgeEndpoint ? "native_python_zmq" : undefined;
+    // Piggyback orgId on connector config so connectors can emit org-scoped events.
+    const configWithOid: any = { ...(rec.connectorConfig ?? {}), _oid: oid };
     const result = await connector.connect(id, creds, {
       name: rec.name, environment: rec.environment,
-      transport, config: rec.connectorConfig,
+      transport, config: configWithOid,
     });
     if (!result.ok) {
       rec.status = "error"; rec.error = result.error ?? "connection failed"; rec.updatedAt = now();
@@ -585,13 +588,22 @@ export const BrokerIntegrationService = {
         try { Metrics.counter("bri.orders.dispatched", { broker: account.broker, mode: account.mode }).incr(); } catch {}
         // Sync positions shortly after fill so the platform reflects reality.
         setTimeout(() => this.syncAccountFromConnector(oid, account.id, { account: true, positions: true, orders: true }).catch((e) => logger.warn("[bri] post-fill sync failed", { err: (e as Error).message })), 1500);
+        try {
+          tradingEvents.emit(oid, { kind: "execution", accountId: account.id, data: { id: exec.id, status: exec.status, decision: exec.decision, symbol: signal.symbol, side: signal.side, volume: signal.volume, brokerTicket: result.ticket } });
+        } catch { /* best-effort */ }
       } else {
         exec.status = "failed"; exec.error = result.error; exec.decision = "broker rejected";
         await Mt5Monitor.audit(oid, account.id, "order_fail", { error: result.error, retcode: result.retcode });
+        try {
+          tradingEvents.emit(oid, { kind: "execution", accountId: account.id, data: { id: exec.id, status: "failed", decision: "broker rejected", symbol: signal.symbol, side: signal.side, volume: signal.volume, error: result.error } });
+        } catch { /* best-effort */ }
       }
     } catch (e: any) {
       exec.status = "failed"; exec.error = e.message; exec.decision = "connector error";
       await Mt5Monitor.audit(oid, account.id, "order_fail", { error: e.message });
+      try {
+        tradingEvents.emit(oid, { kind: "execution", accountId: account.id, data: { id: exec.id, status: "failed", decision: "connector error", symbol: signal.symbol, side: signal.side, volume: signal.volume, error: e.message } });
+      } catch { /* best-effort */ }
     } finally {
       exec.updatedAt = now();
       await redis.set(K.execution(oid, exec.id), s2(exec));

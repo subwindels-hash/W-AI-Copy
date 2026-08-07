@@ -54,6 +54,7 @@ import { RiskEngine, type TiOrderRequest } from "../risk.js";
 import { logger } from "../../config/logger.js";
 import { env } from "../../config/env.js";
 import { Metrics } from "../../observability/metrics.js";
+import { tradingEvents } from "../trading-events.js";
 
 export interface CryptoAccountSession {
   id: string;
@@ -497,6 +498,11 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
     sess.lastTickAt = tick.time;
     for (const h of sess.tickHandlers.values()) {
       try { h(sess.id, tick); } catch { /* ignore */ }
+    }
+    // Emit to org-scoped event hub when _oid is set via BrokerIntegrationService.
+    const oid = (sess.opts.config as any)?._oid;
+    if (oid) {
+      try { tradingEvents.emit(oid, { kind: "tick", accountId: sess.id, data: tick }); } catch { /* best-effort */ }
     }
   }
 

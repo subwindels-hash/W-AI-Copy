@@ -12,6 +12,7 @@ import {
 import { BrokerIntegrationService, CONNECTOR_CATALOG, BROKER_AGENT_KEYS } from "../../tradingIntel/brokerIntegration.service.js";
 import { connectorRegistry } from "../../tradingIntel/connectors/connector-registry.js";
 import { Mt5Monitor } from "../../tradingIntel/mt5/mt5-monitor.js";
+import { tradingEvents } from "../../tradingIntel/trading-events.js";
 import { logger } from "../../config/logger.js";
 
 const brokerId = BrokerIdSchema;
@@ -288,6 +289,39 @@ export function registerBrokerIntegrationRoutes(router: Router) {
       });
     } catch (e: any) {
       logger.warn("SSE tick stream setup failed", { err: e.message });
+      if (!res.headersSent) res.status(500).json({ ok: false, error: e.message });
+      else res.end();
+    }
+  });
+
+  // Unified org-scoped SSE stream for all trading events (ticks, orders, positions,
+  // executions, account state). Any connected connector (MT5 or crypto) whose
+  // connect() was invoked with _oid on config will emit into tradingEvents; this
+  // endpoint fans those events out to the browser for the authenticated org only.
+  router.get("/brokers/events/stream", async (req, res) => {
+    const orgId = oid(req);
+    try {
+      res.setHeader("content-type", "text/event-stream");
+      res.setHeader("cache-control", "no-cache");
+      res.setHeader("connection", "keep-alive");
+      res.setHeader("x-accel-buffering", "no");
+      res.flushHeaders?.();
+      res.write(`event: ready\ndata: ${JSON.stringify({ ok: true, t: new Date().toISOString() })}\n\n`);
+
+      const off = tradingEvents.on(orgId, (evt) => {
+        try { res.write(`event: ${evt.kind}\ndata: ${JSON.stringify(evt)}\n\n`); } catch { /* client gone */ }
+      });
+
+      const hb = setInterval(() => {
+        try { res.write(": hb\n\n"); } catch {}
+      }, 15000);
+
+      req.on("close", () => {
+        clearInterval(hb);
+        off();
+      });
+    } catch (e: any) {
+      logger.warn("SSE events stream setup failed", { err: e.message });
       if (!res.headersSent) res.status(500).json({ ok: false, error: e.message });
       else res.end();
     }

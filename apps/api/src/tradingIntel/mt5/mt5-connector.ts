@@ -28,6 +28,7 @@ import { getHttpTransport, Mt5HttpTransport } from "./mt5-http-transport.js";
 import { getMetaApiTransport, Mt5MetaApiTransport } from "./mt5-metaapi-transport.js";
 import { logger } from "../../config/logger.js";
 import { env } from "../../config/env.js";
+import { tradingEvents } from "../trading-events.js";
 
 const TF_MAP: Record<CandleQuery["timeframe"], string> = {
   M1: "TIMEFRAME_M1", M5: "TIMEFRAME_M5", M15: "TIMEFRAME_M15", M30: "TIMEFRAME_M30",
@@ -132,6 +133,11 @@ export class Mt5Connector implements IBrokerConnector {
         if (sym) { sym.bid = tick.bid; sym.ask = tick.ask; }
         a.state.lastTickAt = new Date().toISOString();
         for (const sub of a.tickSubscribers) { try { sub(aid, tick); } catch (e) { logger.warn("[mt5] tick subscriber threw", { err: e }); } }
+        // Relay to org-scoped event hub so SSE /brokers/events/stream can fan out.
+        const oid = (a.opts.config as any)?._oid;
+        if (oid) {
+          try { tradingEvents.emit(oid, { kind: "tick", accountId: aid, data: tick }); } catch { /* best-effort */ }
+        }
       });
 
       // Perform broker-level login via transport RPC.
