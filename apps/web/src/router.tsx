@@ -74,6 +74,7 @@ const CognitivePage = lazy(() => import("./pages/cognitive/CognitivePage").then(
 const CommandCenterPage = lazy(() => import("./pages/command/CommandCenterPage").then((m) => ({ default: m.CommandCenterPage })));
 const ConversationsPage = lazy(() => import("./pages/conversations/ConversationsPage").then((m) => ({ default: m.ConversationsPage })));
 const DerivativesPage = lazy(() => import("./pages/derivatives/DerivativesPage").then((m) => ({ default: m.DerivativesPage })));
+const AuditConsolePage = lazy(() => import("./pages/audit/AuditConsolePage").then((m) => ({ default: m.AuditConsolePage })));
 const GoogleIdentityPage = lazy(() => import("./pages/googleAuth/GoogleIdentityPage").then((m) => ({ default: m.GoogleIdentityPage })));
 const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then((m) => ({ default: m.GoogleCallbackPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
@@ -326,6 +327,7 @@ export const router = createBrowserRouter([
       { path: "command", element: withSuspense(<CommandCenterPage />) },
       { path: "conversations", element: withSuspense(<ConversationsPage />) },
       { path: "derivatives", element: withSuspense(<DerivativesPage />) },
+      { path: "audit", element: withSuspense(<AuditConsolePage />) },
       { path: "google-identity", element: withSuspense(<GoogleIdentityPage />) },
     ],
   },

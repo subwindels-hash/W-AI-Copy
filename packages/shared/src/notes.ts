@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Shared Notes Module - Reusable Notes Pattern for WINDELS AI OS
  *

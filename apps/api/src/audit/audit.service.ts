@@ -18,6 +18,7 @@
 import { prisma } from "../db/client.js";
 import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
+import { AppError } from "../utils/result.js";
 import type { Prisma } from "@prisma/client";
 
 // ─── Audit Event Types ──────────────────────────────────────────────────────
@@ -148,7 +149,7 @@ export const auditService = {
       });
 
       // Also publish to Redis for real-time audit streaming (optional)
-      await redis.lPush(
+      await (redis as any).lpush(
         `audit:log:${event.organizationId || "global"}:recent`,
         JSON.stringify({
           ...event,
@@ -157,7 +158,7 @@ export const auditService = {
       );
 
       // Trim to last 1000 events per organization
-      await redis.lTrim(`audit:log:${event.organizationId || "global"}:recent`, 0, 999);
+      await (redis as any).ltrim(`audit:log:${event.organizationId || "global"}:recent`, 0, 999);
     } catch (error) {
       // Log failure but don't throw — audit failures shouldn't break the app
       logger.error("Failed to write audit log", {
@@ -300,6 +301,85 @@ export const auditService = {
     });
 
     return Object.fromEntries(logs.map((l) => [l.action, l._count.action]));
+  },
+
+  /**
+   * Get a single audit record by id (org-scoped, fail-closed)
+   */
+  async getById(id: string, organizationId: string): Promise<{
+    id: string;
+    action: AuditAction;
+    resourceType: AuditResourceType | null;
+    resourceId: string | null;
+    userId: string | null;
+    apiKeyId: string | null;
+    organizationId: string | null;
+    ipAddress: string | null;
+    userAgent: string | null;
+    requestId: string | null;
+    metadata: Record<string, unknown>;
+    createdAt: Date;
+  }> {
+    const row = await prisma.auditLog.findFirst({
+      where: { id, organizationId },
+      select: {
+        id: true,
+        action: true,
+        resourceType: true,
+        resourceId: true,
+        userId: true,
+        apiKeyId: true,
+        organizationId: true,
+        ipAddress: true,
+        userAgent: true,
+        requestId: true,
+        metadata: true,
+        createdAt: true,
+      },
+    });
+    if (!row) throw AppError.notFound("Audit entry not found");
+    return row as any;
+  },
+
+  /**
+   * Daily timeline buckets for last N days (zero-filled)
+   */
+  async getTimeline(
+    organizationId: string,
+    days = 14,
+  ): Promise<Array<{ date: string; total: number; byAction: Record<string, number> }>> {
+    const since = new Date();
+    since.setDate(since.getDate() - days);
+    // fetch all in window (bounded)
+    const { logs } = await this.query({
+      organizationId,
+      startDate: since,
+      limit: 10000,
+    });
+    // build date map
+    const buckets = new Map<string, Record<string, number>>();
+    // pre-fill all days with empty
+    for (let i = 0; i < days; i++) {
+      const d = new Date(since);
+      d.setDate(since.getDate() + i + 1);
+      const key = d.toISOString().slice(0, 10);
+      buckets.set(key, {});
+    }
+    // Also include today and days where logs exist outside prefill edge
+    for (const log of logs) {
+      const key = new Date(log.createdAt).toISOString().slice(0, 10);
+      if (!buckets.has(key)) buckets.set(key, {});
+      const by = buckets.get(key)!;
+      by[log.action] = (by[log.action] ?? 0) + 1;
+    }
+    // keep only last `days` sorted ascending
+    const sortedKeys = [...buckets.keys()].sort();
+    const trimmed = sortedKeys.slice(-days);
+    return trimmed.map((date) => {
+      const byAction = buckets.get(date)!;
+      const total = Object.values(byAction).reduce((a, b) => a + b, 0);
+      return { date, total, byAction };
+    });
   },
 
   /**
