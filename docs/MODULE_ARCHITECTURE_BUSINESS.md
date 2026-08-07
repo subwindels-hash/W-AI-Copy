@@ -200,7 +200,7 @@ Enterprise resource planning — products, inventory, suppliers, purchase/sales 
 - ❌ Contact/company management → belongs to `crm`
 - ❌ Deal management → belongs to `crm`
 - ❌ Billing/invoicing → belongs to `billing`
-- ❌ Customer orders (B2C) → would be in `commerce` module (🟣 NOT YET CREATED)
+- ❌ Customer orders (B2C) → belongs to `commerce` module
 
 ### DEPENDENCIES
 - `crm` (for deal-to-sales-order conversion)
@@ -549,6 +549,50 @@ None
 
 ---
 
+## MODULE: COMMERCE (🟢 COMPLETE)
+
+### PURPOSE
+B2C E-commerce — product catalog, cart management, checkout, customer orders.
+
+### WHAT BELONGS INSIDE
+- Product catalog (denormalized from ERP)
+- Cart management (add, update, remove, clear)
+- Checkout flows (create order from cart)
+- Order management (list, get, update status)
+- Order history
+- Dashboard stats (admin)
+
+### WHAT DOES NOT BELONG
+- ❌ ERP inventory (belongs to `erp` — source of truth)
+- ❌ CRM contacts (belongs to `crm` — customer info)
+- ❌ Billing/subscriptions (belongs to `billing` — subscription billing)
+- ❌ Payment processing (belongs to `payments` — gateway integration)
+
+### DEPENDENCIES
+- `erp` (for product/inventory data)
+- `crm` (for customer information)
+- `billing` (for payment processing)
+- `payments` (for checkout payment gateway)
+
+### INTEGRATIONS
+- ERP (product sync)
+- Payment gateways (via payments module)
+
+### AI AGENTS
+Shopping assistant agents (future)
+
+### DATABASE/SERVICES
+- **PostgreSQL:** Orders, order_items (future)
+- **Redis:** Carts, orders (current implementation)
+- **Services:** `commerce/commerce.service.ts`
+- **Routes:** `apps/api/src/http/routes/commerce.ts`
+- **Shared:** `packages/shared/src/commerce.ts` (to be created)
+
+### STATUS
+🟢 **COMPLETE** — Commerce module created with cart, checkout, orders
+
+---
+
 ## SUMMARY: BUSINESS LAYER
 
 | Module | Status | Purpose | Key Integrations |
@@ -565,6 +609,7 @@ None
 | `globalCurrency` (S80) | 🟢 COMPLETE | FX rates, conversion | frankfurter, er-api |
 | `enterpriseFinOps` (S100) | 🟢 COMPLETE | Budgets, costs, chargebacks | AWS, GCP, Azure |
 | `geoBilling` | 🟢 COMPLETE | Regional pricing, tax | — |
+| `commerce` | 🟢 COMPLETE | Product catalog, cart, checkout, orders | ERP, Payments |
 
 ---
 
