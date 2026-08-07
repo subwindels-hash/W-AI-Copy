@@ -10,8 +10,10 @@
  *     sandbox environments identical to production).
  *
  * Determinism guarantees:
- *   1. NO Math.random() / Date.now() inside the matching engine. Time is
- *      injected via `advance(time, ticks)` / `advanceCandles(...)`.
+ *   1. NO unseeded randomness (no built-in PRNG, no wall-clock reads) inside
+ *      the matching engine. Time is injected via `advance(time, ticks)` /
+ *      `advanceCandles(...)`; the only PRNG in use is a seeded mulberry32
+ *      limited to the synthetic intra-bar tick model.
  *   2. All prices come from injected tick/candle data — the simulator never
  *      invents prices.
  *   3. Ticket ids, order of fills, slippage computations are all derived
@@ -483,7 +485,7 @@ export class Mt5Simulator extends EventEmitter implements IBrokerConnector {
         mkTick(c.symbol, c.time, c.open, c.open + (sym.spread ?? this.cfg.defaultSpreadPts) * point),
         mkTick(c.symbol, c.time, c.high - (sym.spread ?? this.cfg.defaultSpreadPts) * point, c.high),
         mkTick(c.symbol, c.time, c.low, c.low + (sym.spread ?? this.cfg.defaultSpreadPts) * point),
-        mkTick(c.time, c.time, c.close, c.close + (sym.spread ?? this.cfg.defaultSpreadPts) * point),
+        mkTick(c.symbol, c.time, c.close, c.close + (sym.spread ?? this.cfg.defaultSpreadPts) * point),
       ];
       deals.push(...this.advance(accountId, c.time, ticks));
     }
