@@ -32,6 +32,10 @@ export interface BrokerAccount {
   leverage: number;
   /** Most recent observed connector latency in ms (REST RTT or WS round trip). */
   latencyMs?: number;
+  /** Count of consecutive connector/sync errors since last successful sync. */
+  consecutiveErrors?: number;
+  /** ISO timestamp of the last recorded connector error (for "X ago" sublabel). */
+  lastErrorAt?: string;
   account: { balance: number; equity: number; margin: number; freeMargin: number; profit: number; dailyPnl: number; marginLevel?: number; credit?: number };
   connectorConfig?: { allowedSymbols?: string[]; deniedSymbols?: string[]; readOnly?: boolean };
   createdAt: string;

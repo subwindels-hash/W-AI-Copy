@@ -17,7 +17,7 @@ export type TradingEvent =
   | { kind: "order_update"; accountId: string; data: BrokerPendingOrder }
   | { kind: "position_update"; accountId: string; data: BrokerPosition }
   | { kind: "execution"; accountId: string; data: { id: string; status: string; decision: string; symbol: string; side: string; volume: number; brokerTicket?: string; error?: string } }
-  | { kind: "account_state"; accountId: string; data: { status: string; lastSyncAt?: string; latencyMs?: number; error?: string } };
+  | { kind: "account_state"; accountId: string; data: { status: string; lastSyncAt?: string; latencyMs?: number; error?: string; consecutiveErrors?: number; lastErrorAt?: string } };
 
 type Listener = (evt: TradingEvent) => void;
 

@@ -57,6 +57,10 @@ export interface BrokerAccount {
   transport?: ConnectorTransport;
   /** Most recent observed connector round-trip latency in ms (REST/WS RTT). */
   latencyMs?: number;
+  /** Count of consecutive connector/sync errors since last successful sync. */
+  consecutiveErrors?: number;
+  /** Unix ms timestamp of the last recorded connector error (for UI "X ago"). */
+  lastErrorAt?: string;
   /** Environment: demo / live / contest / sandbox. */
   environment?: AccountEnvironment;
   currency: string;

@@ -27,7 +27,7 @@ export interface LiveExecution {
 }
 export interface LiveOrder   { accountId: string; data: BrokerPendingOrder; at: string }
 export interface LivePosition{ accountId: string; data: BrokerPosition; at: string }
-export interface LiveAccount { accountId: string; status: string; lastSyncAt?: string; latencyMs?: number; error?: string; at: string }
+export interface LiveAccount { accountId: string; status: string; lastSyncAt?: string; latencyMs?: number; error?: string; consecutiveErrors?: number; lastErrorAt?: string; at: string }
 
 export interface TradingLiveState {
   connected: boolean;
@@ -161,7 +161,9 @@ export function useTradingEvents(opts: { enabled?: boolean } = {}) {
                 const d = data?.data ?? {};
                 const evt: LiveAccount = {
                   accountId: acctId, status: String(d.status ?? ""),
-                  lastSyncAt: d.lastSyncAt, latencyMs: d.latencyMs, error: d.error, at: now,
+                  lastSyncAt: d.lastSyncAt, latencyMs: d.latencyMs, error: d.error,
+                  consecutiveErrors: typeof d.consecutiveErrors === "number" ? d.consecutiveErrors : undefined,
+                  lastErrorAt: d.lastErrorAt, at: now,
                 };
                 next.accountUpdates = pushRing(s.accountUpdates, evt);
                 next.accountStateByAccount = { ...s.accountStateByAccount, [acctId]: evt };

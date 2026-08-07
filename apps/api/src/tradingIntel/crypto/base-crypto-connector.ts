@@ -116,6 +116,8 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
   protected accounts = new Map<string, CryptoAccountSession>();
   private stateHandlers: ConnectionStateHandler[] = [];
   private initialized = false;
+  /** Track consecutive errors per account (WS errors, REST errors). Reset on successful sync. */
+  private sessionErrors = new Map<string, { count: number; lastAt?: string }>();
 
   /**
    * Patch the live session's connector config in-place so toggles like
@@ -306,6 +308,7 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
 
       a.lastSyncAt = new Date().toISOString();
       a.status = "connected"; a.lastError = undefined;
+      this.resetErrorCounter(accountId);
       const symbols: BrokerSymbol[] = [...a.markets.values()].map((m) => ({
         name: m.symbol,
         description: `${m.base}/${m.quote}${m.settle ? ":" + m.settle : ""}`,
@@ -507,8 +510,19 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
 
   protected emitState(id: string, status: BrokerConnectionStatus, err?: string) {
     const a = this.accounts.get(id);
-    if (a) { a.status = status; if (err) a.lastError = err; else a.lastError = undefined; }
+    if (a) {
+      a.status = status;
+      if (err) {
+        a.lastError = err;
+        const rec = this.sessionErrors.get(id) ?? { count: 0 };
+        rec.count += 1; rec.lastAt = new Date().toISOString();
+        this.sessionErrors.set(id, rec);
+      } else {
+        a.lastError = undefined;
+      }
+    }
     for (const h of this.stateHandlers) { try { h(id, status, err); } catch { /* ignore */ } }
+    const errRec = this.sessionErrors.get(id);
     // Fan state transitions out to the org hub so the dashboard can reflect
     // connector health (connected/error/disconnected) without polling.
     const oid = (a?.opts.config as any)?._oid;
@@ -516,10 +530,19 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
       try {
         tradingEvents.emit(oid, {
           kind: "account_state", accountId: id,
-          data: { status, lastSyncAt: a?.lastSyncAt, latencyMs: a?.latencyMs, error: err },
+          data: {
+            status, lastSyncAt: a?.lastSyncAt, latencyMs: a?.latencyMs, error: err,
+            consecutiveErrors: err ? errRec?.count : 0,
+            lastErrorAt: err ? errRec?.lastAt : undefined,
+          },
         });
       } catch { /* best-effort */ }
     }
+  }
+
+  /** Reset per-session error counter (called after a successful sync). */
+  protected resetErrorCounter(id: string) {
+    this.sessionErrors.delete(id);
   }
 
   protected dispatchTick(sess: CryptoAccountSession, symbol: string, bid: number, ask: number) {

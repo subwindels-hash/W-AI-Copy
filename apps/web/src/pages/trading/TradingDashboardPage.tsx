@@ -133,6 +133,15 @@ export function TradingDashboardPage() {
     finally { setBusy(null); }
   }, [load]);
 
+  const syncAccount = useCallback(async (acctId: string) => {
+    setBusy(`sync:${acctId}`);
+    try {
+      await brokerApi.sync(acctId);
+      await load();
+    } catch (e: any) { setErr(e?.message ?? "sync failed"); }
+    finally { setBusy(null); }
+  }, [load]);
+
   const act = useCallback(async (id: string, verb: "approve" | "reject") => {
     setBusy(id);
     try {
@@ -175,6 +184,8 @@ export function TradingDashboardPage() {
       error: la.error ?? a.error,
       lastSyncAt: la.lastSyncAt ?? a.lastSyncAt,
       liveLatencyMs: la.latencyMs as number | undefined,
+      consecutiveErrors: (la.consecutiveErrors as number | undefined) ?? a.consecutiveErrors,
+      lastErrorAt: la.lastErrorAt as string | undefined,
     };
   }), [accounts, live.accountStateByAccount]);
 
@@ -404,12 +415,27 @@ export function TradingDashboardPage() {
                           <Lock className="h-3 w-3 mr-1" />read-only
                         </Badge>
                       )}
+                      {(a.consecutiveErrors ?? 0) > 0 && (
+                        <Badge className="bg-rose-500/15 text-rose-300 border-rose-500/30" title={a.error ?? "connector error"}>
+                          <AlertTriangle className="h-3 w-3 mr-1" />{a.consecutiveErrors} error{a.consecutiveErrors === 1 ? "" : "s"}
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-xs text-slate-500 mt-1 truncate">
                       {a.brokerLabel} · {a.login}@{a.server} · {a.currency} · {a.leverage}:1 · mode={a.mode} · sync {timeAgo(a.lastSyncAt)}
+                      {a.error && <span className="text-rose-400 ml-2">· {a.error}</span>}
                     </p>
                   </div>
-                  <div className="flex items-center gap-4 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Sync this account now (force refresh from broker)"
+                      disabled={!!busy || a.status !== "connected"}
+                      onClick={() => syncAccount(a.id)}
+                    >
+                      {busy === `sync:${a.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    </Button>
                     <Switch
                       id={`ro-${a.id}`}
                       checked={readOnly}
@@ -418,7 +444,7 @@ export function TradingDashboardPage() {
                       label={
                         <span className="inline-flex items-center gap-1 text-xs text-slate-300">
                           {readOnly ? <EyeOff className="h-3 w-3" /> : <Eye className="h-3 w-3" />}
-                          {readOnly ? "Locked (no new orders)" : "Trading enabled"}
+                          {readOnly ? "Locked" : "Trading"}
                         </span>
                       }
                     />
@@ -635,6 +661,7 @@ export function TradingDashboardPage() {
                 const lat = (a as any).liveLatencyMs as number | undefined;
                 const polled = a.latencyMs;
                 const ms = lat ?? polled;
+                const errs = a.consecutiveErrors ?? 0;
                 const tone = ms == null
                   ? "text-slate-500"
                   : ms < 150 ? "text-emerald-300"
@@ -643,10 +670,21 @@ export function TradingDashboardPage() {
                   : "text-rose-300";
                 const label = ms == null ? "—" : ms < 1000 ? `${Math.round(ms)} ms` : `${(ms / 1000).toFixed(1)} s`;
                 return (
-                  <div key={a.id} className="flex items-center justify-between p-3">
+                  <div key={a.id} className="flex items-center justify-between p-3 gap-3">
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm truncate">{a.brokerLabel} · {a.name}</p>
-                      <p className="text-[11px] text-slate-500">sync {timeAgo(a.lastSyncAt)}</p>
+                      <p className="text-sm truncate flex items-center gap-1.5">
+                        {a.brokerLabel} · {a.name}
+                        {errs > 0 && (
+                          <span title={`${errs} consecutive error(s) since ${timeAgo(a.lastErrorAt)}`}
+                                className="inline-flex items-center gap-0.5 text-[10px] font-medium text-rose-300 bg-rose-500/15 px-1.5 py-0.5 rounded">
+                            <AlertTriangle className="h-2.5 w-2.5" />{errs}
+                          </span>
+                        )}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        sync {timeAgo(a.lastSyncAt)}
+                        {errs > 0 && a.lastErrorAt && <span className="text-rose-400 ml-2">· err {timeAgo(a.lastErrorAt)}</span>}
+                      </p>
                     </div>
                     <div className={`text-right tabular-nums font-mono text-sm ${tone}`} title="Last observed connector round-trip latency">
                       {label}

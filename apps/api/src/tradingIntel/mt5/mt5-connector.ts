@@ -98,7 +98,11 @@ export class Mt5Connector implements IBrokerConnector {
     // "syncing" / "reconnecting" are transient — don't overwrite the underlying
     // connected/error state; they are reported to handlers as events only.
     if (status !== "syncing" && status !== "reconnecting") acct.state.status = status;
-    if (error) acct.state.lastError = error;
+    if (error) {
+      acct.state.lastError = error;
+      acct.state.consecutiveErrors = (acct.state.consecutiveErrors ?? 0) + 1;
+      (acct.state as any).lastErrorAt = new Date().toISOString();
+    }
     for (const h of this.stateHandlers) {
       try { h(acct.state.accountId, status, error); } catch (e) { logger.warn("[mt5] state handler threw", { err: e }); }
     }
@@ -108,7 +112,13 @@ export class Mt5Connector implements IBrokerConnector {
       try {
         tradingEvents.emit(oid, {
           kind: "account_state", accountId: acct.state.accountId,
-          data: { status, lastSyncAt: acct.state.lastSyncAt, latencyMs: acct.transport === undefined ? undefined : 0, error },
+          data: {
+            status, lastSyncAt: acct.state.lastSyncAt,
+            latencyMs: acct.transport === undefined ? undefined : 0,
+            error,
+            consecutiveErrors: acct.state.consecutiveErrors ?? 0,
+            lastErrorAt: (acct.state as any).lastErrorAt,
+          },
         });
       } catch { /* best-effort */ }
     }

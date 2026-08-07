@@ -254,7 +254,10 @@ export const BrokerIntegrationService = {
       transport, config: configWithOid,
     });
     if (!result.ok) {
-      rec.status = "error"; rec.error = result.error ?? "connection failed"; rec.updatedAt = now();
+      rec.status = "error"; rec.error = result.error ?? "connection failed";
+      rec.consecutiveErrors = (rec.consecutiveErrors ?? 0) + 1;
+      rec.lastErrorAt = now();
+      rec.updatedAt = now();
       await redis.set(K.account(oid, id), s2(rec));
       await Mt5Monitor.audit(oid, id, "error", { phase: "connect", error: result.error });
       throw new AppError("UPSTREAM_ERROR", `Broker connection failed: ${result.error ?? "unknown"}`, 502);
@@ -274,7 +277,7 @@ export const BrokerIntegrationService = {
       if (result.snapshot.currency) rec.currency = result.snapshot.currency;
       if (result.snapshot.leverage) rec.leverage = result.snapshot.leverage;
     }
-    rec.error = undefined; rec.updatedAt = now(); rec.lastSyncAt = now();
+    rec.error = undefined; rec.consecutiveErrors = 0; rec.updatedAt = now(); rec.lastSyncAt = now();
     // Surface connector latency (most recent REST/WS RTT) onto the account
     // record so the dashboard can render per-account health without a
     // second call. The connector's health() method returns the latest ms.
@@ -320,8 +323,12 @@ export const BrokerIntegrationService = {
     const start = Date.now();
     const result = await connector.sync(id, scope);
     if (!result.ok) {
-      rec.status = "error"; rec.error = result.error; rec.updatedAt = now();
+      rec.status = "error"; rec.error = result.error;
+      rec.consecutiveErrors = (rec.consecutiveErrors ?? 0) + 1;
+      rec.lastErrorAt = now();
+      rec.updatedAt = now();
       await redis.set(K.account(oid, id), s2(rec));
+      try { Metrics.counter("bri.sync.failed", { broker: rec.broker }).incr(); } catch {}
       await Mt5Monitor.audit(oid, id, "error", { phase: "sync", error: result.error });
       return;
     }
@@ -336,7 +343,7 @@ export const BrokerIntegrationService = {
     if (result.orders) await this.persistOrders(oid, id, result.orders);
     if (result.symbols) await this.persistSymbols(oid, id, result.symbols);
     if (result.deals) await this.persistDeals(oid, id, result.deals);
-    rec.status = "connected"; rec.error = undefined;
+    rec.status = "connected"; rec.error = undefined; rec.consecutiveErrors = 0;
     rec.lastSyncAt = now(); rec.updatedAt = now();
     try {
       const ch = connector.health(id);
