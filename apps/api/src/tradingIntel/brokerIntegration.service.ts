@@ -336,7 +336,7 @@ export const BrokerIntegrationService = {
     return {
       broker: rec.broker, transport: rec.transport ?? "native_python_zmq", accountId: id,
       connected: h.connected, latencyMs: h.latencyMs, lastError: h.lastError,
-      reconnectAttempts: h.reconnectAttempts, endpoint: h.endpoint, terminalPath: h.terminalPath,
+      reconnectAttempts: h.reconnectAttempts, endpoint: (h as any).endpoint,
     };
   },
 
@@ -544,7 +544,15 @@ export const BrokerIntegrationService = {
     if (status === "approved" && !paper && connector && connector.isConnected(account.id)) {
       await this.dispatchToBroker(oid, account, execution, signal, connector);
     } else if (status === "approved" && paper) {
-      execution.decision = "approved (paper / simulation — no live order sent)";
+      // Hand the signal to attached EAs (pure-EA deployment path).
+      try {
+        const { EaService } = await import("./ea.service.js");
+        await EaService.enqueueApprovedExecution(oid, account, execution);
+        execution.decision = "queued for EA execution";
+      } catch (e) {
+        logger.warn("[bri] EA enqueue failed", { err: (e as Error).message });
+        execution.decision = "approved (paper / simulation — no live order sent)";
+      }
       execution.status = "submitted";
       await redis.set(K.execution(oid, id), s2(execution));
     }
@@ -604,7 +612,16 @@ export const BrokerIntegrationService = {
         source: "assisted-approved", orderType: "market",
       }, connector);
     } else {
-      exec.status = "submitted"; exec.decision = "approved (paper — broker not connected)"; exec.updatedAt = now();
+      // Pure EA path: queue for any attached EAs.
+      try {
+        const { EaService } = await import("./ea.service.js");
+        await EaService.enqueueApprovedExecution(oid, account, exec);
+        exec.decision = "approved by user — queued for EA execution";
+      } catch (e) {
+        logger.warn("[bri] EA enqueue after approval failed", { err: (e as Error).message });
+        exec.decision = "approved (paper — broker not connected)";
+      }
+      exec.status = "submitted"; exec.updatedAt = now();
       await redis.set(K.execution(oid, id), s2(exec));
     }
     return this.mustGetExecution(oid, id);
@@ -894,7 +911,7 @@ export const BrokerIntegrationService = {
     const rec = await this.mustGetAccount(oid, id);
     const blob = j<ReturnType<typeof encryptString>>(await redis.get(K.creds(oid, id)));
     const plain = decryptString(blob);
-    if (!plain) throw new AppError("INTERNAL", "could not decrypt broker credentials", 500);
+    if (!plain) throw new AppError("INTERNAL_ERROR", "could not decrypt broker credentials", 500);
     return { login: rec.login, password: plain, server: rec.server };
   },
 
@@ -940,6 +957,38 @@ export const BrokerIntegrationService = {
     const sorted = [...deals].sort((a, b) => b.time.localeCompare(a.time)).slice(0, 5000);
     for (const d of sorted) await redis.lpush(K.deals(oid, accountId), s2({ ...d, id: d.ticket ?? d.id, accountId }));
     await redis.ltrim(K.deals(oid, accountId), 0, 4999);
+  },
+
+  /**
+   * Apply positions + account snapshot received from the EA heartbeat. Used
+   * when the EA is the sole execution path (no live ZMQ/HTTP/MetaApi connector)
+   * so the dashboard and risk engine reflect reality.
+   */
+  async applyEaHeartbeat(oid: string, acct: BrokerAccount, hb: {
+    state: {
+      balance: number; equity: number; freeMargin: number; marginLevel?: number;
+      positions: Array<{ ticket: string; symbol: string; side: "BUY" | "SELL"; volume: number; openPrice: number; currentPrice: number; sl?: number; tp?: number; profit: number; swap?: number; openTime: string }>;
+    };
+  }): Promise<void> {
+    const positions: BrokerPosition[] = hb.state.positions.map((p) => ({
+      id: p.ticket, accountId: acct.id, ticket: p.ticket, symbol: p.symbol,
+      side: p.side === "BUY" ? "long" : "short", volume: p.volume, openPrice: p.openPrice,
+      currentPrice: p.currentPrice, sl: p.sl, tp: p.tp, profit: p.profit, swap: p.swap,
+      openTime: p.openTime,
+    }));
+    const totalPnl = positions.reduce((s, p) => s + p.profit, 0);
+    await this.persistPositions(oid, acct.id, positions);
+    acct.account.balance = hb.state.balance;
+    acct.account.equity = hb.state.equity;
+    acct.account.freeMargin = hb.state.freeMargin;
+    acct.account.marginLevel = hb.state.marginLevel;
+    acct.account.profit = totalPnl;
+    acct.account.dailyPnl = totalPnl;
+    acct.lastSyncAt = now();
+    acct.status = "connected";
+    acct.transport = "ea";
+    acct.error = undefined;
+    await redis.set(K.account(oid, acct.id), s2(acct));
   },
 
   async recordExecution(oid: string, account: BrokerAccount, signal: TradeSignalInput, source: string): Promise<TradeExecution> {
