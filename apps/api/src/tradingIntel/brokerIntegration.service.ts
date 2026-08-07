@@ -433,6 +433,45 @@ export const BrokerIntegrationService = {
     return exec;
   },
 
+  async cancelOrder(oid: string, userId: string, accountId: string, orderId: string): Promise<TradeExecution> {
+    const account = await this.mustGetAccount(oid, accountId);
+    const connector = connectorRegistry.mustGet(account.broker);
+    if (!connector.isConnected(accountId)) throw new AppError("BAD_REQUEST", "account not connected", 400);
+    if (env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") throw new AppError("FORBIDDEN", "Global MT5 read-only mode is active", 403);
+    if (env.WINDELS_CRYPTO_GLOBAL_READONLY && account.broker !== "mt5") throw new AppError("FORBIDDEN", "WINDELS_CRYPTO_GLOBAL_READONLY is active", 403);
+    const ord = (await this.listPendingOrders(oid, accountId)).find((o) => (o.ticket ?? o.id) === orderId);
+    if (!ord) throw new AppError("NOT_FOUND", `Order ${orderId} not found`, 404);
+    const exec = await this.recordExecution(oid, account, {
+      accountId, symbol: ord.symbol, side: "long", // side doesn't matter for cancel
+      volume: ord.volume, source: "manual-cancel", confidence: 1,
+    }, "cancel_order");
+    // Call connector.cancelOrder if implemented; crypto connectors implement it via cancelOrderImpl.
+    let result: any;
+    try {
+      if (typeof (connector as any).cancelOrder === "function") {
+        result = await (connector as any).cancelOrder(accountId, orderId);
+      } else {
+        result = { ok: false, error: "cancelOrder not supported on this connector" };
+      }
+    } catch (e: any) {
+      result = { ok: false, error: e.message };
+    }
+    if (result.ok) {
+      exec.status = "blocked"; // cancelled before fill — use blocked as terminal state w/ decision "canceled"
+      exec.decision = "canceled by user";
+      exec.brokerTicket = result.ticket; exec.brokerLatencyMs = result.latencyMs;
+      exec.updatedAt = now(); exec.sentAt = now(); exec.connectorTransport = account.transport;
+      await Mt5Monitor.audit(oid, accountId, "order_cancel", { orderId }, result.latencyMs);
+    } else {
+      exec.status = "failed"; exec.error = result.error; exec.decision = "cancel rejected";
+      await Mt5Monitor.audit(oid, accountId, "order_cancel_fail", { orderId, error: result.error });
+    }
+    exec.updatedAt = now();
+    await redis.set(K.execution(oid, exec.id), s2(exec));
+    this.syncAccountFromConnector(oid, accountId, { orders: true }).catch((e) => logger.warn("[bri] post-cancel sync failed", { err: (e as Error).message }));
+    return exec;
+  },
+
   async modifyPosition(oid: string, userId: string, accountId: string, ticket: string, patch: { sl?: number; tp?: number }): Promise<TradeExecution> {
     const account = await this.mustGetAccount(oid, accountId);
     const connector = connectorRegistry.mustGet(account.broker);

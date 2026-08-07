@@ -162,6 +162,26 @@ export function TradingDashboardPage() {
     return { ...a, status: la.status as typeof a.status, error: la.error ?? a.error, lastSyncAt: la.lastSyncAt ?? a.lastSyncAt };
   }), [accounts, live.accountStateByAccount]);
 
+  // For action buttons (close/cancel) we resolve the owning account per row.
+  // Fall back to first connected account if the row lacks accountId (single-account deployments).
+  const accountFor = useCallback((acctId?: string) =>
+    accountsWithLive.find((a) => a.id === acctId) ?? accountsWithLive[0]
+  , [accountsWithLive]);
+  const closePosition = useCallback(async (acctId: string | undefined, ticket: string | undefined, volume?: number) => {
+    const a = accountFor(acctId); if (!a || !ticket) return;
+    setBusy(`close:${ticket}`);
+    try { await brokerApi.closePosition(a.id, ticket, volume); await load(); }
+    catch (e: any) { setErr(e?.message ?? "close failed"); }
+    finally { setBusy(null); }
+  }, [accountFor, load]);
+  const cancelOrder = useCallback(async (acctId: string | undefined, orderId: string | undefined) => {
+    const a = accountFor(acctId); if (!a || !orderId) return;
+    setBusy(`cancel:${orderId}`);
+    try { await brokerApi.cancelOrder(a.id, orderId); await load(); }
+    catch (e: any) { setErr(e?.message ?? "cancel failed"); }
+    finally { setBusy(null); }
+  }, [accountFor, load]);
+
   // Merge live executions from SSE that aren't yet in the polled list.
   const mergedExecutions = useMemo(() => {
     const seen = new Set(executions.map((e) => e.id));
@@ -348,10 +368,10 @@ export function TradingDashboardPage() {
             <table className="w-full text-sm">
               <thead className="text-xs uppercase text-slate-500"><tr>
                 <th className="text-left p-3">Symbol</th><th className="text-left">Side</th><th className="text-right">Vol</th>
-                <th className="text-right">Open</th><th className="text-right">Current</th><th className="text-right">SL/TP</th><th className="text-right p-3">P/L</th>
+                <th className="text-right">Open</th><th className="text-right">Current</th><th className="text-right">SL/TP</th><th className="text-right">P/L</th><th className="text-right p-3 w-8" />
               </tr></thead>
               <tbody className="divide-y divide-white/5">
-                {openPositions.length === 0 && <tr><td colSpan={7} className="p-6 text-slate-400 text-center">No open positions.</td></tr>}
+                {openPositions.length === 0 && <tr><td colSpan={8} className="p-6 text-slate-400 text-center">No open positions.</td></tr>}
                 {openPositions.map((p) => (
                   <tr key={p.ticket ?? p.id}>
                     <td className="p-3 font-medium">{p.symbol}</td>
@@ -362,7 +382,14 @@ export function TradingDashboardPage() {
                     <td className="text-right tabular-nums text-slate-400 text-xs">
                       {p.sl ? p.sl.toFixed(p.sl < 10 ? 5 : 2) : "—"} / {p.tp ? p.tp.toFixed(p.tp < 10 ? 5 : 2) : "—"}
                     </td>
-                    <td className={`text-right p-3 tabular-nums ${(p.profit ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(p.profit ?? 0)}</td>
+                    <td className={`text-right tabular-nums ${(p.profit ?? 0) >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(p.profit ?? 0)}</td>
+                    <td className="p-3 text-right">
+                      <Button size="sm" variant="ghost" title="Close position"
+                              disabled={!!busy || killSwitch}
+                              onClick={() => closePosition(p.accountId, p.ticket ?? p.id)}>
+                        {busy === `close:${p.ticket ?? p.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -375,16 +402,23 @@ export function TradingDashboardPage() {
           <CardContent className="p-0">
             <table className="w-full text-sm">
               <thead className="text-xs uppercase text-slate-500"><tr>
-                <th className="text-left p-3">Symbol</th><th className="text-left">Type</th><th className="text-right">Vol</th><th className="text-right p-3">Price</th>
+                <th className="text-left p-3">Symbol</th><th className="text-left">Type</th><th className="text-right">Vol</th><th className="text-right">Price</th><th className="text-right p-3 w-8" />
               </tr></thead>
               <tbody className="divide-y divide-white/5">
-                {orders.length === 0 && <tr><td colSpan={4} className="p-6 text-slate-400 text-center">No pending orders.</td></tr>}
+                {orders.length === 0 && <tr><td colSpan={5} className="p-6 text-slate-400 text-center">No pending orders.</td></tr>}
                 {orders.map((o) => (
                   <tr key={o.ticket ?? o.id}>
                     <td className="p-3 font-medium">{o.symbol}</td>
                     <td><Badge className="bg-sky-500/15 text-sky-300">{o.type.replace("_", " ")}</Badge></td>
                     <td className="text-right tabular-nums">{o.volume.toFixed(2)}</td>
-                    <td className="text-right p-3 tabular-nums">{o.price.toFixed(o.price < 10 ? 5 : 2)}</td>
+                    <td className="text-right tabular-nums">{o.price.toFixed(o.price < 10 ? 5 : 2)}</td>
+                    <td className="p-3 text-right">
+                      <Button size="sm" variant="ghost" title="Cancel order"
+                              disabled={!!busy || killSwitch}
+                              onClick={() => cancelOrder(o.accountId, o.ticket ?? o.id)}>
+                        {busy === `cancel:${o.ticket ?? o.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 text-amber-400" />}
+                      </Button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

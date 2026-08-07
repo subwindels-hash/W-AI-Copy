@@ -197,6 +197,8 @@ export const brokerApi = {
     api<TradeExecution>(`/brokers/accounts/${id}/positions/${ticket}/close`, { method: "POST", json: { volume } }),
   modifyPosition: (id: string, ticket: string, patch: { sl?: number; tp?: number }) =>
     api<TradeExecution>(`/brokers/accounts/${id}/positions/${ticket}`, { method: "PATCH", json: patch }),
+  cancelOrder: (id: string, orderId: string) =>
+    api<TradeExecution>(`/brokers/accounts/${id}/orders/${orderId}/cancel`, { method: "POST" }),
   sendOrder: (id: string, order: { symbol: string; side: "long" | "short"; volume: number; type?: string; price?: number; sl?: number; tp?: number; slippage?: number; comment?: string; magic?: number }) =>
     api<TradeExecution>(`/brokers/accounts/${id}/orders`, { method: "POST", json: order }),
   trade: (signal: { accountId: string; symbol: string; side: "long" | "short"; volume: number; source?: string; strategyId?: string; confidence?: number; stopLoss?: number; takeProfit?: number; price?: number; orderType?: string; slippage?: number }) =>

@@ -35,7 +35,7 @@ export interface Mt5AuditEvent {
   ts: string;
   organizationId: string;
   accountId: string;
-  event: "connect" | "disconnect" | "error" | "reconnect" | "sync" | "order_send" | "order_fill" | "order_fail" | "risk_block" | "tick_stream_start" | "tick_stream_stall";
+  event: "connect" | "disconnect" | "error" | "reconnect" | "sync" | "order_send" | "order_fill" | "order_fail" | "risk_block" | "tick_stream_start" | "tick_stream_stall" | "order_cancel" | "order_cancel_fail" | "order_close";
   detail?: Record<string, any>;
   latencyMs?: number;
 }

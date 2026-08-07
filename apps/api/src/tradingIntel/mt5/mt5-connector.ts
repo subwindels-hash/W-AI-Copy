@@ -306,6 +306,19 @@ export class Mt5Connector implements IBrokerConnector {
     } catch (e) { return { ok: false, error: (e as Error).message, latencyMs: Date.now() - start }; }
   }
 
+  async cancelOrder(accountId: string, orderId: string): Promise<OrderResult> {
+    const a = this.accounts.get(accountId);
+    if (!a) return { ok: false, error: "account not connected" };
+    if (a.opts.config?.readOnly) return { ok: false, error: "read-only" };
+    const start = Date.now();
+    try {
+      const res = await a.transportHandle.call<{ ticket?: string; retcode?: number }>("cancel_order", { accountId, orderId });
+      if (res?.retcode && res.retcode !== 0 && res.retcode !== 10014 /* ORDER_DONE */ && res.retcode !== 10013 /* ORDER_NOT_FOUND */)
+        return { ok: false, error: `retcode=${res.retcode}`, retcode: res.retcode, latencyMs: Date.now() - start };
+      return { ok: true, ticket: res.ticket ?? orderId, latencyMs: Date.now() - start };
+    } catch (e) { return { ok: false, error: (e as Error).message, latencyMs: Date.now() - start }; }
+  }
+
   async getCandles(accountId: string, q: CandleQuery): Promise<BrokerCandle[]> {
     const a = this.accounts.get(accountId);
     if (!a) throw new Error("account not connected");

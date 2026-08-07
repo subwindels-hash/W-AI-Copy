@@ -140,6 +140,14 @@ export function registerBrokerIntegrationRoutes(router: Router) {
       res.json({ ok: true, data: ex, meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
+  router.post("/brokers/accounts/:id/orders/:orderId/cancel", validate({
+    params: z.object({ id: z.string().min(1).max(64), orderId: z.string().min(1).max(128) }),
+  }), async (req, res, next) => {
+    try {
+      const ex = await BrokerIntegrationService.cancelOrder(oid(req), uid(req), req.params.id, req.params.orderId);
+      res.json({ ok: true, data: ex, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
 
   // Direct order send (bypasses AI supervisor — for manual trades from UI; still passes risk).
   router.post("/brokers/accounts/:id/orders", validate({ params: brokerId, body: BrokerOrderRequestSchema }), async (req, res, next) => {
