@@ -664,15 +664,22 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
 
   /* ── WebSocket plumbing (overridable) ── */
 
-  /** Create (lazily) the public WS client and attach the parser. */
-  private seedPublicWs(sess: CryptoAccountSession, url: string) {
-    const ws = new ExchangeWsClient({
+  /** Create the public WS client. Exposed as a hook so subclasses (e.g.
+   *  HTX which needs GZIP-decompressed binary frames) can pass gzip:true
+   *  or override parser/ping behavior without duplicating lifecycle code. */
+  protected createPublicWsClient(sess: CryptoAccountSession, url: string): ExchangeWsClient {
+    return new ExchangeWsClient({
       url,
       label: `${this.exchange}:public`,
       parser: (raw) => this.parsePublicMessage(sess, raw),
       pingIntervalMs: this.capabilities.publicWsPingIntervalMs,
       pingMessage: this.publicPingMessage(),
     });
+  }
+
+  /** Create (lazily) the public WS client and attach the parser. */
+  private seedPublicWs(sess: CryptoAccountSession, url: string) {
+    const ws = this.createPublicWsClient(sess, url);
     sess.publicWs = ws;
     ws.on("error", (e) => logger.warn("[crypto] public WS error", { exchange: this.exchange, err: e }));
     ws.connect().catch((e) => logger.warn("[crypto] public WS connect failed", { err: e }));

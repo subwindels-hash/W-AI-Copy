@@ -16,6 +16,7 @@
  *   - EventEmitter-style listeners with "open"/"close"/"error"/"message" events.
  */
 import { EventEmitter } from "node:events";
+import { gunzipSync } from "node:zlib";
 
 export interface WsClientOptions {
   url: string;
@@ -31,8 +32,12 @@ export interface WsClientOptions {
   prepareUrl?: () => string | Promise<string>;
   /** Optional authentication step to run immediately after onopen. */
   onConnect?: (send: (payload: string | object) => void) => void | Promise<void>;
-  /** Parser: given a raw message string/Buffer, return 0..n routed events. */
+  /** Parser: given a raw message string, return 0..n routed events. */
   parser?: (raw: string) => Array<{ channel: string; payload: unknown }>;
+  /** If true, incoming binary frames are gunzip'd (GZIP) before JSON.parse.
+   *  HTX (Huobi) public market-data WS uses GZIP; exchanges that send plain
+   *  text leave this off. Private user-data WS on HTX is uncompressed. */
+  gzip?: boolean;
   /** Per-message callback for raw frames (debug/fallback). */
   onRaw?: (raw: string) => void;
   /** Label for logs. */
@@ -85,6 +90,9 @@ export class ExchangeWsClient extends EventEmitter {
         }
         const ws = new WebSocket(url);
         this.ws = ws;
+        // Prefer ArrayBuffer for binary frames so GZIP decompression via
+        // gunzipSync works on both Node's built-in WebSocket and undici.
+        try { (ws as any).binaryType = "arraybuffer"; } catch { /* ignore */ }
 
         const opened = () => {
           this.connected = true;
@@ -104,7 +112,27 @@ export class ExchangeWsClient extends EventEmitter {
 
         ws.onopen = opened;
         ws.onmessage = (ev) => {
-          const raw = typeof ev.data === "string" ? ev.data : String(ev.data);
+          let raw: string;
+          if (typeof ev.data === "string") {
+            raw = ev.data;
+          } else if (this.opts.gzip) {
+            // Binary GZIP frame (HTX/Huobi public WS): gunzip synchronously,
+            // then decode as UTF-8. Node's built-in WebSocket delivers
+            // Buffer/ArrayBuffer depending on platform; gunzipSync accepts
+            // Buffer | ArrayBuffer | Uint8Array.
+            try {
+              const buf: Buffer | ArrayBuffer | Uint8Array = ev.data instanceof ArrayBuffer
+                ? Buffer.from(ev.data)
+                : (ev.data as any);
+              raw = gunzipSync(buf).toString("utf8");
+            } catch (e) {
+              this.emit("error", e);
+              return;
+            }
+          } else {
+            // Unknown binary frame without gzip enabled — stringify best effort.
+            raw = String(ev.data);
+          }
           if (this.opts.onRaw) { try { this.opts.onRaw(raw); } catch {} }
           // Parse and route.
           if (this.opts.parser) {
