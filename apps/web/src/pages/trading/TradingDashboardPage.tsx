@@ -142,6 +142,25 @@ export function TradingDashboardPage() {
     finally { setBusy(null); }
   }, [load]);
 
+  const disconnectAccount = useCallback(async (acctId: string) => {
+    setBusy(`disc:${acctId}`);
+    try {
+      await brokerApi.disconnect(acctId);
+      await load();
+    } catch (e: any) { setErr(e?.message ?? "disconnect failed"); }
+    finally { setBusy(null); }
+  }, [load]);
+
+  const reconnectAccount = useCallback(async (acctId: string) => {
+    setBusy(`conn:${acctId}`);
+    try {
+      // disconnect first (best-effort) then refresh so the supervisor reconnects
+      await brokerApi.disconnect(acctId).catch(() => {});
+      await load();
+    } catch (e: any) { setErr(e?.message ?? "reconnect failed"); }
+    finally { setBusy(null); }
+  }, [load]);
+
   const act = useCallback(async (id: string, verb: "approve" | "reject") => {
     setBusy(id);
     try {
@@ -426,7 +445,16 @@ export function TradingDashboardPage() {
                       {a.error && <span className="text-rose-400 ml-2">· {a.error}</span>}
                     </p>
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-1 shrink-0">
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Reconnect this account (disconnect + reconnect)"
+                      disabled={!!busy}
+                      onClick={() => reconnectAccount(a.id)}
+                    >
+                      {busy === `conn:${a.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Power className="h-3.5 w-3.5 text-sky-400" />}
+                    </Button>
                     <Button
                       size="sm"
                       variant="ghost"
@@ -435,6 +463,15 @@ export function TradingDashboardPage() {
                       onClick={() => syncAccount(a.id)}
                     >
                       {busy === `sync:${a.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <RefreshCw className="h-3.5 w-3.5" />}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      title="Disconnect this account from WINDELS (does not close positions at broker)"
+                      disabled={!!busy || a.status === "disconnected"}
+                      onClick={() => disconnectAccount(a.id)}
+                    >
+                      {busy === `disc:${a.id}` ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5 text-rose-400" />}
                     </Button>
                     <Switch
                       id={`ro-${a.id}`}

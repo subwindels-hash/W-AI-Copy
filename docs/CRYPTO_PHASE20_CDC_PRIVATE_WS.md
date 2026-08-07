@@ -99,6 +99,22 @@ runs when all tests run in parallel) is pre-existing and not caused by this
 phase; both tests pass in isolation or when run in a file order that doesn't
 trigger the leak.
 
+### Dashboard (web)
+
+Added per-account **Reconnect** and **Disconnect** buttons to the Broker
+Accounts row on the Trading Dashboard:
+* **Reconnect** (cyan Power icon): disconnects the account (best-effort) so
+  the Supervisor re-establishes the connection — useful when a WS has
+  silently stalled.
+* **Sync** (RefreshCw, added in Phase 17): force-refresh balances/orders/
+  positions from REST.
+* **Disconnect** (rose X icon): disconnects the account from WINDELS without
+  touching open positions or orders at the broker. A tooltip clarifies this
+  to avoid any ambiguity — WINDELS never closes broker-side positions on
+  its own.
+Both new actions share the existing busy-key pattern (`conn:<id>` /
+`disc:<id>`) with per-row spinner and disabled-while-busy states.
+
 ## Compliance / Disclaimers
 
 WINDELS does **not**:
