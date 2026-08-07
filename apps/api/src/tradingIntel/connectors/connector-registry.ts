@@ -81,20 +81,50 @@ class ConnectorRegistry {
 export const connectorRegistry = new ConnectorRegistry();
 
 // ── Register bundled connectors ──────────────────────────────────
-// Phase 1: MT5. Phase 3: Deterministic MT5 Simulator. Crypto /
-// traditional-broker connectors are registered in their own phases once
-// built. Import is dynamic so missing optional deps don't hard-crash boot.
+// Forex/CFDs vertical: MT5 + deterministic MT5 simulator.
+// Crypto vertical: 12 launch exchanges.
+// Traditional-markets connectors (IBKR/Alpaca/TradeStation/OANDA/IG) are
+// registered in their own phase once built.
+// Imports are dynamic so missing optional deps don't hard-crash boot.
 export async function registerBundledConnectors() {
+  // Forex / CFDs
   try {
     const { Mt5Connector } = await import("../mt5/mt5-connector.js");
     connectorRegistry.register(new Mt5Connector());
-  } catch (e) {
-    logger.warn("[connectors] MT5 connector failed to load", { err: e });
-  }
+  } catch (e) { logger.warn("[connectors] MT5 connector failed to load", { err: e }); }
   try {
     const { Mt5Simulator } = await import("../mt5/mt5-simulator.js");
     connectorRegistry.register(new Mt5Simulator());
-  } catch (e) {
-    logger.warn("[connectors] MT5 simulator failed to load", { err: e });
+  } catch (e) { logger.warn("[connectors] MT5 simulator failed to load", { err: e }); }
+
+  // Crypto — 12 exchange connectors (Phase 1 of crypto vertical).
+  // Dynamic imports are typed `any` because each module has a named
+  // export (*Connector) discovered at runtime.
+  type Loader = () => Promise<any>; // eslint-disable-line @typescript-eslint/no-explicit-any
+  const cryptoConnectors: Array<[string, Loader]> = [
+    ["binance",     () => import("../crypto/exchanges/binance.js")],
+    ["bybit",       () => import("../crypto/exchanges/bybit.js")],
+    ["okx",         () => import("../crypto/exchanges/okx.js")],
+    ["coinbase",    () => import("../crypto/exchanges/coinbase.js")],
+    ["kraken",      () => import("../crypto/exchanges/kraken.js")],
+    ["kucoin",      () => import("../crypto/exchanges/kucoin.js")],
+    ["bitget",      () => import("../crypto/exchanges/bitget.js")],
+    ["gateio",      () => import("../crypto/exchanges/gateio.js")],
+    ["mexc",        () => import("../crypto/exchanges/mexc.js")],
+    ["htx",         () => import("../crypto/exchanges/htx.js")],
+    ["cryptocom",   () => import("../crypto/exchanges/cryptocom.js")],
+    ["hyperliquid", () => import("../crypto/exchanges/hyperliquid.js")],
+  ];
+  for (const [name, loader] of cryptoConnectors) {
+    try {
+      const mod = await loader();
+      const Ctor = (mod as any).default
+        ?? (mod as any)[name.charAt(0).toUpperCase() + name.slice(1) + "Connector"]
+        ?? Object.values(mod).find((v: any) => typeof v === "function" && v.prototype?.connect) as any;
+      if (Ctor) connectorRegistry.register(new Ctor());
+      else logger.warn("[connectors] crypto module had no exported connector class", { name });
+    } catch (e) {
+      logger.warn("[connectors] crypto connector failed to load", { name, err: e });
+    }
   }
 }

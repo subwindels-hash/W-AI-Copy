@@ -121,6 +121,30 @@ const EnvSchema = z.object({
     .union([z.boolean(), z.enum(["true", "false"])])
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
+
+  // ── Crypto Exchange connectors (Crypto vertical, Phase 1) ──
+
+  /** Global kill-switch for crypto: when true, all crypto connectors refuse
+   *  order send/modify/close across all exchanges. */
+  WINDELS_CRYPTO_GLOBAL_READONLY: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+  /** When true, new crypto accounts default to testnet endpoints where available. */
+  WINDELS_CRYPTO_DEFAULT_TESTNET: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+  /** Per-request REST timeout for crypto HTTP clients. */
+  WINDELS_CRYPTO_HTTP_TIMEOUT_MS: z.preprocess(
+    (v) => {
+      if (v === undefined || v === "" || v === null) return 10000;
+      const n = typeof v === "number" ? v : parseInt(String(v), 10);
+      return Number.isFinite(n) ? n : 10000;
+    },
+    z.number().int().min(1000).max(60000).default(10000),
+  )
+    .default(false),
 });
 
 async function loadDotenv() {
