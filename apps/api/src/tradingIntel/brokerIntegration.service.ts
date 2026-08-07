@@ -478,9 +478,23 @@ export const BrokerIntegrationService = {
     const globalReadOnly = env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5" && !signal.paper;
     checks.push({ rule: "GLOBAL_READ_ONLY", pass: !globalReadOnly, reason: globalReadOnly ? "Global MT5 read-only is active" : undefined });
 
-    // 1. Kill switch.
+    // 1. Kill switch (hard — blocks ALL new orders including manual).
     const killSwitchPass = !risk.killSwitch;
     checks.push({ rule: "KILL_SWITCH", pass: killSwitchPass, reason: risk.killSwitch ? "Emergency stop is active — trading halted." : undefined });
+
+    // 1b. Pause Autonomous Trading (soft — blocks AI/autonomous only, leaves
+    // manual user actions and assisted-mode approval flows intact so a user
+    // can freeze the AI but still manage positions / close risk).
+    const manualSources = new Set(["manual", "manual-direct", "manual-close", "manual-modify", "assisted-approved"]);
+    const isManual = manualSources.has((signal.source ?? "manual").toLowerCase());
+    const autonomousModes: TradingMode[] = ["semi_autonomous", "fully_autonomous"];
+    const autoPauseBlocked = risk.pauseAutonomousTrading && !isManual && autonomousModes.includes(account.mode);
+    checks.push({
+      rule: "PAUSE_AUTONOMOUS",
+      pass: !autoPauseBlocked,
+      reason: autoPauseBlocked ? "Autonomous trading is paused — manual & assisted-approval actions still available." : undefined,
+    });
+
 
     // 2. Mode permission.
     let status: TradeExecution["status"] = "submitted";
@@ -518,7 +532,7 @@ export const BrokerIntegrationService = {
       checks.push({ rule: "SYMBOL_DENYLIST", pass: false, reason: `${signal.symbol} is denied` });
     }
 
-    const hardFail = checks.filter((c) => !c.pass && ["GLOBAL_READ_ONLY", "KILL_SWITCH", "POSITION_SIZE_LIMIT", "SYMBOL_ALLOWLIST", "SYMBOL_DENYLIST"].includes(c.rule));
+    const hardFail = checks.filter((c) => !c.pass && ["GLOBAL_READ_ONLY", "KILL_SWITCH", "PAUSE_AUTONOMOUS", "POSITION_SIZE_LIMIT", "SYMBOL_ALLOWLIST", "SYMBOL_DENYLIST"].includes(c.rule));
     if (hardFail.length > 0) {
       status = "blocked"; decision = hardFail.map((f) => f.reason ?? f.rule).join("; ");
     } else if (account.mode === "assisted") {

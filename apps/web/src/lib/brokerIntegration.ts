@@ -81,7 +81,10 @@ export interface TradingStrategy {
 export interface BrokerRiskControls {
   maxDailyLossPct: number; maxWeeklyLossPct: number; maxMonthlyLossPct: number;
   maxPositionSizeUsd: number; maxExposurePct: number; maxDrawdownPct: number; maxLeverage: number;
-  tradingSessionStart: string; tradingSessionEnd: string; blockNewsEvents: boolean; killSwitch: boolean; updatedAt: string;
+  tradingSessionStart: string; tradingSessionEnd: string; blockNewsEvents: boolean; killSwitch: boolean;
+  /** When true, blocks fully_autonomous/semi_autonomous signals; manual + assisted-approval still work. */
+  pauseAutonomousTrading: boolean;
+  updatedAt: string;
 }
 
 export interface PortfolioIntelligence {
@@ -210,6 +213,7 @@ export const brokerApi = {
   risk: () => api<BrokerRiskControls>("/brokers/risk"),
   updateRisk: (patch: Partial<BrokerRiskControls>) => api<BrokerRiskControls>("/brokers/risk", { method: "PATCH", json: patch }),
   killSwitch: (active: boolean) => api<BrokerRiskControls>("/brokers/risk/kill-switch", { method: "POST", json: { active } }),
+  pauseAutonomous: (paused: boolean) => api<BrokerRiskControls>("/brokers/risk", { method: "PATCH", json: { pauseAutonomousTrading: paused } }),
   portfolio: (accountId?: string) => api<PortfolioIntelligence>("/brokers/portfolio", accountId ? { params: { accountId } } : {}),
   commandCenter: () => api<TradingCommandCenter>("/brokers/command-center"),
   dashboard: () => api<DashboardSummary>("/brokers/dashboard"),

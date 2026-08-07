@@ -396,8 +396,22 @@ export interface BrokerRiskControls {
   tradingSessionStart: string; // "HH:MM"
   tradingSessionEnd: string;
   blockNewsEvents: boolean;
-  /** Emergency stop: when true, all new trade execution is halted. */
+  /** Emergency stop: when true, ALL new trade execution is halted
+   *  (manual + AI-assisted + autonomous), as a hard kill switch. */
   killSwitch: boolean;
+  /**
+   * Pause AI autonomous trading only. When true:
+   *   - fully_autonomous / semi_autonomous signals are blocked (soft-blocked,
+   *     routed to "blocked" status with reason "autonomous paused").
+   *   - assisted mode continues to require explicit human approval.
+   *   - manual user actions (sendOrder, closePosition, approveExecution,
+   *     manual-close, manual-modify, assisted-approved) still flow through.
+   *
+   * This lets a trader freeze the AI instantly without locking themselves
+   * out of their own account, satisfying the product requirement that
+   * "users must be able to pause or disable autonomous trading at any time."
+   */
+  pauseAutonomousTrading: boolean;
   updatedAt: string;
 }
 
@@ -413,6 +427,7 @@ export const DEFAULT_RISK_CONTROLS: Omit<BrokerRiskControls, "updatedAt"> = {
   tradingSessionEnd: "23:59",
   blockNewsEvents: false,
   killSwitch: false,
+  pauseAutonomousTrading: false,
 };
 
 export const UpdateRiskControlsSchema = z.object({
@@ -427,6 +442,7 @@ export const UpdateRiskControlsSchema = z.object({
   tradingSessionEnd: z.string().optional(),
   blockNewsEvents: z.boolean().optional(),
   killSwitch: z.boolean().optional(),
+  pauseAutonomousTrading: z.boolean().optional(),
 });
 export type UpdateRiskControlsInput = z.input<typeof UpdateRiskControlsSchema>;
 

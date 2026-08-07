@@ -16,8 +16,8 @@ import { Badge } from "@/components/ui/Badge";
 import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Activity, AlertTriangle, ArrowDownRight, ArrowUpRight, Bot, CheckCircle2,
-  CircleSlash, Gauge, Layers, Loader2, Power, Radio, RefreshCw, ShieldAlert, Target,
-  TrendingUp, Wallet, Wifi, WifiOff, XCircle, Zap,
+  CircleSlash, Gauge, Hand, Layers, Loader2, Power, Radio, RefreshCw, ShieldAlert,
+  Target, TrendingUp, Wallet, Wifi, WifiOff, XCircle, Zap,
 } from "lucide-react";
 
 const usd = (n: number) =>
@@ -87,6 +87,7 @@ export function TradingDashboardPage() {
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
   const [killSwitch, setKillSwitch] = useState(false);
+  const [autoPaused, setAutoPaused] = useState(false);
 
   // Live SSE stream — updates tick/execution state between polling refreshes.
   // WINDELS is an AI Trading Agent; this feed only relays events originating
@@ -99,6 +100,7 @@ export function TradingDashboardPage() {
       const d = await brokerApi.dashboard();
       setData(d);
       setKillSwitch(d.risk.killSwitch);
+      setAutoPaused(d.risk.pauseAutonomousTrading);
     } catch (e: any) {
       setErr(e?.message ?? "Failed to load dashboard");
     } finally { setLoading(false); }
@@ -112,6 +114,13 @@ export function TradingDashboardPage() {
     catch (e: any) { setErr(e?.message ?? "kill switch failed"); }
     finally { setBusy(null); }
   }, [killSwitch, load]);
+
+  const toggleAutonomousPause = useCallback(async () => {
+    setBusy("pause");
+    try { await brokerApi.pauseAutonomous(!autoPaused); await load(); }
+    catch (e: any) { setErr(e?.message ?? "pause autonomous failed"); }
+    finally { setBusy(null); }
+  }, [autoPaused, load]);
 
   const act = useCallback(async (id: string, verb: "approve" | "reject") => {
     setBusy(id);
@@ -181,6 +190,17 @@ export function TradingDashboardPage() {
           </p>
         </div>
         <div className="flex items-center gap-2">
+          <Button
+            variant={autoPaused ? "warning" : "secondary"}
+            onClick={toggleAutonomousPause}
+            disabled={busy === "pause"}
+            title={autoPaused
+              ? "AI autonomous trading is PAUSED. Manual trades and assisted approvals still work."
+              : "Pause only AI autonomous/semi-autonomous trades (manual + approvals continue)."}
+          >
+            {busy === "pause" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Hand className="h-4 w-4 mr-2" />}
+            {autoPaused ? "AI Paused" : "Pause AI"}
+          </Button>
           <Button variant={killSwitch ? "danger" : "secondary"} onClick={toggleKillSwitch} disabled={busy === "kill"}>
             {busy === "kill" ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : <Power className="h-4 w-4 mr-2" />}
             Kill Switch: {killSwitch ? "ACTIVE" : "off"}
@@ -192,6 +212,9 @@ export function TradingDashboardPage() {
       {err && <DataBanner variant="no-data" title="Error" message={err} />}
       {risk.killSwitch && (
         <DataBanner variant="no-data" title="Kill Switch Engaged" message="No new orders will be sent until the kill switch is released. Existing positions may be closed per policy." />
+      )}
+      {autoPaused && !risk.killSwitch && (
+        <DataBanner variant="no-data" title="AI Autonomous Trading Paused" message="Semi/fully-autonomous AI signals are being blocked. Manual trades, assisted-mode approvals, and position closes remain available. Flip the Pause AI toggle to resume." />
       )}
 
       {/* Live events status + ticker tape */}
@@ -425,6 +448,7 @@ export function TradingDashboardPage() {
             <div>Max drawdown: <span className="text-slate-200">{risk.maxDrawdownPct}%</span></div>
             <div>Session: <span className="text-slate-200">{risk.tradingSessionStart}–{risk.tradingSessionEnd}</span></div>
             <div>Block news events: <span className="text-slate-200">{risk.blockNewsEvents ? "yes" : "no"}</span></div>
+            <div>AI autonomous: <span className={risk.pauseAutonomousTrading ? "text-amber-300" : "text-emerald-300"}>{risk.pauseAutonomousTrading ? "PAUSED" : "running"}</span></div>
           </div>
         </CardContent>
       </Card>
