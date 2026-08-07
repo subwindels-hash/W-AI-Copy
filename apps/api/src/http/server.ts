@@ -132,6 +132,7 @@ import { registerEnterpriseFinOpsRoutes } from "./routes/enterpriseFinOps.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerPublishingRoutes } from "./routes/publishing.js";
+import { registerCommerceRoutes } from "./routes/commerce.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
@@ -1173,6 +1174,12 @@ export function createApp() {
   v1.use("/marketing", marketingRouter);
   marketingRouter.use(authenticate);
   registerMarketingRoutes(marketingRouter);
+
+  // /commerce — B2C E-commerce (product catalog, cart, checkout, orders)
+  const commerceRouter = express.Router();
+  v1.use("/commerce", commerceRouter);
+  commerceRouter.use(authenticate);
+  registerCommerceRoutes(commerceRouter);
 
   // /tenant-isolation — Session 89: Tenant Isolation & Cross-Tenant Data
   // Governance (per-org isolation policies, namespace audit, cross-tenant
