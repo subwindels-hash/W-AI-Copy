@@ -246,6 +246,9 @@ async function main() {
         try {
           const { bootstrapTradingIntel } = await import("./tradingIntel/bootstrap.js");
           await bootstrapTradingIntel(logger);
+          // MT5 (and future) broker connectors initialise after TradingIntel.
+          const { BrokerIntegrationService } = await import("./tradingIntel/brokerIntegration.service.js");
+          await BrokerIntegrationService.initializeConnectors();
         } catch (e) { logger.warn("trading intel bootstrap failed", { err: e }); }
       }, 13500);
 
@@ -627,6 +630,13 @@ async function main() {
     }
     clearTimeout(forceCloseTimer);
 
+    // Disconnect broker connectors (gracefully close MT5 sessions, drain tick streams).
+    try {
+      const { BrokerIntegrationService } = await import("./tradingIntel/brokerIntegration.service.js");
+      await BrokerIntegrationService.shutdownConnectors();
+    } catch (e) {
+      logger.warn("broker connector shutdown failed", { err: e });
+    }
     // Disconnect database and Redis
     await prisma.$disconnect().catch((e) => logger.warn("prisma disconnect failed", { err: e }));
     try {

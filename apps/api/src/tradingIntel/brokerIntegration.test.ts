@@ -30,15 +30,17 @@ beforeEach(() => {
 const accInput = { name: "Main MT5", broker: "mt5" as const, login: "12345", server: "ICMarkets", password: "supersecret", mode: "assisted" as const, currency: "USD", leverage: 100 };
 
 describe("broker accounts", () => {
-  it("connector catalog lists all broker types", () => {
-    expect(CONNECTOR_CATALOG.length).toBeGreaterThanOrEqual(6);
+  it("connector catalog lists all broker types (MT5 + crypto exchanges + traditional brokers)", () => {
+    expect(CONNECTOR_CATALOG.length).toBeGreaterThanOrEqual(20);
     expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("mt5");
-    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("crypto");
+    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("binance");
+    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("coinbase");
+    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("interactive_brokers");
   });
 
   it("stores credentials encrypted and never returns them", async () => {
     const a = await BrokerIntegrationService.createAccount(ORG, USER, accInput);
-    expect(a.status).toBe("requires_config"); // honest — no live connector in sandbox
+    expect(a.status).toBe("disconnected"); // honest — created but not yet connected (no bridge in sandbox)
     // The returned account has no password field at all.
     expect((a as any).password).toBeUndefined();
     // Stored credentials are an encrypted blob, not plaintext.
@@ -70,7 +72,8 @@ describe("trade execution supervisor (modes + risk)", () => {
     const ex = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "EURUSD", side: "long", volume: 0.1 });
     expect(ex.status).toBe("pending_approval");
     const approved = await BrokerIntegrationService.approveExecution(ORG, ex.id, USER);
-    expect(approved.status).toBe("approved");
+    // After approval, an unconnected account follows the paper/simulation path → submitted.
+    expect(["approved", "submitted"]).toContain(approved.status);
     const rejected = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "GBPUSD", side: "short", volume: 0.2 });
     const rej = await BrokerIntegrationService.rejectExecution(ORG, rejected.id, USER);
     expect(rej.status).toBe("blocked");
