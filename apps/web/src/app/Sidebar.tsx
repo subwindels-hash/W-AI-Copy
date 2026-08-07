@@ -122,6 +122,7 @@ const navItems = [
   { to: "/app/commerce", icon: Package, label: "Commerce" },
   { to: "/app/notifications", icon: Bell, label: "Notifications" },
   { to: "/app/permissions", icon: Shield, label: "Permissions" },
+  { to: "/app/publishing", icon: Megaphone, label: "Publishing" },
   { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },

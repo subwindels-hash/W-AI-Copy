@@ -1,6 +1,7 @@
 export * from "./ids.js";
 export * from "./api.js";
 export * from "./permissions.js";
+export * from "./publishing.js";
 export * from "./desktop.js";
 export * from "./enterprise.js";
 export * from "./dataPlatform.js";

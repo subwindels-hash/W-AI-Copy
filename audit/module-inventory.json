@@ -8281,11 +8281,11 @@
       "serviceFile": {
         "file": "publishing.module.ts",
         "path": "/home/user/WIN/apps/api/src/publishing/publishing.module.ts",
-        "sloc": 183,
+        "sloc": 94,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 183,
+      "serviceTotalSloc": 94,
       "serviceFiles": [
         "publishing.module.ts"
       ],
@@ -8295,7 +8295,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/publishing.ts",
-        "sloc": 251,
+        "sloc": 65,
         "counts": {
           "total": 20,
           "GET": 7,
@@ -8328,14 +8328,15 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/publishing.ts (13 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/publishing.ts (9 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Workspace"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -8352,7 +8353,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "qa",
