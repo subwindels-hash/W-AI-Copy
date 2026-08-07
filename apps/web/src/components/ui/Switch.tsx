@@ -1,17 +1,19 @@
 import { cn } from "@/lib/cn";
 
+import type { ReactNode } from "react";
+
 interface Props {
   checked: boolean;
   onChange: (checked: boolean) => void;
   disabled?: boolean;
-  label?: string;
+  label?: ReactNode;
   id?: string;
   className?: string;
 }
 
 export function Switch({ checked, onChange, disabled, label, id, className }: Props) {
   return (
-    <label className={cn("inline-flex items-center gap-2 cursor-pointer", disabled && "opacity-50 cursor-not-allowed", className)}>
+    <label className={cn("inline-flex items-center gap-2 cursor-pointer select-none", disabled && "opacity-50 cursor-not-allowed", className)}>
       <button
         type="button"
         id={id}

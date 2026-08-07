@@ -87,6 +87,8 @@ export * from "./advertising.js";
 export * from "./musicGen.js";
 export * from "./musicVideo.js";
 export * from "./brokerIntegration.js";
+export * from "./ea.js";
+export * from "./crypto.js";
 export * from "./marketing.js";
 export * from "./tenantIsolation.js";
 export * from "./crm.js";

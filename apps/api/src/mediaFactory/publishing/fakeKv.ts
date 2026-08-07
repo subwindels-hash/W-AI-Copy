@@ -39,11 +39,15 @@ export class FakeKv {
     return "OK";
   }
 
-  async del(key: string): Promise<number> {
-    const had =
-      this.strings.delete(key) || this.hashes.delete(key) || this.zsets.delete(key) ||
-      this.lists.delete(key) || this.sets.delete(key);
-    return had ? 1 : 0;
+  async del(...keys: string[]): Promise<number> {
+    let n = 0;
+    for (const k of keys.flat()) {
+      if (
+        this.strings.delete(k) || this.hashes.delete(k) || this.zsets.delete(k) ||
+        this.lists.delete(k) || this.sets.delete(k)
+      ) n++;
+    }
+    return n;
   }
 
   async exists(key: string): Promise<number> {
@@ -267,7 +271,7 @@ export class FakeKv {
     const self = this;
     const chain = {
       set(key: string, value: string, ...args: any[]) { ops.push(() => self.set(key, value, ...args)); return chain; },
-      del(key: string) { ops.push(() => self.del(key)); return chain; },
+      del(...keys: string[]) { for (const k of keys.flat()) ops.push(() => self.del(k)); return chain; },
       hset(key: string, ...rest: any[]) { ops.push(() => self.hset(key, ...rest)); return chain; },
       sadd(key: string, ...members: string[]) { ops.push(() => self.sadd(key, ...members)); return chain; },
       srem(key: string, ...members: string[]) { ops.push(() => self.srem(key, ...members)); return chain; },

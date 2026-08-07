@@ -132,6 +132,7 @@ import { registerEnterpriseFinOpsRoutes } from "./routes/enterpriseFinOps.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
+import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
@@ -1166,6 +1167,13 @@ export function createApp() {
   v1.use("/brokers", brokerRouter);
   brokerRouter.use(authenticate);
   registerBrokerIntegrationRoutes(brokerRouter);
+
+  // /ea — MetaTrader Expert Advisor endpoints. Mixed public/private auth:
+  // register/list/revoke are behind session auth; poll/fill/heartbeat/config
+  // use Bearer-token auth handled inside registerEaRoutes.
+  const eaRouter = express.Router();
+  v1.use("/ea", eaRouter);
+  registerEaRoutes(eaRouter);
 
   // /marketing — AI Marketing Intelligence & Campaign Management (Tier-1 module).
   const marketingRouter = express.Router();
