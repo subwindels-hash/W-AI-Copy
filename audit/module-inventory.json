@@ -10176,7 +10176,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/voice.ts",
-        "sloc": 262,
+        "sloc": 263,
         "counts": {
           "total": 15,
           "GET": 8,
@@ -10206,7 +10206,7 @@
     ],
     "sharedTypes": "packages/shared/src/voice.ts (267 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/voice.ts (10 LOC)",
       "pages": []
     },
     "db": {
@@ -10228,7 +10228,7 @@
     "externalIntegrations": [
       "ElevenLabs"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "voiceFoundry",

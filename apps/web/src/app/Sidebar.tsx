@@ -63,6 +63,7 @@ const navItems = [
   { to: "/app/trading", icon: TrendingUp, label: "Trading Intel" },
   { to: "/app/trading/brokers", icon: Landmark, label: "Broker Trading" },
   { to: "/app/voice", icon: Mic, label: "Voice Studio" },
+  { to: "/app/voice-console", icon: Mic, label: "Voice" },
   { to: "/app/media", icon: Film, label: "Media Factory" },
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
   { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },

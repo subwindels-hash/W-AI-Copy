@@ -21,6 +21,7 @@ const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
 const AnalyticsPage = lazy(() => import("./pages/analytics/AnalyticsPage"));
 const TradingIntelPage = lazy(() => import("./pages/trading/TradingIntelPage").then((m) => ({ default: m.TradingIntelPage })));
 const VoiceStudioPage = lazy(() => import("./pages/voice/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
+const VoiceConsolePage = lazy(() => import("./pages/voice/VoiceConsolePage").then((m) => ({ default: m.VoiceConsolePage })));
 const MediaFactoryPage = lazy(() => import("./pages/media/MediaFactoryPage").then((m) => ({ default: m.MediaFactoryPage })));
 const LearnPage = lazy(() => import("./pages/learn/LearnPage").then((m) => ({ default: m.LearnPage })));
 const ProjectsPage = lazy(() => import("./pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
@@ -279,6 +280,7 @@ export const router = createBrowserRouter([
       { path: "trading/dashboard", element: withSuspense(<TradingDashboardPage />) },
       { path: "marketing", element: withSuspense(<MarketingDashboardPage />) },
       { path: "voice", element: withSuspense(<VoiceStudioPage />) },
+      { path: "voice-console", element: withSuspense(<VoiceConsolePage />) },
       { path: "media", element: withSuspense(<MediaFactoryPage />) },
       { path: "learn", element: withSuspense(<LearnPage />) },
       { path: "projects", element: withSuspense(<ProjectsPage />) },
