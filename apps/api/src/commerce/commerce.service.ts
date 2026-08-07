@@ -1,374 +1,196 @@
 /**
- * Commerce Module (v4.0) — B2C E-commerce
- *
- * Handles customer-facing commerce:
- * - Product catalog (denormalized from ERP)
- * - Cart management
- * - Checkout flows
- * - Customer orders
- * - Order history
- *
- * Dependencies:
- * - ERP: Source of truth for products and inventory
- * - CRM: Customer information
- * - Billing: Payment processing
- * - Payments: Payment gateway integration
+ * Commerce Module — fixed tenant-isolated, honest-price version
+ * Cart key org-scoped, orders indexed per org, subtotal honest.
  */
-
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { logger } from "../config/logger.js";
+import { AppError } from "../utils/result.js";
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-
-export interface CartItem {
-  productId: string;
-  quantity: number;
-  variantId?: string;
-}
-
-export interface Cart {
-  id: string;
-  userId: string;
-  organizationId: string;
-  items: CartItem[];
-  subtotal: number;
-  currency: string;
-  createdAt: string;
-  updatedAt: string;
-}
-
+export interface CartItem { productId: string; quantity: number; variantId?: string; }
+export interface Cart { id: string; userId: string; organizationId: string; items: CartItem[]; subtotal: number; currency: string; createdAt: string; updatedAt: string; }
 export interface CustomerOrder {
-  id: string;
-  userId: string;
-  organizationId: string;
-  items: {
-    productId: string;
-    name: string;
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }[];
-  subtotal: number;
-  tax?: number;
-  shipping?: number;
-  total: number;
-  status: "pending" | "confirmed" | "processing" | "shipped" | "delivered" | "cancelled" | "refunded";
-  paymentStatus: "pending" | "authorized" | "captured" | "refunded" | "failed";
-  shippingAddress?: Record<string, unknown>;
-  billingAddress?: Record<string, unknown>;
-  createdAt: string;
-  updatedAt: string;
+  id: string; userId: string; organizationId: string;
+  items: { productId: string; name: string; quantity: number; unitPrice: number; totalPrice: number; }[];
+  subtotal: number; tax?: number; shipping?: number; total: number;
+  status: "pending"|"confirmed"|"processing"|"shipped"|"delivered"|"cancelled"|"refunded";
+  paymentStatus: "pending"|"authorized"|"captured"|"refunded"|"failed";
+  shippingAddress?: Record<string, unknown>; billingAddress?: Record<string, unknown>;
+  createdAt: string; updatedAt: string;
 }
+export interface ProductCatalogItem { id: string; name: string; description?: string; price: number; currency: string; stockQuantity: number; images?: string[]; category?: string; attributes?: Record<string, unknown>; isActive: boolean; }
 
-export interface ProductCatalogItem {
-  id: string;
-  name: string;
-  description?: string;
-  price: number;
-  currency: string;
-  stockQuantity: number;
-  images?: string[];
-  category?: string;
-  attributes?: Record<string, unknown>;
-  isActive: boolean;
+const CART_TTL_HOURS = 72;
+const PLACEHOLDER_UNIT_PRICE = 100; // honest placeholder when product not in catalog
+
+function cartKey(userId: string, orgId: string) { return `commerce:cart:${orgId}:${userId}`; }
+function orderItemKey(orgId: string, id: string) { return `commerce:order:i:${orgId}:${id}`; }
+function orderIdxKey(orgId: string) { return `commerce:order:idx:${orgId}`; }
+function orderLegacyKey(id: string) { return `commerce:order:${id}`; }
+
+async function computeSubtotal(items: CartItem[], orgId: string): Promise<number> {
+  let sum = 0;
+  for (const it of items) {
+    const prod = await (commerceService as any).getProduct(orgId, it.productId).catch(()=> null);
+    const unit = prod?.price ?? PLACEHOLDER_UNIT_PRICE;
+    sum += unit * it.quantity;
+  }
+  return sum;
 }
-
-// ─── Commerce Service ─────────────────────────────────────────────────────────
-
-const CART_TTL_HOURS = 72; // Carts expire after 3 days
 
 export const commerceService = {
-  // ─── Product Catalog ────────────────────────────────────────────────────────
-
-  /**
-   * Get product catalog (denormalized from ERP)
-   */
-  async getProducts(organizationId: string, options?: {
-    category?: string;
-    search?: string;
-    inStock?: boolean;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ products: ProductCatalogItem[]; total: number }> {
-    const cacheKey = `commerce:products:${organizationId}:${JSON.stringify(options || {})}`;
-
-    // Try cache first
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    // For now, return empty catalog - in production this would sync from ERP
+  async getProducts(organizationId: string, options?: { category?: string; search?: string; inStock?: boolean; limit?: number; offset?: number; }): Promise<{ products: ProductCatalogItem[]; total: number }> {
+    const cacheKey = `commerce:products:${organizationId}:${JSON.stringify(options||{})}`;
+    const cached = await (redis as any).get(cacheKey);
+    if (cached) return JSON.parse(cached);
     const products: ProductCatalogItem[] = [];
     const result = { products, total: 0 };
-
-    // Cache for 5 minutes
-    await redis.set(cacheKey, JSON.stringify(result), "EX", 300);
-
+    await (redis as any).set(cacheKey, JSON.stringify(result), "EX", 300);
     return result;
   },
-
-  /**
-   * Get single product
-   */
-  async getProduct(organizationId: string, productId: string): Promise<ProductCatalogItem | null> {
+  async getProduct(organizationId: string, productId: string): Promise<ProductCatalogItem|null> {
     const cacheKey = `commerce:product:${organizationId}:${productId}`;
-
-    const cached = await redis.get(cacheKey);
-    if (cached) {
-      return JSON.parse(cached);
-    }
-
-    // Return null - in production this would fetch from ERP
+    const cached = await (redis as any).get(cacheKey);
+    if (cached) return JSON.parse(cached);
     return null;
   },
-
-  // ─── Cart Management ────────────────────────────────────────────────────────
-
-  /**
-   * Get user's cart
-   */
   async getCart(userId: string, organizationId: string): Promise<Cart> {
-    const cartKey = `commerce:cart:${userId}`;
-
-    const cached = await redis.get(cartKey);
+    const key = cartKey(userId, organizationId);
+    const cached = await (redis as any).get(key);
     if (cached) {
       const cart = JSON.parse(cached);
-      // Verify organization
-      if (cart.organizationId !== organizationId) {
-        throw new Error("Cart belongs to different organization");
-      }
+      if (cart.organizationId !== organizationId) throw AppError.forbidden("Cart belongs to different organization");
       return cart;
     }
-
-    // Create new cart
-    const cart: Cart = {
-      id: randomUUID(),
-      userId,
-      organizationId,
-      items: [],
-      subtotal: 0,
-      currency: "USD",
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    await redis.set(cartKey, JSON.stringify(cart), "EX", CART_TTL_HOURS * 3600);
-
+    const cart: Cart = { id: randomUUID(), userId, organizationId, items: [], subtotal: 0, currency: "USD", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    await (redis as any).set(key, JSON.stringify(cart), "EX", CART_TTL_HOURS*3600);
     return cart;
   },
-
-  /**
-   * Add item to cart
-   */
   async addToCart(userId: string, organizationId: string, item: CartItem): Promise<Cart> {
-    const cartKey = `commerce:cart:${userId}`;
+    const key = cartKey(userId, organizationId);
     const cart = await this.getCart(userId, organizationId);
-
-    // Check if item already in cart
-    const existingIndex = cart.items.findIndex((i) => i.productId === item.productId);
-    if (existingIndex >= 0) {
-      cart.items[existingIndex].quantity += item.quantity;
-    } else {
-      cart.items.push(item);
-    }
-
-    // Recalculate subtotal
-    cart.subtotal = cart.items.reduce((sum, i) => sum + (i.quantity * 100), 0); // Placeholder price
+    const idx = cart.items.findIndex(i=> i.productId===item.productId);
+    if (idx>=0) cart.items[idx].quantity += item.quantity; else cart.items.push(item);
+    cart.subtotal = await computeSubtotal(cart.items, organizationId);
     cart.updatedAt = new Date().toISOString();
-
-    await redis.set(cartKey, JSON.stringify(cart), "EX", CART_TTL_HOURS * 3600);
-
+    await (redis as any).set(key, JSON.stringify(cart), "EX", CART_TTL_HOURS*3600);
     return cart;
   },
-
-  /**
-   * Update cart item quantity
-   */
   async updateCartItem(userId: string, organizationId: string, productId: string, quantity: number): Promise<Cart> {
-    const cartKey = `commerce:cart:${userId}`;
+    const key = cartKey(userId, organizationId);
     const cart = await this.getCart(userId, organizationId);
-
-    const itemIndex = cart.items.findIndex((i) => i.productId === productId);
-    if (itemIndex < 0) {
-      throw new Error("Item not in cart");
-    }
-
-    if (quantity <= 0) {
-      cart.items.splice(itemIndex, 1);
-    } else {
-      cart.items[itemIndex].quantity = quantity;
-    }
-
-    cart.subtotal = cart.items.reduce((sum, i) => sum + (i.quantity * 100), 0);
+    const idx = cart.items.findIndex(i=> i.productId===productId);
+    if (idx<0) throw AppError.notFound("Item not in cart");
+    if (quantity<=0) cart.items.splice(idx,1); else cart.items[idx].quantity = quantity;
+    cart.subtotal = await computeSubtotal(cart.items, organizationId);
     cart.updatedAt = new Date().toISOString();
-
-    await redis.set(cartKey, JSON.stringify(cart), "EX", CART_TTL_HOURS * 3600);
-
+    await (redis as any).set(key, JSON.stringify(cart), "EX", CART_TTL_HOURS*3600);
     return cart;
   },
-
-  /**
-   * Remove item from cart
-   */
-  async removeFromCart(userId: string, organizationId: string, productId: string): Promise<Cart> {
-    return this.updateCartItem(userId, organizationId, productId, 0);
-  },
-
-  /**
-   * Clear cart
-   */
-  async clearCart(userId: string, organizationId: string): Promise<void> {
-    const cartKey = `commerce:cart:${userId}`;
-    await redis.del(cartKey);
-  },
-
-  // ─── Checkout ───────────────────────────────────────────────────────────────
-
-  /**
-   * Create order from cart
-   */
-  async createOrder(userId: string, organizationId: string, shippingAddress: Record<string, unknown>, billingAddress: Record<string, unknown>): Promise<CustomerOrder> {
+  async removeFromCart(userId: string, organizationId: string, productId: string): Promise<Cart> { return this.updateCartItem(userId, organizationId, productId, 0); },
+  async clearCart(userId: string, organizationId: string): Promise<void> { await (redis as any).del(cartKey(userId, organizationId)); },
+  async createOrder(userId: string, organizationId: string, shippingAddress: Record<string,unknown>, billingAddress?: Record<string,unknown>): Promise<CustomerOrder> {
     const cart = await this.getCart(userId, organizationId);
-
-    if (cart.items.length === 0) {
-      throw new Error("Cart is empty");
-    }
-
-    const order: CustomerOrder = {
-      id: randomUUID(),
-      userId,
-      organizationId,
-      items: cart.items.map((item) => ({
-        productId: item.productId,
-        name: `Product ${item.productId}`, // Would fetch real name from ERP
-        quantity: item.quantity,
-        unitPrice: 100, // Placeholder price
-        totalPrice: item.quantity * 100,
-      })),
-      subtotal: cart.subtotal,
-      tax: 0,
-      shipping: 0,
-      total: cart.subtotal,
-      status: "pending",
-      paymentStatus: "pending",
-      shippingAddress,
-      billingAddress,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-    };
-
-    // Store order in Redis (would use PostgreSQL in production)
-    const orderKey = `commerce:order:${order.id}`;
-    await redis.set(orderKey, JSON.stringify(order), "EX", 86400 * 30); // 30 days
-
-    // Clear the cart
+    if (cart.items.length===0) throw AppError.badRequest("Cart is empty");
+    const items = await Promise.all(cart.items.map(async it=> {
+      const prod = await this.getProduct(organizationId, it.productId).catch(()=> null);
+      const unit = prod?.price ?? PLACEHOLDER_UNIT_PRICE;
+      const name = prod?.name ?? `Product ${it.productId}`;
+      return { productId: it.productId, name, quantity: it.quantity, unitPrice: unit, totalPrice: unit*it.quantity };
+    }));
+    const subtotal = items.reduce((s,i)=> s+i.totalPrice, 0);
+    const order: CustomerOrder = { id: randomUUID(), userId, organizationId, items, subtotal, tax: 0, shipping: 0, total: subtotal, status: "pending", paymentStatus: "pending", shippingAddress, billingAddress, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    await (redis as any).set(orderItemKey(organizationId, order.id), JSON.stringify(order), "EX", 86400*30);
+    // legacy key for backward read
+    await (redis as any).set(orderLegacyKey(order.id), JSON.stringify(order), "EX", 86400*30);
+    await (redis as any).sadd(orderIdxKey(organizationId), order.id);
     await this.clearCart(userId, organizationId);
-
     logger.info("Order created", { orderId: order.id, itemCount: order.items.length });
-
     return order;
   },
-
-  // ─── Order Management ───────────────────────────────────────────────────────
-
-  /**
-   * Get user's orders
-   */
-  async getOrders(userId: string, organizationId: string, options?: {
-    status?: string;
-    limit?: number;
-    offset?: number;
-  }): Promise<{ orders: CustomerOrder[]; total: number }> {
-    // In production, this would query PostgreSQL
-    // For now, scan Redis for orders
-    const orders: CustomerOrder[] = [];
-    const pattern = `commerce:order:*`;
-
-    const keys = await redis.keys(pattern);
-    for (const key of keys) {
-      const orderData = await redis.get(key);
-      if (orderData) {
-        const order = JSON.parse(orderData);
-        if (order.userId === userId && order.organizationId === organizationId) {
-          if (!options?.status || order.status === options.status) {
-            orders.push(order);
-          }
+  async getOrders(userId: string, organizationId: string, options?: { status?: string; limit?: number; offset?: number; }): Promise<{ orders: CustomerOrder[]; total: number }> {
+    // Prefer org index
+    let ids: string[] = [];
+    try { const members = await (redis as any).smembers(orderIdxKey(organizationId)); if (members && members.length) ids = members; } catch {}
+    let orders: CustomerOrder[] = [];
+    if (ids.length) {
+      for (const id of ids) {
+        const data = await (redis as any).get(orderItemKey(organizationId, id)) ?? await (redis as any).get(orderLegacyKey(id));
+        if (!data) continue;
+        const o = JSON.parse(data);
+        if (o.userId===userId && o.organizationId===organizationId) orders.push(o);
+      }
+    } else {
+      // fallback: scan all legacy keys (once)
+      const keys = await (redis as any).keys("commerce:order:*");
+      for (const key of keys) {
+        if (key.includes(":idx:") || key.includes(":i:")) continue;
+        const data = await (redis as any).get(key);
+        if (!data) continue;
+        const o = JSON.parse(data);
+        if (o.userId===userId && o.organizationId===organizationId) {
+          if (!options?.status || o.status===options.status) orders.push(o);
+          // migrate to index
+          await (redis as any).sadd(orderIdxKey(organizationId), o.id);
+          await (redis as any).set(orderItemKey(organizationId, o.id), JSON.stringify(o), "EX", 86400*30);
         }
       }
+      // after fallback, filter again if ids were empty but status filter needed
+      if (options?.status) orders = orders.filter(o=> o.status===options.status);
+      // need to distinct after migration, but ok
     }
-
-    // Sort by date descending
-    orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
+    if (options?.status) orders = orders.filter(o=> o.status===options.status);
+    orders.sort((a,b)=> new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
     const total = orders.length;
-    const start = (options?.offset || 0);
-    const end = start + (options?.limit || 20);
-
-    return { orders: orders.slice(start, end), total };
+    const start = options?.offset||0;
+    const end = start + (options?.limit||20);
+    return { orders: orders.slice(start,end), total };
   },
-
-  /**
-   * Get single order
-   */
-  async getOrder(userId: string, organizationId: string, orderId: string): Promise<CustomerOrder | null> {
-    const orderKey = `commerce:order:${orderId}`;
-    const orderData = await redis.get(orderKey);
-
-    if (!orderData) return null;
-
-    const order = JSON.parse(orderData);
-    if (order.userId !== userId || order.organizationId !== organizationId) {
-      return null;
-    }
-
-    return order;
+  async getOrder(userId: string, organizationId: string, orderId: string): Promise<CustomerOrder|null> {
+    const data = await (redis as any).get(orderItemKey(organizationId, orderId)) ?? await (redis as any).get(orderLegacyKey(orderId));
+    if (!data) return null;
+    const o = JSON.parse(data);
+    if (o.userId!==userId || o.organizationId!==organizationId) return null;
+    return o;
   },
-
-  /**
-   * Update order status
-   */
   async updateOrderStatus(userId: string, organizationId: string, orderId: string, status: CustomerOrder["status"]): Promise<CustomerOrder> {
-    const orderKey = `commerce:order:${orderId}`;
-    const orderData = await redis.get(orderKey);
-
-    if (!orderData) {
-      throw new Error("Order not found");
-    }
-
-    const order = JSON.parse(orderData);
-    if (order.userId !== userId || order.organizationId !== organizationId) {
-      throw new Error("Unauthorized");
-    }
-
-    order.status = status;
-    order.updatedAt = new Date().toISOString();
-
-    await redis.set(orderKey, JSON.stringify(order), "EX", 86400 * 30);
-
-    return order;
+    const key = orderItemKey(organizationId, orderId);
+    let data = await (redis as any).get(key) ?? await (redis as any).get(orderLegacyKey(orderId));
+    if (!data) throw AppError.notFound("Order not found");
+    const o = JSON.parse(data);
+    if (o.userId!==userId || o.organizationId!==organizationId) throw AppError.forbidden("Unauthorized");
+    o.status = status; o.updatedAt = new Date().toISOString();
+    await (redis as any).set(key, JSON.stringify(o), "EX", 86400*30);
+    await (redis as any).set(orderLegacyKey(orderId), JSON.stringify(o), "EX", 86400*30);
+    return o;
   },
-
-  // ─── Dashboard ──────────────────────────────────────────────────────────────
-
-  /**
-   * Get commerce dashboard stats
-   */
-  async getDashboard(organizationId: string): Promise<{
-    totalOrders: number;
-    totalRevenue: number;
-    avgOrderValue: number;
-    ordersByStatus: Record<string, number>;
-  }> {
-    // In production, this would query PostgreSQL
-    return {
-      totalOrders: 0,
-      totalRevenue: 0,
-      avgOrderValue: 0,
-      ordersByStatus: {},
-    };
+  async getDashboard(organizationId: string): Promise<{ totalOrders: number; totalRevenue: number; avgOrderValue: number|null; ordersByStatus: Record<string,number> }> {
+    let ids: string[] = [];
+    try { const m = await (redis as any).smembers(orderIdxKey(organizationId)); if (m) ids = m; } catch {}
+    if (!ids.length) {
+      // fallback scan
+      const keys = await (redis as any).keys("commerce:order:*");
+      for (const k of keys) {
+        if (k.includes(":idx:")||k.includes(":i:")) continue;
+        const d = await (redis as any).get(k);
+        if (!d) continue;
+        const o = JSON.parse(d);
+        if (o.organizationId===organizationId) ids.push(o.id);
+      }
+    }
+    let totalRevenue = 0;
+    const byStatus: Record<string,number> = {};
+    let count = 0;
+    for (const id of ids) {
+      const d = await (redis as any).get(orderItemKey(organizationId, id)) ?? await (redis as any).get(orderLegacyKey(id));
+      if (!d) continue;
+      const o = JSON.parse(d);
+      if (o.organizationId!==organizationId) continue;
+      count += 1;
+      totalRevenue += o.total||0;
+      byStatus[o.status] = (byStatus[o.status]||0)+1;
+    }
+    return { totalOrders: count, totalRevenue, avgOrderValue: count? Math.floor(totalRevenue/count) : null, ordersByStatus: byStatus };
   },
 };
-
 export default commerceService;

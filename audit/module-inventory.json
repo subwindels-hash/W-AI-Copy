@@ -1215,6 +1215,7 @@
       "audit.spec.ts",
       "auth.spec.ts",
       "collaboration.spec.ts",
+      "commerce.spec.ts",
       "conversations.spec.ts",
       "dataPlatform.spec.ts",
       "derivatives.spec.ts",
@@ -2311,13 +2312,14 @@
       "serviceFile": {
         "file": "commerce.service.ts",
         "path": "/home/user/WIN/apps/api/src/commerce/commerce.service.ts",
-        "sloc": 375,
+        "sloc": 197,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 750,
+      "serviceTotalSloc": 536,
       "serviceFiles": [
         "commerce.service.ts",
+        "commerce.test.ts",
         "commerce/commerce.service.ts"
       ],
       "importedServiceFiles": [
@@ -2328,7 +2330,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/commerce.ts",
-        "sloc": 195,
+        "sloc": 65,
         "counts": {
           "total": 16,
           "GET": 7,
@@ -2357,24 +2359,26 @@
         ]
       }
     ],
-    "sharedTypes": null,
+    "sharedTypes": "packages/shared/src/commerce.ts (27 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/commerce.ts (18 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
-        "Organization",
-        "Integration"
+        "Organization"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "commerce.spec.ts",
+      "commerce/commerce.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "composer",

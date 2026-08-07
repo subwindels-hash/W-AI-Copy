@@ -118,6 +118,7 @@ const navItems = [
   { to: "/app/conversations", icon: Inbox, label: "Conversation Ops" },
   { to: "/app/derivatives", icon: Sigma, label: "Derivatives Desk" },
   { to: "/app/audit", icon: ShieldCheck, label: "Audit Trail" },
+  { to: "/app/commerce", icon: Package, label: "Commerce" },
   { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/app/files", icon: Folder, label: "Files" },
