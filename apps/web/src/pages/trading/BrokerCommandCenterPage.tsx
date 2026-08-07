@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { DataBanner } from "@/components/ui/DataBanner";
-import { Activity, Plus, Loader2, Trash2, ShieldAlert, Power, LineChart, Briefcase, CheckCircle2, XCircle, TrendingUp, Wallet, Layers, Target, Bot } from "lucide-react";
+import { Activity, Plus, Rocket, AlertTriangle, Loader2, Trash2, ShieldAlert, Power, LineChart, Briefcase, CheckCircle2, XCircle, TrendingUp, Wallet, Layers, Target, Bot } from "lucide-react";
 
 const usd = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const modeColor: Record<string, string> = {
@@ -61,11 +61,14 @@ export function BrokerCommandCenterPage() {
   // strategy form
   const [stratName, setStratName] = useState("");
   const [stratType, setStratType] = useState<TradingStrategy["type"]>("rule");
+  const [demoInstructions, setDemoInstructions] = useState<Array<{step:number;title:string;detail:string;warning?:string}> | null>(null);
+  const [demoBusy, setDemoBusy] = useState(false);
 
   const refresh = useCallback(async () => {
     try {
       const [c, p, s, ag] = await Promise.all([brokerApi.commandCenter(), brokerApi.portfolio(), brokerApi.strategies(), brokerApi.agents()]);
       setCc(c); setPortfolio(p); setStrategies(s); setAgents(ag);
+      try { const inst = await brokerApi.demoInstructions(); setDemoInstructions(inst.instructions); } catch {}
     } catch { /* degrades before server config */ }
   }, []);
 
@@ -129,6 +132,41 @@ export function BrokerCommandCenterPage() {
       {cc?.riskControls.killSwitch && (
         <div className="mb-4"><DataBanner message="KILL SWITCH is ACTIVE — all new trade execution is halted. Re-enable trading to continue." /></div>
       )}
+
+      {/* ── 1-Click Demo Paper-Trading Preset — BEFORE USING READ THIS ── */}
+      <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4 text-amber-400" /> BEFORE USING — Read Step-by-Step (1-Click Demo Preset)</CardTitle>
+          <CardDescription>MT4 demo + conservative risk + backtested strategy — PAPER TRADING ONLY. No real money until YOU switch to live.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0" /><span><b>Disclaimer:</b> Demo + backtest = historical replay, not future profit. Past winRate ≠ future winRate. Never trade live with funds you cannot afford to lose. Leverage kills.</span></div>
+          {demoInstructions ? (
+            <ol className="space-y-2">
+              {demoInstructions.map((st) => (
+                <li key={st.step} className="rounded-lg border border-border bg-bg-elevated p-3">
+                  <div className="text-sm font-semibold text-text-bright"><span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-azure-500/20 text-azure-300 text-xs mr-2">{st.step}</span>{st.title}</div>
+                  <div className="text-xs text-text-muted mt-1">{st.detail}</div>
+                  {st.warning && <div className="text-xs text-rose-300 mt-1">⚠ {st.warning}</div>}
+                </li>
+              ))}
+            </ol>
+          ) : <p className="text-xs text-text-muted">Loading instructions from /brokers/demo-preset/instructions…</p>}
+          <Button onClick={async () => {
+            setDemoBusy(true); setErr(null); setNotice(null);
+            try {
+              const preset = await brokerApi.demoPreset();
+              setNotice(`Demo preset ready: account "${preset.account.name}" (${preset.account.broker}), risk $500 max, strategy "${preset.strategy.name}" backtested ${preset.strategy.backtest ? Math.round(preset.strategy.backtest.winRate*100)+"% WR" : "ready"}. Stay in analysis_only, review instructions step 5.`);
+              await refresh();
+            } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setDemoBusy(false); }
+          }} disabled={demoBusy} variant="primary" className="w-full sm:w-auto">
+            {demoBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Rocket className="h-4 w-4 mr-2" />}
+            1-Click Create MT4 Demo Preset (Conservative)
+          </Button>
+          <p className="text-[11px] text-text-muted">Creates MT4 account “MT4 Demo Preset” (analysis_only), sets $500 max position / 5% exposure / 1% daily loss / 50× leverage / news block, and backtests “Conservative SMA Demo”. Idempotent — safe to click again.</p>
+        </CardContent>
+      </Card>
+
 
       {err && <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">{err}</div>}
       {notice && <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200">{notice}</div>}

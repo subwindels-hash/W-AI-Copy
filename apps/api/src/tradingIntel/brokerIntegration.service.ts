@@ -820,6 +820,69 @@ export const BrokerIntegrationService = {
     return next;
   },
 
+  /* ── 1-Click Demo Paper-Trading Preset (MT4 demo + conservative risk + backtested strategy) ── */
+  DEMO_PRESET_INSTRUCTIONS: [
+    { step: 1, title: "READ BEFORE YOU CLICK — this is DEMO, not real money", detail: "The preset creates a paper-trading sandbox on an MT4 demo account, sets ultra-conservative risk limits, and loads a backtested SMA strategy. No real funds are at risk until YOU switch an account to live. Trading is risky — past backtest does NOT guarantee future profit.", warning: "Never trade live with money you cannot afford to lose." },
+    { step: 2, title: "What 1-Click Does", detail: "1) Creates MT4 account 'MT4 Demo Preset' (broker=mt4, environment=demo, mode=analysis_only) if missing. 2) Sets risk: maxPosition $500, maxExposure 5%, daily loss 1%, leverage 50, killSwitch OFF but pauseAutonomous false — you stay in analysis_only until you approve. 3) Creates strategy 'Conservative SMA Demo' (SMA 20/50 crossover, winRate 0.55) and runs backtest immediately. 4) Returns account / risk / strategy + this instruction pack." },
+    { step: 3, title: "After Click — Verify Demo", detail: "Check Dashboard: account status = disconnected (expected until you add real demo login), risk panel shows conservative limits, strategy shows backtest {winRate, totalReturn, maxDrawdown}. Run another backtest with different dates to see variance." },
+    { step: 4, title: "Add Your Real MT4 Demo Login (optional)", detail: "To go live on demo: PATCH /brokers/accounts/:id with your broker's demo login/server/password (e.g., IC Markets-Demo). Then POST /brokers/accounts/:id/connect. Until connected, all signals stay in analysis_only / paper path and are queued for EA." },
+    { step: 5, title: "Test Profitability Safely (PAPER FIRST)", detail: "Keep mode=analysis_only for 7+ days, watch Draft Executions (POST /brokers/trade {paper:true}). Review daily PnL, winRate, drawdown in Portfolio Intelligence. Only when backtest + paper both profitable, switch ONE account to mode=assisted (requires human approval) — never fully_autonomous on day one." },
+    { step: 6, title: "Go Live — Gradual", detail: "Change mode to assisted → approve each execution in /brokers/executions. If profitable after 2 weeks, consider semi_autonomous. Keep killSwitch and pauseAutonomous handy — you can halt AI instantly without locking yourself out. Global read-only WINDELS_MT4_GLOBAL_READONLY=true blocks all MT4 orders instantly." },
+  ],
+
+  async getDemoPresetInstructions(): Promise<typeof BrokerIntegrationService.DEMO_PRESET_INSTRUCTIONS> {
+    return this.DEMO_PRESET_INSTRUCTIONS;
+  },
+
+  async createDemoPreset(oid: string, userId: string): Promise<{ account: BrokerAccount; risk: BrokerRiskControls; strategy: TradingStrategy; instructions: typeof BrokerIntegrationService.DEMO_PRESET_INSTRUCTIONS }> {
+    // 1) Account — reuse if exists
+    let accounts = await this.listAccounts(oid);
+    let account = accounts.find(a => a.name === "MT4 Demo Preset" && a.broker === "mt4");
+    if (!account) {
+      account = await this.createAccount(oid, userId, {
+        name: "MT4 Demo Preset",
+        broker: "mt4",
+        login: "demo-preset",
+        server: "Demo-Server",
+        password: "demo-password-please-update",
+        mode: "analysis_only",
+        environment: "demo",
+        currency: "USD",
+        leverage: 50,
+      } as any);
+    }
+    // 2) Conservative risk
+    const risk = await this.updateRiskControls(oid, {
+      maxDailyLossPct: 1,
+      maxWeeklyLossPct: 3,
+      maxMonthlyLossPct: 5,
+      maxPositionSizeUsd: 500,
+      maxExposurePct: 5,
+      maxDrawdownPct: 5,
+      maxLeverage: 50,
+      tradingSessionStart: "00:00",
+      tradingSessionEnd: "23:59",
+      blockNewsEvents: true,
+      killSwitch: false,
+      pauseAutonomousTrading: false,
+    });
+    // 3) Strategy — reuse or create
+    let strategies = await this.listStrategies(oid);
+    let strategy = strategies.find(s => s.name === "Conservative SMA Demo");
+    if (!strategy) {
+      strategy = await this.createStrategy(oid, userId, {
+        name: "Conservative SMA Demo",
+        description: "SMA 20/50 crossover, 1% risk per trade, conservative — demo preset. Backtest is replay, not live profit.",
+        type: "rule",
+        logic: { indicator: "smaCross", fast: 20, slow: 50, winRate: 0.55, maxTrades: 50 },
+        accountIds: [account.id],
+      } as any);
+    }
+    strategy = await this.backtestStrategy(oid, strategy.id);
+    const instructions = await this.getDemoPresetInstructions();
+    return { account, risk, strategy, instructions };
+  },
+
   inSession(start: string, end: string): boolean {
     if (!start || !end || start === end) return true;
     const nowD = new Date();

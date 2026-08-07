@@ -226,6 +226,20 @@ export function registerBrokerIntegrationRoutes(router: Router) {
     catch (e) { next(e); }
   });
 
+  // ── 1-Click Demo Paper-Trading Preset ──
+  router.get("/brokers/demo-preset/instructions", async (req, res, next) => {
+    try {
+      const instructions = await BrokerIntegrationService.getDemoPresetInstructions();
+      res.json({ ok: true, data: { instructions, disclaimer: "Paper trading only — backtest is historical replay, not future profit. Never trade live with funds you cannot afford to lose." }, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.post("/brokers/demo-preset", async (req, res, next) => {
+    try {
+      const preset = await BrokerIntegrationService.createDemoPreset(oid(req), uid(req));
+      res.status(201).json({ ok: true, data: preset, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
   // Portfolio intelligence
   router.get("/brokers/portfolio", async (req, res, next) => {
     try {
