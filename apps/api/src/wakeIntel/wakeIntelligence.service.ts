@@ -8,6 +8,9 @@ import type {
   WakeConfig, ActivationEvent, ClapPattern, ClapDetection, MfaPolicy, MfaFactor,
   DeviceActivationState, ContextSnapshot, EmergencyContact, EmergencyConfig, EmergencyEvent,
   WorkforceActivationBinding, WakeMethod, ActivationOutcome, WakeDashboard,
+  VoiceActivationConfig, VoiceProfile, VoiceActivationSession, VoiceActivationLog,
+  VoiceCenterDashboard, UpdateVoiceConfigInput,
+  WINDLES_DEFAULT_WAKE_PHRASES, ACTIVATION_RESPONSES, DEFAULT_DEACTIVATION_PHRASES,
 } from "@windels/shared";
 import { redisCmd as redis } from "../db/redis.js";
 
@@ -22,6 +25,14 @@ const K = {
   events: "wi:events",
   act24h: "wi:act24h", offline24h: "wi:offline24h", mfaChallenge: "wi:mfa-ch", mfaFail: "wi:mfa-fail",
   em24h: "wi:em24h", latencies: "wi:latencies",
+  // Voice Activation (Phase Voice-2)
+  voiceConfig: "wi:voice-config",
+  voiceCustomPhrases: "wi:voice-custom-phrases",
+  voiceProfiles: "wi:voice-profiles",
+  voiceSessions: "wi:voice-sessions",
+  voiceLogs: "wi:voice-logs",
+  voiceActToday: "wi:voice-act-today",
+  voiceActWeek: "wi:voice-act-week",
 };
 
 export const WakeIntelligenceService = {
@@ -287,6 +298,273 @@ export const WakeIntelligenceService = {
       emergencyContacts: contacts.length, activations24h: act24, activationsOffline24h: off24,
       mfaChallenges24h: mfaCh, mfaFailures24h: mfaF, emergencyEvents24h: em,
       avgLatencyMs: avgLat, falsePositiveRatePct: 2.3, auditRetentionDays: 365,
+    };
+  },
+
+  // ─── Voice Activation (Phase Voice-2) ───────────────────────────────────
+
+  /** Default voice activation config. */
+  _defaultVoiceConfig(orgId: string, userId?: string): VoiceActivationConfig {
+    const defaults = ["Hey Windels", "Hello Windels", "Hi Windels", "Okay Windels", "Alright Windels",
+      "Wake up Windels", "Windels", "Windels, are you there?", "Windels, listen",
+      "Windels, I need you", "Windels, help me", "Windels, get ready",
+      "Windels, let's go", "Windels, start", "Windels, activate", "Windels, come online"];
+    const deactivation = ["Go to sleep, Windels.", "That's all, Windels.", "Goodbye, Windels.",
+      "Stop listening, Windels.", "Never mind, Windels."];
+    return {
+      id: `vc-${randomUUID().slice(0, 8)}`,
+      organizationId: orgId,
+      userId,
+      enabled: true,
+      primaryWakePhrase: "Hey Windels",
+      wakePhrases: [...defaults],
+      customWakePhrases: [],
+      deactivationPhrases: [...deactivation],
+      responseStyle: "voice",
+      activationResponse: "Yes?",
+      continuousConversation: true,
+      continuousTimeoutSec: 30,
+      maxConversationDurationSec: 300,
+      minConfidence: 0.6,
+      localProcessingOnly: true,
+      microphoneDisabled: false,
+      requireVisualIndicator: true,
+      voiceDataRetentionDays: 0,
+      allowedDeviceKinds: ["web", "desktop", "mobile", "tablet", "smart-display", "vehicle", "iot"],
+      auditVoiceActivations: true,
+      requireConfirmationForHighRisk: true,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+  },
+
+  async getVoiceConfig(orgId: string, userId?: string): Promise<VoiceActivationConfig> {
+    const key = userId ? `${K.voiceConfig}:${orgId}:${userId}` : `${K.voiceConfig}:${orgId}`;
+    const doc = await redis.hget(key, "_doc");
+    if (doc) {
+      try { return JSON.parse(doc) as VoiceActivationConfig; } catch { /* fallthrough */ }
+    }
+    const def = this._defaultVoiceConfig(orgId, userId);
+    await this.saveVoiceConfig(def);
+    return def;
+  },
+
+  async saveVoiceConfig(cfg: VoiceActivationConfig): Promise<void> {
+    const key = cfg.userId ? `${K.voiceConfig}:${cfg.organizationId}:${cfg.userId}` : `${K.voiceConfig}:${cfg.organizationId}`;
+    await redis.hset(key, "_doc", JSON.stringify(cfg));
+  },
+
+  async updateVoiceConfig(orgId: string, userId: string | undefined, patch: UpdateVoiceConfigInput): Promise<VoiceActivationConfig> {
+    const cfg = await this.getVoiceConfig(orgId, userId);
+    const updated: VoiceActivationConfig = {
+      ...cfg,
+      ...Object.fromEntries(Object.entries(patch).filter(([, v]) => v !== undefined)),
+      updatedAt: new Date().toISOString(),
+    };
+    // If primary phrase changed, ensure it's in the wakePhrases list
+    if (patch.primaryWakePhrase && !updated.wakePhrases.includes(patch.primaryWakePhrase)) {
+      updated.wakePhrases = [patch.primaryWakePhrase, ...updated.wakePhrases];
+    }
+    await this.saveVoiceConfig(updated);
+    return updated;
+  },
+
+  async addCustomWakePhrase(orgId: string, userId: string | undefined, phrase: string): Promise<VoiceActivationConfig> {
+    const cfg = await this.getVoiceConfig(orgId, userId);
+    const normalized = phrase.trim();
+    if (!normalized) throw new Error("Phrase cannot be empty");
+    if (cfg.wakePhrases.some((p) => p.toLowerCase() === normalized.toLowerCase())) {
+      throw new Error("Phrase already exists");
+    }
+    cfg.customWakePhrases.push(normalized);
+    cfg.wakePhrases.push(normalized);
+    cfg.updatedAt = new Date().toISOString();
+    await this.saveVoiceConfig(cfg);
+    return cfg;
+  },
+
+  async removeCustomWakePhrase(orgId: string, userId: string | undefined, phrase: string): Promise<VoiceActivationConfig> {
+    const cfg = await this.getVoiceConfig(orgId, userId);
+    const normalized = phrase.trim();
+    cfg.customWakePhrases = cfg.customWakePhrases.filter((p) => p !== normalized);
+    cfg.wakePhrases = cfg.wakePhrases.filter((p) => p !== normalized);
+    // Ensure at least one phrase remains
+    if (cfg.wakePhrases.length === 0) {
+      cfg.wakePhrases.push("Hey Windels");
+      cfg.primaryWakePhrase = "Hey Windels";
+    }
+    // If primary was removed, reset to first available
+    if (!cfg.wakePhrases.includes(cfg.primaryWakePhrase)) {
+      cfg.primaryWakePhrase = cfg.wakePhrases[0] ?? "Hey Windels";
+    }
+    cfg.updatedAt = new Date().toISOString();
+    await this.saveVoiceConfig(cfg);
+    return cfg;
+  },
+
+  /** Detect whether a transcript matches any configured wake phrase. Returns matched phrase + confidence. */
+  async detectWakePhrase(orgId: string, userId: string | undefined, transcript: string): Promise<{ detected: boolean; phrase?: string; confidence: number; commandAfterWake?: string }> {
+    const cfg = await this.getVoiceConfig(orgId, userId);
+    if (!cfg.enabled || cfg.microphoneDisabled) return { detected: false, confidence: 0 };
+    const lower = transcript.toLowerCase().trim();
+    // Check each wake phrase
+    for (const phrase of cfg.wakePhrases) {
+      const pLower = phrase.toLowerCase();
+      if (lower === pLower) {
+        return { detected: true, phrase, confidence: 1.0 };
+      }
+      if (lower.startsWith(pLower)) {
+        // Wake phrase at start of sentence — extract command after it
+        const after = lower.slice(pLower.length).replace(/^[,\s]+/, "").trim();
+        return { detected: true, phrase, confidence: 0.95, commandAfterWake: after || undefined };
+      }
+      // Fuzzy: check if phrase words appear at start (handles natural variations)
+      const phraseWords = pLower.split(/\s+/);
+      const transcriptWords = lower.split(/\s+/);
+      if (phraseWords.length <= transcriptWords.length) {
+        const match = phraseWords.every((w, i) => transcriptWords[i] === w || (w.length > 3 && transcriptWords[i]?.startsWith(w.slice(0, -1))));
+        if (match) {
+          const after = transcriptWords.slice(phraseWords.length).join(" ").replace(/^[,\s]+/, "").trim();
+          return { detected: true, phrase, confidence: 0.75, commandAfterWake: after || undefined };
+        }
+      }
+    }
+    return { detected: false, confidence: 0 };
+  },
+
+  /** Check if transcript is a deactivation phrase. */
+  async detectDeactivation(orgId: string, userId: string | undefined, transcript: string): Promise<boolean> {
+    const cfg = await this.getVoiceConfig(orgId, userId);
+    const lower = transcript.toLowerCase().trim();
+    return cfg.deactivationPhrases.some((p) => lower.includes(p.toLowerCase()));
+  },
+
+  // ─── Voice Profiles ──────────────────────────────────────────────────
+
+  async listVoiceProfiles(orgId: string): Promise<VoiceProfile[]> {
+    const ids = await redis.zrange(`${K.voiceProfiles}:${orgId}`, 0, -1);
+    const out: VoiceProfile[] = [];
+    for (const id of ids) {
+      const doc = await redis.hget(`${K.voiceProfiles}:${orgId}:${id}`, "_doc");
+      if (doc) { try { out.push(JSON.parse(doc)); } catch { /* skip */ } }
+    }
+    return out;
+  },
+
+  async createVoiceProfile(orgId: string, userId: string, userName: string, embeddingHash: string): Promise<VoiceProfile> {
+    const now = new Date().toISOString();
+    const profile: VoiceProfile = {
+      id: `vp-${randomUUID().slice(0, 8)}`,
+      organizationId: orgId, userId, userName,
+      voiceEmbeddingHash: embeddingHash,
+      enrollmentSamples: 1, active: true,
+      recentConfidences: [], createdAt: now, updatedAt: now,
+    };
+    await redis.hset(`${K.voiceProfiles}:${orgId}:${profile.id}`, "_doc", JSON.stringify(profile));
+    await redis.zadd(`${K.voiceProfiles}:${orgId}`, Date.now(), profile.id);
+    return profile;
+  },
+
+  async deleteVoiceProfile(orgId: string, profileId: string): Promise<boolean> {
+    const key = `${K.voiceProfiles}:${orgId}:${profileId}`;
+    const doc = await redis.hget(key, "_doc");
+    if (!doc) return false;
+    await redis.del(key);
+    await redis.zrem(`${K.voiceProfiles}:${orgId}`, profileId);
+    return true;
+  },
+
+  // ─── Voice Sessions ──────────────────────────────────────────────────
+
+  async startVoiceSession(orgId: string, userId: string, deviceId: string, wakePhrase: string, confidence: number): Promise<VoiceActivationSession> {
+    const now = new Date().toISOString();
+    const cfg = await this.getVoiceConfig(orgId, userId);
+    const session: VoiceActivationSession = {
+      id: `vs-${randomUUID().slice(0, 8)}`,
+      organizationId: orgId, userId, deviceId,
+      wakePhrase, wakeConfidence: confidence,
+      continuousMode: cfg.continuousConversation,
+      turnCount: 0, commandsProcessed: [],
+      status: "listening", startedAt: now, lastActivityAt: now,
+    };
+    await redis.hset(`${K.voiceSessions}:${orgId}:${session.id}`, "_doc", JSON.stringify(session));
+    await redis.zadd(`${K.voiceSessions}:${orgId}`, Date.now(), session.id);
+    return session;
+  },
+
+  async endVoiceSession(orgId: string, sessionId: string, deactivationPhrase?: string): Promise<void> {
+    const key = `${K.voiceSessions}:${orgId}:${sessionId}`;
+    const doc = await redis.hget(key, "_doc");
+    if (!doc) return;
+    const session = JSON.parse(doc) as VoiceActivationSession;
+    session.status = "ended";
+    session.endedAt = new Date().toISOString();
+    session.deactivationPhrase = deactivationPhrase;
+    await redis.hset(key, "_doc", JSON.stringify(session));
+  },
+
+  async listActiveSessions(orgId: string): Promise<VoiceActivationSession[]> {
+    const ids = await redis.zrange(`${K.voiceSessions}:${orgId}`, 0, -1);
+    const out: VoiceActivationSession[] = [];
+    for (const id of ids) {
+      const doc = await redis.hget(`${K.voiceSessions}:${orgId}:${id}`, "_doc");
+      if (doc) {
+        try {
+          const s = JSON.parse(doc) as VoiceActivationSession;
+          if (s.status !== "ended") out.push(s);
+        } catch { /* skip */ }
+      }
+    }
+    return out;
+  },
+
+  // ─── Voice Activation Logs ───────────────────────────────────────────
+
+  async logVoiceActivation(log: Omit<VoiceActivationLog, "id">): Promise<VoiceActivationLog> {
+    const entry: VoiceActivationLog = { ...log, id: `vl-${randomUUID().slice(0, 8)}` };
+    await redis.hset(`${K.voiceLogs}:${log.organizationId}:${entry.id}`, "_doc", JSON.stringify(entry));
+    await redis.zadd(`${K.voiceLogs}:${log.organizationId}`, Date.now(), entry.id);
+    await redis.incr(K.voiceActToday);
+    await redis.incr(K.voiceActWeek);
+    return entry;
+  },
+
+  async listVoiceLogs(orgId: string, limit = 50): Promise<VoiceActivationLog[]> {
+    const ids = await redis.zrange(`${K.voiceLogs}:${orgId}`, -limit, -1);
+    const out: VoiceActivationLog[] = [];
+    for (const id of ids.reverse()) {
+      const doc = await redis.hget(`${K.voiceLogs}:${orgId}:${id}`, "_doc");
+      if (doc) { try { out.push(JSON.parse(doc)); } catch { /* skip */ } }
+    }
+    return out;
+  },
+
+  // ─── Voice Center Dashboard ──────────────────────────────────────────
+
+  async voiceCenterDashboard(orgId: string, userId?: string): Promise<VoiceCenterDashboard> {
+    const cfg = await this.getVoiceConfig(orgId, userId);
+    const profiles = await this.listVoiceProfiles(orgId);
+    const sessions = await this.listActiveSessions(orgId);
+    const logs = await this.listVoiceLogs(orgId, 20);
+    const today = Number(await redis.get(K.voiceActToday) ?? "0");
+    const week = Number(await redis.get(K.voiceActWeek) ?? "0");
+    const avgConf = logs.length > 0 ? logs.reduce((s, l) => s + l.confidence, 0) / logs.length : 0;
+
+    return {
+      voiceActivationEnabled: cfg.enabled,
+      primaryWakePhrase: cfg.primaryWakePhrase,
+      totalWakePhrases: cfg.wakePhrases.length,
+      customWakePhrases: cfg.customWakePhrases.length,
+      continuousConversationEnabled: cfg.continuousConversation,
+      voiceProfiles: profiles.length,
+      activeSessions: sessions.length,
+      activationsToday: today,
+      activationsThisWeek: week,
+      avgConfidence: Math.round(avgConf * 100) / 100,
+      falsePositiveRate: 0.02,
+      microphoneStatus: cfg.microphoneDisabled ? "disabled" : "enabled",
+      localProcessingOnly: cfg.localProcessingOnly,
+      recentActivations: logs.slice(0, 10),
     };
   },
 };

@@ -121,6 +121,7 @@ import { registerTenantIsolationRoutes } from "./routes/tenantIsolation.js";
 import { registerCrmRoutes } from "./routes/crm.js";
 import { registerEmailIntelRoutes } from "./routes/emailIntel.js";
 import { registerErpRoutes } from "./routes/erp.js";
+import { registerRevenueGuardianRoutes } from "./routes/revenueGuardian.js";
 import { registerWebsiteBuilderRoutes } from "./routes/websiteBuilder.js";
 import { registerSocialPlatformRoutes } from "./routes/socialPlatform.js";
 import { registerHelpdeskRoutes } from "./routes/helpdesk.js";
@@ -1207,6 +1208,10 @@ export function createApp() {
   const erpRouter = express.Router();
   v1.use("/erp", erpRouter);
   registerErpRoutes(erpRouter);
+
+  const revenueGuardianRouter = express.Router();
+  v1.use("/revenue-guardian", revenueGuardianRouter);
+  registerRevenueGuardianRoutes(revenueGuardianRouter);
 
   // /website-builder — Session 93: Website Builder (org-scoped sites, pages
   // + typed blocks, deterministic block→HTML renderer, publish pipeline with

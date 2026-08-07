@@ -89,6 +89,48 @@ class ConnectorRegistry {
       try { await c.shutdown(); } catch (e) { logger.warn("[connectors] shutdown error", { broker: c.broker, err: e }); }
     }
   }
+
+  /**
+   * Aggregate recent errors from all registered connectors for a given org.
+   * Phase 21 — Dashboard recent-errors panel.
+   */
+  aggregateRecentErrors(oid: string, limitPerAccount = 10): Array<{
+    broker: BrokerType;
+    label: string;
+    accountId: string;
+    errors: Array<{ at: string; message: string; category: string }>;
+  }> {
+    const out: Array<{
+      broker: BrokerType;
+      label: string;
+      accountId: string;
+      errors: Array<{ at: string; message: string; category: string }>;
+    }> = [];
+    for (const c of this.connectors.values()) {
+      if (typeof c.getRecentErrors !== "function") continue;
+      // Each connector tracks its own accounts; we call getRecentErrors for
+      // each connected account. The connector internally knows which accounts
+      // belong to which org (via the session opts).
+      // For connectors without getRecentErrors (e.g. MT5), this is skipped.
+      try {
+        // Attempt to get errors for all accounts this connector manages.
+        // Connectors expose their account list through the health/getState path;
+        // we rely on the connector's own knowledge of its connected accounts.
+        const connectorAny = c as any;
+        if (connectorAny.accounts instanceof Map) {
+          for (const [acctId, sess] of connectorAny.accounts) {
+            const sessOid = (sess as any)?.opts?.config?._oid;
+            if (sessOid !== oid) continue;
+            const errs = c.getRecentErrors!(acctId, limitPerAccount);
+            if (errs.length > 0) {
+              out.push({ broker: c.broker, label: c.label, accountId: acctId, errors: errs });
+            }
+          }
+        }
+      } catch { /* best-effort aggregation */ }
+    }
+    return out;
+  }
 }
 
 export const connectorRegistry = new ConnectorRegistry();

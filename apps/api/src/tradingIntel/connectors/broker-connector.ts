@@ -156,4 +156,6 @@ export interface IBrokerConnector {
   onStateChange(handler: ConnectionStateHandler): void;
   /** Health for a given account. */
   health(accountId: string): { connected: boolean; latencyMs?: number; lastError?: string; reconnectAttempts: number; endpoint?: string };
+  /** Recent error history for an account (Phase 21 — dashboard errors panel). */
+  getRecentErrors?(accountId: string, limit?: number): Array<{ at: string; message: string; category: string }>;
 }

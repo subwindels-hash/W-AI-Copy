@@ -196,3 +196,199 @@ export interface WakeDashboard {
   falsePositiveRatePct: number;
   auditRetentionDays: number;
 }
+
+// ─── Multi-Wake-Word Voice Activation (Phase Voice-2) ─────────────────────
+
+/** Built-in wake phrases that ship with WINDELS AI OS. */
+export const WINDLES_DEFAULT_WAKE_PHRASES: readonly string[] = [
+  "Hey Windels",
+  "Hello Windels",
+  "Hi Windels",
+  "Okay Windels",
+  "Alright Windels",
+  "Wake up Windels",
+  "Windels",
+  "Windels, are you there?",
+  "Windels, listen",
+  "Windels, I need you",
+  "Windels, help me",
+  "Windels, get ready",
+  "Windels, let's go",
+  "Windels, start",
+  "Windels, activate",
+  "Windels, come online",
+] as const;
+
+/** Activation response style — what WINDELS says/does when woken. */
+export type ActivationResponseStyle = "tone" | "voice" | "visual" | "silent";
+
+/** Built-in activation feedback phrases. */
+export const ACTIVATION_RESPONSES: readonly string[] = [
+  "I'm listening.",
+  "Yes?",
+  "How can I help?",
+  "Ready.",
+  "Go ahead.",
+  "At your service.",
+  "Listening.",
+] as const;
+
+/** Deactivation phrases — user says these to end active session. */
+export const DEFAULT_DEACTIVATION_PHRASES: readonly string[] = [
+  "Go to sleep, Windels.",
+  "That's all, Windels.",
+  "Goodbye, Windels.",
+  "Stop listening, Windels.",
+  "Never mind, Windels.",
+] as const;
+
+/** Voice activation configuration — per-user and per-org. */
+export interface VoiceActivationConfig {
+  id: string;
+  organizationId: string;
+  userId?: string;
+  /** Whether voice activation is enabled globally. */
+  enabled: boolean;
+  /** Primary wake phrase (used for display and confidence boost). */
+  primaryWakePhrase: string;
+  /** All active wake phrases (built-in + custom). */
+  wakePhrases: string[];
+  /** Custom user/org-defined wake phrases. */
+  customWakePhrases: string[];
+  /** Deactivation phrases. */
+  deactivationPhrases: string[];
+  /** Activation response style. */
+  responseStyle: ActivationResponseStyle;
+  /** Activation feedback phrase. */
+  activationResponse: string;
+  /** Whether continuous conversation mode is enabled. */
+  continuousConversation: boolean;
+  /** How long (seconds) to stay active after last interaction in continuous mode. */
+  continuousTimeoutSec: number;
+  /** Maximum conversation duration in seconds before auto-sleep. */
+  maxConversationDurationSec: number;
+  /** Minimum confidence (0-1) to accept a wake detection. */
+  minConfidence: number;
+  /** Privacy: process wake detection locally only. */
+  localProcessingOnly: boolean;
+  /** Privacy: disable microphone completely. */
+  microphoneDisabled: boolean;
+  /** Privacy: require visual indicator when listening. */
+  requireVisualIndicator: boolean;
+  /** Maximum voice data retention days (0 = delete immediately after processing). */
+  voiceDataRetentionDays: number;
+  /** Allowed device kinds for voice activation. */
+  allowedDeviceKinds: string[];
+  /** Whether to log all voice activations. */
+  auditVoiceActivations: boolean;
+  /** Require confirmation for high-risk voice commands. */
+  requireConfirmationForHighRisk: boolean;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Voice profile — associates a voice pattern with an authorized user. */
+export interface VoiceProfile {
+  id: string;
+  organizationId: string;
+  userId: string;
+  userName: string;
+  /** Voice embedding hash for recognition (not raw audio). */
+  voiceEmbeddingHash: string;
+  /** Number of enrollment samples provided. */
+  enrollmentSamples: number;
+  /** Whether the profile is active. */
+  active: boolean;
+  /** Last recognized timestamp. */
+  lastRecognizedAt?: string;
+  /** Recognition confidence history (recent). */
+  recentConfidences: number[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** Voice activation session — tracks an active voice conversation. */
+export interface VoiceActivationSession {
+  id: string;
+  organizationId: string;
+  userId: string;
+  deviceId: string;
+  /** The wake phrase that triggered activation. */
+  wakePhrase: string;
+  /** Confidence of the wake detection. */
+  wakeConfidence: number;
+  /** Whether continuous conversation is active. */
+  continuousMode: boolean;
+  /** Conversation turn count. */
+  turnCount: number;
+  /** Commands processed in this session. */
+  commandsProcessed: string[];
+  /** Session status. */
+  status: "active" | "listening" | "processing" | "responding" | "sleeping" | "ended";
+  /** When the session started. */
+  startedAt: string;
+  /** Last activity timestamp. */
+  lastActivityAt: string;
+  /** When the session ended. */
+  endedAt?: string;
+  /** Deactivation phrase used (if any). */
+  deactivationPhrase?: string;
+}
+
+/** Voice activation log entry for audit. */
+export interface VoiceActivationLog {
+  id: string;
+  organizationId: string;
+  userId?: string;
+  deviceId: string;
+  wakePhrase: string;
+  confidence: number;
+  commandText?: string;
+  intentDetected?: string;
+  outcome: "accepted" | "rejected" | "confirmation_required" | "error";
+  processingMode: "local" | "cloud" | "hybrid";
+  latencyMs: number;
+  timestamp: string;
+}
+
+/** Voice & Wake Center dashboard summary. */
+export interface VoiceCenterDashboard {
+  voiceActivationEnabled: boolean;
+  primaryWakePhrase: string;
+  totalWakePhrases: number;
+  customWakePhrases: number;
+  continuousConversationEnabled: boolean;
+  voiceProfiles: number;
+  activeSessions: number;
+  activationsToday: number;
+  activationsThisWeek: number;
+  avgConfidence: number;
+  falsePositiveRate: number;
+  microphoneStatus: "enabled" | "disabled" | "permission_required";
+  localProcessingOnly: boolean;
+  recentActivations: VoiceActivationLog[];
+}
+
+/** Input schema types for API routes. */
+export interface AddCustomWakePhraseInput {
+  phrase: string;
+}
+
+export interface UpdateVoiceConfigInput {
+  enabled?: boolean;
+  primaryWakePhrase?: string;
+  customWakePhrases?: string[];
+  responseStyle?: ActivationResponseStyle;
+  activationResponse?: string;
+  continuousConversation?: boolean;
+  continuousTimeoutSec?: number;
+  maxConversationDurationSec?: number;
+  minConfidence?: number;
+  localProcessingOnly?: boolean;
+  microphoneDisabled?: boolean;
+  requireVisualIndicator?: boolean;
+  voiceDataRetentionDays?: number;
+  allowedDeviceKinds?: string[];
+  auditVoiceActivations?: boolean;
+  requireConfirmationForHighRisk?: boolean;
+}

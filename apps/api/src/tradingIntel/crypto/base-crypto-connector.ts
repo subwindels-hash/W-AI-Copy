@@ -99,6 +99,19 @@ export interface BaseCryptoOpts {
   capabilities: CryptoConnectorCapabilities;
 }
 
+/** Structured connector error entry for the dashboard recent-errors panel. */
+export interface ConnectorError {
+  /** ISO-8601 timestamp of when the error occurred. */
+  at: string;
+  /** Human-readable error message. */
+  message: string;
+  /** Error category for grouping/filtering. */
+  category: "rest" | "ws" | "auth" | "sync" | "order" | "rate_limit" | "network" | "unknown";
+}
+
+/** Maximum errors retained per account in the ring buffer. */
+const ERROR_BUFFER_SIZE = 50;
+
 /** Risk pre-check result. */
 interface RiskPass { ok: true }
 interface RiskBlock { ok: false; error: string; blockedBy?: string }
@@ -118,6 +131,8 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
   private initialized = false;
   /** Track consecutive errors per account (WS errors, REST errors). Reset on successful sync. */
   private sessionErrors = new Map<string, { count: number; lastAt?: string }>();
+  /** Ring buffer of recent errors per account (last ERROR_BUFFER_SIZE entries). */
+  private errorHistory = new Map<string, ConnectorError[]>();
 
   /**
    * Patch the live session's connector config in-place so toggles like
@@ -508,7 +523,7 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
     return a;
   }
 
-  protected emitState(id: string, status: BrokerConnectionStatus, err?: string) {
+  protected emitState(id: string, status: BrokerConnectionStatus, err?: string, category?: ConnectorError["category"]) {
     const a = this.accounts.get(id);
     if (a) {
       a.status = status;
@@ -517,6 +532,8 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
         const rec = this.sessionErrors.get(id) ?? { count: 0 };
         rec.count += 1; rec.lastAt = new Date().toISOString();
         this.sessionErrors.set(id, rec);
+        // Push to ring buffer (Phase 21)
+        this.pushError(id, err, category ?? this.classifyError(err));
       } else {
         a.lastError = undefined;
       }
@@ -538,6 +555,42 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
         });
       } catch { /* best-effort */ }
     }
+  }
+
+  /**
+   * Push a structured error into the per-account ring buffer.
+   * Keeps at most ERROR_BUFFER_SIZE entries; oldest are dropped.
+   */
+  protected pushError(accountId: string, message: string, category: ConnectorError["category"] = "unknown"): void {
+    const buf = this.errorHistory.get(accountId) ?? [];
+    buf.push({ at: new Date().toISOString(), message, category });
+    if (buf.length > ERROR_BUFFER_SIZE) buf.splice(0, buf.length - ERROR_BUFFER_SIZE);
+    this.errorHistory.set(accountId, buf);
+  }
+
+  /**
+   * Classify an error message into a category for the dashboard panel.
+   * Uses keyword matching against common exchange error patterns.
+   */
+  private classifyError(msg: string): ConnectorError["category"] {
+    const m = msg.toLowerCase();
+    if (m.includes("rate limit") || m.includes("429") || m.includes("too many request")) return "rate_limit";
+    if (m.includes("econnrefused") || m.includes("etimedout") || m.includes("enotfound") || m.includes("socket hang") || m.includes("fetch failed")) return "network";
+    if (m.includes("auth") || m.includes("unauthorized") || m.includes("forbidden") || m.includes("invalid api") || m.includes("signature") || m.includes("401") || m.includes("403")) return "auth";
+    if (m.includes("order") || m.includes("insufficient") || m.includes("margin") || m.includes("position") || m.includes("reject")) return "order";
+    if (m.includes("ws") || m.includes("websocket") || m.includes("heartbeat") || m.includes("ping")) return "ws";
+    if (m.includes("sync") || m.includes("snapshot")) return "sync";
+    if (m.includes("http") || m.includes("status") || m.includes("response")) return "rest";
+    return "unknown";
+  }
+
+  /**
+   * Retrieve the recent error history for an account.
+   * Returns the last `limit` errors (most recent first).
+   */
+  getRecentErrors(accountId: string, limit = 20): ConnectorError[] {
+    const buf = this.errorHistory.get(accountId) ?? [];
+    return buf.slice(-limit).reverse();
   }
 
   /** Reset per-session error counter (called after a successful sync). */
