@@ -131,6 +131,7 @@ import { registerEnterpriseSearchRoutes } from "./routes/enterpriseSearch.js";
 import { registerEnterpriseFinOpsRoutes } from "./routes/enterpriseFinOps.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
+import { registerPublishingRoutes } from "./routes/publishing.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
@@ -714,6 +715,13 @@ export function createApp() {
     } catch (e) { next(e); }
   });
   registerMediaFactoryRoutes(mfRouter);
+
+  // /publishing — Publishing Module (extracted from mediaFactory)
+  // Handles publishing to external platforms: YouTube, TikTok, Instagram, etc.
+  const publishingRouter = express.Router();
+  v1.use("/publishing", publishingRouter);
+  publishingRouter.use(authenticate);
+  registerPublishingRoutes(publishingRouter);
 
   // /ux-intelligence — Session 78: UX Intelligence, Design System & Experience
   const uxRouter = express.Router();
