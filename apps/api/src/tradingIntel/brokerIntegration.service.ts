@@ -1017,6 +1017,11 @@ export const BrokerIntegrationService = {
     pnl: { today: number; week: number; month: number; allTime: number };
     winRate: { day: number; week: number };
     connectors: { broker: string; label: string; available: boolean; transport?: string }[];
+    /** Phase 21 — per-connector recent error history for the dashboard panel. */
+    recentErrorsByConnector: Array<{
+      broker: string; label: string; accountId: string;
+      errors: Array<{ at: string; message: string; category: string }>;
+    }>;
   }> {
     const accounts = await this.listAccounts(oid);
     const positions: BrokerPosition[] = [];
@@ -1054,6 +1059,8 @@ export const BrokerIntegrationService = {
     const connAvail = await connectorRegistry.probeAvailability();
     const connectors = connAvail.map((c) => ({ broker: c.broker, label: BROKER_LABEL[c.broker] ?? c.broker, available: c.available, transport: c.transports?.[0] }));
     const recentErrors = executions.filter((e) => e.status === "failed" || e.status === "blocked").length;
+    // Phase 21 — aggregate per-connector error history for the dashboard panel.
+    const recentErrorsByConnector = connectorRegistry.aggregateRecentErrors(oid, 10);
 
     return {
       generatedAt: new Date().toISOString(),
@@ -1064,6 +1071,7 @@ export const BrokerIntegrationService = {
         recentErrors, uptimePct: accounts.length ? Math.round((connectedAccounts.length / Math.max(1, accounts.length)) * 1000) / 10 : 100,
       },
       pnl, winRate: { day: winRate(day), week: winRate(week) }, connectors,
+      recentErrorsByConnector,
     };
   },
 

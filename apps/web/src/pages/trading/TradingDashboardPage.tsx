@@ -83,6 +83,25 @@ function StatusDot({ connected }: { connected: boolean }) {
     : <CircleSlash className="h-3.5 w-3.5 text-slate-500" />;
 }
 
+// Phase 21 — error category styling helpers.
+const categoryBadgeClass = (cat: string): string => {
+  switch (cat) {
+    case "auth":        return "bg-rose-500/15 text-rose-300 border-rose-500/30";
+    case "network":     return "bg-amber-500/15 text-amber-300 border-amber-500/30";
+    case "rate_limit":  return "bg-orange-500/15 text-orange-300 border-orange-500/30";
+    case "ws":          return "bg-sky-500/15 text-sky-300 border-sky-500/30";
+    case "order":       return "bg-violet-500/15 text-violet-300 border-violet-500/30";
+    case "rest":        return "bg-cyan-500/15 text-cyan-300 border-cyan-500/30";
+    case "sync":        return "bg-indigo-500/15 text-indigo-300 border-indigo-500/30";
+    default:            return "bg-slate-500/15 text-slate-300 border-slate-500/30";
+  }
+};
+const categoryTone = (cat: string): string => {
+  if (cat === "auth" || cat === "network" || cat === "order") return "rose";
+  if (cat === "rate_limit" || cat === "ws") return "amber";
+  return "default";
+};
+
 export function TradingDashboardPage() {
   const [data, setData] = useState<DashboardSummary | null>(null);
   const [loading, setLoading] = useState(true);
@@ -188,8 +207,21 @@ export function TradingDashboardPage() {
   }
   if (!data) return null;
 
-  const { accounts, positions, orders, executions, eas, risk, pnl, winRate, health, connectors } = data;
+  const { accounts, positions, orders, executions, eas, risk, pnl, winRate, health, connectors, recentErrorsByConnector = [] } = data;
   const pendingApprovals = executions.filter((e) => e.status === "pending_approval");
+
+  // Phase 21 — Flatten recent-errors-by-connector into a sorted timeline.
+  const flatErrors = useMemo(() => {
+    const out: Array<{ group: { broker: string; label: string; accountId: string }; err: { at: string; message: string; category: string } }> = [];
+    for (const g of recentErrorsByConnector) {
+      for (const e of g.errors) {
+        out.push({ group: { broker: g.broker, label: g.label, accountId: g.accountId }, err: e });
+      }
+    }
+    out.sort((a, b) => (a.err.at < b.err.at ? 1 : -1));
+    return out;
+  }, [recentErrorsByConnector]);
+  const totalRecentConnectorErrors = flatErrors.length;
 
   // Override per-account status from SSE account_state events when fresher
   // than the last polled snapshot. This lets the dashboard react to connector
@@ -733,6 +765,51 @@ export function TradingDashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Phase 21 — Recent Errors Panel */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <div>
+            <CardTitle className="flex items-center gap-2"><AlertTriangle className="h-4 w-4 text-rose-400" />Recent Connector Errors</CardTitle>
+            <CardDescription>Last errors reported by each connector per account. Ring-buffered (up to 50 per account); most recent first. Cleared on successful sync.</CardDescription>
+          </div>
+          {totalRecentConnectorErrors > 0 && (
+            <Badge className="bg-rose-500/15 text-rose-300 border-rose-500/30">
+              {totalRecentConnectorErrors} error{totalRecentConnectorErrors === 1 ? "" : "s"}
+            </Badge>
+          )}
+        </CardHeader>
+        <CardContent className="p-0">
+          <table className="w-full text-sm">
+            <thead className="text-xs uppercase text-slate-500"><tr>
+              <th className="text-left p-3 w-32">Time</th>
+              <th className="text-left">Connector</th>
+              <th className="text-left">Category</th>
+              <th className="text-left">Message</th>
+            </tr></thead>
+            <tbody className="divide-y divide-white/5">
+              {totalRecentConnectorErrors === 0 && (
+                <tr><td colSpan={4} className="p-6 text-slate-400 text-center">No connector errors recorded this session. ✓</td></tr>
+              )}
+              {flatErrors.slice(0, 30).map((e, i) => (
+                <tr key={`${e.group.accountId}:${e.err.at}:${i}`} className={categoryTone(e.err.category) === "rose" ? "bg-rose-500/5" : ""}>
+                  <td className="p-3 text-slate-400 whitespace-nowrap font-mono text-xs">{timeAgo(e.err.at)}</td>
+                  <td className="text-slate-300">
+                    <span className="font-medium">{e.group.label}</span>
+                    <span className="text-slate-500 text-xs ml-1.5">#{e.group.accountId.slice(0, 8)}</span>
+                  </td>
+                  <td>
+                    <Badge className={categoryBadgeClass(e.err.category)}>
+                      {e.err.category}
+                    </Badge>
+                  </td>
+                  <td className="text-slate-300 text-xs max-w-[400px] truncate font-mono" title={e.err.message}>{e.err.message}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </CardContent>
+      </Card>
     </div>
   );
 }

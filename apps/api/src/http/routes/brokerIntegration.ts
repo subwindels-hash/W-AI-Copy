@@ -246,6 +246,16 @@ export function registerBrokerIntegrationRoutes(router: Router) {
     catch (e) { next(e); }
   });
 
+  // Phase 21 — Recent errors panel: per-connector error history.
+  router.get("/brokers/recent-errors", async (req, res, next) => {
+    try {
+      const limit = Number(req.query.limit ?? 10);
+      const errors = connectorRegistry.aggregateRecentErrors(oid(req), Math.min(limit, 50));
+      res.json({ ok: true, data: errors, meta: { requestId: req.requestId } });
+    }
+    catch (e) { next(e); }
+  });
+
   // AI Broker Trading agents
   router.get("/brokers/agents", async (req, res, next) => {
     try { res.json({ ok: true, data: await BrokerIntegrationService.listAgents(oid(req)), meta: { requestId: req.requestId } }); }

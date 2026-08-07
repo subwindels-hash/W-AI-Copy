@@ -114,6 +114,21 @@ export interface TradingCommandCenter {
   systemHealth: { brokerConnected: number; brokerTotal: number; eaConnected: number; eaTotal: number; lastSyncAt?: string };
 }
 
+/** Phase 21 — Structured connector error entry for the recent-errors panel. */
+export interface ConnectorErrorEntry {
+  at: string;
+  message: string;
+  category: "rest" | "ws" | "auth" | "sync" | "order" | "rate_limit" | "network" | "unknown";
+}
+
+/** Phase 21 — Per-connector error history aggregated for the dashboard. */
+export interface ConnectorErrorGroup {
+  broker: string;
+  label: string;
+  accountId: string;
+  errors: ConnectorErrorEntry[];
+}
+
 export interface DashboardSummary {
   generatedAt: string;
   accounts: BrokerAccount[];
@@ -129,6 +144,8 @@ export interface DashboardSummary {
   pnl: { today: number; week: number; month: number; allTime: number };
   winRate: { day: number; week: number };
   connectors: { broker: string; label: string; available: boolean; transport?: string }[];
+  /** Phase 21 — per-connector recent error history. */
+  recentErrorsByConnector: ConnectorErrorGroup[];
 }
 
 export type BrokerAgentKey = "trade-execution-supervisor" | "strategy-optimizer" | "portfolio-risk" | "broker-connectivity" | "trade-validator" | "trading-compliance";
@@ -225,6 +242,8 @@ export const brokerApi = {
   portfolio: (accountId?: string) => api<PortfolioIntelligence>("/brokers/portfolio", accountId ? { params: { accountId } } : {}),
   commandCenter: () => api<TradingCommandCenter>("/brokers/command-center"),
   dashboard: () => api<DashboardSummary>("/brokers/dashboard"),
+  /** Phase 21 — dedicated recent-errors endpoint (alternative to dashboard rollup). */
+  recentErrors: (limit = 10) => api<ConnectorErrorGroup[]>("/brokers/recent-errors", { params: { limit } }),
   agents: () => api<BrokerTradingAgent[]>("/brokers/agents"),
   runAgent: (key: string, payload?: Record<string, any>) => api<{ agent: string; verdict: string; detail: string; data?: any }>(`/brokers/agents/${key}/run`, { method: "POST", json: payload ?? {} }),
   eas: () => api<EaSummary[]>("/ea"),
