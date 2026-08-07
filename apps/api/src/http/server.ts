@@ -69,9 +69,8 @@ import { registerWakeIntelRoutes } from "./routes/wakeIntel.js";
 import { registerArchitectureRoutes } from "./routes/architecture.js";
 import { registerSelfHostedRoutes } from "./routes/selfHosted.js";
 import { registerKernelRoutes } from "./routes/kernel.js";
-import { registerVoiceStudioRoutes } from "./routes/voiceStudio.js";
+import { registerVoiceRoutes } from "./routes/voice.js";
 import { registerTradingIntelRoutes } from "./routes/tradingIntel.js";
-import { registerVoiceFoundryRoutes } from "./routes/voiceFoundry.js";
 import { registerExpertsPlatformRoutes } from "./routes/expertsPlatform.js";
 import { registerMediaFactoryRoutes } from "./routes/mediaFactory.js";
 import { registerUxIntelligenceRoutes } from "./routes/uxIntelligence.js";
@@ -132,6 +131,8 @@ import { registerEnterpriseSearchRoutes } from "./routes/enterpriseSearch.js";
 import { registerEnterpriseFinOpsRoutes } from "./routes/enterpriseFinOps.js";
 import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
+import { registerPublishingRoutes } from "./routes/publishing.js";
+import { registerCommerceRoutes } from "./routes/commerce.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
@@ -616,11 +617,12 @@ export function createApp() {
   });
   registerKernelRoutes(krRouter);
 
-  // /voice-studio — Session 40: Voice Studio (library, cloning with consent, customization, multilingual TTS)
-  const vsRouter = express.Router();
-  v1.use("/voice-studio", vsRouter);
-  vsRouter.use(authenticate);
-  vsRouter.use(async (req, res, next) => {
+  // /voice — Unified Voice Module (v4.0): Voice Studio (S40) + Voice Foundry (S41)
+  // Combined voice synthesis, creation, deployment, and management
+  const voiceRouter = express.Router();
+  v1.use("/voice", voiceRouter);
+  voiceRouter.use(authenticate);
+  voiceRouter.use(async (req, res, next) => {
     try {
       const { hasPermission } = await import("../services/permissions.service.js");
       const { Permission } = await import("@prisma/client");
@@ -630,7 +632,7 @@ export function createApp() {
       next();
     } catch (e) { next(e); }
   });
-  registerVoiceStudioRoutes(vsRouter);
+  registerVoiceRoutes(voiceRouter);
 
   // /trading-intel — Session 81: Unified Global Financial Markets Intelligence & Trading Platform (extends S35)
   const tiRouter = express.Router();
@@ -647,22 +649,6 @@ export function createApp() {
     } catch (e) { next(e); }
   });
   registerTradingIntelRoutes(tiRouter);
-
-  // /voice-foundry — Session 41: AI Voice Foundry (autonomous voices, design/evolve/deploy, consent-exempt with audit)
-  const vfRouter = express.Router();
-  v1.use("/voice-foundry", vfRouter);
-  vfRouter.use(authenticate);
-  vfRouter.use(async (req, res, next) => {
-    try {
-      const { hasPermission } = await import("../services/permissions.service.js");
-      const { Permission } = await import("@prisma/client");
-      if (!(await hasPermission(req.user!.id, Permission.ORG_ADMIN))) {
-        return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "Admins only" } });
-      }
-      next();
-    } catch (e) { next(e); }
-  });
-  registerVoiceFoundryRoutes(vfRouter);
 
   // /experts — Session 77A: Professional Intelligence Platform (domain expert agents, courses, packages)
   const epRouter = express.Router();
@@ -730,6 +716,13 @@ export function createApp() {
     } catch (e) { next(e); }
   });
   registerMediaFactoryRoutes(mfRouter);
+
+  // /publishing — Publishing Module (extracted from mediaFactory)
+  // Handles publishing to external platforms: YouTube, TikTok, Instagram, etc.
+  const publishingRouter = express.Router();
+  v1.use("/publishing", publishingRouter);
+  publishingRouter.use(authenticate);
+  registerPublishingRoutes(publishingRouter);
 
   // /ux-intelligence — Session 78: UX Intelligence, Design System & Experience
   const uxRouter = express.Router();
@@ -1181,6 +1174,12 @@ export function createApp() {
   v1.use("/marketing", marketingRouter);
   marketingRouter.use(authenticate);
   registerMarketingRoutes(marketingRouter);
+
+  // /commerce — B2C E-commerce (product catalog, cart, checkout, orders)
+  const commerceRouter = express.Router();
+  v1.use("/commerce", commerceRouter);
+  commerceRouter.use(authenticate);
+  registerCommerceRoutes(commerceRouter);
 
   // /tenant-isolation — Session 89: Tenant Isolation & Cross-Tenant Data
   // Governance (per-org isolation policies, namespace audit, cross-tenant
