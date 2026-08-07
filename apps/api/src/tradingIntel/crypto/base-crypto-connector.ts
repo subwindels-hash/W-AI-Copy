@@ -646,25 +646,30 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
   private startPrivateWs(sess: CryptoAccountSession, url?: string) {
     if (!url || !this.capabilities.hasPrivateWs) return;
     const usesListenKey = !!this.capabilities.privateWsUsesListenKey;
+    // Subclasses that need a fully dynamic WS URL (e.g. KuCoin bullet-private
+    // returns a host+token from POST /api/v1/bullet-private per connect)
+    // can override preparePrivateWsUrl to produce it. It takes precedence
+    // over the base url + listenKey composition.
+    const prepareHook = usesListenKey
+      ? async () => {
+          sess.privateListenKey = await this.createListenKey(sess);
+          if (sess.privateListenKeyTimer) clearInterval(sess.privateListenKeyTimer);
+          sess.privateListenKeyTimer = setInterval(() => {
+            this.keepAliveListenKey(sess).catch((e) =>
+              logger.warn("[crypto] listenKey keepalive failed", { exchange: this.exchange, err: (e as Error).message }),
+            );
+          }, 30 * 60_000);
+          return url.replace(/\/+$/, "") + "/" + (sess.privateListenKey ?? "");
+        }
+      : async () => {
+          const dyn = await this.preparePrivateWsUrl(sess);
+          return dyn ?? url;
+        };
     const ws = new ExchangeWsClient({
       url,
       label: `${this.exchange}:private`,
       parser: (raw) => this.parsePrivateMessage(sess, raw),
-      prepareUrl: usesListenKey
-        ? async () => {
-            // Obtain a fresh listenKey on every (re)connect so the WS URL
-            // contains a valid token. Schedule a keepalive on first issue.
-            sess.privateListenKey = await this.createListenKey(sess);
-            if (sess.privateListenKeyTimer) clearInterval(sess.privateListenKeyTimer);
-            sess.privateListenKeyTimer = setInterval(() => {
-              this.keepAliveListenKey(sess).catch((e) =>
-                logger.warn("[crypto] listenKey keepalive failed", { exchange: this.exchange, err: (e as Error).message }),
-              );
-            }, 30 * 60_000);
-            // Binance/MEXC style: wss://host/ws/<listenKey>
-            return url.replace(/\/+$/, "") + "/" + (sess.privateListenKey ?? "");
-          }
-        : undefined,
+      prepareUrl: prepareHook,
       onConnect: async (send) => {
         try {
           await this.authenticatePrivateWs(sess, send);
@@ -755,6 +760,14 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
   protected async createListenKey(_sess: CryptoAccountSession): Promise<string | undefined> { return undefined; }
   protected async keepAliveListenKey(_sess: CryptoAccountSession): Promise<void> { return; }
   protected async disposeListenKey(_sess: CryptoAccountSession): Promise<void> { return; }
+  /**
+   * Dynamic WS URL bootstrap (overrides base url + listenKey composition).
+   * Used by connectors like KuCoin that require a per-connect REST call to
+   * obtain `{instanceServers:[{endpoint}],token}` (bullet-private). Return
+   * the fully resolved URL including `?token=...` & `?connectId=...` query.
+   * Returns undefined to fall back to the configured privateWsUrl.
+   */
+  protected async preparePrivateWsUrl(_sess: CryptoAccountSession): Promise<string | undefined> { return undefined; }
   /** Cancel order default (returns unsupported; subclasses override when supported). */
   protected async cancelOrderImpl(_sess: CryptoAccountSession, _orderId: string): Promise<OrderResult> {
     return { ok: false, error: "cancelOrder not supported on this exchange" };
