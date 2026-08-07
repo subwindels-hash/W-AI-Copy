@@ -70,6 +70,7 @@ const BillingPage = lazy(() => import("./pages/billing/BillingPage").then((m) =>
 const PaymentGatewaysPage = lazy(() => import("./pages/billing/PaymentGatewaysPage").then((m) => ({ default: m.PaymentGatewaysPage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
 const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
+const NotificationsPage = lazy(() => import("./pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
 const CameraPage = lazy(() => import("./pages/camera/CameraPage").then((m) => ({ default: m.CameraPage })));
 const CognitivePage = lazy(() => import("./pages/cognitive/CognitivePage").then((m) => ({ default: m.CognitivePage })));
 const CommandCenterPage = lazy(() => import("./pages/command/CommandCenterPage").then((m) => ({ default: m.CommandCenterPage })));
@@ -324,6 +325,7 @@ export const router = createBrowserRouter([
       { path: "payments", element: withSuspense(<PaymentGatewaysPage />) },
       { path: "geo-billing", element: withSuspense(<GeoBillingConsolePage />) },
       { path: "commerce", element: withSuspense(<CommercePage />) },
+      { path: "notifications", element: withSuspense(<NotificationsPage />) },
       { path: "camera", element: withSuspense(<CameraPage />) },
       { path: "cognitive", element: withSuspense(<CognitivePage />) },
       { path: "command", element: withSuspense(<CommandCenterPage />) },

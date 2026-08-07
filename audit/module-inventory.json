@@ -1236,6 +1236,7 @@
       "mfaAssurance.spec.ts",
       "mlOps.spec.ts",
       "mobileSync.spec.ts",
+      "notifications.spec.ts",
       "opexAssurance.spec.ts",
       "payments.spec.ts",
       "platformServices.spec.ts",
@@ -7328,13 +7329,14 @@
       "serviceFile": {
         "file": "notifications.service.ts",
         "path": "/home/user/WIN/apps/api/src/notifications/notifications.service.ts",
-        "sloc": 443,
+        "sloc": 444,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 886,
+      "serviceTotalSloc": 972,
       "serviceFiles": [
         "notifications.service.ts",
+        "notifications.test.ts",
         "notifications/notifications.service.ts"
       ],
       "importedServiceFiles": [
@@ -7367,7 +7369,7 @@
     ],
     "sharedTypes": "packages/shared/src/notifications.ts (112 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/notifications.ts (16 LOC)",
       "pages": []
     },
     "db": {
@@ -7381,12 +7383,15 @@
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
-    "tests": [],
+    "tests": [
+      "notifications.spec.ts",
+      "notifications/notifications.test.ts"
+    ],
     "syntheticData": [],
     "externalIntegrations": [
       "Twilio"
     ],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "opex",
