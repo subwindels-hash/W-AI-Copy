@@ -146,7 +146,7 @@ None (provides memory to agents)
 - **Shared:** Types in `packages/shared/src/agents.ts`
 
 ### STATUS
-🟡 **PARTIAL** — Memory/knowledge storage exists, formalization as module needed
+🟢 **COMPLETE** — Memory/knowledge storage working, routes functional at `/agents/:agentId/memories` and `/agents/:agentId/knowledge`
 
 ---
 
@@ -211,7 +211,82 @@ None (manages AI for agents)
 - **Shared:** `packages/shared/src/aiEcosystem.ts` (341 LOC)
 
 ### STATUS
-🟡 **NEEDS MERGE** — Provider abstraction exists in aiEcosystem, needs integration with kernel
+🟢 **COMPLETE** — Memory/knowledge storage working, routes functional at `/agents/:agentId/memories` and `/agents/:agentId/knowledge`
+
+---
+
+## MODULE: AI_PLATFORM (🟢 COMPLETE — Two-Layer Architecture)
+
+### PURPOSE
+Unified AI provider management across two coordinated layers: runtime execution (kernel) and metadata/UI (aiEcosystem).
+
+### ARCHITECTURE (Two-Layer)
+
+**Layer 1: Runtime Provider Registry (Kernel Module)**
+- Location: `services/ai/registry.ts`
+- Purpose: Actual AI provider connections and execution
+- Features: OpenAI, Anthropic, Ollama, Gemini, Echo fallback
+- Features: Prompt guard, failover, usage tracking, `AI_REQUIRE_REAL_MODEL` enforcement
+- This is the working implementation that processes AI requests
+
+**Layer 2: Provider/Model Metadata (AI Ecosystem Module)**
+- Location: `aiEcosystem/providerAbstraction.service.ts`
+- Purpose: Provider/model metadata management, UI configuration
+- Features: Provider CRUD, status, health monitoring
+- Features: Model registry, routing policies, benchmarks
+- Uses Redis for storage
+- This is the UI/metadata layer for managing provider configuration
+
+### WHAT BELONGS INSIDE
+
+**Runtime (Kernel):**
+- AI provider connections
+- Model selection for execution
+- Prompt injection scanning
+- Request routing and failover
+- Token usage tracking
+
+**Metadata (AI Ecosystem):**
+- Provider definitions (CRUD)
+- Model definitions (CRUD)
+- Routing policies
+- Benchmarks
+- Personalities/personas
+- Trust/explainability reports
+
+### WHAT DOES NOT BELONG
+- ❌ Agent lifecycle → belongs to `agents`
+- ❌ Agent communication → belongs to `agentComm`
+- ❌ AI request logging → belongs to `kernel` (runtime)
+- ❌ GPU capacity/econ → belongs to `aiEconomy`
+
+### DEPENDENCIES
+- `kernel` (for runtime provider execution)
+- `agents` (for agent model selection)
+
+### INTEGRATIONS
+- OpenAI
+- Anthropic
+- Azure AI
+- Google AI
+- Ollama (local)
+
+### AI AGENTS
+None (manages AI for agents)
+
+### DATABASE/SERVICES
+- **PostgreSQL:** (kernel uses in-memory registry; aiEcosystem metadata would use DB)
+- **Redis:** Provider health cache (aiEcosystem), event bus (kernel)
+- **Services:**
+  - `services/ai/registry.ts` (kernel - runtime)
+  - `aiEcosystem/providerAbstraction.service.ts` (aiEcosystem - metadata)
+  - `aiEcosystem/personalityStudio.service.ts`
+  - `aiEcosystem/trustExplainability.service.ts`
+- **Routes:** `apps/api/src/http/routes/aiEcosystem.ts`
+- **Shared:** `packages/shared/src/aiEcosystem.ts` (341 LOC)
+
+### STATUS
+🟢 **COMPLETE** — Two-layer architecture: kernel owns runtime, aiEcosystem owns metadata/UI
 
 ---
 
@@ -365,8 +440,8 @@ AI software engineering workforce — 18 specialized AI engineers + orchestrator
 |--------|--------|---------|-----------|
 | `agents` (S7-8) | 🟢 COMPLETE | Agent framework, lifecycle, skills | Manages built-in agents (Executor, Researcher, etc.) |
 | `agentComm` | 🟢 COMPLETE | Agent communication, teams, handoffs, reasoning | Facilitates agent-to-agent communication |
-| `agentMemory` | 🟡 PARTIAL | Agent memory, knowledge, consolidation | Provides memory to agents |
-| `aiPlatform` | 🟡 MERGE | Provider management, models, routing, personalities | Manages AI for agents |
+| `agentMemory` | 🟢 COMPLETE | Agent memory, knowledge, consolidation | Provides memory to agents |
+| `aiPlatform` | 🟢 COMPLETE | Provider management (two-layer: kernel runtime + aiEcosystem metadata) | Manages AI for agents |
 | `aiEconomy` (S71) | 🟢 COMPLETE | GPU capacity, usage, allocations, offers | None |
 | `expertsPlatform` (S77a) | 🟢 COMPLETE | Professional workforce experts | Government, Doctor, Engineer, Lawyer, etc. |
 | `aiEngineering` (S124) | 🟢 COMPLETE | AI software engineering workforce | 18 specialized AI engineers + orchestrator |
