@@ -353,12 +353,18 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
       Metrics.timing("crypto.order.place", ms, { exchange: this.exchange, ok: String(r.ok) });
       if (r.ok) Metrics.counter("crypto.order.dispatched", { exchange: this.exchange }).incr();
       else Metrics.counter("crypto.order.rejected", { exchange: this.exchange }).incr();
+      // Emit an execution event to the org hub immediately after REST response
+      // so the dashboard sees the result without waiting for background sync.
+      // Private WS (where implemented) will follow up with fill updates.
+      this.emitOrderEvent(a, req.symbol, req.side === "short" ? "sell" : "buy", req.volume, r, cryptoReq.clientOrderId);
       // Best-effort refresh after fill.
       setTimeout(() => this.backgroundSync(accountId).catch(() => {}), 1500);
       return { ...r, latencyMs: ms };
     } catch (e) {
       const msg = (e as Error).message;
       Metrics.counter("crypto.order.error", { exchange: this.exchange }).incr();
+      const a = this.accounts.get(accountId);
+      if (a) this.emitOrderEvent(a, req.symbol, req.side === "short" ? "sell" : "buy", req.volume, { ok: false, error: msg }, undefined);
       return { ok: false, error: msg, latencyMs: Date.now() - started };
     }
   }
@@ -586,6 +592,30 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
     catch { /* background */ }
   }
 
+  /** Best-effort: emit an execution event to the org hub for a REST order response. */
+  private emitOrderEvent(
+    a: CryptoAccountSession, symbol: string, side: "buy" | "sell", volume: number,
+    r: OrderResult, clientOrderId?: string,
+  ) {
+    const oid = (a.opts.config as any)?._oid;
+    if (!oid) return;
+    try {
+      const brokerSide = side === "sell" ? "short" : "long";
+      const id = (r as any).dealId ?? r.ticket ?? clientOrderId ?? `${this.exchange}-${Date.now()}`;
+      tradingEvents.emit(oid, {
+        kind: "execution", accountId: a.id,
+        data: {
+          id: String(id),
+          status: r.ok ? ((r as any).dealId ? "filled" : "submitted") : "failed",
+          decision: r.ok ? ((r as any).dealId ? "filled" : "submitted to exchange") : (r.error ?? "exchange rejected"),
+          symbol, side: brokerSide, volume,
+          brokerTicket: r.ticket ? String(r.ticket) : undefined,
+          error: r.ok ? undefined : r.error,
+        },
+      });
+    } catch { /* best-effort */ }
+  }
+
   /* ── WebSocket plumbing (overridable) ── */
 
   /** Create (lazily) the public WS client and attach the parser. */
@@ -618,6 +648,7 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
             sess.privateListenKeyTimer = setInterval(() => { this.keepAliveListenKey(sess).catch((e) => logger.warn("[crypto] listenKey keepalive failed", { err: (e as Error).message })); }, 30 * 60_000);
           }
           await this.authenticatePrivateWs(sess, send);
+          await this.afterPrivateAuth(sess, send);
         } catch (e) {
           logger.warn("[crypto] private WS auth failed", { exchange: this.exchange, err: (e as Error).message });
         }
@@ -627,6 +658,45 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
     });
     sess.privateWs = ws;
     ws.on("error", (e) => logger.warn("[crypto] private WS error", { exchange: this.exchange, err: e }));
+    // Route parsed private channel messages into tradingEvents hub. parsePrivateMessage
+    // is responsible for mutating sess.openOrders / sess.positions / sess.balances;
+    // here we fan out the resulting order/position/account events to the hub.
+    ws.on("message", (ev: any) => {
+      const { channel, payload } = ev as { channel: string; payload: unknown };
+      const oid = (sess.opts.config as any)?._oid;
+      if (!oid) return;
+      try {
+        if (channel === "order") {
+          // payload may be single order or array; emit most recent order_update.
+          const o = Array.isArray(payload) ? (payload as any[])[payload.length - 1] : payload;
+          if (o) tradingEvents.emit(oid, { kind: "order_update", accountId: sess.id, data: cryptoOrderToBrokerOrder(o, sess.id) });
+        } else if (channel === "position") {
+          const p = Array.isArray(payload) ? (payload as any[])[payload.length - 1] : payload;
+          if (p) tradingEvents.emit(oid, { kind: "position_update", accountId: sess.id, data: cryptoPositionToBrokerPosition(p, sess.id) });
+        } else if (channel === "balance" || channel === "account") {
+          tradingEvents.emit(oid, {
+            kind: "account_state", accountId: sess.id,
+            data: { status: "connected", lastSyncAt: new Date().toISOString() },
+          });
+        } else if (channel === "fill") {
+          const f = Array.isArray(payload) ? (payload as any[])[payload.length - 1] : payload;
+          if (f) {
+            const side = (f.side === "sell" || f.side === "short") ? "short" : "long";
+            tradingEvents.emit(oid, {
+              kind: "execution", accountId: sess.id,
+              data: {
+                id: String(f.id ?? f.tradeId ?? f.orderId ?? ""),
+                status: "filled", decision: "filled",
+                symbol: f.symbol, side, volume: Number(f.quantity ?? f.qty ?? 0),
+                brokerTicket: f.orderId ? String(f.orderId) : undefined,
+              },
+            });
+          }
+        }
+      } catch (e) {
+        logger.warn("[crypto] private WS hub emit failed", { exchange: this.exchange, err: (e as Error).message });
+      }
+    });
     ws.connect().catch((e) => logger.warn("[crypto] private WS connect failed", { err: e }));
   }
 
@@ -670,6 +740,14 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
   protected async cancelOrderImpl(_sess: CryptoAccountSession, _orderId: string): Promise<OrderResult> {
     return { ok: false, error: "cancelOrder not supported on this exchange" };
   }
+
+  /**
+   * Hook invoked after private-WS authenticatePrivateWs() resolves. Exchanges
+   * that need to send explicit subscribe frames for orders/positions/wallet
+   * (Bybit/OKX/Coinbase/Kraken/etc.) override this to send them. The Binance
+   * listen-key style requires no subscribe so the default is no-op.
+   */
+  protected async afterPrivateAuth(_sess: CryptoAccountSession, _send: (p: string | object) => void): Promise<void> { return; }
 
   /* ── Abstract (per-exchange) ── */
 
@@ -787,4 +865,41 @@ function dedupeFills(existing: CryptoFill[], incoming: CryptoFill[]): CryptoFill
   const seen = new Set<string>(existing.map((f) => f.id));
   for (const f of incoming) { if (!seen.has(f.id)) { existing.push(f); seen.add(f.id); } }
   return existing;
+}
+
+/** Convert a single CryptoOrder to the shared BrokerPendingOrder shape for hub events. */
+function cryptoOrderToBrokerOrder(o: CryptoOrder, accountId: string): BrokerPendingOrder {
+  const isBuy = o.side === "buy";
+  let mtType: BrokerPendingOrder["type"] = isBuy ? "buy_limit" : "sell_limit";
+  if (o.type === "market" || o.type === "stop_market" || o.type === "take_profit_market") {
+    mtType = isBuy ? "buy_stop" : "sell_stop";
+    if (o.type === "market") mtType = isBuy ? "buy_limit" : "sell_limit";
+  }
+  return {
+    id: o.id, accountId, ticket: o.id,
+    symbol: o.symbol, type: mtType,
+    volume: Math.max(0, (o.quantity ?? 0) - (o.filledQuantity ?? 0)),
+    price: o.price ?? 0,
+    sl: o.stopLoss?.price, tp: o.takeProfit?.price,
+    openTime: o.createdTime,
+    status: (o.status === "partially_filled" ? "partial" : (o.status === "canceled" ? "cancelled" : (o.status === "filled" || o.status === "expired" || o.status === "rejected" ? o.status : "active"))) as BrokerPendingOrder["status"],
+    filledVolume: o.filledQuantity,
+    comment: o.clientOrderId, magic: 0,
+  };
+}
+
+/** Convert a single CryptoPosition to the shared BrokerPosition shape for hub events. */
+function cryptoPositionToBrokerPosition(p: CryptoPosition, accountId: string): BrokerPosition {
+  const signedQty = p.quantity * (p.side === "net" ? (p.quantity >= 0 ? 1 : -1) : (p.side === "short" ? -1 : 1));
+  return {
+    id: p.symbol, accountId, ticket: p.symbol, symbol: p.symbol,
+    side: signedQty >= 0 ? "long" : "short",
+    volume: Math.abs(p.quantity),
+    openPrice: p.entryPrice, currentPrice: p.markPrice,
+    sl: p.stopLoss, tp: p.takeProfit,
+    openTime: p.openedTime,
+    profit: p.unrealizedPnl,
+    swap: 0, commission: 0,
+    comment: `${p.marketType} ${p.marginType} lev=${p.leverage}`, magic: 0,
+  };
 }

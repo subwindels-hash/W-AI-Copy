@@ -407,18 +407,28 @@ export class BinanceConnector extends BaseCryptoConnector {
           createdTime: new Date(msg.O).toISOString(), updatedTime: new Date(msg.T || msg.E).toISOString(),
           fee: 0, feeCurrency: "USDT",
         };
-        sess.openOrders.set(orderId, o);
+        // Preserve prior filledQuantity across repeated frames for the same order
+        // so partial fills accumulate correctly when WS re-delivers executionReports.
+        const existing = sess.openOrders.get(orderId);
+        if (existing && o.filledQuantity === 0) o.filledQuantity = existing.filledQuantity;
         if (msg.x === "TRADE") {
+          const lastQty = Number(msg.l);
           const fill: CryptoFill = {
             id: String(msg.t ?? orderId + ":" + msg.E), orderId, symbol: sym, marketType: "perp",
-            side: o.side, price: Number(msg.L), quantity: Number(msg.l),
+            side: o.side, price: Number(msg.L), quantity: lastQty,
             fee: Number(msg.n ?? 0), feeCurrency: msg.N ?? "USDT",
             realizedPnl: 0, time: new Date(msg.T || msg.E).toISOString(), isMaker: msg.m === true,
             tradeId: String(msg.t),
           };
+          // Update the in-memory order with the fill before deciding whether to evict it.
+          sess.openOrders.set(orderId, o);
           this.applyFill(sess, fill);
+          if (o.status === "filled" || o.status === "canceled") sess.openOrders.delete(orderId);
+          else sess.openOrders.set(orderId, o);
+        } else {
+          sess.openOrders.set(orderId, o);
+          if (o.status === "filled" || o.status === "canceled") sess.openOrders.delete(orderId);
         }
-        if (o.status === "filled" || o.status === "canceled") sess.openOrders.delete(orderId);
         return [{ channel: "order", payload: o }];
       }
       case "outboundAccountPosition": {

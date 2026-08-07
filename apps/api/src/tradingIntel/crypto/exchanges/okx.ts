@@ -176,8 +176,108 @@ export class OkxConnector extends BaseCryptoConnector {
     const sig = hmacSha256Base64(sess.creds.apiSecret, ts + "GET" + "/users/self/verify");
     send({ op: "login", args: [{ apiKey: sess.creds.apiKey, passphrase: sess.creds.passphrase ?? "", timestamp: ts, sign: sig }] });
   }
+  protected async afterPrivateAuth(_sess: CryptoAccountSession, send: (p: any) => void): Promise<void> {
+    // OKX private channel subscriptions for orders + positions + account.
+    send({ op: "subscribe", args: [{ channel: "orders" }, { channel: "positions" }, { channel: "account" }] });
+  }
+  protected parsePrivateMessage(sess: CryptoAccountSession, raw: string): Array<{ channel: string; payload: unknown }> {
+    let msg: any; try { msg = JSON.parse(raw); } catch { return []; }
+    if (msg?.event === "login" || msg?.event === "subscribe" || msg?.event === "error") return [];
+    const arg = msg?.arg; if (!arg?.channel) return [];
+    const data = msg.data ?? (msg.arg ? [msg.arg] : []);
+    switch (arg.channel) {
+      case "orders": {
+        for (const o of Array.isArray(data) ? data : [data]) {
+          if (!o?.instId) continue;
+          const sym = okxToUnified(o.instId);
+          const order: CryptoOrder = {
+            id: String(o.ordId ?? o.ordId ?? ""), clientOrderId: o.clOrdId, symbol: sym, marketType: o.instType?.toLowerCase() === "spot" ? "spot" : "perp",
+            side: String(o.side ?? "").toLowerCase() === "buy" ? "buy" : "sell",
+            type: mapOkxOrdType(o.ordType) as CryptoOrder["type"], price: Number(o.px ?? 0) || null, triggerPrice: null,
+            quantity: Number(o.sz ?? 0), filledQuantity: Number(o.accFillSz ?? 0),
+            remainingQuantity: Math.max(0, Number(o.sz ?? 0) - Number(o.accFillSz ?? 0)),
+            avgFillPrice: Number(o.avgPx ?? 0) || null, status: mapOkxOrderState(o.state),
+            timeInForce: "GTC", reduceOnly: false, leverage: undefined,
+            createdTime: new Date(Number(o.cTime || o.ts || Date.now())).toISOString(),
+            updatedTime: new Date(Number(o.uTime || o.ts || Date.now())).toISOString(),
+            fee: Number(o.fee ?? 0) * -1, feeCurrency: o.feeCcy,
+          };
+          sess.openOrders.set(order.id, order);
+          if (order.status === "filled" || order.status === "canceled") sess.openOrders.delete(order.id);
+          if (Number(o.fillPx ?? 0) > 0 && Number(o.fillSz ?? 0) > 0) {
+            this.applyFill(sess, {
+              id: String(o.tradeId ?? order.id + ":" + o.ts), orderId: order.id, symbol: sym,
+              marketType: order.marketType, side: order.side, price: Number(o.fillPx), quantity: Number(o.fillSz),
+              fee: Number(o.fee ?? 0) * -1, feeCurrency: o.feeCcy, realizedPnl: Number(o.fillPnlForCloseOrd ?? 0),
+              time: order.updatedTime, isMaker: o.execType === "M", tradeId: String(o.tradeId ?? ""),
+            });
+          }
+        }
+        return [{ channel: "order", payload: data }];
+      }
+      case "positions": {
+        for (const p of Array.isArray(data) ? data : [data]) {
+          if (!p?.instId) continue;
+          const sym = okxToUnified(p.instId);
+          const qty = Number(p.pos ?? 0);
+          if (qty === 0) { sess.positions.delete(sym); continue; }
+          sess.positions.set(sym, {
+            symbol: sym, marketType: "perp",
+            side: Number(p.pos) >= 0 ? "long" : "short",
+            quantity: Math.abs(qty), entryPrice: Number(p.avgPx ?? 0), markPrice: Number(p.markPx ?? 0),
+            unrealizedPnl: Number(p.upl ?? 0), realizedPnl: Number(p.realizedPnl ?? 0),
+            leverage: Number(p.lever ?? 1), margin: Number(p.margin ?? 0),
+            marginType: String(p.mgnMode ?? "cross") as any, liquidationPrice: null,
+            stopLoss: undefined, takeProfit: undefined,
+            openedTime: new Date(Number(p.cTime || Date.now())).toISOString(), updatedTime: new Date(Number(p.uTime || Date.now())).toISOString(),
+          });
+        }
+        return [{ channel: "position", payload: data }];
+      }
+      case "account": {
+        return [{ channel: "account", payload: data }];
+      }
+    }
+    return [];
+  }
+
+  /* Public WS tickers */
+  private nextWsReqId = 1;
+  protected buildTickerSubscribePayload(m: CryptoMarket): object | null {
+    return { op: "subscribe", args: [{ channel: "tickers", instId: m.rawSymbol }] };
+  }
+  protected buildTickerUnsubscribePayload(m: CryptoMarket): object | null {
+    return { op: "unsubscribe", args: [{ channel: "tickers", instId: m.rawSymbol }] };
+  }
+  protected parsePublicMessage(sess: CryptoAccountSession, raw: string): Array<{ channel: string; payload: unknown }> {
+    let msg: any; try { msg = JSON.parse(raw); } catch { return []; }
+    if (msg?.arg?.channel !== "tickers" || !msg?.data?.[0]) return [];
+    const instId = msg.arg.instId as string;
+    const m = [...sess.markets.values()].find((x) => x.rawSymbol === instId);
+    if (!m) return [];
+    return [{ channel: `ticker:${m.rawSymbol}`, payload: msg.data[0] }];
+  }
+  protected parseTickerMessage(_s: CryptoAccountSession, _m: CryptoMarket, payload: any): { bid: number; ask: number } | null {
+    const bid = Number(payload?.bidPx); const ask = Number(payload?.askPx);
+    if (!bid || !ask) return null;
+    return { bid, ask };
+  }
 }
 
+function okxToUnified(instId: string): string {
+  // instId e.g. "BTC-USDT-SWAP" or "BTC-USDT"
+  if (instId.endsWith("-SWAP")) return instId.replace(/-USDT-SWAP$/, "/USDT:USDT").replace(/-/g, "/");
+  return instId.replace(/-USDT$/, "/USDT").replace(/-/g, "/");
+}
+function mapOkxOrderState(s: string): CryptoOrder["status"] {
+  // OKX: live / partially_filled / filled / canceled
+  const u = String(s || "").toLowerCase();
+  if (u === "filled") return "filled";
+  if (u === "canceled" || u === "cancelled") return "canceled";
+  if (u === "partially_filled") return "partially_filled";
+  if (u === "rejected" || u === "expired") return u;
+  return "new";
+}
 function mapOkxOrdType(t: string): string {
   const u = String(t).toLowerCase();
   if (u === "market") return "market";

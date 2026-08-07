@@ -196,6 +196,10 @@ export class BybitConnector extends BaseCryptoConnector {
     const sig = hmacSha256Hex(sess.creds.apiSecret, "GET/realtime" + expires);
     send({ op: "auth", args: [sess.creds.apiKey, expires, sig] });
   }
+  protected async afterPrivateAuth(_sess: CryptoAccountSession, send: (p: any) => void): Promise<void> {
+    // Subscribe to order and position channels. Bybit UTA uses "order" and "position" topics (category inferred).
+    send({ op: "subscribe", args: ["order", "position"], req_id: String(this.nextWsReqId++) });
+  }
 
   /* WS */
   protected publicPingMessage(): object {
@@ -233,6 +237,8 @@ export class BybitConnector extends BaseCryptoConnector {
       for (const o of arr) {
         if (!o) continue;
         const sym = symToUnified(o.symbol);
+        const priorFilled = sess.openOrders.get(o.orderId)?.filledQuantity ?? 0;
+        const newFilled = Math.max(0, Number(o.cumExecQty) - priorFilled);
         const order: CryptoOrder = {
           id: o.orderId, clientOrderId: o.orderLinkId, symbol: sym, marketType: "perp",
           side: (o.side || "").toLowerCase() === "buy" ? "buy" : "sell",
@@ -245,10 +251,10 @@ export class BybitConnector extends BaseCryptoConnector {
         };
         sess.openOrders.set(o.orderId, order);
         if (order.status === "filled" || order.status === "canceled" || order.status === "rejected") sess.openOrders.delete(o.orderId);
-        if (Number(o.cumExecQty || 0) > 0) {
+        if (newFilled > 0) {
           this.applyFill(sess, {
             id: o.execId ?? o.orderId, orderId: o.orderId, symbol: sym, marketType: "perp",
-            side: order.side, price: Number(o.avgPrice) || Number(o.price), quantity: Number(o.cumExecQty) - (order.filledQuantity || 0),
+            side: order.side, price: Number(o.avgPrice) || Number(o.price), quantity: newFilled,
             fee: 0, feeCurrency: "USDT", time: order.updatedTime, isMaker: false,
           });
         }
