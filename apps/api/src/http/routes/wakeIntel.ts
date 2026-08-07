@@ -158,4 +158,152 @@ export function registerWakeIntelRoutes(router: Router) {
       res.status(204).end();
     } catch (e) { next(e); }
   });
+
+  // ─── Voice Activation Center (Phase Voice-2) ──────────────────────
+
+  const orgOfV = (req: any) => (req.user as any)?.organizationId;
+  const userOfV = (req: any) => (req.user as any)?.id;
+
+  router.get("/voice/dashboard", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      res.json({ ok: true, data: await Wi.voiceCenterDashboard(oid, userOfV(req)) });
+    } catch (e) { next(e); }
+  });
+
+  router.get("/voice/config", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      res.json({ ok: true, data: await Wi.getVoiceConfig(oid, userOfV(req)) });
+    } catch (e) { next(e); }
+  });
+
+  router.patch("/voice/config", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      res.json({ ok: true, data: await Wi.updateVoiceConfig(oid, userOfV(req), req.body) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/voice/phrases", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const { phrase } = req.body;
+      if (!phrase || typeof phrase !== "string") return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "phrase required" } });
+      res.json({ ok: true, data: await Wi.addCustomWakePhrase(oid, userOfV(req), phrase) });
+    } catch (e) { next(e); }
+  });
+
+  router.delete("/voice/phrases", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const { phrase } = req.body;
+      if (!phrase) return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "phrase required" } });
+      res.json({ ok: true, data: await Wi.removeCustomWakePhrase(oid, userOfV(req), phrase) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/voice/detect", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const { transcript } = req.body;
+      if (!transcript) return res.status(400).json({ ok: false, error: { code: "BAD_REQUEST", message: "transcript required" } });
+      const result = await Wi.detectWakePhrase(oid, userOfV(req), transcript);
+      res.json({ ok: true, data: result });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/voice/deactivate", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const { transcript } = req.body;
+      const isDeactivation = await Wi.detectDeactivation(oid, userOfV(req), transcript ?? "");
+      res.json({ ok: true, data: { isDeactivation } });
+    } catch (e) { next(e); }
+  });
+
+  // Voice profiles
+  router.get("/voice/profiles", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      res.json({ ok: true, data: await Wi.listVoiceProfiles(oid) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/voice/profiles", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      const uid = userOfV(req);
+      if (!oid || !uid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const { userName, embeddingHash } = req.body;
+      res.status(201).json({ ok: true, data: await Wi.createVoiceProfile(oid, uid, userName ?? "User", embeddingHash ?? "") });
+    } catch (e) { next(e); }
+  });
+
+  router.delete("/voice/profiles/:id", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const ok = await Wi.deleteVoiceProfile(oid, req.params.id);
+      if (!ok) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND" } });
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  });
+
+  // Voice sessions
+  router.get("/voice/sessions", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      res.json({ ok: true, data: await Wi.listActiveSessions(oid) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/voice/sessions/start", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      const uid = userOfV(req);
+      if (!oid || !uid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const { deviceId, wakePhrase, confidence } = req.body;
+      res.json({ ok: true, data: await Wi.startVoiceSession(oid, uid, deviceId ?? "web", wakePhrase ?? "unknown", confidence ?? 0.8) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/voice/sessions/:id/end", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      await Wi.endVoiceSession(oid, req.params.id, req.body?.deactivationPhrase);
+      res.json({ ok: true });
+    } catch (e) { next(e); }
+  });
+
+  // Voice logs
+  router.get("/voice/logs", async (req, res, next) => {
+    try {
+      const oid = orgOfV(req);
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN" } });
+      const limit = Number(req.query.limit ?? 50);
+      res.json({ ok: true, data: await Wi.listVoiceLogs(oid, Math.min(limit, 200)) });
+    } catch (e) { next(e); }
+  });
+
+  // Built-in wake phrases list
+  router.get("/voice/builtin-phrases", async (_req, res) => {
+    const phrases = ["Hey Windels", "Hello Windels", "Hi Windels", "Okay Windels", "Alright Windels",
+      "Wake up Windels", "Windels", "Windels, are you there?", "Windels, listen",
+      "Windels, I need you", "Windels, help me", "Windels, get ready",
+      "Windels, let's go", "Windels, start", "Windels, activate", "Windels, come online"];
+    const responses = ["I'm listening.", "Yes?", "How can I help?", "Ready.", "Go ahead.", "At your service.", "Listening."];
+    const deactivations = ["Go to sleep, Windels.", "That's all, Windels.", "Goodbye, Windels.", "Stop listening, Windels.", "Never mind, Windels."];
+    res.json({ ok: true, data: { wakePhrases: phrases, activationResponses: responses, deactivationPhrases: deactivations } });
+  });
 }
