@@ -212,6 +212,15 @@ class MockRedis {
     return slice.slice(start, actualStop).map((item: any) => item.member);
   }
 
+  async zrem(key: string, member: string) {
+    const zset = this.store.get(key);
+    if (!zset || !Array.isArray(zset)) return 0;
+    const before = zset.length;
+    const filtered = zset.filter((item: any) => item.member !== member);
+    this.store.set(key, filtered);
+    return before - filtered.length;
+  }
+
   async zremrangebyrank(key: string, start: number, stop: number) {
     const zset = this.store.get(key);
     if (!zset || !Array.isArray(zset)) return 0;

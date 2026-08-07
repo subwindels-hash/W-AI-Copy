@@ -52,6 +52,7 @@ const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage
 const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
 const EmailIntelPage = lazy(() => import("./pages/emailIntel/EmailIntelPage").then((m) => ({ default: m.EmailIntelPage })));
 const ErpPage = lazy(() => import("./pages/erp/ErpPage").then((m) => ({ default: m.ErpPage })));
+const RevenueGuardianPage = lazy(() => import("./pages/revenueGuardian/RevenueGuardianPage").then((m) => ({ default: m.RevenueGuardianPage })));
 const WebsiteBuilderPage = lazy(() => import("./pages/websiteBuilder/WebsiteBuilderPage").then((m) => ({ default: m.WebsiteBuilderPage })));
 const SocialPlatformPage = lazy(() => import("./pages/socialPlatform/SocialPlatformPage").then((m) => ({ default: m.SocialPlatformPage })));
 const HelpdeskPage = lazy(() => import("./pages/helpdesk/HelpdeskPage").then((m) => ({ default: m.HelpdeskPage })));
@@ -302,6 +303,7 @@ export const router = createBrowserRouter([
       { path: "crm", element: withSuspense(<CrmPage />) },
       { path: "email-intel", element: withSuspense(<EmailIntelPage />) },
       { path: "erp", element: withSuspense(<ErpPage />) },
+      { path: "revenue-guardian", element: withSuspense(<RevenueGuardianPage />) },
       { path: "website-builder", element: withSuspense(<WebsiteBuilderPage />) },
       { path: "social", element: withSuspense(<SocialPlatformPage />) },
       { path: "helpdesk", element: withSuspense(<HelpdeskPage />) },
