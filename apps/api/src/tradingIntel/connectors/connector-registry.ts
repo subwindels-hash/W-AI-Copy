@@ -11,7 +11,7 @@
  * explicitly not a trading venue — it has no balances, fills, or margin.
  *
  * Every IBrokerConnector registered here talks to an external provider:
- *   Forex/CFDs: MT5 (native ZMQ/HTTP bridge or MetaApi cloud). Future: MT4/cTrader.
+ *   Forex/CFDs: MT5 + MT4 (native ZMQ/HTTP bridge or MetaApi cloud). cTrader planned.
  *   Crypto:     Binance, Bybit, OKX, Coinbase, Kraken, KuCoin, Bitget, Gate.io,
  *               MEXC, HTX, Crypto.com, Hyperliquid (Phase 1).
  *   Traditional: IBKR, Alpaca, TradeStation, OANDA, IG (future).
@@ -142,7 +142,7 @@ export const connectorRegistry = new ConnectorRegistry();
 // accounts; strategy backtesting is a separate analytical utility (see
 // tradingIntel/backtest) that does not execute trades.
 //
-// Forex / CFDs: MT5.
+// Forex / CFDs: MT5 + MT4.
 // Crypto:      12 launch exchanges.
 // Traditional: IBKR/Alpaca/TradeStation/OANDA/IG (future).
 // Imports are dynamic so missing optional deps don't hard-crash boot.
@@ -152,6 +152,10 @@ export async function registerBundledConnectors() {
     const { Mt5Connector } = await import("../mt5/mt5-connector.js");
     connectorRegistry.register(new Mt5Connector());
   } catch (e) { logger.warn("[connectors] MT5 connector failed to load", { err: e }); }
+  try {
+    const { Mt4Connector } = await import("../mt4/mt4-connector.js");
+    connectorRegistry.register(new Mt4Connector());
+  } catch (e) { logger.warn("[connectors] MT4 connector failed to load", { err: e }); }
 
   // Crypto — 12 exchange connectors (Phase 1 of crypto vertical).
   // Dynamic imports are typed `any` because each module has a named

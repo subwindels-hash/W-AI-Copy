@@ -97,7 +97,7 @@ const BROKER_LABEL: Record<string, string> = {
 /** Broker connector registry entry (exported for diagnostics/UI). */
 export const CONNECTOR_CATALOG = [
   { broker: "mt5", name: "MetaTrader 5", protocol: "native Python bridge (ZMQ/HTTP) or MetaApi cloud; use MT5 demo accounts for paper trading", requiresConfig: false },
-  { broker: "mt4", name: "MetaTrader 4", protocol: "planned — future phase", requiresConfig: true },
+  { broker: "mt4", name: "MetaTrader 4", protocol: "native Python bridge (ZMQ/HTTP) or MetaApi cloud; use MT4 demo accounts for paper trading (parity with MT5)", requiresConfig: false },
   { broker: "ctrader", name: "cTrader", protocol: "planned — future phase", requiresConfig: true },
   { broker: "binance", name: "Binance", protocol: "REST+WS (HMAC-SHA256) — spot, USDⓈ-M/COIN-M perps & futures", requiresConfig: true },
   { broker: "bybit", name: "Bybit", protocol: "Unified Trading Account v5 REST+WS (HMAC-SHA256) — spot, linear/inverse perps, options", requiresConfig: true },
@@ -436,7 +436,7 @@ export const BrokerIntegrationService = {
     const account = await this.mustGetAccount(oid, accountId);
     const connector = connectorRegistry.mustGet(account.broker);
     if (!connector.isConnected(accountId)) throw new AppError("BAD_REQUEST", "account not connected", 400);
-    if (env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") throw new AppError("FORBIDDEN", "Global MT5 read-only mode is active", 403);
+    if ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) throw new AppError("FORBIDDEN", "Global MT read-only mode is active", 403);
     const pos = (await this.listPositions(oid, accountId)).find((p) => p.ticket === ticket);
     if (!pos) throw new AppError("NOT_FOUND", `Position ticket ${ticket} not found`, 404);
     const exec = await this.recordExecution(oid, account, {
@@ -466,8 +466,8 @@ export const BrokerIntegrationService = {
     const account = await this.mustGetAccount(oid, accountId);
     const connector = connectorRegistry.mustGet(account.broker);
     if (!connector.isConnected(accountId)) throw new AppError("BAD_REQUEST", "account not connected", 400);
-    if (env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") throw new AppError("FORBIDDEN", "Global MT5 read-only mode is active", 403);
-    if (env.WINDELS_CRYPTO_GLOBAL_READONLY && account.broker !== "mt5") throw new AppError("FORBIDDEN", "WINDELS_CRYPTO_GLOBAL_READONLY is active", 403);
+    if ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) throw new AppError("FORBIDDEN", "Global MT read-only mode is active", 403);
+    if (env.WINDELS_CRYPTO_GLOBAL_READONLY && account.broker !== "mt5" && account.broker !== "mt4") throw new AppError("FORBIDDEN", "WINDELS_CRYPTO_GLOBAL_READONLY is active", 403);
     const ord = (await this.listPendingOrders(oid, accountId)).find((o) => (o.ticket ?? o.id) === orderId);
     if (!ord) throw new AppError("NOT_FOUND", `Order ${orderId} not found`, 404);
     const exec = await this.recordExecution(oid, account, {
@@ -505,7 +505,7 @@ export const BrokerIntegrationService = {
     const account = await this.mustGetAccount(oid, accountId);
     const connector = connectorRegistry.mustGet(account.broker);
     if (!connector.isConnected(accountId)) throw new AppError("BAD_REQUEST", "account not connected", 400);
-    if (env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") throw new AppError("FORBIDDEN", "Global MT5 read-only mode is active", 403);
+    if ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) throw new AppError("FORBIDDEN", "Global MT read-only mode is active", 403);
     const pos = (await this.listPositions(oid, accountId)).find((p) => p.ticket === ticket);
     if (!pos) throw new AppError("NOT_FOUND", `Position ticket ${ticket} not found`, 404);
     const result = await connector.modifyPosition(accountId, ticket, patch);
@@ -543,8 +543,8 @@ export const BrokerIntegrationService = {
     const id = randomUUID();
 
     // 0. Global read-only override.
-    const globalReadOnly = env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5" && !signal.paper;
-    checks.push({ rule: "GLOBAL_READ_ONLY", pass: !globalReadOnly, reason: globalReadOnly ? "Global MT5 read-only is active" : undefined });
+    const globalReadOnly = ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) && !signal.paper;
+    checks.push({ rule: "GLOBAL_READ_ONLY", pass: !globalReadOnly, reason: globalReadOnly ? "Global MT read-only is active" : undefined });
 
     // 1. Kill switch (hard — blocks ALL new orders including manual).
     const killSwitchPass = !risk.killSwitch;
@@ -700,7 +700,7 @@ export const BrokerIntegrationService = {
     // Dispatch now that human approved.
     const account = await this.mustGetAccount(oid, exec.accountId);
     const connector = connectorRegistry.get(account.broker);
-    if (connector && connector.isConnected(account.id) && !env.WINDELS_MT5_GLOBAL_READONLY) {
+    if (connector && connector.isConnected(account.id) && !env.WINDELS_MT5_GLOBAL_READONLY && !env.WINDELS_MT4_GLOBAL_READONLY) {
       await this.dispatchToBroker(oid, account, exec, {
         accountId: account.id, symbol: exec.symbol, side: exec.side, volume: exec.volume,
         confidence: exec.confidence, stopLoss: exec.stopLoss, takeProfit: exec.takeProfit,
