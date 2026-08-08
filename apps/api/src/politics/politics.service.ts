@@ -44,6 +44,16 @@ import { NIGERIA_LEADERS, NIGERIA_PARTIES, NIGERIA_ELECTIONS, LAGOS_GOVERNORS, N
 import { GLOBAL_LEADERS } from "./politics.seed.leaders.js";
 import { IDEOLOGIES, MOVEMENTS, INTERNATIONAL_ORGS, GOVERNMENT_FORMS_RECORDS, POLICY_RECORDS } from "./politics.seed.ideas.js";
 import { GLOBAL_DIPLOMACY, GLOBAL_CONCEPTS, KENYA_EVENTS } from "./politics.seed.completion.js";
+import {
+  GLOBAL_CURRENT_LEADERS,
+  GLOBAL_MONARCHS,
+  GLOBAL_PARTIES,
+  GLOBAL_ELECTIONS,
+  GLOBAL_FORMS,
+  GLOBAL_EVENTS,
+  GLOBAL_DIPLOMACY_2,
+  GLOBAL_MOVEMENTS_2,
+} from "./politics.seed.global.js";
 
 const K = {
   updIdx: (orgId: string) => `pol:upd:idx:${orgId}`,
@@ -92,7 +102,15 @@ export const POLITICS_CATALOG: AnyPoliticalRecord[] = [
   ...NIGERIA_SENATORS,
   ...KENYA_EVENTS,
   ...GLOBAL_DIPLOMACY,
+  ...GLOBAL_DIPLOMACY_2,
   ...GLOBAL_CONCEPTS,
+  ...GLOBAL_CURRENT_LEADERS,
+  ...GLOBAL_MONARCHS,
+  ...GLOBAL_PARTIES,
+  ...GLOBAL_ELECTIONS,
+  ...GLOBAL_FORMS,
+  ...GLOBAL_EVENTS,
+  ...GLOBAL_MOVEMENTS_2,
   ...IDEOLOGIES,
   ...MOVEMENTS,
   ...INTERNATIONAL_ORGS,
@@ -114,25 +132,62 @@ function normalize(t: string): string {
 const STOPWORDS = new Set(["the", "a", "an", "of", "and", "or", "what", "is", "are", "was", "were", "do", "does", "did", "how", "why", "when", "where", "who", "which", "about", "me", "my", "its", "it", "in", "on", "for", "to", "i", "you", "your", "all", "list", "tell", "explain", "country", "politics", "political", "government"]);
 
 function tokens(text: string): string[] {
-  return normalize(text).split(/\s+/).filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+  return normalize(text)
+    .split(/\s+/)
+    .map((t) => t.replace(/['’]s$/g, "")) // nigeria's -> nigeria
+    .filter((t) => t.length >= 3 && !STOPWORDS.has(t));
+}
+
+function tokenForms(tok: string): string[] {
+  const forms = [tok];
+  if (tok.endsWith("ies")) forms.push(tok.slice(0, -3) + "y"); // parties -> party
+  else if (tok.endsWith("s") && tok.length > 3) forms.push(tok.slice(0, -1)); // senators -> senator
+  return [...new Set(forms)];
+}
+
+function escRe(tok: string): string {
+  return tok.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function scoreRecord(record: AnyPoliticalRecord, qTokens: string[]): { score: number; matchedBy: string[] } {
   const names = nameStrings(record).map(normalize);
   let score = 0;
   const matchedBy: string[] = [];
-  const full = normalize(`${record.name} ${(record.altNames ?? []).join(" ")} ${record.title ?? ""} ${record.summary}`);
+  // Searchable text: name, aliases, title/office, summary, and the
+  // institutional fields (§11 questions like "How does the Senate work?").
+  const extra = [
+    record.title, record.office, record.jurisdiction,
+    record.legislature, record.legislativePowers, record.executive,
+    record.executivePowers, record.history, record.independence,
+    record.modernHistory,
+  ].filter(Boolean).join(" ");
+  const full = normalize(`${record.name} ${(record.altNames ?? []).join(" ")} ${extra} ${record.summary}`);
   for (const tok of qTokens) {
-    if (names.some((n) => n === tok)) {
-      score += 6; // exact name word
-      matchedBy.push(`exact:${tok}`);
-    } else if (names.some((n) => n.split(/\s+/).some((w) => w.startsWith(tok)))) {
-      score += 3; // name word prefix ("president" in "presidential")
-      matchedBy.push(`name:${tok}`);
-    } else if (new RegExp(`\\b${tok.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`).test(full)) {
-      score += 2; // exact word in text
-      matchedBy.push(`text:${tok}`);
-    } else if (full.includes(tok)) {
+    let matched = false;
+    for (const f of tokenForms(tok)) {
+      if (names.some((n) => n === f)) {
+        score += 6;
+        matchedBy.push(`exact:${tok}`);
+        matched = true;
+        break;
+      }
+      if (names.some((n) => n.split(/\s+/).some((w) => w.startsWith(f)))) {
+        score += 3;
+        matchedBy.push(`name:${tok}`);
+        matched = true;
+        break;
+      }
+    }
+    if (matched) continue;
+    for (const f of tokenForms(tok)) {
+      if (new RegExp(`\\b${escRe(f)}\\b`).test(full)) {
+        score += 2;
+        matchedBy.push(`text:${tok}`);
+        matched = true;
+        break;
+      }
+    }
+    if (!matched && full.includes(tok)) {
       score += 1;
       matchedBy.push(`frag:${tok}`);
     }
@@ -287,15 +342,29 @@ export const PoliticsService = {
       let boost = 0;
       if (classification.intent === "current_office" && record.meta.verification === "current_as_of") boost += 4;
       if (classification.intent === "leader" && record.kind === "leader") boost += 2;
-      if (classification.intent === "leader" && (record.kind === "ministry" || record.kind === "governor" || record.kind === "legislator")) boost += 3;
-      if (classification.intent === "country_history" && record.kind === "leader" && (record as any).titleKind === "military_ruler") boost += 3;
+      if (classification.intent === "leader" && record.kind === "ministry") boost += 6;
+      if (classification.intent === "leader" && (record.kind === "governor" || record.kind === "legislator" || record.kind === "party")) boost += 4;
+      if (classification.intent === "current_office" && record.kind === "leader") boost += 2;
+      if (classification.intent === "country_history" && record.kind === "leader" && ((record as any).titleKind === "military_ruler" || String((record as any).title ?? "").includes("Military"))) boost += 5;
+      if (classification.intent === "country_history" && record.kind === "event") boost += 2;
       if (classification.intent === "election" && record.kind === "election") boost += 2;
       if (classification.intent === "constitution" && record.kind === "constitution") boost += 2;
       if (classification.intent === "international" && record.kind === "international_organization") boost += 2;
+      if (classification.intent === "international" && record.kind === "diplomacy") boost += 2;
       if (classification.intent === "ideology" && record.kind === "ideology") boost += 2;
-      if (classification.intent === "country_history" && record.kind === "country") boost += 2;
-      if (classification.intent === "government_how" && record.kind === "country") boost += 1;
-      if (score + boost < 4) continue;
+      if (classification.intent === "country_history" && record.kind === "country") boost += 1;
+      if (classification.intent === "government_how" && record.kind === "country") boost += 5;
+      if (classification.intent === "government_how" && record.kind === "constitution") boost += 4;
+      // "How does the Nigerian Senate work?" — the country's name should rank
+      // first even when the question uses the adjective form ("Nigerian").
+      if (classification.intent === "government_how") {
+        const nameWords2 = nameStrings(record).flatMap((n) => n.split(/\s+/)).map(normalize);
+        const nameHit = qTokens.some((tok) => nameWords2.some((w) => w.startsWith(tok) || tok.startsWith(w)));
+        if (nameHit && record.kind === "country") boost += 6;
+        if (nameHit && record.kind === "constitution") boost += 5;
+      }
+      if (classification.intent === "government_how" && record.kind === "government_form") boost += 2;
+      if (score + boost < 6) continue;
       scored.push({ record, score: score + boost });
     }
     scored.sort((a, b) => b.score - a.score || a.record.id.localeCompare(b.record.id));
@@ -395,7 +464,9 @@ export const PoliticsService = {
   },
 
   leaderTimeline(countryId: string) {
-    const leaders = this.listCountryLeaders(countryId).sort((a, b) => (a.ordinal ?? 999) - (b.ordinal ?? 999));
+    const leaders = this.listCountryLeaders(countryId)
+      .filter((l) => ["head_of_state", "head_of_government", "both"].includes(l.role))
+      .sort((a, b) => (a.ordinal ?? 999) - (b.ordinal ?? 999));
     return leaders.map((l) => ({
       id: l.id,
       name: l.name,

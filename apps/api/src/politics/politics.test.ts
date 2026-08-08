@@ -553,3 +553,141 @@ describe("Session 145 — the completed §26 questions", () => {
     expect(treaty.results.some((r) => r.id === "pol.dip.treaty-lagos")).toBe(true);
   });
 });
+
+describe("Session 146 — global expansion (§4/§9/§10/§12/§14/§15/§17/§21/§26)", () => {
+  it("has a current head of state/government for every covered country (§21)", () => {
+    const current = POLITICS_CATALOG.filter((r) => r.kind === "leader" && r.meta.verification === "current_as_of");
+    const countries = new Set(current.map((l) => (l as any).countryId));
+    for (const c of ["pol.country.nigeria", "pol.country.united-states", "pol.country.united-kingdom", "pol.country.kenya", "pol.country.ghana", "pol.country.south-africa", "pol.country.france", "pol.country.germany", "pol.country.india", "pol.country.china", "pol.country.brazil", "pol.country.canada", "pol.country.japan", "pol.country.russia", "pol.country.egypt", "pol.country.ethiopia", "pol.country.mexico", "pol.country.australia"]) {
+      expect(countries.has(c), c).toBe(true);
+    }
+    for (const l of current) {
+      expect(l.meta.lastVerified).toBeTruthy();
+      expect(l.meta.asOfDate).toBeTruthy();
+    }
+  });
+
+  it("covers monarchs and a traditional ruler (§4 King/Queen/Sultan, §6)", () => {
+    const charles = PoliticsService.getRecord("pol.leader.uk.charles") as any;
+    expect(charles.titleKind).toBe("monarch_king");
+    expect(charles.role).toBe("head_of_state");
+    expect(charles.meta.verification).toBe("current_as_of");
+    const elizabeth = PoliticsService.getRecord("pol.leader.uk.elizabeth") as any;
+    expect(elizabeth.titleKind).toBe("monarch_queen");
+    expect(elizabeth.officeEnd).toContain("2022");
+    const sultan = PoliticsService.getRecord("pol.leader.nigeria.sultan") as any;
+    expect(sultan.titleKind).toBe("sultan");
+    expect(sultan.countryId).toBe("pol.country.nigeria");
+  });
+
+  it("covers global parties for the covered countries (§9)", () => {
+    const ids = new Set(POLITICS_CATALOG.map((r) => r.id));
+    for (const id of ["pol.party.us.democratic", "pol.party.us.republican", "pol.party.uk.labour", "pol.party.uk.conservative", "pol.party.kenya.uda", "pol.party.kenya.odm", "pol.party.sa.anc", "pol.party.sa.da", "pol.party.germany.cdu", "pol.party.germany.spd", "pol.party.india.bjp", "pol.party.india.inc"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const anc = PoliticsService.getRecord("pol.party.sa.anc") as any;
+    expect(anc.selfDescription).toContain("liberation movement");
+    expect(anc.academicClassification).toContain("dominant party");
+    // §9: what a party calls itself vs how scholars classify it.
+    expect(anc.selfDescription).not.toBe(anc.academicClassification);
+  });
+
+  it("covers landmark global elections (§10)", () => {
+    const ids = new Set(POLITICS_CATALOG.map((r) => r.id));
+    for (const id of ["pol.election.us.2024", "pol.election.uk.2024", "pol.election.kenya.2022", "pol.election.sa.2024", "pol.election.ghana.2024", "pol.election.germany.2025", "pol.election.india.2024", "pol.election.france.2024"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const us = PoliticsService.getRecord("pol.election.us.2024") as any;
+    expect(us.winner).toContain("Trump");
+    expect(us.resultSummary).toContain("312");
+    const kenya = PoliticsService.getRecord("pol.election.kenya.2022") as any;
+    expect(kenya.disputes).toContain("Supreme Court");
+  });
+
+  it("covers the §12 federal and parliamentary monarchy forms", () => {
+    expect(PoliticsService.getRecord("pol.form.federal-monarchy")).not.toBeNull();
+    const pm = PoliticsService.getRecord("pol.form.parliamentary-monarchy") as any;
+    expect(pm.examples).toContain("United Kingdom");
+  });
+
+  it("covers the §15 revolutions and peace agreement", () => {
+    const ids = new Set(POLITICS_CATALOG.map((r) => r.id));
+    for (const id of ["pol.event.france.revolution", "pol.event.us.revolution", "pol.event.russia.revolution", "pol.event.kenya.national-accord"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const french = PoliticsService.getRecord("pol.event.france.revolution") as any;
+    expect(french.eventType).toBe("revolution");
+    expect(french.nonViolenceNote).toContain("not glorified");
+    const accord = PoliticsService.getRecord("pol.event.kenya.national-accord") as any;
+    expect(accord.eventType).toBe("peace agreement");
+  });
+
+  it("covers the §17 diplomacy additions", () => {
+    const ids = new Set(POLITICS_CATALOG.map((r) => r.id));
+    for (const id of ["pol.dip.nigeria-south-africa", "pol.dip.us-china", "pol.dip.nato-ukraine"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const usChina = PoliticsService.getRecord("pol.dip.us-china") as any;
+    expect(usChina.relationshipType).toBe("dispute");
+  });
+
+  it("covers the §14 June 12 movement", () => {
+    const j12 = PoliticsService.getRecord("pol.mov.june12") as any;
+    expect(j12).not.toBeNull();
+    expect(j12.leaders).toContain("MKO Abiola");
+    expect(j12.outcome).toContain("Democracy Day");
+  });
+
+  it("answers 'Who is the King of the United Kingdom?' with Charles III", async () => {
+    const res = await PoliticsService.ask(null, { question: "Who is the King of the United Kingdom?" });
+    expect(res.matches.some((m) => m.id === "pol.leader.uk.charles")).toBe(true);
+  });
+
+  it("answers 'Who is the current president of France?' with Macron", async () => {
+    const res = await PoliticsService.ask(null, { question: "Who is the current president of France?" });
+    expect(res.matches.some((m) => m.id === "pol.leader.france.macron")).toBe(true);
+  });
+
+  it("answers 'What political parties exist in the United States?'", async () => {
+    const res = await PoliticsService.ask(null, { question: "What political parties exist in the United States?" });
+    expect(res.matches.some((m) => m.id === "pol.party.us.democratic")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.party.us.republican")).toBe(true);
+  });
+
+  it("answers 'What political parties have governed Nigeria?' (the §26 question)", async () => {
+    const res = await PoliticsService.ask(null, { question: "What political parties have governed Nigeria?", limit: 20 });
+    const partyMatches = res.matches.filter((m: any) => m.kind === "party" && m.id.startsWith("pol.party.nigeria"));
+    expect(partyMatches.length).toBeGreaterThanOrEqual(5);
+    expect(res.matches.some((m) => m.id === "pol.party.nigeria.pdp")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.party.nigeria.apc")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.party.nigeria.npc")).toBe(true);
+  });
+
+  it("answers 'How does the Nigerian Senate work?' (the §26 question)", async () => {
+    const res = await PoliticsService.ask(null, { question: "How does the Nigerian Senate work?" });
+    expect(res.intent.intent).toBe("government_how");
+    expect(res.matches.some((m) => ["pol.country.nigeria", "pol.constitution.nigeria.1999"].includes(m.id))).toBe(true);
+  });
+
+  it("answers 'Explain the 2024 United States presidential election'", async () => {
+    const res = await PoliticsService.ask(null, { question: "Explain the 2024 United States presidential election" });
+    expect(res.matches.some((m) => m.id === "pol.election.us.2024")).toBe(true);
+  });
+
+  it("answers 'What happened during the French Revolution?'", async () => {
+    const res = await PoliticsService.ask(null, { question: "What happened during the French Revolution?" });
+    expect(res.matches.some((m) => m.id === "pol.event.france.revolution")).toBe(true);
+  });
+
+  it("answers 'Who is the Sultan of Sokoto?'", async () => {
+    const res = await PoliticsService.ask(null, { question: "Who is the Sultan of Sokoto?" });
+    expect(res.matches.some((m) => m.id === "pol.leader.nigeria.sultan")).toBe(true);
+  });
+
+  it("the catalog integrity report stays clean at ~208 records", () => {
+    const report = PoliticsService.integrity();
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual([]);
+    expect(PoliticsService.catalogMeta().recordCount).toBeGreaterThan(200);
+  });
+});

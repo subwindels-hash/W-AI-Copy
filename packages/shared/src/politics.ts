@@ -309,6 +309,7 @@ const POLITICS_INTENT_RULES: Array<{ intent: Exclude<PoliticsQuestionIntent, "ge
     patterns: [
       /\bpresidents?\b/, /\bprime ministers?\b/, /\bchancellors?\b/, /\bmonarchs?\b/, /\bheads? of state\b/,
       /\bheads? of government\b/, /\bwho (was|were|governed|ruled|led)\b/, /\bleaders?\b/, /\bgovernors?\b/, /\bsenators?\b/, /\bministers?\b/,
+      /\bpart(?:ies|y)\b/, /\bparliamentarians?\b/,
     ],
   },
   {

@@ -260,3 +260,82 @@ test.describe("Session 145 — Politics coverage completion (§17 diplomacy & re
     expect(res.data.issues).toEqual([]);
   });
 });
+
+test.describe("Session 146 — Politics global expansion (§4/§9/§10/§12/§14/§15/§17/§21)", () => {
+  let token = "";
+
+  test.beforeAll(async () => {
+    token = await apiLogin();
+  });
+
+  const auth = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+  async function get(path: string) {
+    const res = await fetch(`${BASE}${path}`, { headers: auth() });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  async function send(method: string, path: string, body?: unknown) {
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: auth(),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  test("current heads of state exist for every covered country with Last Verified", async () => {
+    const ids = [
+      "pol.leader.france.macron", "pol.leader.china.xi", "pol.leader.russia.putin",
+      "pol.leader.brazil.lula", "pol.leader.canada.carney", "pol.leader.japan.ishiba",
+      "pol.leader.egypt.sisi", "pol.leader.mexico.sheinbaum", "pol.leader.australia.albanese",
+      "pol.leader.uk.charles", "pol.leader.nigeria.sultan",
+    ];
+    for (const id of ids) {
+      const res = await get(`/politics/records/${id}`);
+      expect(res.status, id).toBe(200);
+      expect(res.data.meta.verification).toBe("current_as_of");
+      expect(res.data.meta.lastVerified).toBeTruthy();
+    }
+    const charles = await get("/politics/records/pol.leader.uk.charles");
+    expect(charles.data.titleKind).toBe("monarch_king");
+    const sultan = await get("/politics/records/pol.leader.nigeria.sultan");
+    expect(sultan.data.titleKind).toBe("sultan");
+  });
+
+  test("global parties and elections resolve", async () => {
+    for (const id of ["pol.party.us.democratic", "pol.party.sa.anc", "pol.party.india.bjp", "pol.party.germany.cdu"]) {
+      const res = await get(`/politics/records/${id}`);
+      expect(res.status, id).toBe(200);
+    }
+    for (const id of ["pol.election.us.2024", "pol.election.kenya.2022", "pol.election.germany.2025", "pol.election.france.2024"]) {
+      const res = await get(`/politics/records/${id}`);
+      expect(res.status, id).toBe(200);
+    }
+    const us = await get("/politics/records/pol.election.us.2024");
+    expect(us.data.resultSummary).toContain("312");
+  });
+
+  test("the §26 additions answer: parties, senate, king, revolutions", async () => {
+    const parties = await send("POST", "/politics/ask", { question: "What political parties exist in the United States?" });
+    expect(parties.data.matches.some((m: any) => m.id === "pol.party.us.democratic")).toBe(true);
+    expect(parties.data.matches.some((m: any) => m.id === "pol.party.us.republican")).toBe(true);
+
+    const senate = await send("POST", "/politics/ask", { question: "How does the Nigerian Senate work?" });
+    expect(senate.data.matches.some((m: any) => ["pol.country.nigeria", "pol.constitution.nigeria.1999"].includes(m.id))).toBe(true);
+
+    const king = await send("POST", "/politics/ask", { question: "Who is the King of the United Kingdom?" });
+    expect(king.data.matches.some((m: any) => m.id === "pol.leader.uk.charles")).toBe(true);
+
+    const rev = await send("POST", "/politics/ask", { question: "What happened during the French Revolution?" });
+    expect(rev.data.matches.some((m: any) => m.id === "pol.event.france.revolution")).toBe(true);
+  });
+
+  test("the catalog integrity report stays clean at 200+ records", async () => {
+    const res = await get("/politics/integrity");
+    expect(res.data.ok).toBe(true);
+    expect(res.data.issues).toEqual([]);
+    const meta = await get("/politics/catalog");
+    expect(meta.data.recordCount).toBeGreaterThan(200);
+  });
+});

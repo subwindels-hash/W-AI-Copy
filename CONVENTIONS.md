@@ -1330,3 +1330,28 @@
 - **Education concepts are records, not code.** "Explain democracy" and
   "Explain elections" are `concept` records in the catalog — teachable,
   searchable and versionable like every other entity (§27).
+
+### Session 146 — Politics Global Expansion (`politics`)
+
+- **"Every covered country needs a current leader" is a §21 contract.** The
+  audit found nine covered countries without one; the rule going forward is
+  that a country profile and a current leader record must exist together —
+  both are `current_as_of` with Last Verified timestamps.
+- **Monarchs and traditional rulers are leader records, not afterthoughts.**
+  King Charles III, Queen Elizabeth II and the Sultan of Sokoto use the §4
+  title kinds (`monarch_king`, `monarch_queen`, `sultan`) and carry the
+  head-of-state vs head-of-government role distinction; the §19 leader
+  timeline filters to heads of state/government so traditional rulers do
+  not pollute the political-succession view.
+- **Parties and elections must exist beyond the example country.** Twelve
+  global parties and eight landmark elections now cover the §9/§10 global
+  scope for the covered countries, each with self-description vs academic
+  classification and official-source results.
+- **The engine's §26 guarantees are test-pinned at the question level.**
+  Possessive stripping (`nigeria's`), plural stemming (`parties`→`party`)
+  and the country-name-prefix boost exist because specific §26 questions
+  failed; each has a unit test and an e2e case so regressions surface as
+  failing questions, not vague score drift.
+- **Revolutions and wars are educational records.** The French, American
+  and Russian Revolutions and the Kenya National Accord carry
+  non-glorification notes (§15) alongside their historical content.

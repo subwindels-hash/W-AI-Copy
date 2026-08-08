@@ -8115,15 +8115,16 @@
       "serviceFile": {
         "file": "politics.service.ts",
         "path": "/home/user/WIN/apps/api/src/politics/politics.service.ts",
-        "sloc": 731,
+        "sloc": 802,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 5973,
+      "serviceTotalSloc": 7130,
       "serviceFiles": [
         "politics.catalog.ts",
         "politics.seed.completion.ts",
         "politics.seed.countries.ts",
+        "politics.seed.global.ts",
         "politics.seed.ideas.ts",
         "politics.seed.leaders.ts",
         "politics.seed.nigeria.ts",
@@ -8173,7 +8174,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/politics.ts (951 LOC)",
+    "sharedTypes": "packages/shared/src/politics.ts (952 LOC)",
     "web": {
       "client": "apps/web/src/lib/politics.ts (195 LOC)",
       "pages": []
