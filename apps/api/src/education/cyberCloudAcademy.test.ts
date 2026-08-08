@@ -93,3 +93,67 @@ describe("Cyber & Cloud Academy (Lecturer AI teaching tracks)", () => {
     expect(path.filter((n) => n.nextRecommended && n.track === "cloud").length).toBe(1);
   });
 });
+
+describe("Session 152 — Cyber & Cloud Academy completion: catalog integrity & path semantics", () => {
+  it("catalog integrity: unique ids, resolving prerequisites, valid tracks/levels, beginner entry points", () => {
+    const cat = CyberCloudAcademyService.catalog();
+    const all = [...cat.tracks.cybersecurity, ...cat.tracks.cloud];
+    expect(all.length).toBe(cat.total);
+    const ids = all.map((t) => t.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const idSet = new Set(ids);
+    for (const t of all) {
+      expect(["cybersecurity", "cloud"]).toContain(t.track);
+      expect(["beginner", "intermediate", "advanced", "expert"]).toContain(t.level);
+      expect(t.teachingTopic.length).toBeGreaterThan(30);
+      expect(t.description.length).toBeGreaterThan(10);
+      for (const p of t.prerequisites) {
+        expect(idSet.has(p), `${t.id} prerequisite ${p}`).toBe(true);
+      }
+    }
+    // Each track has a beginner entry point with no prerequisites.
+    for (const track of ["cybersecurity", "cloud"] as const) {
+      const entry = cat.tracks[track].filter((t) => t.level === "beginner" && t.prerequisites.length === 0);
+      expect(entry.length, `${track} beginner entry`).toBeGreaterThanOrEqual(1);
+    }
+    // All four levels are represented somewhere in the catalog.
+    const levels = new Set(all.map((t) => t.level));
+    for (const l of ["beginner", "intermediate", "advanced", "expert"]) expect(levels.has(l as any)).toBe(true);
+  });
+
+  it("path marks exactly one next-recommended topic per track even before anything is started", async () => {
+    const path = await CyberCloudAcademyService.path("cca-fresh-" + Date.now());
+    expect(path.length).toBe(17);
+    expect(path.filter((n) => n.nextRecommended && n.track === "cybersecurity").length).toBe(1);
+    expect(path.filter((n) => n.nextRecommended && n.track === "cloud").length).toBe(1);
+    // A fresh learner's first recommendation is the beginner entry topic of each track.
+    const cyberNext = path.find((n) => n.nextRecommended && n.track === "cybersecurity")!;
+    expect(cyberNext.topicId).toBe("cyber-fundamentals");
+    const cloudNext = path.find((n) => n.nextRecommended && n.track === "cloud")!;
+    expect(cloudNext.topicId).toBe("cloud-fundamentals");
+    // Prerequisites of un-started advanced topics are unmet.
+    const advanced = path.find((n) => n.topicId === "network-pentest")!;
+    expect(advanced.prerequisitesMet).toBe(false);
+    expect(advanced.masteryPct).toBeNull();
+  });
+
+  it("topic lookup resolves known topics and returns undefined for unknown ids", () => {
+    expect(CyberCloudAcademyService.getTopic("iac")?.title).toBe("Infrastructure as Code (Terraform)");
+    expect(CyberCloudAcademyService.getTopic("multi-cloud")?.prerequisites).toEqual(["devsecops", "cloud-aws"]);
+    expect(CyberCloudAcademyService.getTopic("no-such-topic")).toBeUndefined();
+  });
+
+  it("starts with an explicit level override and honours it for the returned topic", async () => {
+    const { topic, turn } = await CyberCloudAcademyService.startTopic("cca-level-" + Date.now(), "zero-trust", "expert");
+    expect(topic.level).toBe("expert");
+    expect(turn.sessionId).toMatch(/^ls-/);
+  });
+
+  it("progress is stable-ordered by track then catalog order", async () => {
+    const prog = await CyberCloudAcademyService.progress("cca-order-" + Date.now());
+    const ids = prog.map((p) => p.topicId);
+    expect(ids.indexOf("cyber-fundamentals")).toBeLessThan(ids.indexOf("cloud-fundamentals"));
+    // Multi-cloud (expert, last in catalog) sorts last.
+    expect(ids[ids.length - 1]).toBe("multi-cloud");
+  });
+});

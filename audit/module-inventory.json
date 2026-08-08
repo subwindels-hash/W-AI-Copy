@@ -1217,6 +1217,7 @@
       "collaboration.spec.ts",
       "commerce.spec.ts",
       "conversations.spec.ts",
+      "cyberCloudAcademy.spec.ts",
       "dataPlatform.spec.ts",
       "derivatives.spec.ts",
       "devPortal.spec.ts",
@@ -3000,6 +3001,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "cyberCloudAcademy.spec.ts",
       "sessions61-72-82.spec.ts"
     ],
     "syntheticData": [],
@@ -3057,7 +3059,7 @@
     ],
     "sharedTypes": "packages/shared/src/cyberCloudAcademy.ts (235 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/cyberCloudAcademy.ts (68 LOC)",
       "pages": []
     },
     "db": {
@@ -3073,7 +3075,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "dataMarketplace",
@@ -3776,7 +3778,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1921,
+      "serviceTotalSloc": 1985,
       "serviceFiles": [
         "bootstrap.ts",
         "cyberCloudAcademy.service.ts",
@@ -3850,7 +3852,8 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [
-      "OpenAI"
+      "OpenAI",
+      "AWS"
     ],
     "status": "COMPLETE"
   },

@@ -118,6 +118,7 @@ const navItems = [
   { to: "/app/religions", icon: BookOpen, label: "World Religions" },
   { to: "/app/politics", icon: Landmark, label: "Politics & Government" },
   { to: "/app/life-principles", icon: Lightbulb, label: "Rules of Life" },
+  { to: "/app/cyber-cloud-academy", icon: ShieldCheck, label: "Cyber & Cloud Academy" },
   { to: "/app/geo-billing", icon: Globe2, label: "Geo-Billing Engine" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },
   { to: "/app/cognitive", icon: Brain, label: "Cognitive / World Model" },

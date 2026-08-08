@@ -1540,3 +1540,35 @@
 - **Every classification fix is pinned with a score assertion.** The new
   edge-case tests assert `score > 0` as well as the target area, so a
   future keyword removal cannot silently reintroduce the score-0 default.
+
+### Session 152 — Module Completion 1/3: Cyber & Cloud Academy (`cyberCloudAcademy`)
+
+- **PARTIAL in the inventory is a symptom, not a verdict.** The scanner's
+  COMPLETE gate needs routes ≥ 5, a web client, shared types and visible
+  tests. cyberCloudAcademy had all the substance (service, contract, 7
+  passing unit tests) — it was PARTIAL purely because (a) no
+  `lib/cyberCloudAcademy.ts` existed and (b) its co-located tests were
+  invisible to `findTestsFor`. Completing a module means closing the real
+  gates: client, console page, e2e spec, test coverage — and fixing the
+  scanner when the scanner is the one lying.
+- **Scanner test detection now matches any import path of the backing
+  service.** The `importsBacking` check required `./base.js`; education
+  tests import `../education/base.js` from the grouping directory. The fix
+  (`src.includes(base + ".js")`) is a tooling-truth correction — the three
+  education suites genuinely exercise their services and were always real
+  tests; they are now counted for all three modules.
+- **The "one by one" rule keeps sessions reviewable.** Completing all three
+  PARTIAL modules in one giant commit would have mixed three distinct
+  contracts, clients and e2e surfaces. One module per session keeps each
+  commit independently verifiable; the scanner fix lands once (S152) and
+  the remaining modules still need their own clients/e2e/docs to flip.
+- **Completion does not mean rewriting.** The module's honesty discipline
+  (null mastery for never-started topics, one next-recommended per track,
+  real Lecturer AI delegate with structured fallback surfaced via
+  `modelSource`/`warnings`) was already correct — the session pinned it
+  with tests rather than re-architecting it. Additive-only held: no
+  existing endpoint, service method or contract shape was changed.
+- **Fresh-learner path semantics are a testable spec.** With nothing
+  started, the path must recommend exactly one topic per track and it must
+  be the beginner entry point whose prerequisites are met (all of them,
+  vacuously) — pinned for both tracks.
