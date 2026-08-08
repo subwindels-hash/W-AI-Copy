@@ -85,7 +85,7 @@ export const LIFE_COACHING_AREAS: LifeCoachingArea[] = [
     id: "career",
     label: "Career",
     description: "Jobs, skills, interviews, professional growth and working life.",
-    keywords: ["career", "job", "interview", "cv", "resume", "promotion", "profession", "employer", "hired", "career path", "workplace", "colleague"],
+    keywords: ["career", "job", "interview", "cv", "resume", "promotion", "profession", "employer", "hired", "career path", "workplace", "colleague", "negotiate", "salary", "raise", "redundant", "fired", "quit my job"],
     ruleNumbers: [13, 21, 23, 24, 27, 28, 29, 30, 56, 60, 61, 72, 91],
   },
   {
@@ -99,7 +99,7 @@ export const LIFE_COACHING_AREAS: LifeCoachingArea[] = [
     id: "relationships",
     label: "Relationships",
     description: "Friendship, family, marriage, boundaries, trust, conflict and healthy distance.",
-    keywords: ["relationship", "marriage", "married", "friend", "friendship", "family", "partner", "spouse", "girlfriend", "boyfriend", "breakup", "divorce", "in-law", "trust people", "my mother", "my father", "my sister", "my brother", "my wife", "my husband"],
+    keywords: ["relationship", "marriage", "married", "friend", "friendship", "family", "partner", "spouse", "girlfriend", "boyfriend", "breakup", "divorce", "in-law", "trust people", "my mother", "my father", "my sister", "my brother", "my wife", "my husband", "father", "mother", "parent", "parenting", "kids", "my child", "my son", "my daughter"],
     ruleNumbers: [46, 47, 62, 73, 74, 76, 77, 78, 79, 80, 81, 82, 83, 84, 85],
   },
   {
@@ -127,7 +127,7 @@ export const LIFE_COACHING_AREAS: LifeCoachingArea[] = [
     id: "mental_resilience",
     label: "Mental resilience",
     description: "Handling stress, fear, failure and pressure without losing yourself.",
-    keywords: ["stress", "anxious", "anxiety", "fear", "afraid", "failure", "resilience", "strong", "strength", "overcome", "depressed", "discouraged", "give up", "worried", "mental", "overwhelmed", "burnout", "pressure"],
+    keywords: ["stress", "anxious", "anxiety", "fear", "afraid", "failure", "resilience", "strong", "strength", "overcome", "depressed", "discouraged", "give up", "giving up", "give up on", "worried", "mental", "overwhelmed", "burnout", "pressure", "hopeless"],
     ruleNumbers: [1, 3, 4, 9, 51, 58, 59, 62, 65, 68, 75, 109, 110],
   },
   {

@@ -1512,3 +1512,31 @@
 - **Verify the mount (S142 rule, applied again).** The server.ts wiring
   (import + `v1.use` + `registerLifePrinciplesRoutes`) was grep-verified
   after editing; the scanner independently confirmed all 12 endpoints.
+
+### Session 151 — Life Principles Verbatim Audit & Coaching Refinement (`lifePrinciples`)
+
+- **Verbatim pinning is the strongest audit.** The S150 catalog was
+  compared mechanically against the spec text: 115/115 titles and
+  principles, 13 area labels and 12 philosophy phrases all exact. The
+  comparison script was then converted into a generated unit-test file, so
+  the spec text is now permanently the source of truth in the suite — any
+  future wording drift fails CI instead of passing review.
+- **Score-0 classification is a silent gap.** The coaching engine's
+  keyword classifier falls back to the first area when nothing matches —
+  a probe ("How do I become a better father?") that lands in `discipline`
+  with score 0 looks like a deliberate answer but is a missed
+  classification. The refinement rule: probe the engine with natural
+  phrasings of every area's core situations, and treat any score-0 result
+  as a keyword gap, not a default.
+- **Keyword layers are data, but they still need rebuild discipline.**
+  The fixes live in `packages/shared/src/lifePrinciples.ts`; after editing
+  shared, the rebuild of `@windels/shared` came first, then API/web
+  typecheck — the standing hygiene rule applied to a data change.
+- **Tie-breaks are documented, not "fixed".** Equal-score ties resolve to
+  the earlier area in `LIFE_COACHING_AREAS` ("Teach me to be more grateful"
+  → education over spirituality). Both readings are defensible; changing
+  the tie-break would be a behavioural change to a pinned engine, so the
+  behaviour is documented in the spec and runtime checklists instead.
+- **Every classification fix is pinned with a score assertion.** The new
+  edge-case tests assert `score > 0` as well as the target area, so a
+  future keyword removal cannot silently reintroduce the score-0 default.

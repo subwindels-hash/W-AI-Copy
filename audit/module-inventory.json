@@ -6457,13 +6457,14 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2283,
+      "serviceTotalSloc": 2472,
       "serviceFiles": [
         "lifePrinciples.seed.core.ts",
         "lifePrinciples.seed.unstoppable.ts",
         "lifePrinciples.seed.work.ts",
         "lifePrinciples.service.ts",
         "lifePrinciples.test.ts",
+        "lifePrinciples.verbatim.test.ts",
         "lifePrinciples/lifePrinciples.service.ts"
       ],
       "importedServiceFiles": [
@@ -6521,7 +6522,8 @@
     },
     "tests": [
       "lifePrinciples.spec.ts",
-      "lifePrinciples/lifePrinciples.test.ts"
+      "lifePrinciples/lifePrinciples.test.ts",
+      "lifePrinciples/lifePrinciples.verbatim.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
