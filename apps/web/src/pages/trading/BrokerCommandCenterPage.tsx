@@ -63,12 +63,21 @@ export function BrokerCommandCenterPage() {
   const [stratType, setStratType] = useState<TradingStrategy["type"]>("rule");
   const [demoInstructions, setDemoInstructions] = useState<Array<{step:number;title:string;detail:string;warning?:string}> | null>(null);
   const [demoBusy, setDemoBusy] = useState(false);
+  const [healthDetailed, setHealthDetailed] = useState<Array<{accountId:string;name:string;broker:string;state:string;connected:boolean;reason?:string}>>([]);
+  const [sparkline, setSparkline] = useState<{period:string;points:any[];reason?:string;label:string}|null>(null);
+  const [btSymbol, setBtSymbol] = useState("EURUSD");
+  const [btTf, setBtTf] = useState("1h");
+  const [btStart, setBtStart] = useState("2024-01-01");
+  const [btEnd, setBtEnd] = useState("2024-02-01");
+  const [btResult, setBtResult] = useState<any>(null);
 
   const refresh = useCallback(async () => {
     try {
       const [c, p, s, ag] = await Promise.all([brokerApi.commandCenter(), brokerApi.portfolio(), brokerApi.strategies(), brokerApi.agents()]);
       setCc(c); setPortfolio(p); setStrategies(s); setAgents(ag);
       try { const inst = await brokerApi.demoInstructions(); setDemoInstructions(inst.instructions); } catch {}
+      try { const hd = await brokerApi.detailedHealth(); setHealthDetailed(hd); } catch {}
+      try { const sp = await brokerApi.pnlSparkline("7d"); setSparkline(sp); } catch {}
     } catch { /* degrades before server config */ }
   }, []);
 
@@ -191,6 +200,46 @@ export function BrokerCommandCenterPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Hardening: Connection Health State Machine ── */}
+      <Card className="mb-4">
+        <CardHeader><CardTitle className="text-sm">Connection Health — State Machine</CardTitle><CardDescription>CONNECTING / CONNECTED / DEGRADED / DISCONNECTED / AUTHENTICATION_ERROR / CONFIGURATION_ERROR / MARKET_DATA_ERROR / EXECUTION_UNAVAILABLE — never fake.</CardDescription></CardHeader>
+        <CardContent className="space-y-2">
+          {healthDetailed.length===0 ? <p className="text-xs text-text-muted">No accounts — configure bridge env <code>WINDELS_MT4/MT5_BRIDGE_*</code> — MT4/MT5 is external, user must authorize.</p> : healthDetailed.map((h:any)=> (
+            <div key={h.accountId+h.broker} className={`flex items-center justify-between rounded border p-2 text-xs ${h.connected ? "border-emerald-500/30 bg-emerald-500/10" : "border-amber-500/30 bg-amber-500/10"}`}>
+              <span className="font-medium">{h.name} ({h.broker}) — <Badge className={h.state==="CONNECTED"?"bg-emerald-500/15 text-emerald-300":h.state==="CONFIGURATION_ERROR"?"bg-slate-500/15 text-slate-300":"bg-amber-500/15 text-amber-300"}>{h.state}</Badge></span>
+              <span className="text-text-muted">{h.reason || (h.connected ? "verified" : "MT5 CONNECTION OFFLINE")}</span>
+            </div>
+          ))}
+          {healthDetailed.some((h:any)=> !h.connected) && <div className="rounded bg-amber-500/10 border border-amber-500/30 p-2 text-xs text-amber-200">MT5 CONNECTION OFFLINE — bridge unavailable. Check Bridge configuration, Authentication, Environment variables, Reconnection, Logging. Environment dependency — not fabricated.</div>}
+        </CardContent>
+      </Card>
+
+      {/* ── Hardening: Backtest History + PnL Sparkline ── */}
+      <div className="grid lg:grid-cols-2 gap-4 mb-4">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Backtest History — BACKTEST DATA</CardTitle><CardDescription>Historical replay — never guaranteed future performance.</CardDescription></CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-4 gap-1">
+              <Input value={btSymbol} onChange={e=>setBtSymbol(e.target.value)} placeholder="EURUSD" />
+              <Select value={btTf} onChange={e=>setBtTf(e.target.value)}><option value="1m">1m</option><option value="5m">5m</option><option value="15m">15m</option><option value="1h">1h</option><option value="1d">1d</option></Select>
+              <Input type="date" value={btStart} onChange={e=>setBtStart(e.target.value)} />
+              <Input type="date" value={btEnd} onChange={e=>setBtEnd(e.target.value)} />
+            </div>
+            <Button size="sm" onClick={async()=>{ try{ const r=await brokerApi.backtestHistory({symbol:btSymbol, timeframe:btTf, startDate:btStart, endDate:btEnd, strategyId: strategies[0]?.id}); setBtResult(r); }catch(e){ setErr(e instanceof Error?e.message:String(e)); }}}>Run Backtest History</Button>
+            {btResult && <div className="text-xs space-y-1 border border-border rounded p-2"><div className="font-medium">{btResult.labels?.join(" / ")} — {btResult.disclaimer?.slice(0,80)}</div><div>{btResult.candles?.length || 0} candles · {btResult.backtest ? `trades ${btResult.backtest.trades} WR ${Math.round(btResult.backtest.winRate*100)}% PF ${btResult.backtest.profitFactor||"-"} PnL ${btResult.backtest.totalReturnPct}% DD ${btResult.backtest.maxDrawdownPct}%` : "no strategy"}</div><div className="max-h-24 overflow-auto">{btResult.candles?.slice(0,3).map((c:any,i:number)=><div key={i} className="text-[11px] text-text-muted">{new Date(c.time*1000).toLocaleDateString()} O{c.open} H{c.high} L{c.low} C{c.close}</div>)}</div></div>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Live PnL Sparkline — {sparkline?.label || "LIVE DATA"}</CardTitle><CardDescription>{sparkline?.reason || "Real equity curve when connected — no fake values."}</CardDescription></CardHeader>
+          <CardContent>
+            {sparkline?.points?.length ? (
+              <div className="flex items-end gap-px h-16">{sparkline.points.map((p:any,i:number)=>{ const max=Math.max(...sparkline.points.map((x:any)=>x.equity),1); const h=Math.max(2, Math.round((p.equity/max)*60)); return <div key={i} className="flex-1 bg-emerald-500/60" style={{height: h}} title={`${p.t} $${p.equity}`} /> })}</div>
+            ) : <p className="text-xs text-text-muted">{sparkline?.reason || "No live account — PnL sparkline offline."}</p>}
+            <div className="text-xs text-text-muted mt-1">{sparkline?.points?.length||0} points · {sparkline?.period}</div>
+          </CardContent>
+        </Card>
+      </div>
 
       {/* Key stats */}
       {cc && (

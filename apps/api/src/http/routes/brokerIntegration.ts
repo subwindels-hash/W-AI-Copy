@@ -240,6 +240,18 @@ export function registerBrokerIntegrationRoutes(router: Router) {
     } catch (e) { next(e); }
   });
 
+
+  // ── Hardening: Detailed Health State Machine + Backtest History + PnL Sparkline ──
+  router.get("/brokers/health/detailed", async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.detailedHealth(oid(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.post("/brokers/backtest/history", validate({ body: z.object({ symbol: z.string().min(1), timeframe: z.string().min(1), startDate: z.string().min(1), endDate: z.string().min(1), strategyId: z.string().optional(), riskPct: z.number().optional(), spread: z.number().optional(), slippage: z.number().optional() }) }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.backtestHistory(oid(req), req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.get("/brokers/pnl/sparkline", async (req, res, next) => {
+    try { const period = String((req.query as any).period || "7d"); res.json({ ok: true, data: await BrokerIntegrationService.pnlSparkline(oid(req), period), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+
   // Portfolio intelligence
   router.get("/brokers/portfolio", async (req, res, next) => {
     try {
