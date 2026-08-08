@@ -1473,3 +1473,42 @@
   pinned `catalogVersion` containing "148"; the 149 bump required updating
   that one assertion. Version pins are expected to move with each session's
   bump — they are guards against stale versions, not frozen strings.
+
+### Session 150 — Life Operating Principles Engine ("Rules of Life", `lifePrinciples`)
+
+- **A spec that looks like "content" still gets a real architecture.** The
+  Rules of Life spec is mostly lists (115 numbered rules), but shipping it
+  as a static document would have failed its own Part VII–X: the module is
+  built around engines — a 13-area coaching classifier, a deterministic
+  daily-rule picker, a 10-question decision framework — and the rules are
+  records with why/how/action/reflection fields, not strings.
+- **Neutrality for life advice is the same discipline as for religion and
+  politics.** The spec itself says there is no universal set of rules; the
+  module makes that structural: the catalog note, every ask response and
+  the daily payload carry "practical principles, not absolute laws", and
+  rules with absolutist readings carry `considerations` balance notes. The
+  "X without Y" philosophy pairs are the spec's own anti-absolutism device
+  and are first-class catalog content.
+- **"Never decide for the user" is enforced in content and in tests.** The
+  decision mode returns the 10 questions plus mapped principles and an
+  explicit note that WINDELS does not make the decision — the e2e and unit
+  tests pin the exact note and the exact question order, so the anti-dependency
+  guarantee cannot silently regress.
+- **Deterministic engines are testable engines.** The daily rule is
+  `dayOfYear(date) % 115 + 1`; tests pin that two calls with the same date
+  are identical, different dates differ, and `?rule=` overrides work. The
+  area classifier is keyword scoring with list-order tie-breaks, pinned for
+  all 13 areas.
+- **Static catalog modules still integrate.** The module has no Redis keys
+  (documented — nothing to add to the TI sweep), but it does join
+  Enterprise Search as a new `life_principle` entity with a rollup count,
+  exactly like `religion` and `politics` before it. Integration breadth is
+  the convention: searchable, console page, sidebar, shared contract.
+- **Inventory tooling follows the mount, not the file name.** The scanner
+  derived `/api/v1/lifePrinciples` from the route file name; the real mount
+  is kebab-case. Added `lifePrinciples: "life-principles"` to
+  `moduleRoutePrefix` — the same pattern as `healthEcosystem` etc. — and
+  verified the regenerated inventory reports the correct prefix.
+- **Verify the mount (S142 rule, applied again).** The server.ts wiring
+  (import + `v1.use` + `registerLifePrinciplesRoutes`) was grep-verified
+  after editing; the scanner independently confirmed all 12 endpoints.

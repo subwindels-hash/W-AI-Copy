@@ -279,6 +279,19 @@ export const EnterpriseSearchService = {
         }
         break;
       }
+      case "life_principle": {
+        // Session 150 — the curated Life Operating Principles catalog
+        // (115 practical life principles across 10 parts). Static global
+        // content — searched with the same relevance ranking.
+        const { LifePrinciplesService } = await import("../lifePrinciples/lifePrinciples.service.js");
+        for (const r of LifePrinciplesService.listSearchable()) {
+          push(
+            { id: r.id, title: r.title, updatedAt: r.updatedAt, meta: r.meta },
+            [[r.title, 3], [r.body, 2], [r.meta, 1]]
+          );
+        }
+        break;
+      }
       case "knowledge": {
         // Session 125 — approved identity-knowledge records (Super Admin
         // biography, company/organization profiles, brand, mission, FAQs…).
@@ -424,6 +437,8 @@ export const EnterpriseSearchService = {
       religion: (await import("../religions/religions.service.js")).RELIGION_CATALOG.length,
       // Session 144 — curated political knowledge catalog (static count).
       politics: (await import("../politics/politics.service.js")).POLITICS_CATALOG.length,
+      // Session 150 — curated Life Operating Principles catalog (static count).
+      life_principle: (await import("../lifePrinciples/lifePrinciples.service.js")).LIFE_RULES_CATALOG.length,
     };
   },
 

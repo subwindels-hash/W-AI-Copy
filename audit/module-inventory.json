@@ -1232,6 +1232,7 @@
       "infrastructure.spec.ts",
       "knowledge.spec.ts",
       "leadPipeline.spec.ts",
+      "lifePrinciples.spec.ts",
       "marketplace.spec.ts",
       "mediaPublishing.spec.ts",
       "mfaAssurance.spec.ts",
@@ -4394,11 +4395,11 @@
       "serviceFile": {
         "file": "enterpriseSearch.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
-        "sloc": 441,
+        "sloc": 456,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1143,
+      "serviceTotalSloc": 1173,
       "serviceFiles": [
         "bootstrap.ts",
         "enterpriseSearch.service.ts",
@@ -6439,6 +6440,93 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "lifePrinciples",
+    "title": "lifePrinciples",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/life-principles",
+    "backend": {
+      "serviceDir": "apps/api/src/lifePrinciples",
+      "serviceFile": {
+        "file": "lifePrinciples.service.ts",
+        "path": "/home/user/WIN/apps/api/src/lifePrinciples/lifePrinciples.service.ts",
+        "sloc": 253,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2283,
+      "serviceFiles": [
+        "lifePrinciples.seed.core.ts",
+        "lifePrinciples.seed.unstoppable.ts",
+        "lifePrinciples.seed.work.ts",
+        "lifePrinciples.service.ts",
+        "lifePrinciples.test.ts",
+        "lifePrinciples/lifePrinciples.service.ts"
+      ],
+      "importedServiceFiles": [
+        "lifePrinciples/lifePrinciples.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/lifePrinciples.ts",
+        "sloc": 141,
+        "counts": {
+          "total": 12,
+          "GET": 9,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /parts",
+          "GET /rules",
+          "GET /rules/:number",
+          "POST /search",
+          "GET /integrity",
+          "POST /ask",
+          "GET /areas",
+          "GET /daily",
+          "POST /decision",
+          "GET /philosophy",
+          "GET /principle"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/lifePrinciples.ts (332 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/lifePrinciples.ts (166 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Task",
+        "Activity",
+        "Conversation",
+        "Message",
+        "Alert",
+        "Notification"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "lifePrinciples.spec.ts",
+      "lifePrinciples/lifePrinciples.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
     "status": "COMPLETE"
   },
   {

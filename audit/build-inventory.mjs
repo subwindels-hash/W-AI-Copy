@@ -456,6 +456,7 @@ function moduleRoutePrefix(key) {
     mlOps: "ml-ops", cyber: "cyber", biomedical: "biomedical",
     hybridExec: "hybrid-execution", mediaGen: "media-generation",
     selfHosted: "self-hosted", devportal: "dev-portal",
+    lifePrinciples: "life-principles",
   };
   return map[key] || key;
 }

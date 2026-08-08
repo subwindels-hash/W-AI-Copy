@@ -46,6 +46,7 @@ import { registerKnowledgeRoutes } from "./routes/knowledge.js";
 import { registerReligionsRoutes } from "./routes/religions.js";
 import { registerReligionsIntegrationsRoutes } from "./routes/religionsIntegrations.js";
 import { registerPoliticsRoutes } from "./routes/politics.js";
+import { registerLifePrinciplesRoutes } from "./routes/lifePrinciples.js";
 import { registerEnterpriseRoutes } from "./routes/enterprise.js";
 import { registerDataPlatformRoutes } from "./routes/dataPlatform.js";
 import { registerGovernanceRoutes } from "./routes/governance.js";
@@ -348,6 +349,16 @@ export function createApp() {
   v1.use("/politics", politicsRouter);
   politicsRouter.use(authenticate);
   registerPoliticsRoutes(politicsRouter);
+
+  // /life-principles — Session 150: Life Operating Principles Engine (the
+  // 115 practical life principles grouped into 10 parts, the Life Coaching
+  // Engine over 13 areas, Daily Rules Mode, the Decision Mode framework,
+  // the 12 balance pairs and the WINDELS Principle). Static curated
+  // catalog — read-only for any authenticated member.
+  const lifePrinciplesRouter = express.Router();
+  v1.use("/life-principles", lifePrinciplesRouter);
+  lifePrinciplesRouter.use(authenticate);
+  registerLifePrinciplesRoutes(lifePrinciplesRouter);
 
   // /enterprise (models, AI monitoring, plugins, integrations, SSO, org/white-label, + Session 18 governance/discovery/events/api-governance)
   const enterpriseRouter = express.Router();
