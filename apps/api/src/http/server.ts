@@ -42,6 +42,7 @@ import { registerDeveloperRoutes } from "./routes/developers.js";
 import { registerBillingRoutes } from "./routes/billing.js";
 import { registerPaymentsRoutes } from "./routes/payments.js";
 import { registerGeoBillingRoutes } from "./routes/geoBilling.js";
+import { registerKnowledgeRoutes } from "./routes/knowledge.js";
 import { registerEnterpriseRoutes } from "./routes/enterprise.js";
 import { registerDataPlatformRoutes } from "./routes/dataPlatform.js";
 import { registerGovernanceRoutes } from "./routes/governance.js";
@@ -304,6 +305,16 @@ export function createApp() {
   registerBillingRoutes(billingRouter);
   registerPaymentsRoutes(v1);
   registerGeoBillingRoutes(v1);
+
+  // /knowledge — Session 140: Global Human Knowledge & Everyday Question
+  // Intelligence System (master categories, curated knowledge layers, the
+  // Question Intent Engine, teaching/comparison/timeline/graph engines, and
+  // the org-scoped dynamic layer). Catalog reads work for any authenticated
+  // member; the dynamic layer is organization-scoped.
+  const knowledgeRouter = express.Router();
+  v1.use("/knowledge", knowledgeRouter);
+  knowledgeRouter.use(authenticate);
+  registerKnowledgeRoutes(knowledgeRouter);
 
   // /enterprise (models, AI monitoring, plugins, integrations, SSO, org/white-label, + Session 18 governance/discovery/events/api-governance)
   const enterpriseRouter = express.Router();

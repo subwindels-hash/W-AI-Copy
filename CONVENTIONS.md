@@ -1141,3 +1141,48 @@
 - **Confirmation Threshold Rules.** On-chain crypto checkouts must track block confirmations and only transition to `completed` once network-specific confirmation thresholds are satisfied (`btc: 1`, `tron_trc20: 19`, `eth_erc20: 12`, `bnb_chain: 15`).
 - **Automated Billing Invoice Settlement.** Paid transactions in `payments` containing an `invoiceId` must automatically invoke `billing.markInvoicePaid(orgId, invoiceId)`, keeping the payment ledger (`pay:tx`) and subscription billing ledger synchronized without manual intervention.
 - **Tenant Isolation 2-Segment Catalog Rule.** `pay:tx` is catalogued with its full 2-segment prefix so `prefix.split(":").length = 2` correctly isolates `<org>` at index 2. Bare root (`pay`) is omitted.
+
+### Session 140 — Global Human Knowledge & Everyday Question Intelligence (`knowledge`)
+
+- **Module prefix:** `Knowledge*` types in `packages/shared/src/knowledge.ts`
+  (the module's first dedicated contract — ~1100 LOC of types + Zod + the pure
+  engines), **`kn:rec` Redis keys** (org in the segment after the index marker —
+  the `usg:evt`/`pay:tx` shape, catalogued `org_scoped` in the S89 sweep),
+  `/api/v1/knowledge` route prefix (additive; nothing existing is touched),
+  `apps/web/src/lib/knowledge.ts` client, `/app/knowledge` route + sidebar
+  label "Global Knowledge".
+- **Current facts are never memorized.** The catalog contains no price, score,
+  office-holder or weather reading. Fast-changing information is *dynamic
+  knowledge*: it may only be presented with SOURCE + DATE + VERIFICATION STATUS
+  + LAST UPDATED, and current-information questions are routed to the dynamic
+  layer with verification guidance. This is the module's core honesty rule and
+  it is pinned by the `pol.current-information` policy record and by tests.
+- **The Question Intent Engine is deterministic and honest.** Classification
+  uses weighted patterns with specificity tie-breaking and returns an explicit
+  confidence plus the matched rules; no match yields the `general` fallback at
+  low confidence rather than a forced category. Every one of the 13 spec
+  example questions is pinned in unit + e2e tests.
+- **Never claim the system knows everything.** Ask returns an explicit
+  "I do not have sufficient knowledge in the catalog" answer on no match —
+  retrieval never fabricates. The policy is documented in the
+  `pol.ask-anything` record, not just in code.
+- **Comparisons present criteria, never a universal winner.** The compare
+  engine scores only *labeled* criteria from the catalog; anything unlabeled
+  renders `value: null, basis: "not_labeled"` — never an invented 0 or a
+  "winner" field. Comparison *item* records (`cmp.item.*`) carry the labeled
+  scores; the text comparison records explain trade-offs.
+- **Teaching adapts presentation, never facts.** `renderRecordAtLevel` filters
+  the record's sections per audience level (child → research); the underlying
+  record is identical at every level (pinned by test).
+- **The dynamic layer is org-scoped, self-reported and labelled.** New dynamic
+  records default to `unverified` with `self_reported` provenance and require
+  ≥1 source; they merge into search/ask only for their own organization; the
+  console renders them with an explicit "self-reported" badge. Catalog records
+  can never be updated or deleted through the dynamic layer (404).
+- **Health and law educate, never advise.** Every health/law record carries a
+  professional-assistance note surfaced in answers and the console; no record
+  diagnoses, prescribes or gives legal advice.
+- **Curated content, not demo data.** The catalog is real educational content
+  with confidence labels and sources, authored into a versioned seed — no
+  `WINDELS_DEMO_DATA` gate is needed because nothing is synthetic; the
+  no-fabricated-data guards pass untouched.

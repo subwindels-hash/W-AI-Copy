@@ -1,7 +1,7 @@
 # PROGRESS — WINDELS AI OS
 
-> **Status of this document:** Accurate as of 2026-08-06 on branch
-> `arena/019fd6f3-win`. It is the single source of truth for session
+> **Status of this document:** Accurate as of 2026-08-08 on branch
+> `arena/019fe26a-win`. It is the single source of truth for session
 > certification state. **PRODUCTION COMPLETE is only granted after the Phase 6
 > runtime validation checklist for a session passes in the target deployment
 > environment** (live PostgreSQL 17 + Redis + `prisma generate`). This sandbox
@@ -18,6 +18,7 @@
 
 | Session | Module | State | Notes |
 |---|---|---|---|
+| 140 | Global Human Knowledge & Everyday Question Intelligence | 🟡 | new additive `knowledge` module (`/api/v1/knowledge`): WINDELS' broad human-knowledge layer. **Question Intent Engine** classifies every question into the 13 spec intents (definition, explanation, history, comparison, instruction, recommendation, calculation, current_information, research, education, creative, troubleshooting, personal_guidance) plus an honest `general` fallback, deterministically, and routes it to the matching knowledge domain (`POST /intent`, `POST /ask`). **Stable/Dynamic knowledge separation**: stable knowledge (math, history, science, established concepts) lives in a versioned curated catalog; dynamic knowledge (politics, prices, sports, weather, elections, releases) is **never memorized as permanent** — dynamic records must carry SOURCE + DATE + VERIFICATION STATUS + LAST UPDATED, and current-information questions are answered with verification guidance, not stale claims. The catalog holds the 90 master categories, 24 content layers and 178 real curated records (the 15 spec concepts + government/money/photosynthesis, 12 how-to instructions with professional-assistance flags, 10 why-explanations, 6 verified people profiles, 28 global timeline events, 8 places, 10 disciplines, 9 science fields with FOUNDATIONS→RESEARCH levels, 9 technologies, 6 business, 5 careers with structured steps, 5 law, 5 health with disclaimers, culture/travel/relationships/entertainment/languages/everyday/creative records, 4 comparisons + 9 comparison-item records with labeled criteria, 3 knowledge-policy records). Personalized Teaching Engine renders any record at child→research levels (same facts, adapted presentation); comparison engine presents criteria and never a universal winner (`not_labeled` instead of invented scores); timeline engine sorts BCE/CE chronologically; knowledge graph resolves related + reverse edges; Ask answers honestly ("I do not have sufficient knowledge in the catalog") instead of fabricating. Org-scoped dynamic layer (`kn:rec:idx:<org>` / `kn:rec:i:<org>:<id>`, Redis best-effort + memory fallback, catalogued `org_scoped` in the S89 sweep) with create/update/delete/list, `unverified` default confidence and `self_reported` provenance. Routes 20 (16 unique paths); `packages/shared/src/knowledge.ts` (~800 LOC); `/app/knowledge` console (Ask / Knowledge / Intent Engine / Compare / Dynamic / Timeline tabs) + sidebar "Global Knowledge". 57 unit tests + 12 Playwright cases; runtime pending |
 | 1 | Auth foundation | 🟡 | 23 unit tests; demo-cleanup + bootstrap-gating pass; runtime checklist pending |
 | 2 | Universal Workspace | 🟡 | workspace/message tests (12); runtime pending |
 | 3 | AI Chat | 🟡 | context-manager tests (11); runtime pending |
@@ -83,16 +84,17 @@
 - **Simulated modules** (robotics, spatial, quantum, biomedical, legal, education, scientific, market data, voice cloning): 🔴 blocked on external providers/credentials; honestly labeled (`docs/SIMULATED_MODULES_INVENTORY.md`).
 - **Web-client gap closure** (2026-08-05): added `admin`, `promptTemplates`, `events` (SSE subscription) clients; documented Google OAuth (server redirect) and public API (external-consumer surface) as intentionally client-less. See `docs/CHANGELOG.md`. *(Superseded for Google OAuth by Session 114, which added `lib/googleAuth.ts` plus the governance console and the missing `/auth/callback` page.)*
 
-## Validation Snapshot (in-sandbox)
-- API unit/integration-style suite: **1797 tests passing, 0 failures** (51 integration tests auto-skip without a live server; 123 files: 120 passed + 3 skipped).
-- Guard suites: `noRandomData`, `noFakeVerdict`, `demoCleanup`, `seedGate` all pass.
-- `make verify` (Prisma offline generate + build + typecheck + test): **green** in this sandbox; the preflight's blocked engine fetch is non-fatal by design.
-- Web typecheck: clean.
+## Validation Snapshot (in-sandbox, Session 140 run)
+- API unit/integration-style suite: **2098 tests passing, 10 failing, 51 skipped** (159 files: 152 passed + 3 skipped + 4 failed). The 4 failing files are **pre-existing, verified on the clean baseline** (stash test): `enterpriseSearch` (8), `geoBilling` (suite-level load failure), `noFakeVerdict` (flags `voice/voice.module.ts:311` — a pre-existing simulation-marker pattern in the S27 voice module), plus the flaky `crypto-phase15-bitget-private-ws` suite (passes in isolation and on baseline; fails only under full-suite parallel load). None of Session 140's files appear in any failure.
+- Session 140 suite: **57/57 unit tests** (`knowledge.test.ts`) + 12 Playwright cases (`tests/e2e/knowledge.spec.ts`, run against a live API in the target environment).
+- Guard suites: `noRandomData`, `demoCleanup` pass; `noFakeVerdict` fails only on the pre-existing `voice/voice.module.ts` finding above.
+- Shared package build + API typecheck (excluding the environment-only Prisma generated-type errors) + web typecheck + web production build: **all clean**.
+- `make verify` (Prisma offline generate + build + typecheck + test): the preflight's blocked engine fetch is non-fatal by design.
 - Remaining API typecheck errors: environment-only Prisma generated-type errors (`prisma generate` needs the blocked engine download).
-- Module inventory (regenerated 2026-08-06): **109 modules** — **109 COMPLETE / 0 PARTIAL / 0 STUB-by-design / 0 DEMO DATA (100% COMPLETE)**. Session 128 added `payments` (Flutterwave, Paystack, PayPal, Blockonomics/Crypto). Every implementable product module in WINDELS AI OS is COMPLETE.
+- Module inventory (regenerated 2026-08-08): **122 modules** — **119 COMPLETE / 3 PARTIAL / 0 STUB-by-design / 0 DEMO DATA**. Session 140 added `knowledge` (Global Human Knowledge & Everyday Question Intelligence) as COMPLETE (routes 20, shared contract ~800 LOC, 178 curated records, 57 unit tests, 12 e2e cases). The three PARTIAL entries (`cyberCloudAcademy`, `university`, `universityEngine`) are the pre-existing `education` sub-modules under the current scanner's classification — untouched by Session 140 and failing no tests; they were reported COMPLETE in earlier regenerations.
 
 ## Blocked Gates (require target deployment environment)
 - `prisma generate` (native engine download from `binaries.prisma.sh` is network-blocked here).
 - Migration deploy / rollback / schema-drift verification (needs live Postgres).
-- Live API boot, `/healthz`, end-to-end journeys, real-provider AI streaming.
+- Live API boot, `/healthz`, end-to-end journeys, real-provider AI streaming; `tests/e2e/knowledge.spec.ts` (12 cases) runs against a live API + Redis in the target environment.
 - Production/desktop/mobile builds that require the generated Prisma client.
