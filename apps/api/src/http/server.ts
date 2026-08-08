@@ -42,6 +42,11 @@ import { registerDeveloperRoutes } from "./routes/developers.js";
 import { registerBillingRoutes } from "./routes/billing.js";
 import { registerPaymentsRoutes } from "./routes/payments.js";
 import { registerGeoBillingRoutes } from "./routes/geoBilling.js";
+import { registerKnowledgeRoutes } from "./routes/knowledge.js";
+import { registerReligionsRoutes } from "./routes/religions.js";
+import { registerReligionsIntegrationsRoutes } from "./routes/religionsIntegrations.js";
+import { registerPoliticsRoutes } from "./routes/politics.js";
+import { registerLifePrinciplesRoutes } from "./routes/lifePrinciples.js";
 import { registerEnterpriseRoutes } from "./routes/enterprise.js";
 import { registerDataPlatformRoutes } from "./routes/dataPlatform.js";
 import { registerGovernanceRoutes } from "./routes/governance.js";
@@ -304,6 +309,56 @@ export function createApp() {
   registerBillingRoutes(billingRouter);
   registerPaymentsRoutes(v1);
   registerGeoBillingRoutes(v1);
+
+  // /knowledge — Session 140: Global Human Knowledge & Everyday Question
+  // Intelligence System (master categories, curated knowledge layers, the
+  // Question Intent Engine, teaching/comparison/timeline/graph engines, and
+  // the org-scoped dynamic layer). Catalog reads work for any authenticated
+  // member; the dynamic layer is organization-scoped.
+  const knowledgeRouter = express.Router();
+  v1.use("/knowledge", knowledgeRouter);
+  knowledgeRouter.use(authenticate);
+  registerKnowledgeRoutes(knowledgeRouter);
+
+  // /religions — Session 141: Global Religion, Belief & Spirituality
+  // Knowledge System (families, denominations, indigenous traditions,
+  // ancient religions, the comparison engine, educational levels and the
+  // ten-step expansion pipeline). Catalog reads work for any authenticated
+  // member; submissions are organization-scoped; approval is Super Admin only.
+  const religionsRouter = express.Router();
+  v1.use("/religions", religionsRouter);
+  religionsRouter.use(authenticate);
+  registerReligionsRoutes(religionsRouter);
+
+  // /religions/integrations — Session 142: the five §20 integration channels
+  // (Memory Fabric, AI agents, AI Training Center, Lecturer AI education,
+  // conversational teaching).
+  const religionsIntegrationsRouter = express.Router();
+  religionsIntegrationsRouter.use(authenticate);
+  registerReligionsIntegrationsRoutes(religionsIntegrationsRouter);
+  religionsRouter.use("/integrations", religionsIntegrationsRouter);
+
+  // /politics — Session 144: Global Politics, Government & Political History
+  // Intelligence System (country profiles, leaders, parties, elections,
+  // ministries, constitutions, ideologies, movements, international
+  // organizations, timelines, the fact-vs-opinion engine and the
+  // never-overwrite-history update engine). Catalog reads work for any
+  // authenticated member; updates are organization-scoped; applying updates
+  // is Super Admin only.
+  const politicsRouter = express.Router();
+  v1.use("/politics", politicsRouter);
+  politicsRouter.use(authenticate);
+  registerPoliticsRoutes(politicsRouter);
+
+  // /life-principles — Session 150: Life Operating Principles Engine (the
+  // 115 practical life principles grouped into 10 parts, the Life Coaching
+  // Engine over 13 areas, Daily Rules Mode, the Decision Mode framework,
+  // the 12 balance pairs and the WINDELS Principle). Static curated
+  // catalog — read-only for any authenticated member.
+  const lifePrinciplesRouter = express.Router();
+  v1.use("/life-principles", lifePrinciplesRouter);
+  lifePrinciplesRouter.use(authenticate);
+  registerLifePrinciplesRoutes(lifePrinciplesRouter);
 
   // /enterprise (models, AI monitoring, plugins, integrations, SSO, org/white-label, + Session 18 governance/discovery/events/api-governance)
   const enterpriseRouter = express.Router();

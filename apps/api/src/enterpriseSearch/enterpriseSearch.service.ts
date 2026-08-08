@@ -254,6 +254,44 @@ export const EnterpriseSearchService = {
         }
         break;
       }
+      case "politics": {
+        // Session 144 — curated political knowledge (countries, leaders,
+        // parties, elections, ideologies, movements, organizations).
+        const { PoliticsService } = await import("../politics/politics.service.js");
+        for (const r of PoliticsService.listSearchable()) {
+          push(
+            { id: r.id, title: r.title, updatedAt: r.updatedAt, meta: r.meta },
+            [[r.title, 3], [r.body, 2], [r.meta, 1]]
+          );
+        }
+        break;
+      }
+      case "religion": {
+        // Session 141 — the curated religion knowledge catalog (families,
+        // denominations, indigenous traditions, ancient religions). Static
+        // global knowledge — searched with the same relevance ranking.
+        const { ReligionsService } = await import("../religions/religions.service.js");
+        for (const r of ReligionsService.listSearchable()) {
+          push(
+            { id: r.id, title: r.title, updatedAt: r.updatedAt, meta: r.meta },
+            [[r.title, 3], [r.body, 2], [r.meta, 1]]
+          );
+        }
+        break;
+      }
+      case "life_principle": {
+        // Session 150 — the curated Life Operating Principles catalog
+        // (115 practical life principles across 10 parts). Static global
+        // content — searched with the same relevance ranking.
+        const { LifePrinciplesService } = await import("../lifePrinciples/lifePrinciples.service.js");
+        for (const r of LifePrinciplesService.listSearchable()) {
+          push(
+            { id: r.id, title: r.title, updatedAt: r.updatedAt, meta: r.meta },
+            [[r.title, 3], [r.body, 2], [r.meta, 1]]
+          );
+        }
+        break;
+      }
       case "knowledge": {
         // Session 125 — approved identity-knowledge records (Super Admin
         // biography, company/organization profiles, brand, mission, FAQs…).
@@ -395,6 +433,12 @@ export const EnterpriseSearchService = {
       // Session 125 — approved identity-knowledge records (counted for the
       // search viewer's own permissions via the service's public list).
       knowledge: (await ik.IdentityKnowledgeService.listSearchable(org, { id: "", role: null })).length,
+      // Session 141 — curated religion knowledge catalog (static count).
+      religion: (await import("../religions/religions.service.js")).RELIGION_CATALOG.length,
+      // Session 144 — curated political knowledge catalog (static count).
+      politics: (await import("../politics/politics.service.js")).POLITICS_CATALOG.length,
+      // Session 150 — curated Life Operating Principles catalog (static count).
+      life_principle: (await import("../lifePrinciples/lifePrinciples.service.js")).LIFE_RULES_CATALOG.length,
     };
   },
 

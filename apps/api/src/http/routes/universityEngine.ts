@@ -118,7 +118,14 @@ export function registerUniversityEngineRoutes(router: Router) {
         level: req.body.level,
       });
       res.json({ ok: true, data: result });
-    } catch (e) { next(e); }
+    } catch (e: any) {
+      // Session 154 — a missing field/title is a client-input mistake, not a
+      // server failure: return 400 VALIDATION_ERROR instead of 500.
+      if (e instanceof Error && /fieldId or a course title/.test(e.message)) {
+        return res.status(400).json({ ok: false, error: { code: "VALIDATION_ERROR", message: "Provide a field or a course title to teach." } });
+      }
+      next(e);
+    }
   });
 
   // Research & thesis guidance

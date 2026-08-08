@@ -40,6 +40,7 @@ const ROUTE_OVERRIDES = {
   collaboration: "collaboration", command: "command", composer: "composer",
   constitution: "constitution", conversations: "conversations",
   conversationOps: "conversations",
+  religionsIntegrations: "religions",
   coreIntegration: "coreIntegration", cryptoIntelligence: "cryptoIntelligence",
   cyber: "cyber", dataMarketplace: "dataMarketplace", dataPlatform: "dataMarketplace",
   deployment: "deployment", derivativesDesk: "derivatives",
@@ -288,7 +289,12 @@ function findTestsFor(modKey) {
       const src = read(path.join(dir, f));
       const importsBacking = servicesFromRoutes(modKey).some((r) => {
         const base = path.basename(r, ".ts");
-        return src.includes(`./${base}.js`) || src.includes(`${base}.js"`);
+        // Match the backing service wherever the test imports it from —
+        // `./base.js`, `../education/base.js`, `../../education/base.js`.
+        // Co-located tests in a grouping directory (education/*.test.ts)
+        // import the service with a relative path that includes the group
+        // directory, so a `./`-only match made them invisible.
+        return src.includes(`${base}.js`);
       });
       if (importsBacking) tests.push(`${relDir}/${f}`);
     }
@@ -455,6 +461,7 @@ function moduleRoutePrefix(key) {
     mlOps: "ml-ops", cyber: "cyber", biomedical: "biomedical",
     hybridExec: "hybrid-execution", mediaGen: "media-generation",
     selfHosted: "self-hosted", devportal: "dev-portal",
+    lifePrinciples: "life-principles",
   };
   return map[key] || key;
 }

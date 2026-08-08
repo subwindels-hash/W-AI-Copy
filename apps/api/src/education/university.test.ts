@@ -97,3 +97,78 @@ describe("University Education (Lecturer AI teaching platform)", () => {
     expect(plan2!.courses.filter((n) => n.nextRecommended).length).toBe(1);
   });
 });
+
+describe("Session 153 — University completion: catalog integrity & degree-plan semantics", () => {
+  it("catalog integrity: unique ids/codes, resolving faculty refs and prerequisites, valid credits/levels/terms", () => {
+    const cat = UniversityService.catalog();
+    const ids = cat.courses.map((c) => c.id);
+    expect(new Set(ids).size).toBe(ids.length);
+    const codes = cat.courses.map((c) => c.code);
+    expect(new Set(codes).size).toBe(codes.length);
+    const idSet = new Set(ids);
+    const facIds = new Set(cat.faculties.map((f) => f.id));
+    for (const c of cat.courses) {
+      expect(facIds.has(c.faculty), `${c.id} faculty ref`).toBe(true);
+      expect(["bachelor", "master", "doctor"]).toContain(c.level);
+      // Bachelor/master courses carry credits; doctoral research/thesis
+      // courses are research work and legitimately carry 0 credits.
+      expect(c.credits).toBeGreaterThanOrEqual(0);
+      if (c.level !== "doctor") expect(c.credits, `${c.id} credits`).toBeGreaterThan(0);
+      expect(c.description.length).toBeGreaterThan(10);
+      expect(c.teachingTopic.length).toBeGreaterThan(20);
+      for (const p of c.prerequisites) expect(idSet.has(p), `${c.id} prerequisite ${p}`).toBe(true);
+    }
+    // Faculties carry awards for all three levels and at least one research area.
+    for (const f of cat.faculties) {
+      expect(Object.keys(f.awards)).toEqual(["bachelor", "master", "doctor"]);
+      expect(f.researchAreas.length).toBeGreaterThan(0);
+    }
+  });
+
+  it("every faculty offers courses at all three degree levels", () => {
+    const cat = UniversityService.catalog();
+    for (const f of cat.faculties) {
+      const courses = UniversityService.coursesByFaculty(f.id);
+      const levels = new Set(courses.map((c) => c.level));
+      expect(levels, f.id).toEqual(new Set(["bachelor", "master", "doctor"]));
+    }
+  });
+
+  it("coursesByFaculty returns [] for unknown faculties; getFaculty/getCourse handle misses", () => {
+    expect(UniversityService.coursesByFaculty("nope")).toEqual([]);
+    expect(UniversityService.getFaculty("nope")).toBeUndefined();
+    expect(UniversityService.getCourse("nope")).toBeUndefined();
+    expect(UniversityService.getCourse("csc-101")?.code).toBe("CSC101");
+  });
+
+  it("search is case-insensitive and matches title, code, department and faculty name", () => {
+    expect(UniversityService.search("ethical hacking").length).toBeGreaterThan(0);
+    expect(UniversityService.search("csc").length).toBeGreaterThan(0);
+    expect(UniversityService.search("LAW").length).toBeGreaterThan(0);
+    expect(UniversityService.search("")).toEqual([]);
+    expect(UniversityService.search("   ")).toEqual([]);
+  });
+
+  it("degree plan for every faculty is ordered by level → term and marks exactly one next", async () => {
+    const uid = "uni-plan-all-" + Date.now();
+    const faculties = UniversityService.faculties();
+    for (const f of faculties) {
+      const plan = await UniversityService.degreePlan(uid, f.id);
+      expect(plan, f.id).not.toBeNull();
+      expect(plan!.courses.length).toBeGreaterThan(0);
+      // Ordered: bachelor before master before doctor; term ascending within level.
+      const levels = plan!.courses.map((n) => n.level);
+      const levelIdx = levels.map((l) => ["bachelor", "master", "doctor"].indexOf(l));
+      for (let i = 1; i < levelIdx.length; i++) expect(levelIdx[i]! >= levelIdx[i - 1]!).toBe(true);
+      // Exactly one next-recommended for a fresh learner.
+      const next = plan!.courses.filter((n) => n.nextRecommended);
+      expect(next.length, `${f.id} next count`).toBe(1);
+      expect(next[0]!.level).toBe("bachelor");
+      expect(next[0]!.prerequisitesMet).toBe(true);
+    }
+  });
+
+  it("degree plan returns null for an unknown faculty", async () => {
+    expect(await UniversityService.degreePlan("uni-x-" + Date.now(), "nope")).toBeNull();
+  });
+});

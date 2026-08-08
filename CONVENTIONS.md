@@ -1141,3 +1141,496 @@
 - **Confirmation Threshold Rules.** On-chain crypto checkouts must track block confirmations and only transition to `completed` once network-specific confirmation thresholds are satisfied (`btc: 1`, `tron_trc20: 19`, `eth_erc20: 12`, `bnb_chain: 15`).
 - **Automated Billing Invoice Settlement.** Paid transactions in `payments` containing an `invoiceId` must automatically invoke `billing.markInvoicePaid(orgId, invoiceId)`, keeping the payment ledger (`pay:tx`) and subscription billing ledger synchronized without manual intervention.
 - **Tenant Isolation 2-Segment Catalog Rule.** `pay:tx` is catalogued with its full 2-segment prefix so `prefix.split(":").length = 2` correctly isolates `<org>` at index 2. Bare root (`pay`) is omitted.
+
+### Session 140 — Global Human Knowledge & Everyday Question Intelligence (`knowledge`)
+
+- **Module prefix:** `Knowledge*` types in `packages/shared/src/knowledge.ts`
+  (the module's first dedicated contract — ~1100 LOC of types + Zod + the pure
+  engines), **`kn:rec` Redis keys** (org in the segment after the index marker —
+  the `usg:evt`/`pay:tx` shape, catalogued `org_scoped` in the S89 sweep),
+  `/api/v1/knowledge` route prefix (additive; nothing existing is touched),
+  `apps/web/src/lib/knowledge.ts` client, `/app/knowledge` route + sidebar
+  label "Global Knowledge".
+- **Current facts are never memorized.** The catalog contains no price, score,
+  office-holder or weather reading. Fast-changing information is *dynamic
+  knowledge*: it may only be presented with SOURCE + DATE + VERIFICATION STATUS
+  + LAST UPDATED, and current-information questions are routed to the dynamic
+  layer with verification guidance. This is the module's core honesty rule and
+  it is pinned by the `pol.current-information` policy record and by tests.
+- **The Question Intent Engine is deterministic and honest.** Classification
+  uses weighted patterns with specificity tie-breaking and returns an explicit
+  confidence plus the matched rules; no match yields the `general` fallback at
+  low confidence rather than a forced category. Every one of the 13 spec
+  example questions is pinned in unit + e2e tests.
+- **Never claim the system knows everything.** Ask returns an explicit
+  "I do not have sufficient knowledge in the catalog" answer on no match —
+  retrieval never fabricates. The policy is documented in the
+  `pol.ask-anything` record, not just in code.
+- **Comparisons present criteria, never a universal winner.** The compare
+  engine scores only *labeled* criteria from the catalog; anything unlabeled
+  renders `value: null, basis: "not_labeled"` — never an invented 0 or a
+  "winner" field. Comparison *item* records (`cmp.item.*`) carry the labeled
+  scores; the text comparison records explain trade-offs.
+- **Teaching adapts presentation, never facts.** `renderRecordAtLevel` filters
+  the record's sections per audience level (child → research); the underlying
+  record is identical at every level (pinned by test).
+- **The dynamic layer is org-scoped, self-reported and labelled.** New dynamic
+  records default to `unverified` with `self_reported` provenance and require
+  ≥1 source; they merge into search/ask only for their own organization; the
+  console renders them with an explicit "self-reported" badge. Catalog records
+  can never be updated or deleted through the dynamic layer (404).
+- **Health and law educate, never advise.** Every health/law record carries a
+  professional-assistance note surfaced in answers and the console; no record
+  diagnoses, prescribes or gives legal advice.
+- **Curated content, not demo data.** The catalog is real educational content
+  with confidence labels and sources, authored into a versioned seed — no
+  `WINDELS_DEMO_DATA` gate is needed because nothing is synthetic; the
+  no-fabricated-data guards pass untouched.
+
+### Session 141 — Global Religion, Belief & Spirituality Knowledge System (`religions`)
+
+- **Module prefix:** `Religion*` types in `packages/shared/src/religions.ts`
+  (the module's first dedicated contract — ~900 LOC of types + Zod + the pure
+  engines), **`rel:sub` Redis keys** (org-scoped submissions, org in the
+  segment after the index marker — the `usg:evt`/`pay:tx` shape) and
+  **`rel:ext` keys** (globally shared approved extensions — catalogued
+  `shared` with the rationale that there is no org segment at all),
+  `/api/v1/religions` route prefix (additive), `apps/web/src/lib/religions.ts`
+  client, `/app/religions` route + sidebar label "World Religions", and a new
+  `religion` entity type in Enterprise Search.
+- **Neutrality is structural, not a disclaimer.** No record in the catalog
+  ranks religions; the comparison engine presents each tradition's own text
+  across the 18 spec categories and never a winner; truth-claim questions
+  ("Which religion is true?") are answered by the `pol.neutrality` policy —
+  truth claims are matters of faith, theology, philosophy and personal
+  belief, and WINDELS never claims to have chosen a religion. The unit tests
+  pin that no non-policy record claims its own truth or superiority.
+- **Attribution before assertion.** Contested claims are phrased as "X
+  traditions generally teach A, while Y traditions generally teach B", and
+  `controversialNote` corrects documented popular misconceptions (Vodun vs
+  "voodoo dolls"; Yazidism vs devil worship; Rastafari vs Selassie's own
+  position) — the system never manufactures teachings and never treats
+  followers of a religion as identical.
+- **Indigenous names are primary, not footnotes.** Records carry
+  `indigenousNames` (with language and script) and `namesByLanguage`; search
+  is Unicode-aware so `Ìṣẹ̀ṣe` and Hebrew names match; oral tradition is a
+  first-class source type alongside academic/primary/historical/community.
+- **Denominations are not religions.** Every denomination, school and
+  mystical tradition is its own record with its relation to the parent
+  explained (`den.*`, `sch.*`, `mys.*`); the catalog's integrity check
+  guarantees every related-tradition reference resolves.
+- **Expansion is a ten-step gate, and aliases are never duplicated.** New
+  traditions enter through the pipeline (§18): identity, classification,
+  sources (required), history, community review (advisory), duplicate
+  detection against the catalog AND pending submissions, related/branch
+  mapping, confidence scoring (defaults to UNVERIFIED), and the Super Admin
+  approval gate (service-level role check, so a mis-wired route cannot
+  bypass it). Approved records publish into the shared `rel:ext` store,
+  which search/ask merge for every organization. There is deliberately no
+  fixed target count and no fabricated traditions.
+- **Honest uncertainty.** Fragmentary ancient religions carry `uncertain`
+  confidence with research notes; "I do not have sufficient verified
+  knowledge" is the standing no-match answer — never a guess.
+
+### Session 142 — Religion Knowledge Integration & Teaching Systems (`religions/integrations`)
+
+- **Integration channels:** `rel:int:mem:<org>` (last memory sync marker) and `rel:int:ds:<org>` (created training dataset marker) Redis keys; the `religionsIntegrations` route file is mapped to the `religions` module in the inventory's `ROUTE_OVERRIDES` (the `conversationOps` convention).
+- **Memory sync is idempotent by design.** The Memory Fabric deduplicates by content+scope, so re-syncs of the catalog never create duplicates; the integration reports honest attempted/succeeded/failed counts and records the last sync instead of pretending anything was "imported" twice.
+- **Agent knowledge is labelled provenance, not content-dumping.** Attached rows are `SNIPPET`s titled `Religion: <name>` with `source: WINDELS religion catalog <version>`; re-attach skips titles already present. Agent ownership stays with the existing agentKnowledge service (org assertion) — the integration never bypasses it.
+- **Training datasets declare their honesty.** The curated religion corpus is created with `syntheticPct: 0`, `cleaned: true`, `ragbuilderIncluded: true`, and every JSONL row carries the catalog version as its source — the same "label the provenance" rule as memory and agents.
+- **The Lecturer AI handoff keeps facts in the catalog.** `POST /education/lesson` returns both the curated course and the adaptive tutor session; level mapping is explicit (research→advanced) and the note states that the catalog is the source of truth.
+- **The chat surface inherits the neutrality guarantee.** `POST /chat` reuses the religion question engine, so truth-claim questions get the policy answer and out-of-catalog questions get the honest no-match — the conversational channel cannot bypass the Session 141 neutrality rules.
+- **Route mounting is verified, not assumed.** Session 141's router mount silently failed to insert (anchor drift; unit tests exercise services directly, so they stayed green). Session 142 mounts both routers and the fix is pinned by the inventory route count — future route-file additions must assert the mount exists in `server.ts`.
+
+### Session 143 — Religion Coverage Completion & AI Response Safety (`religions`)
+
+- **Spec audit before new work.** When a spec is re-sent after implementation,
+  the correct response is a line-by-line audit against the shipped catalog —
+  this session found and closed 12 genuine gaps (five §3 ancient religions,
+  Mu'tazila, a regional Islamic tradition, two Jewish tradition records,
+  modern Hindu movements, Anekantavada, Sikh movements) that a "done"
+  verdict would have missed. Every new record follows the same §12 structure
+  and integrity rules as the originals.
+- **§19 safety is narrow and conservative, by design.** `classifyReligionResponseSafety`
+  flags only clear hate speech (calls to harm, dehumanization, slurs, blanket
+  "X religion is evil") and blanket discrimination ("all X are …", ban/remove
+  calls). Educational questions, criticism, theology, personal faith and
+  history are never flagged — over-blocking would itself violate §19's
+  requirement that "educational discussion of religion should remain
+  available". The taxonomy is pinned by tests on both sides (flagged and
+  never-flagged).
+- **Refusals are educational, not preachy.** The safety-refused answer names
+  the policy record (`pol.response-safety`), states that educational
+  discussion remains available, and offers follow-ups — the refusal is itself
+  a teaching turn.
+- **The classifier is enforced at the surfaces, not the data.** The catalog
+  is unchanged by the safety layer; `ask` and `chat` intercept at the
+  boundary, so the same curated, neutral content serves everyone while the
+  safety posture is enforced consistently.
+
+### Session 144 — Global Politics, Government & Political History Intelligence System (`politics`)
+
+- **Module prefix:** `Politics*` types in `packages/shared/src/politics.ts`
+  (the module's first contract — ~1000 LOC incl. the fact-vs-opinion and
+  question engines), **`pol:upd` Redis keys** (org-scoped update engine, org
+  in the segment after the index marker), `/api/v1/politics` route prefix,
+  `apps/web/src/lib/politics.ts` client, `/app/politics` console + sidebar
+  "Politics & Government", and a `politics` entity type in Enterprise Search.
+- **INFORM, NOT MANIPULATE is structural (§24).** The comparison engine
+  attributes each country's constitutional facts and never ranks systems;
+  parties carry both their self-description and the academic
+  classification; the neutrality policy is a first-class record; the
+  console surfaces the note on every comparison.
+- **Fact vs opinion is an engine, not a disclaimer (§23).** Causal claims
+  ("X destroyed the economy") classify as *historical interpretation*, not
+  fact; value claims as *opinion*; accusations as *allegation*; the
+  classifier is exposed as an API and in the console so users can check any
+  claim.
+- **Current ≠ permanent (§21).** Every current office-holder record carries
+  `current_as_of` verification with `lastVerified` + `asOfDate`; the
+  current-info policy record explains the update path. The catalog never
+  pretends today's office-holder is a permanent fact.
+- **Never overwrite history (§28/§29).** The update engine stores change
+  requests with previous/new values, effective dates and §22-ladder
+  sources; applying (Super Admin only) writes a change-log entry and
+  leaves every historical record untouched — pinned by tests, including
+  "the historical record is unchanged after applying an update" and the
+  versioned `fieldHistory` trail.
+- **Election data is official-source-bound.** Vote totals and percentages
+  are recorded "per INEC" (or the equivalent official source) with the
+  disputes field carrying the opposition's challenges and their judicial
+  outcomes — never presented as one side's narrative.
+- **Scoring favors exact names over partials.** Word-boundary name matches
+  (+6) outrank name prefixes (+3), so "president" does not let election
+  records outrank the actual president; current_as_of records get a
+  current-office boost. Pinned by the §26 question tests.
+
+### Session 145 — Politics Coverage Completion: Diplomacy Layer & Remaining Spec Items (`politics`)
+
+- **Spec re-sends are audits.** When a spec arrives again after implementation,
+  the work is a line-by-line gap analysis — this session found and closed 14
+  genuine gaps, including an entire missing section (§17 Diplomacy Database).
+- **§17 diplomacy is entity-based, not text-based.** `diplomacy` records
+  carry partners, a relationship-type enum (bilateral_relationship / treaty /
+  alliance / strategic_partnership / diplomatic_recognition / dispute /
+  negotiation / summit / diplomatic_mission), a signed-at date, key events
+  and a current status — and dynamic items like ambassadorial appointments
+  are explicitly noted as "dynamic information to verify at query time"
+  rather than frozen into records (§21).
+- **"Current" records stay honest.** The new senators and ministers carry
+  `current_as_of` + `lastVerified`; the first-PM record (Balewa) is stable
+  history. The never-overwrite rule is untouched.
+- **Scoring fixes are pinned by questions, not preferences.** The §26
+  question suite drove three engine refinements: leader titles join the
+  searchable text (so "military head of state" matches military rulers),
+  intent boosts apply before the acceptance threshold (ministries answer
+  "who are the current ministers?"), and tokens shorter than 3 characters
+  are excluded (a bare "at" no longer makes nonsense questions match).
+  Each fix is covered by a unit test.
+- **Education concepts are records, not code.** "Explain democracy" and
+  "Explain elections" are `concept` records in the catalog — teachable,
+  searchable and versionable like every other entity (§27).
+
+### Session 146 — Politics Global Expansion (`politics`)
+
+- **"Every covered country needs a current leader" is a §21 contract.** The
+  audit found nine covered countries without one; the rule going forward is
+  that a country profile and a current leader record must exist together —
+  both are `current_as_of` with Last Verified timestamps.
+- **Monarchs and traditional rulers are leader records, not afterthoughts.**
+  King Charles III, Queen Elizabeth II and the Sultan of Sokoto use the §4
+  title kinds (`monarch_king`, `monarch_queen`, `sultan`) and carry the
+  head-of-state vs head-of-government role distinction; the §19 leader
+  timeline filters to heads of state/government so traditional rulers do
+  not pollute the political-succession view.
+- **Parties and elections must exist beyond the example country.** Twelve
+  global parties and eight landmark elections now cover the §9/§10 global
+  scope for the covered countries, each with self-description vs academic
+  classification and official-source results.
+- **The engine's §26 guarantees are test-pinned at the question level.**
+  Possessive stripping (`nigeria's`), plural stemming (`parties`→`party`)
+  and the country-name-prefix boost exist because specific §26 questions
+  failed; each has a unit test and an e2e case so regressions surface as
+  failing questions, not vague score drift.
+- **Revolutions and wars are educational records.** The French, American
+  and Russian Revolutions and the Kenya National Accord carry
+  non-glorification notes (§15) alongside their historical content.
+
+### Session 147 — Knowledge Coverage Completion (§5–§23, `knowledge`)
+
+- **The audit loop applies to every module, every re-send.** The S140 spec
+  arrived again; a line-by-line audit against the shipped catalog found 66
+  genuine gaps across §5–§23 — none of them engine bugs, all of them missing
+  content — and the expansion seed closed them. The pattern: content
+  coverage is never "done" until every explicitly listed item resolves.
+- **Cross-module relatedIds must not leak.** The integrity report proved
+  its worth again: six new records initially referenced ids from the
+  `politics` module (`pol.leader.uk.starmer`, `pol.form.presidential-republic`,
+  `pol.mov.endsars`, `pol.gov.lagos.sanwo-olu`, `place.ethiopia`,
+  `bus.project-management`). The rule: a knowledge record's `relatedIds`
+  may only reference knowledge-module ids — cross-module links belong to
+  the integration layer, not the seed.
+- **Disclaimers travel with the content.** All nine new law records and
+  three new health records carry professional-assistance notes; the new
+  people records carry historical-context and contested-legacy sections
+  (Churchill and empire, Socrates's trial, Nkrumah's later rule) — the
+  neutrality discipline applies to biography as much as to politics.
+- **New coverage is pinned by new questions.** "Who was Kwame Nkrumah?",
+  "What is machine learning?", "What is civil law?" and "Where is Lagos?"
+  are unit- and e2e-tested so the coverage cannot silently regress.
+
+### Session 148 — Spec A Re-Send Audit: Knowledge Coverage Completion (§5–§23 + §8, `knowledge`)
+
+- **A third send of the S140 spec triggered a third audit — and the audit
+  still found 103 genuine gaps.** S147 closed §5–§23 partially; the
+  re-audit walked every explicit list item and found the remaining items:
+  10 people role categories, 3 spec-example timeline events, 12 place item
+  types, 8 disciplines, 2 science fields, software engineering, 5 business,
+  5 career, 8 culture, 4 travel, 5 relationship, 5 entertainment, 6
+  language, 4 everyday, 7 creative records and 6 comparison categories with
+  12 profiles. The audit loop is a discipline, not a one-time event:
+  coverage is judged against the spec text, never against the previous
+  session's claims.
+- **"Spec example questions" are first-class audit items.** §6's example
+  questions ("When was the first computer built?", "When was the internet
+  created?", "When was the constitution adopted?") are answerable by the
+  engine — each now has a pinned record and a pinned ask test. If a spec
+  lists a question, the module must answer it.
+- **Ranking ties are resolved by id order, and intent boost can create
+  ties.** Two-token "What is X science?" questions tie between the
+  `science_field` record (both tokens in title, no `definition` intent) and
+  `discipline` records (one token + intent boost) — the lexicographically
+  earlier id then wins, so `disc.computer-science` can outrank
+  `sci.materials-science`. Pre-existing behaviour; this session's new
+  science fields carry the `definition` intent (semantically correct) so
+  they rank first, and the quirk is documented rather than silently
+  "fixed" in the engine (additive-only).
+- **DYNAMIC-content guidance records are legitimate catalog content.**
+  `car.salaries` and `trv.currency-money` contain no salary figures or
+  exchange rates — they teach that such data is dynamic and must carry
+  SOURCE + DATE + VERIFICATION STATUS. The no-memorized-numbers rule
+  applies to catalog content, and guidance records are how the rule is
+  itself represented.
+- **Comparison profiles must never carry an unlabeled score.** The six new
+  comparison categories (university vs polytechnic, bootstrap vs funding,
+  saving vs investing, beach vs city break, WW1 vs WW2, open source vs
+  proprietary) follow the established pattern: a text comparison record
+  plus item profiles whose `criteria` arrays are 100% labeled — the engine
+  reports `not_labeled` rather than inventing values, and the WW1/WW2
+  comparison is framed as analysis ("never a verdict") so even historical
+  comparison avoids declaring a winner.
+- **No-stereotype and no-single-answer rules are test-pinned, not just
+  written.** Culture records' guidance sections and relationship records'
+  guidance sections are asserted against anti-stereotype/anti-formula
+  regexes in unit tests, so a future edit cannot silently regress the
+  neutrality discipline.
+- **Seed writing hygiene for big seeds:** timeline events need
+  `dateLabel`/`year`/`eraId` threaded through the helper (the first
+  integrity run caught three missing), source constants must exist before
+  use (`SRC_NASA`), and every `relatedIds` entry must resolve — the
+  integrity report caught nothing else because the seed was written with
+  the pre-computed ID list, but the audit seed's 103 records were still
+  verified record-by-record via `getRecord` + ask smoke tests.
+
+### Session 149 — Spec A Re-Audit Closure (§6–§9, `knowledge`)
+
+- **A fourth send of the S140 spec produced a smaller but real gap list.**
+  The audit loop never assumes the previous session was complete: this pass
+  found 13 unresolved items (religion-origin event, president-taking-office
+  event, technology-popularity event, towns/villages, businesses, country
+  and political-system comparisons, vocational education, postgraduate
+  degrees) that S147/S148 had not covered. Every re-send gets the full
+  walk, and the gap list shrinks only because the walk is honest.
+- **Spec example questions are answerable, and the answer must be the
+  right record.** "When did this religion begin?" previously surfaced the
+  Edict of Milan (313 CE — legalization, not origin); the fix was a
+  dedicated `when.christianity` event whose misconception section teaches
+  the origin-vs-legalization distinction. A match that is merely close is
+  an audit failure; the probe question must resolve to the intended
+  record.
+- **Single-token questions need the token in the title.** The ask() scorer
+  gives +2 for a title token and +1 for a text token with an if/else, so a
+  record whose key term lives only in aliases/text (e.g. "phd") scores 1
+  and is filtered (`score < 2`). "What is a PhD?" returned NO MATCH until
+  the title became "Doctorate (PhD) and master's degrees". Lesson: for
+  every alias a user might ask alone, consider whether the title carries
+  it.
+- **Cross-module coverage is documented, not duplicated.** "Religions as
+  an academic comparison" is implemented by the `religions` module's
+  18-category `compareReligions` (S141/S143); the knowledge audit records
+  that as covered rather than re-implementing it. The new country and
+  political-system comparisons are genuinely in-scope for the knowledge
+  comparison engine, so they were added with labeled profiles and
+  no-winner framing — and the country comparison explicitly notes its
+  statistics are dynamic.
+- **Comparison records for contested topics carry framing in the record,
+  not just in the engine.** `cmp.presidential-vs-parliamentary` says
+  "not an endorsement of any system or country" inside its guidance
+  section, and `cmp.nigeria-vs-kenya` carries a verificationNote — the
+  neutrality discipline is content-level, because the engine's generic
+  no-winner note is not enough for politically sensitive comparisons.
+- **Version assertions in tests track catalog versions.** The S148 test
+  pinned `catalogVersion` containing "148"; the 149 bump required updating
+  that one assertion. Version pins are expected to move with each session's
+  bump — they are guards against stale versions, not frozen strings.
+
+### Session 150 — Life Operating Principles Engine ("Rules of Life", `lifePrinciples`)
+
+- **A spec that looks like "content" still gets a real architecture.** The
+  Rules of Life spec is mostly lists (115 numbered rules), but shipping it
+  as a static document would have failed its own Part VII–X: the module is
+  built around engines — a 13-area coaching classifier, a deterministic
+  daily-rule picker, a 10-question decision framework — and the rules are
+  records with why/how/action/reflection fields, not strings.
+- **Neutrality for life advice is the same discipline as for religion and
+  politics.** The spec itself says there is no universal set of rules; the
+  module makes that structural: the catalog note, every ask response and
+  the daily payload carry "practical principles, not absolute laws", and
+  rules with absolutist readings carry `considerations` balance notes. The
+  "X without Y" philosophy pairs are the spec's own anti-absolutism device
+  and are first-class catalog content.
+- **"Never decide for the user" is enforced in content and in tests.** The
+  decision mode returns the 10 questions plus mapped principles and an
+  explicit note that WINDELS does not make the decision — the e2e and unit
+  tests pin the exact note and the exact question order, so the anti-dependency
+  guarantee cannot silently regress.
+- **Deterministic engines are testable engines.** The daily rule is
+  `dayOfYear(date) % 115 + 1`; tests pin that two calls with the same date
+  are identical, different dates differ, and `?rule=` overrides work. The
+  area classifier is keyword scoring with list-order tie-breaks, pinned for
+  all 13 areas.
+- **Static catalog modules still integrate.** The module has no Redis keys
+  (documented — nothing to add to the TI sweep), but it does join
+  Enterprise Search as a new `life_principle` entity with a rollup count,
+  exactly like `religion` and `politics` before it. Integration breadth is
+  the convention: searchable, console page, sidebar, shared contract.
+- **Inventory tooling follows the mount, not the file name.** The scanner
+  derived `/api/v1/lifePrinciples` from the route file name; the real mount
+  is kebab-case. Added `lifePrinciples: "life-principles"` to
+  `moduleRoutePrefix` — the same pattern as `healthEcosystem` etc. — and
+  verified the regenerated inventory reports the correct prefix.
+- **Verify the mount (S142 rule, applied again).** The server.ts wiring
+  (import + `v1.use` + `registerLifePrinciplesRoutes`) was grep-verified
+  after editing; the scanner independently confirmed all 12 endpoints.
+
+### Session 151 — Life Principles Verbatim Audit & Coaching Refinement (`lifePrinciples`)
+
+- **Verbatim pinning is the strongest audit.** The S150 catalog was
+  compared mechanically against the spec text: 115/115 titles and
+  principles, 13 area labels and 12 philosophy phrases all exact. The
+  comparison script was then converted into a generated unit-test file, so
+  the spec text is now permanently the source of truth in the suite — any
+  future wording drift fails CI instead of passing review.
+- **Score-0 classification is a silent gap.** The coaching engine's
+  keyword classifier falls back to the first area when nothing matches —
+  a probe ("How do I become a better father?") that lands in `discipline`
+  with score 0 looks like a deliberate answer but is a missed
+  classification. The refinement rule: probe the engine with natural
+  phrasings of every area's core situations, and treat any score-0 result
+  as a keyword gap, not a default.
+- **Keyword layers are data, but they still need rebuild discipline.**
+  The fixes live in `packages/shared/src/lifePrinciples.ts`; after editing
+  shared, the rebuild of `@windels/shared` came first, then API/web
+  typecheck — the standing hygiene rule applied to a data change.
+- **Tie-breaks are documented, not "fixed".** Equal-score ties resolve to
+  the earlier area in `LIFE_COACHING_AREAS` ("Teach me to be more grateful"
+  → education over spirituality). Both readings are defensible; changing
+  the tie-break would be a behavioural change to a pinned engine, so the
+  behaviour is documented in the spec and runtime checklists instead.
+- **Every classification fix is pinned with a score assertion.** The new
+  edge-case tests assert `score > 0` as well as the target area, so a
+  future keyword removal cannot silently reintroduce the score-0 default.
+
+### Session 152 — Module Completion 1/3: Cyber & Cloud Academy (`cyberCloudAcademy`)
+
+- **PARTIAL in the inventory is a symptom, not a verdict.** The scanner's
+  COMPLETE gate needs routes ≥ 5, a web client, shared types and visible
+  tests. cyberCloudAcademy had all the substance (service, contract, 7
+  passing unit tests) — it was PARTIAL purely because (a) no
+  `lib/cyberCloudAcademy.ts` existed and (b) its co-located tests were
+  invisible to `findTestsFor`. Completing a module means closing the real
+  gates: client, console page, e2e spec, test coverage — and fixing the
+  scanner when the scanner is the one lying.
+- **Scanner test detection now matches any import path of the backing
+  service.** The `importsBacking` check required `./base.js`; education
+  tests import `../education/base.js` from the grouping directory. The fix
+  (`src.includes(base + ".js")`) is a tooling-truth correction — the three
+  education suites genuinely exercise their services and were always real
+  tests; they are now counted for all three modules.
+- **The "one by one" rule keeps sessions reviewable.** Completing all three
+  PARTIAL modules in one giant commit would have mixed three distinct
+  contracts, clients and e2e surfaces. One module per session keeps each
+  commit independently verifiable; the scanner fix lands once (S152) and
+  the remaining modules still need their own clients/e2e/docs to flip.
+- **Completion does not mean rewriting.** The module's honesty discipline
+  (null mastery for never-started topics, one next-recommended per track,
+  real Lecturer AI delegate with structured fallback surfaced via
+  `modelSource`/`warnings`) was already correct — the session pinned it
+  with tests rather than re-architecting it. Additive-only held: no
+  existing endpoint, service method or contract shape was changed.
+- **Fresh-learner path semantics are a testable spec.** With nothing
+  started, the path must recommend exactly one topic per track and it must
+  be the beginner entry point whose prerequisites are met (all of them,
+  vacuously) — pinned for both tracks.
+
+### Session 153 — Module Completion 2/3: University Education (`university`)
+
+- **The one-by-one pattern compounds.** Session 152's scanner fix removed
+  the `hasTests` gate for all three education modules at once, so
+  `university` needed only the client + console + tests + e2e. The
+  remaining PARTIAL flag is now almost always "no web client" — check the
+  scanner's four gates (routes ≥ 5, client, types, tests) before assuming
+  a module is unfinished in substance.
+- **Catalog integrity tests must encode the catalog's real design rules.**
+  The first integrity draft asserted `credits > 0` for every course and
+  failed on doctoral research courses — which legitimately carry 0 credits
+  (thesis research work, not taught modules). The pinned rule is
+  "non-doctor courses > 0; doctoral research may be 0" — the test now
+  documents the design instead of fighting it.
+- **Degree-plan semantics are pinned for EVERY faculty, not just one.**
+  The original suite checked `computing`; the completion suite iterates
+  all 10 faculties and asserts: non-empty plans, level → term ordering,
+  exactly one next-recommended, bachelor level, prerequisites met. This is
+  the same fresh-learner-pinning discipline used for the academy tracks.
+- **The web client re-exports the shared contract; the page imports both.**
+  In S152 the type-only re-export alone left the function signatures
+  unresolved (TS2304) — the lesson is to import the types for local scope
+  AND re-export them for consumers. Applied correctly this time; the page
+  uses the typed lib functions (never raw fetch).
+- **Session count discipline:** 152/153/154 = cyberCloudAcademy /
+  university / universityEngine — one module, one commit, one PROGRESS
+  row, one CONVENTIONS section, one inventory regeneration. The audit
+  trail stays reviewable module by module.
+
+### Session 154 — Module Completion 3/3: Universal University & Higher Education Engine (`universityEngine`)
+
+- **The one-by-one completion is finished: 0 PARTIAL modules remain.**
+  cyberCloudAcademy (S152), university (S153), universityEngine (S154) —
+  each got a client, a console page, extended unit tests, an e2e spec and
+  docs. The inventory now reads 125/125 COMPLETE. When every module is
+  COMPLETE, the inventory's job becomes regression detection: any future
+  PARTIAL is a new defect, not a legacy one.
+- **Integrity tests must match the contract's real field names.** Three
+  assertion drafts failed against the actual shared types: fields have no
+  `domainId` (resolve via FIELD_BY_ID), UniversityRecord uses `founded`/
+  `notes` not `foundedYear`/`rankNote`, and the PhD label is "Doctor of
+  Philosophy (PhD)". The pattern: read the contract before writing the
+  assertions — the tests document the shipped shape, not an imagined one.
+- **Error paths are part of module completion.** `POST /teach` with no
+  field/title returned 500 INTERNAL_ERROR for a client-input mistake. The
+  completion session fixed it to 400 VALIDATION_ERROR — an error-path
+  correction is additive in spirit (no successful-response shape changed)
+  and is exactly the kind of defect a completion audit should find.
+- **Honest-failure semantics were pinned, not invented.** The advisor's
+  no-match behaviour (empty pathway + "could not strongly match" rationale)
+  predates the session; the completion tests pin it so a future change
+  cannot silently start fabricating recommendations. Same for study-plan
+  bounds and the 0-credit doctoral research design.
+- **The web layer imports types for scope AND re-exports them.** Applied
+  the S152 lesson to the third client in a row (S153 and S154 both
+  correct); the pattern is now the standing convention for module clients.
+- **Session 154 completes the education trio, not the platform.** The
+  three modules were PARTIAL in *inventory classification*; they were never
+  broken. The real value of the completion pass: every module now has a
+  console surface, e2e coverage and pinned semantics — and the scanner
+  truthfully reports 0 unfinished modules.

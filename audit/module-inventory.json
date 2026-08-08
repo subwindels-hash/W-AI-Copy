@@ -1217,6 +1217,7 @@
       "collaboration.spec.ts",
       "commerce.spec.ts",
       "conversations.spec.ts",
+      "cyberCloudAcademy.spec.ts",
       "dataPlatform.spec.ts",
       "derivatives.spec.ts",
       "devPortal.spec.ts",
@@ -1230,7 +1231,9 @@
       "governance.spec.ts",
       "identityKnowledge.spec.ts",
       "infrastructure.spec.ts",
+      "knowledge.spec.ts",
       "leadPipeline.spec.ts",
+      "lifePrinciples.spec.ts",
       "marketplace.spec.ts",
       "mediaPublishing.spec.ts",
       "mfaAssurance.spec.ts",
@@ -1241,11 +1244,13 @@
       "payments.spec.ts",
       "permissions.spec.ts",
       "platformServices.spec.ts",
+      "politics.spec.ts",
       "program.spec.ts",
       "promptTemplates.spec.ts",
       "publicApi.spec.ts",
       "qa.spec.ts",
       "release.spec.ts",
+      "religions.spec.ts",
       "sessions37-40.spec.ts",
       "sessions41-76-80.spec.ts",
       "sessions42-47.spec.ts",
@@ -1256,6 +1261,8 @@
       "sustainability.spec.ts",
       "talk.spec.ts",
       "tenantIsolation.spec.ts",
+      "university.spec.ts",
+      "universityEngine.spec.ts",
       "usage.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
@@ -2996,6 +3003,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "cyberCloudAcademy.spec.ts",
       "sessions61-72-82.spec.ts"
     ],
     "syntheticData": [],
@@ -3004,6 +3012,71 @@
       "GCP",
       "Azure"
     ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "cyberCloudAcademy",
+    "title": "cyberCloudAcademy",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/cyberCloudAcademy",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "cyberCloudAcademy.service.ts",
+        "path": "/home/user/WIN/apps/api/src/education/cyberCloudAcademy.service.ts",
+        "sloc": 168,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 168,
+      "serviceFiles": [
+        "education/cyberCloudAcademy.service.ts"
+      ],
+      "importedServiceFiles": [
+        "education/cyberCloudAcademy.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/cyberCloudAcademy.ts",
+        "sloc": 75,
+        "counts": {
+          "total": 5,
+          "GET": 4,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /progress",
+          "GET /path",
+          "POST /start",
+          "GET /topic/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/cyberCloudAcademy.ts (235 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/cyberCloudAcademy.ts (68 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "education/cyberCloudAcademy.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
     "status": "COMPLETE"
   },
   {
@@ -3701,18 +3774,24 @@
     "backend": {
       "serviceDir": "apps/api/src/education",
       "serviceFile": {
-        "file": "education.service.ts",
-        "path": "/home/user/WIN/apps/api/src/education/education.service.ts",
-        "sloc": 129,
+        "file": "cyberCloudAcademy.service.ts",
+        "path": "/home/user/WIN/apps/api/src/education/cyberCloudAcademy.service.ts",
+        "sloc": 168,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 876,
+      "serviceTotalSloc": 2184,
       "serviceFiles": [
         "bootstrap.ts",
+        "cyberCloudAcademy.service.ts",
+        "cyberCloudAcademy.test.ts",
         "education.service.ts",
         "lecturer.service.ts",
         "lecturer.test.ts",
+        "university.service.ts",
+        "university.test.ts",
+        "universityEngine.service.ts",
+        "universityEngine.test.ts",
         "education/education.service.ts",
         "education/lecturer.service.ts"
       ],
@@ -3758,19 +3837,26 @@
         "User",
         "Agent",
         "Message",
-        "Workflow"
+        "Workflow",
+        "Integration"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "religions.spec.ts",
       "sessions61-72-82.spec.ts",
+      "universityEngine.spec.ts",
+      "education/cyberCloudAcademy.test.ts",
       "education/lecturer.test.ts",
+      "education/university.test.ts",
+      "education/universityEngine.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
-      "OpenAI"
+      "OpenAI",
+      "AWS"
     ],
     "status": "COMPLETE"
   },
@@ -4315,11 +4401,11 @@
       "serviceFile": {
         "file": "enterpriseSearch.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
-        "sloc": 412,
+        "sloc": 456,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1085,
+      "serviceTotalSloc": 1173,
       "serviceFiles": [
         "bootstrap.ts",
         "enterpriseSearch.service.ts",
@@ -6003,6 +6089,113 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "knowledge",
+    "title": "knowledge",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/knowledge",
+    "backend": {
+      "serviceDir": "apps/api/src/knowledge",
+      "serviceFile": {
+        "file": "knowledge.service.ts",
+        "path": "/home/user/WIN/apps/api/src/knowledge/knowledge.service.ts",
+        "sloc": 627,
+        "mathRandom": false,
+        "externalFetch": true
+      },
+      "serviceTotalSloc": 10986,
+      "serviceFiles": [
+        "knowledge.catalog.ts",
+        "knowledge.seed.audit.ts",
+        "knowledge.seed.audit2.ts",
+        "knowledge.seed.domains.ts",
+        "knowledge.seed.expansion.ts",
+        "knowledge.seed.people.ts",
+        "knowledge.seed.ts",
+        "knowledge.service.ts",
+        "knowledge.test.ts",
+        "knowledge/knowledge.service.ts"
+      ],
+      "importedServiceFiles": [
+        "knowledge/knowledge.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/knowledge.ts",
+        "sloc": 241,
+        "counts": {
+          "total": 20,
+          "GET": 14,
+          "POST": 4,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /integrity",
+          "GET /categories",
+          "GET /categories/:id",
+          "GET /kinds",
+          "GET /levels",
+          "GET /eras",
+          "GET /timeline",
+          "GET /search",
+          "POST /intent",
+          "POST /ask",
+          "POST /compare",
+          "GET /graph",
+          "GET /graph/:id",
+          "GET /stats",
+          "GET /records",
+          "POST /records",
+          "GET /records/:id",
+          "PATCH /records/:id",
+          "DELETE /records/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/knowledge.ts (809 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/knowledge.ts (247 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Agent",
+        "Task",
+        "Activity",
+        "Conversation",
+        "Message",
+        "Meeting",
+        "Workflow",
+        "Invoice",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "knowledge.spec.ts",
+      "mlOps.spec.ts",
+      "knowledge/knowledge.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "OpenAI",
+      "AWS",
+      "GCP",
+      "Azure",
+      "Google"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "leadDiscovery",
     "title": "Lead Discovery & Pipeline (S85/S115)",
     "sessions": [
@@ -6253,6 +6446,95 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "lifePrinciples",
+    "title": "lifePrinciples",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/life-principles",
+    "backend": {
+      "serviceDir": "apps/api/src/lifePrinciples",
+      "serviceFile": {
+        "file": "lifePrinciples.service.ts",
+        "path": "/home/user/WIN/apps/api/src/lifePrinciples/lifePrinciples.service.ts",
+        "sloc": 253,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2472,
+      "serviceFiles": [
+        "lifePrinciples.seed.core.ts",
+        "lifePrinciples.seed.unstoppable.ts",
+        "lifePrinciples.seed.work.ts",
+        "lifePrinciples.service.ts",
+        "lifePrinciples.test.ts",
+        "lifePrinciples.verbatim.test.ts",
+        "lifePrinciples/lifePrinciples.service.ts"
+      ],
+      "importedServiceFiles": [
+        "lifePrinciples/lifePrinciples.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/lifePrinciples.ts",
+        "sloc": 141,
+        "counts": {
+          "total": 12,
+          "GET": 9,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /parts",
+          "GET /rules",
+          "GET /rules/:number",
+          "POST /search",
+          "GET /integrity",
+          "POST /ask",
+          "GET /areas",
+          "GET /daily",
+          "POST /decision",
+          "GET /philosophy",
+          "GET /principle"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/lifePrinciples.ts (332 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/lifePrinciples.ts (166 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Task",
+        "Activity",
+        "Conversation",
+        "Message",
+        "Alert",
+        "Notification"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "lifePrinciples.spec.ts",
+      "lifePrinciples/lifePrinciples.test.ts",
+      "lifePrinciples/lifePrinciples.verbatim.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
     "status": "COMPLETE"
   },
   {
@@ -7924,6 +8206,103 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "politics",
+    "title": "politics",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/politics",
+    "backend": {
+      "serviceDir": "apps/api/src/politics",
+      "serviceFile": {
+        "file": "politics.service.ts",
+        "path": "/home/user/WIN/apps/api/src/politics/politics.service.ts",
+        "sloc": 802,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 7130,
+      "serviceFiles": [
+        "politics.catalog.ts",
+        "politics.seed.completion.ts",
+        "politics.seed.countries.ts",
+        "politics.seed.global.ts",
+        "politics.seed.ideas.ts",
+        "politics.seed.leaders.ts",
+        "politics.seed.nigeria.ts",
+        "politics.service.ts",
+        "politics.test.ts",
+        "politics/politics.service.ts"
+      ],
+      "importedServiceFiles": [
+        "politics/politics.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/politics.ts",
+        "sloc": 228,
+        "counts": {
+          "total": 21,
+          "GET": 14,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /kinds",
+          "GET /integrity",
+          "GET /search",
+          "GET /records/:id",
+          "GET /records/:id/history",
+          "POST /ask",
+          "POST /compare",
+          "POST /claim",
+          "GET /timeline/:countryId",
+          "GET /leaders/:countryId",
+          "GET /graph",
+          "GET /graph/:id",
+          "POST /graph/answer",
+          "GET /education/catalog",
+          "POST /quiz",
+          "POST /updates",
+          "GET /updates",
+          "GET /updates/:id",
+          "PATCH /updates/:id",
+          "GET /stats"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/politics.ts (952 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/politics.ts (195 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Membership",
+        "Message",
+        "Meeting",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "politics.spec.ts",
+      "politics/politics.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "program",
     "title": "Program Management (S25)",
     "sessions": [
@@ -8022,6 +8401,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "universityEngine.spec.ts",
       "config/liveFabrication.test.ts"
     ],
     "syntheticData": [],
@@ -8610,6 +8990,126 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "religions",
+    "title": "religions",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/religions",
+    "backend": {
+      "serviceDir": "apps/api/src/religions",
+      "serviceFile": {
+        "file": "religions.integrations.service.ts",
+        "path": "/home/user/WIN/apps/api/src/religions/religions.integrations.service.ts",
+        "sloc": 404,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 9382,
+      "serviceFiles": [
+        "religions.catalog.ts",
+        "religions.integrations.service.ts",
+        "religions.integrations.test.ts",
+        "religions.seed.abrahamic.ts",
+        "religions.seed.ancient.ts",
+        "religions.seed.dharmic.ts",
+        "religions.seed.traditional.ts",
+        "religions.service.ts",
+        "religions.test.ts",
+        "religions/religions.service.ts",
+        "religions/religions.integrations.service.ts"
+      ],
+      "importedServiceFiles": [
+        "religions/religions.service.ts",
+        "religions/religions.integrations.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/religions.ts",
+        "sloc": 173,
+        "counts": {
+          "total": 14,
+          "GET": 8,
+          "POST": 4,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /families",
+          "GET /integrity",
+          "GET /search",
+          "GET /records/:id",
+          "GET /records/:id/teach",
+          "POST /safety",
+          "POST /ask",
+          "POST /compare",
+          "POST /submissions",
+          "GET /submissions",
+          "GET /submissions/:id",
+          "DELETE /submissions/:id",
+          "PATCH /submissions/:id"
+        ]
+      },
+      {
+        "file": "apps/api/src/http/routes/religionsIntegrations.ts",
+        "sloc": 147,
+        "counts": {
+          "total": 10,
+          "GET": 5,
+          "POST": 5,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /",
+          "GET /memory",
+          "POST /memory/sync",
+          "POST /agents/:agentId/attach",
+          "GET /agents/:agentId",
+          "POST /training/dataset",
+          "GET /training/export",
+          "GET /education/catalog",
+          "POST /education/lesson",
+          "POST /chat"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/religions.ts (777 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/religions.ts (341 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Membership",
+        "Agent",
+        "Activity",
+        "Message",
+        "AgentKnowledge",
+        "Meeting",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "religions.spec.ts",
+      "religions/religions.integrations.test.ts",
+      "religions/religions.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
     "status": "COMPLETE"
   },
   {
@@ -9537,11 +10037,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 518,
+        "sloc": 535,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1212,
+      "serviceTotalSloc": 1246,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -9832,6 +10332,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "religions.spec.ts",
       "sessions54-60.spec.ts",
       "training/training.test.ts",
       "config/seedGate.test.ts"
@@ -9840,6 +10341,156 @@
     "externalIntegrations": [
       "Whisper"
     ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "university",
+    "title": "university",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/university",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "university.service.ts",
+        "path": "/home/user/WIN/apps/api/src/education/university.service.ts",
+        "sloc": 207,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 486,
+      "serviceFiles": [
+        "education/university.service.ts",
+        "education/lecturer.service.ts"
+      ],
+      "importedServiceFiles": [
+        "education/university.service.ts",
+        "education/lecturer.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/university.ts",
+        "sloc": 92,
+        "counts": {
+          "total": 9,
+          "GET": 8,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /overview",
+          "GET /catalog",
+          "GET /faculties",
+          "GET /faculties/:id/courses",
+          "GET /faculties/:id/degree-plan",
+          "GET /progress",
+          "GET /search",
+          "POST /start",
+          "GET /courses/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/university.ts (305 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/university.ts (94 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "university.spec.ts",
+      "education/cyberCloudAcademy.test.ts",
+      "education/lecturer.test.ts",
+      "education/university.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "universityEngine",
+    "title": "universityEngine",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/universityEngine",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "universityEngine.service.ts",
+        "path": "/home/user/WIN/apps/api/src/education/universityEngine.service.ts",
+        "sloc": 364,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 364,
+      "serviceFiles": [
+        "education/universityEngine.service.ts"
+      ],
+      "importedServiceFiles": [
+        "education/universityEngine.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/universityEngine.ts",
+        "sloc": 147,
+        "counts": {
+          "total": 16,
+          "GET": 13,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /domains",
+          "GET /domains/:id",
+          "GET /fields/:id",
+          "GET /education-levels",
+          "GET /search",
+          "GET /program",
+          "GET /program/courses",
+          "GET /universities",
+          "GET /universities/:id",
+          "GET /countries",
+          "GET /countries/:code",
+          "POST /advise",
+          "POST /study-plan",
+          "POST /teach",
+          "GET /research/:id",
+          "GET /insight"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/universityEngine.ts (233 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/universityEngine.ts (152 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "education/universityEngine.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
     "status": "COMPLETE"
   },
   {
@@ -9910,6 +10561,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "politics.spec.ts",
       "sessions54-60.spec.ts"
     ],
     "syntheticData": [],
