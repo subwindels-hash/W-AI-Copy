@@ -103,6 +103,9 @@ import { registerSustainabilityRoutes } from "./routes/sustainability.js";
 import { registerBiomedicalRoutes } from "./routes/biomedical.js";
 import { registerLegalRoutes } from "./routes/legal.js";
 import { registerEducationRoutes } from "./routes/education.js";
+import { registerCyberCloudAcademyRoutes } from "./routes/cyberCloudAcademy.js";
+import { registerUniversityRoutes } from "./routes/university.js";
+import { registerUniversityEngineRoutes } from "./routes/universityEngine.js";
 import { registerScientificRoutes } from "./routes/scientific.js";
 import { registerCognitiveRoutes } from "./routes/cognitive.js";
 import { registerCommandRoutes } from "./routes/command.js";
@@ -1063,6 +1066,27 @@ export function createApp() {
   v1.use("/education", eduRouter);
   eduRouter.use(authenticate);
   registerEducationRoutes(eduRouter);
+
+  // /cyber-cloud-academy — Lecturer AI teaching tracks (Cyber + Cloud)
+  // Mounted next to /education so both learners and security/cloud users can
+  // discover it; sessions themselves run through the Lecturer AI.
+  const ccaRouter = express.Router();
+  v1.use("/cyber-cloud-academy", ccaRouter);
+  ccaRouter.use(authenticate);
+  registerCyberCloudAcademyRoutes(ccaRouter);
+
+  // /university — University Education: full faculty + degree catalog taught
+  // by the Lecturer AI (bachelor / master / doctor + research).
+  const uniRouter = express.Router();
+  v1.use("/university", uniRouter);
+  uniRouter.use(authenticate);
+  registerUniversityRoutes(uniRouter);
+
+  // /education-engine — WINDELS Universal University & Higher Education Engine
+  const ueRouter = express.Router();
+  v1.use("/education-engine", ueRouter);
+  ueRouter.use(authenticate);
+  registerUniversityEngineRoutes(ueRouter);
 
   // /scientific — Session 68: Scientific Research
   const sciRouter = express.Router();
