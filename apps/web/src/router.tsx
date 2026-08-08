@@ -71,6 +71,7 @@ const BillingPage = lazy(() => import("./pages/billing/BillingPage").then((m) =>
 const PaymentGatewaysPage = lazy(() => import("./pages/billing/PaymentGatewaysPage").then((m) => ({ default: m.PaymentGatewaysPage })));
 const KnowledgePage = lazy(() => import("./pages/knowledge/KnowledgePage").then((m) => ({ default: m.KnowledgePage })));
 const ReligionsPage = lazy(() => import("./pages/religions/ReligionsPage").then((m) => ({ default: m.ReligionsPage })));
+const PoliticsPage = lazy(() => import("./pages/politics/PoliticsPage").then((m) => ({ default: m.PoliticsPage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
 const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
 const NotificationsPage = lazy(() => import("./pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
@@ -331,6 +332,7 @@ export const router = createBrowserRouter([
       { path: "payments", element: withSuspense(<PaymentGatewaysPage />) },
       { path: "knowledge", element: withSuspense(<KnowledgePage />) },
       { path: "religions", element: withSuspense(<ReligionsPage />) },
+      { path: "politics", element: withSuspense(<PoliticsPage />) },
       { path: "geo-billing", element: withSuspense(<GeoBillingConsolePage />) },
       { path: "commerce", element: withSuspense(<CommercePage />) },
       { path: "notifications", element: withSuspense(<NotificationsPage />) },

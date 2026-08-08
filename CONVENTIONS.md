@@ -1267,3 +1267,40 @@
   is unchanged by the safety layer; `ask` and `chat` intercept at the
   boundary, so the same curated, neutral content serves everyone while the
   safety posture is enforced consistently.
+
+### Session 144 — Global Politics, Government & Political History Intelligence System (`politics`)
+
+- **Module prefix:** `Politics*` types in `packages/shared/src/politics.ts`
+  (the module's first contract — ~1000 LOC incl. the fact-vs-opinion and
+  question engines), **`pol:upd` Redis keys** (org-scoped update engine, org
+  in the segment after the index marker), `/api/v1/politics` route prefix,
+  `apps/web/src/lib/politics.ts` client, `/app/politics` console + sidebar
+  "Politics & Government", and a `politics` entity type in Enterprise Search.
+- **INFORM, NOT MANIPULATE is structural (§24).** The comparison engine
+  attributes each country's constitutional facts and never ranks systems;
+  parties carry both their self-description and the academic
+  classification; the neutrality policy is a first-class record; the
+  console surfaces the note on every comparison.
+- **Fact vs opinion is an engine, not a disclaimer (§23).** Causal claims
+  ("X destroyed the economy") classify as *historical interpretation*, not
+  fact; value claims as *opinion*; accusations as *allegation*; the
+  classifier is exposed as an API and in the console so users can check any
+  claim.
+- **Current ≠ permanent (§21).** Every current office-holder record carries
+  `current_as_of` verification with `lastVerified` + `asOfDate`; the
+  current-info policy record explains the update path. The catalog never
+  pretends today's office-holder is a permanent fact.
+- **Never overwrite history (§28/§29).** The update engine stores change
+  requests with previous/new values, effective dates and §22-ladder
+  sources; applying (Super Admin only) writes a change-log entry and
+  leaves every historical record untouched — pinned by tests, including
+  "the historical record is unchanged after applying an update" and the
+  versioned `fieldHistory` trail.
+- **Election data is official-source-bound.** Vote totals and percentages
+  are recorded "per INEC" (or the equivalent official source) with the
+  disputes field carrying the opposition's challenges and their judicial
+  outcomes — never presented as one side's narrative.
+- **Scoring favors exact names over partials.** Word-boundary name matches
+  (+6) outrank name prefixes (+3), so "president" does not let election
+  records outrank the actual president; current_as_of records get a
+  current-office boost. Pinned by the §26 question tests.

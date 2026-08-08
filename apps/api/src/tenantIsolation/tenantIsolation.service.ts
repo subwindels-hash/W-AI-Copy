@@ -239,6 +239,10 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // knowledge by design — there is no organization segment at all.
   { prefix: "rel:sub", scope: "org_scoped" },
   { prefix: "rel:ext", scope: "shared" },
+  // Session 144 politics update engine: org-scoped change requests
+  // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
+  // the segment after the index marker (usg:evt/pay:tx shape).
+  { prefix: "pol:upd", scope: "org_scoped" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A

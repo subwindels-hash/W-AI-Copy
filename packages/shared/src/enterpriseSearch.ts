@@ -16,7 +16,7 @@ import { z } from "zod";
 export const ES_ENTITY_TYPES = [
   "contact", "company", "deal", "product", "supplier", "purchase_order",
   "sales_order", "message", "post", "comment", "ticket", "task", "project",
-  "artifact", "report", "knowledge", "religion",
+  "artifact", "report", "knowledge", "religion", "politics",
 ] as const;
 export type EsEntityType = (typeof ES_ENTITY_TYPES)[number];
 

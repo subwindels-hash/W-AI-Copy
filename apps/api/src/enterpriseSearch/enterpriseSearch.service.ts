@@ -254,6 +254,18 @@ export const EnterpriseSearchService = {
         }
         break;
       }
+      case "politics": {
+        // Session 144 — curated political knowledge (countries, leaders,
+        // parties, elections, ideologies, movements, organizations).
+        const { PoliticsService } = await import("../politics/politics.service.js");
+        for (const r of PoliticsService.listSearchable()) {
+          push(
+            { id: r.id, title: r.title, updatedAt: r.updatedAt, meta: r.meta },
+            [[r.title, 3], [r.body, 2], [r.meta, 1]]
+          );
+        }
+        break;
+      }
       case "religion": {
         // Session 141 — the curated religion knowledge catalog (families,
         // denominations, indigenous traditions, ancient religions). Static
@@ -410,6 +422,8 @@ export const EnterpriseSearchService = {
       knowledge: (await ik.IdentityKnowledgeService.listSearchable(org, { id: "", role: null })).length,
       // Session 141 — curated religion knowledge catalog (static count).
       religion: (await import("../religions/religions.service.js")).RELIGION_CATALOG.length,
+      // Session 144 — curated political knowledge catalog (static count).
+      politics: (await import("../politics/politics.service.js")).POLITICS_CATALOG.length,
     };
   },
 

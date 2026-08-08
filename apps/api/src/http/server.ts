@@ -45,6 +45,7 @@ import { registerGeoBillingRoutes } from "./routes/geoBilling.js";
 import { registerKnowledgeRoutes } from "./routes/knowledge.js";
 import { registerReligionsRoutes } from "./routes/religions.js";
 import { registerReligionsIntegrationsRoutes } from "./routes/religionsIntegrations.js";
+import { registerPoliticsRoutes } from "./routes/politics.js";
 import { registerEnterpriseRoutes } from "./routes/enterprise.js";
 import { registerDataPlatformRoutes } from "./routes/dataPlatform.js";
 import { registerGovernanceRoutes } from "./routes/governance.js";
@@ -335,6 +336,18 @@ export function createApp() {
   religionsIntegrationsRouter.use(authenticate);
   registerReligionsIntegrationsRoutes(religionsIntegrationsRouter);
   religionsRouter.use("/integrations", religionsIntegrationsRouter);
+
+  // /politics — Session 144: Global Politics, Government & Political History
+  // Intelligence System (country profiles, leaders, parties, elections,
+  // ministries, constitutions, ideologies, movements, international
+  // organizations, timelines, the fact-vs-opinion engine and the
+  // never-overwrite-history update engine). Catalog reads work for any
+  // authenticated member; updates are organization-scoped; applying updates
+  // is Super Admin only.
+  const politicsRouter = express.Router();
+  v1.use("/politics", politicsRouter);
+  politicsRouter.use(authenticate);
+  registerPoliticsRoutes(politicsRouter);
 
   // /enterprise (models, AI monitoring, plugins, integrations, SSO, org/white-label, + Session 18 governance/discovery/events/api-governance)
   const enterpriseRouter = express.Router();

@@ -115,6 +115,7 @@ const navItems = [
   { to: "/app/payments", icon: CreditCard, label: "Payment Gateways" },
   { to: "/app/knowledge", icon: BookOpen, label: "Global Knowledge" },
   { to: "/app/religions", icon: BookOpen, label: "World Religions" },
+  { to: "/app/politics", icon: Landmark, label: "Politics & Government" },
   { to: "/app/geo-billing", icon: Globe2, label: "Geo-Billing Engine" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },
   { to: "/app/cognitive", icon: Brain, label: "Cognitive / World Model" },

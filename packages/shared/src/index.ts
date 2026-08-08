@@ -140,6 +140,7 @@ export * from "./webhook.js";
 export * from "./payments.js";
 export * from "./knowledge.js";
 export * from "./religions.js";
+export * from "./politics.js";
 export * from "./geoBilling.js";
 export * from "./audit.js";
 export * from "./commerce.js";

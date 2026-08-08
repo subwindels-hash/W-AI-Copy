@@ -1242,6 +1242,7 @@
       "payments.spec.ts",
       "permissions.spec.ts",
       "platformServices.spec.ts",
+      "politics.spec.ts",
       "program.spec.ts",
       "promptTemplates.spec.ts",
       "publicApi.spec.ts",
@@ -4393,11 +4394,11 @@
       "serviceFile": {
         "file": "enterpriseSearch.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
-        "sloc": 427,
+        "sloc": 441,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1115,
+      "serviceTotalSloc": 1143,
       "serviceFiles": [
         "bootstrap.ts",
         "enterpriseSearch.service.ts",
@@ -8104,6 +8105,101 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "politics",
+    "title": "politics",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/politics",
+    "backend": {
+      "serviceDir": "apps/api/src/politics",
+      "serviceFile": {
+        "file": "politics.service.ts",
+        "path": "/home/user/WIN/apps/api/src/politics/politics.service.ts",
+        "sloc": 721,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 5301,
+      "serviceFiles": [
+        "politics.catalog.ts",
+        "politics.seed.countries.ts",
+        "politics.seed.ideas.ts",
+        "politics.seed.leaders.ts",
+        "politics.seed.nigeria.ts",
+        "politics.service.ts",
+        "politics.test.ts",
+        "politics/politics.service.ts"
+      ],
+      "importedServiceFiles": [
+        "politics/politics.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/politics.ts",
+        "sloc": 228,
+        "counts": {
+          "total": 21,
+          "GET": 14,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /kinds",
+          "GET /integrity",
+          "GET /search",
+          "GET /records/:id",
+          "GET /records/:id/history",
+          "POST /ask",
+          "POST /compare",
+          "POST /claim",
+          "GET /timeline/:countryId",
+          "GET /leaders/:countryId",
+          "GET /graph",
+          "GET /graph/:id",
+          "POST /graph/answer",
+          "GET /education/catalog",
+          "POST /quiz",
+          "POST /updates",
+          "GET /updates",
+          "GET /updates/:id",
+          "PATCH /updates/:id",
+          "GET /stats"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/politics.ts (912 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/politics.ts (195 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Membership",
+        "Message",
+        "Meeting",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "politics.spec.ts",
+      "politics/politics.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "program",
     "title": "Program Management (S25)",
     "sessions": [
@@ -9837,11 +9933,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 531,
+        "sloc": 535,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1238,
+      "serviceTotalSloc": 1246,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -10359,6 +10455,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "politics.spec.ts",
       "sessions54-60.spec.ts"
     ],
     "syntheticData": [],
