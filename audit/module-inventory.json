@@ -8803,11 +8803,11 @@
       "serviceFile": {
         "file": "religions.integrations.service.ts",
         "path": "/home/user/WIN/apps/api/src/religions/religions.integrations.service.ts",
-        "sloc": 384,
+        "sloc": 404,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 8710,
+      "serviceTotalSloc": 9382,
       "serviceFiles": [
         "religions.catalog.ts",
         "religions.integrations.service.ts",
@@ -8830,11 +8830,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/religions.ts",
-        "sloc": 165,
+        "sloc": 173,
         "counts": {
-          "total": 13,
+          "total": 14,
           "GET": 8,
-          "POST": 3,
+          "POST": 4,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
@@ -8846,6 +8846,7 @@
           "GET /search",
           "GET /records/:id",
           "GET /records/:id/teach",
+          "POST /safety",
           "POST /ask",
           "POST /compare",
           "POST /submissions",
@@ -8880,9 +8881,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/religions.ts (672 LOC)",
+    "sharedTypes": "packages/shared/src/religions.ts (777 LOC)",
     "web": {
-      "client": "apps/web/src/lib/religions.ts (326 LOC)",
+      "client": "apps/web/src/lib/religions.ts (341 LOC)",
       "pages": []
     },
     "db": {

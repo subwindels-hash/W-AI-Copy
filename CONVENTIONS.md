@@ -1241,3 +1241,29 @@
 - **The Lecturer AI handoff keeps facts in the catalog.** `POST /education/lesson` returns both the curated course and the adaptive tutor session; level mapping is explicit (research→advanced) and the note states that the catalog is the source of truth.
 - **The chat surface inherits the neutrality guarantee.** `POST /chat` reuses the religion question engine, so truth-claim questions get the policy answer and out-of-catalog questions get the honest no-match — the conversational channel cannot bypass the Session 141 neutrality rules.
 - **Route mounting is verified, not assumed.** Session 141's router mount silently failed to insert (anchor drift; unit tests exercise services directly, so they stayed green). Session 142 mounts both routers and the fix is pinned by the inventory route count — future route-file additions must assert the mount exists in `server.ts`.
+
+### Session 143 — Religion Coverage Completion & AI Response Safety (`religions`)
+
+- **Spec audit before new work.** When a spec is re-sent after implementation,
+  the correct response is a line-by-line audit against the shipped catalog —
+  this session found and closed 12 genuine gaps (five §3 ancient religions,
+  Mu'tazila, a regional Islamic tradition, two Jewish tradition records,
+  modern Hindu movements, Anekantavada, Sikh movements) that a "done"
+  verdict would have missed. Every new record follows the same §12 structure
+  and integrity rules as the originals.
+- **§19 safety is narrow and conservative, by design.** `classifyReligionResponseSafety`
+  flags only clear hate speech (calls to harm, dehumanization, slurs, blanket
+  "X religion is evil") and blanket discrimination ("all X are …", ban/remove
+  calls). Educational questions, criticism, theology, personal faith and
+  history are never flagged — over-blocking would itself violate §19's
+  requirement that "educational discussion of religion should remain
+  available". The taxonomy is pinned by tests on both sides (flagged and
+  never-flagged).
+- **Refusals are educational, not preachy.** The safety-refused answer names
+  the policy record (`pol.response-safety`), states that educational
+  discussion remains available, and offers follow-ups — the refusal is itself
+  a teaching turn.
+- **The classifier is enforced at the surfaces, not the data.** The catalog
+  is unchanged by the safety layer; `ask` and `chat` intercept at the
+  boundary, so the same curated, neutral content serves everyone while the
+  safety posture is enforced consistently.

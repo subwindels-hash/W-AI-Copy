@@ -54,7 +54,8 @@ import {
   syncReligionsMemory,
   teachReligion,
 } from "@/lib/religions";
-import type { ReligionChatTurn } from "@/lib/religions";
+import type { ReligionChatTurn, ReligionSafetyClassification } from "@/lib/religions";
+import { classifyReligionSafety } from "@/lib/religions";
 import type {
   ReligionAskResponse,
   ReligionCatalogMeta,
@@ -252,6 +253,8 @@ export function ReligionsPage() {
   const [eduLesson, setEduLesson] = useState<any>(null);
   const [chatQ, setChatQ] = useState("What do different religions teach about the afterlife?");
   const [chatTurn, setChatTurn] = useState<ReligionChatTurn | null>(null);
+  const [safetyText, setSafetyText] = useState("kill all Muslims");
+  const [safetyResult, setSafetyResult] = useState<ReligionSafetyClassification | null>(null);
 
   const loadIntegrations = useCallback(async () => {
     setIntegrationOverview(await getReligionsIntegrationsOverview().catch(() => null));
@@ -317,6 +320,10 @@ export function ReligionsPage() {
   const runChat = useCallback(async () => {
     setChatTurn(await chatReligion({ question: chatQ, level }).catch(() => null));
   }, [chatQ, level]);
+
+  const runSafety = useCallback(async () => {
+    setSafetyResult(await classifyReligionSafety(safetyText).catch(() => null));
+  }, [safetyText]);
 
   return (
     <div className="space-y-6">
@@ -788,6 +795,27 @@ export function ReligionsPage() {
                       <div className="text-xs text-text-muted">Q: {eduLesson.lecturer.question.stem}</div>
                     )}
                     <div className="text-xs text-text-muted">{eduLesson.note}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Response safety (§19)</CardTitle>
+                <CardDescription>
+                  WINDELS distinguishes education, advice, theology, personal faith, history and criticism from discrimination and hate speech. Educational discussion — including criticism — stays available; hateful content is refused with a respectful redirect.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex gap-2">
+                  <Input value={safetyText} onChange={(e) => setSafetyText(e.target.value)} placeholder="Check a message…" onKeyDown={(e) => e.key === "Enter" && runSafety()} />
+                  <Button onClick={runSafety} className="shrink-0"><ShieldCheck className="w-4 h-4 mr-1" /> Check</Button>
+                </div>
+                {safetyResult && (
+                  <div className={`rounded-lg border p-3 text-sm ${safetyResult.isHateful || safetyResult.isDiscriminatory ? "border-rose-500/40 bg-rose-500/10 text-rose-200" : "border-emerald-500/30 bg-emerald-500/10 text-emerald-200"}`}>
+                    <div className="font-medium">{safetyResult.category.replace(/_/g, " ")}{safetyResult.isHateful ? " — refused" : safetyResult.isDiscriminatory ? " — refused" : " — allowed"}</div>
+                    <div className="text-xs mt-1">{safetyResult.explanation}</div>
                   </div>
                 )}
               </CardContent>

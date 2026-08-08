@@ -19,6 +19,7 @@ import { logger } from "../config/logger.js";
 import { AppError } from "../utils/result.js";
 import {
   classifyReligionQuestion,
+  classifyReligionResponseSafety,
   compareReligions,
   renderReligionAtLevel,
   RELIGION_COMPARISON_CATEGORIES,
@@ -221,6 +222,34 @@ export const ReligionsService = {
   async ask(orgId: string | null, input: ReligionAskInput) {
     const question = input.question.trim();
     const classification = classifyReligionQuestion(question);
+
+    // §19 response safety: refuse hate speech and blanket religious
+    // discrimination with a respectful, educational redirect. Educational
+    // discussion — including criticism and history — passes through.
+    const safety = classifyReligionResponseSafety(question);
+    if (safety.isHateful || safety.isDiscriminatory) {
+      const policy = this.getRecord("pol.response-safety");
+      return {
+        question,
+        intent: classification,
+        mode: "safety_refused",
+        level: input.level ?? "intermediate",
+        matches: policy
+          ? [
+              {
+                id: policy.id,
+                name: policy.name,
+                summary: policy.summary,
+                sections: renderReligionAtLevel(policy, input.level ?? "intermediate").sections,
+                sources: policy.sources,
+                confidence: policy.confidence,
+              },
+            ]
+          : [],
+        safety,
+        note: `I cannot generate content that ${safety.isHateful ? "targets people with hate speech" : "blanket-condemns a religion or its followers"}. Educational discussion of any religion — including respectful criticism and historical study — remains fully available.`,
+      };
+    }
     const level = input.level ?? "intermediate";
     const limit = input.limit ?? 5;
 
@@ -302,6 +331,11 @@ export const ReligionsService = {
         ? "I do not have sufficient verified knowledge about this tradition in the religion catalog. It may be a local tradition not yet documented here — the catalog expands through the ten-step submission process."
         : undefined,
     };
+  },
+
+  /** §19: classify the safety posture of a religion-related message. */
+  classifySafety(text: string) {
+    return classifyReligionResponseSafety(text);
   },
 
   /** Find records whose names appear in the question text (for comparisons). */

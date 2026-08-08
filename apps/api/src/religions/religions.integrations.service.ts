@@ -27,6 +27,7 @@ import { AppError } from "../utils/result.js";
 import {
   RELIGION_CATALOG_VERSION,
 } from "./religions.catalog.js";
+import { classifyReligionResponseSafety } from "@windels/shared";
 import {
   ReligionsService,
   RELIGION_CATALOG,
@@ -305,6 +306,25 @@ export const ReligionsIntegrationsService = {
     note?: string;
   }> {
     const level = input.level ?? "intermediate";
+
+    // §19: the chat surface inherits the safety guard.
+    const safety = classifyReligionResponseSafety(input.question);
+    if (safety.isHateful || safety.isDiscriminatory) {
+      return {
+        channel: "chat",
+        role: "assistant",
+        question: input.question,
+        intent: { intent: "general", confidence: 0.05, matchedRules: [], explanation: safety.explanation },
+        mode: "safety_refused",
+        level,
+        answer: `I cannot generate content that ${safety.isHateful ? "targets people with hate speech" : "blanket-condemns a religion or its followers"}. Educational discussion of any religion — including respectful criticism and historical study — remains fully available. What would you like to understand about a tradition?`,
+        sections: [],
+        sources: [],
+        confidence: null,
+        followUp: ["What is Christianity?", "What is Islam?", "How do the major religions compare?"],
+      };
+    }
+
     const res = await ReligionsService.ask(orgId, { question: input.question, level, limit: 3 });
     const top = res.matches[0];
 

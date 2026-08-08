@@ -669,3 +669,108 @@ export const ReligionSubmissionsQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 export type ReligionSubmissionsQuery = z.input<typeof ReligionSubmissionsQuerySchema>;
+
+/* ────────────────────────────────────────────────────────────────────────────
+ * AI Response Safety (§19) — distinguish education/advice/theology/faith/
+ * history/criticism from discrimination and hate speech.
+ *
+ * The classifier is deliberately narrow and conservative: it flags only
+ * clear hate speech and blanket religious discrimination (slurs, calls to
+ * harm, dehumanization, blanket condemnation of a whole religion or its
+ * followers). Everything else — including religious criticism and historical
+ * discussion — passes through to the normal question engine. Educational
+ * discussion of religion remains available; the system never generates
+ * hateful content targeting people because of their religion.
+ * ──────────────────────────────────────────────────────────────────────────── */
+
+export const RELIGION_SAFETY_CATEGORIES = [
+  "religious_education",      // "What is Christianity?"
+  "religious_advice",         // "How should I pray?" / practice guidance
+  "theology",                 // doctrinal discussion and argument
+  "personal_faith",           // "I am a Muslim and I believe…"
+  "historical_information",   // "What happened during the Crusades?"
+  "religious_criticism",      // "I think this doctrine is wrong because…"
+  "religious_discrimination", // blanket condemnation of a religion/its people
+  "hate_speech",              // slurs, calls to harm, dehumanization
+] as const;
+export type ReligionSafetyCategory = (typeof RELIGION_SAFETY_CATEGORIES)[number];
+
+export interface ReligionSafetyClassification {
+  category: ReligionSafetyCategory;
+  isHateful: boolean;         // hate speech (slurs, calls to harm, dehumanization)
+  isDiscriminatory: boolean;  // blanket condemnation of a religion or its followers
+  matchedPatterns: string[];
+  explanation: string;
+}
+
+/** Groups/religions whose members are the targets of religious hatred. */
+const SAFETY_TARGETS = [
+  "muslims?", "jews", "christians?", "hindus?", "buddhists?", "sikhs?",
+  "jains?", "yazidis?", "bahá", "atheists?", "pagans?", "zoroastrians?",
+  "catholics?", "protestants?", "sunnis?", "shia", "shias?", "mormons?",
+  "jewish people", "muslim people", "christian people", "people of faith",
+  "believers?", "nonbelievers?", "non-believers?",
+] as const;
+
+/** Unambiguous religious slurs / dehumanizing terms. */
+const SAFETY_SLURS = [
+  "kike", "raghead", "towelhead", "muzzie", "muzzie", "christ-killer",
+  "christkiller", "heathen scum", "infidel scum", "devil worshippers?",
+  "satan worshippers?", "jew pigs?", "muslim pigs?", "christian pigs?",
+] as const;
+
+const SAFETY_HATE_PATTERNS: Array<{ label: string; re: RegExp }> = [
+  // Calls to harm a group
+  { label: "call_to_harm", re: /\b(kill|exterminate|destroy|burn|hang|shoot|slaughter|gas|bomb|behead|stone|hunt)\b[^.!?]{0,80}\b(all|every|any|the)\b[^.!?]{0,40}(muslims?|jews|christians?|hindus?|buddhists?|sikhs?|yazidis?|atheists?|pagans?|believers?|nonbelievers?)/i },
+  { label: "harm_call_reversed", re: /\b(all|every|the)\b[^.!?]{0,40}(muslims?|jews|christians?|hindus?|buddhists?|sikhs?|yazidis?|atheists?|pagans?|believers?|nonbelievers?)[^.!?]{0,40}\b(kill|exterminate|destroy|burn|hang|shoot|slaughter|gas|bomb|behead|stone|hunt)\b/i },
+  // Dehumanization of a group
+  { label: "dehumanization", re: /\b(all|most|every|these|those)\b[^.!?]{0,30}(muslims?|jews|christians?|hindus?|buddhists?|sikhs?|yazidis?|atheists?|pagans?|believers?|nonbelievers?|catholics?|protestants?|mormons?)[^.!?]{0,30}\b(are|is)\b[^.!?]{0,40}\b(subhuman|vermin|scum|parasites?|dogs|rats?|pigs?|garbage|trash|animals|beasts|monsters|disease|cancer|plague)\b/i },
+  // Blanket condemnation of a whole religion as evil
+  { label: "religion_blanket_evil", re: /\b(islam|judaism|christianity|hinduism|buddhism|sikhism|jainism|the (qur|kor)an|the bible|the torah|the talmud)\b[^.!?]{0,50}\b(is|are)\b[^.!?]{0,40}\b(evil|of the devil|satanic|a curse|a plague|worthless|garbage|trash|vile|disgusting|an abomination|(the|a) religion of (evil|hatred|terror|violence|murder))\b/i },
+  { label: "religion_blanket_evil_reversed", re: /\b(evil|of the devil|satanic|a curse|a plague|worthless|garbage|trash|vile|disgusting|an abomination)\b[^.!?]{0,50}\b(islam|judaism|christianity|hinduism|buddhism|sikhism|jainism)\b/i },
+];
+
+const SAFETY_DISCRIMINATION_PATTERNS: Array<{ label: string; re: RegExp }> = [
+  // "all X are …" blanket statements about people of a religion
+  { label: "blanket_all_are", re: /\b(all|every|most)\b[^.!?]{0,30}(muslims?|jews|christians?|hindus?|buddhists?|sikhs?|yazidis?|atheists?|pagans?|believers?|nonbelievers?|catholics?|protestants?|mormons?)[^.!?]{0,30}\b(are|is)\b[^.!?]{0,60}\b(evil|stupid|ignorant|backward|savages?|barbaric|brainwashed|dangerous|criminals?|terrorists?|liars?|thieves?|inferior|subhuman|animals)\b/i },
+  // "get rid of / ban all X"
+  { label: "ban_or_remove_group", re: /\b(get rid of|ban|remove|expel|deport|exclude|erase)\b[^.!?]{0,40}\b(all|every|the)\b[^.!?]{0,40}(muslims?|jews|christians?|hindus?|buddhists?|sikhs?|yazidis?|atheists?|pagans?|believers?|nonbelievers?)/i },
+  // slurs by themselves
+  { label: "slur", re: new RegExp(`\\b(${SAFETY_SLURS.join("|")})\\b`, "i") },
+];
+
+/**
+ * Classify the safety posture of a religion-related message (§19).
+ * Deterministic. Only clear hate speech and blanket discrimination are
+ * flagged; criticism, theology, personal faith and education pass through.
+ */
+export function classifyReligionResponseSafety(text: string): ReligionSafetyClassification {
+  const normalized = normalizeReligionText(text);
+  const matchedPatterns: string[] = [];
+
+  for (const p of SAFETY_HATE_PATTERNS) {
+    if (p.re.test(text)) matchedPatterns.push(`hate:${p.label}`);
+  }
+  for (const p of SAFETY_DISCRIMINATION_PATTERNS) {
+    if (p.re.test(text)) matchedPatterns.push(`discrimination:${p.label}`);
+  }
+
+  const isHateful = matchedPatterns.some((m) => m.startsWith("hate:"));
+  const isDiscriminatory = matchedPatterns.some((m) => m.startsWith("discrimination:"));
+
+  let category: ReligionSafetyCategory;
+  if (isHateful) category = "hate_speech";
+  else if (isDiscriminatory) category = "religious_discrimination";
+  else if (/i (am|'m) (a )?(muslim|christian|jew|jewish|hindu|buddhist|sikh|jain|atheist|pagan)/i.test(text)) category = "personal_faith";
+  else if (/\b(advice|should i|how (do|should) i (pray|worship|meditate|celebrate|observe))\b/i.test(text)) category = "religious_advice";
+  else if (/\b(criticism|criticize|critique|disagree|i think .* (wrong|mistaken|incorrect))\b/i.test(text)) category = "religious_criticism";
+  else if (/\b(history|historically|in (the )?(medieval|ancient|modern) (era|period)|during|war|crusades|inquisition)\b/i.test(text)) category = "historical_information";
+  else if (/\b(theology|theological|doctrine|doctrinal|exegesis|hermeneutics)\b/i.test(text)) category = "theology";
+  else category = "religious_education";
+
+  const explanation = isHateful || isDiscriminatory
+    ? `Flagged as ${category} — WINDELS does not generate hateful or discriminatory content targeting people because of their religion (§19). Educational discussion of the tradition remains available.`
+    : `Classified as ${category}; educational religious discussion is available.`;
+
+  return { category, isHateful, isDiscriminatory, matchedPatterns, explanation };
+}

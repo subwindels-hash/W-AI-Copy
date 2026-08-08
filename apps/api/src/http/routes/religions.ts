@@ -39,6 +39,7 @@ import {
 } from "@windels/shared";
 
 const IdParam = z.object({ id: z.string().min(1).max(64) });
+const IntentRequestLike = z.object({ text: z.string().min(1).max(500) });
 const TeachQuery = z.object({ level: z.enum(["beginner", "intermediate", "advanced", "research"]).default("intermediate") });
 
 export function registerReligionsRoutes(router: Router) {
@@ -93,6 +94,13 @@ export function registerReligionsRoutes(router: Router) {
   });
 
   /* ── Engines ───────────────────────────────────────────────────────── */
+
+  router.post("/safety", validate({ body: IntentRequestLike }), async (req, res, next) => {
+    try {
+      const data = ReligionsService.classifySafety(req.body.text);
+      res.json({ ok: true, data, meta: meta(req) });
+    } catch (e) { next(e); }
+  });
 
   router.post("/ask", validate({ body: ReligionAskSchema }), async (req, res, next) => {
     try {

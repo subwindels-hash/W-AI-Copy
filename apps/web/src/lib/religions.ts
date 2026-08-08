@@ -323,3 +323,18 @@ export function startReligionLesson(recordId: string, level: ReligionLevel): Pro
 export function chatReligion(input: { question: string; level?: ReligionLevel }): Promise<ReligionChatTurn> {
   return api<ReligionChatTurn>("/religions/integrations/chat", { method: "POST", json: input });
 }
+
+/* ── Session 143 — §19 response safety ──────────────────────────────────── */
+
+export interface ReligionSafetyClassification {
+  category: "religious_education" | "religious_advice" | "theology" | "personal_faith" | "historical_information" | "religious_criticism" | "religious_discrimination" | "hate_speech";
+  isHateful: boolean;
+  isDiscriminatory: boolean;
+  matchedPatterns: string[];
+  explanation: string;
+}
+
+/** Classify the safety posture of a religion-related message (§19). */
+export function classifyReligionSafety(text: string): Promise<ReligionSafetyClassification> {
+  return api<ReligionSafetyClassification>("/religions/safety", { method: "POST", json: { text } });
+}

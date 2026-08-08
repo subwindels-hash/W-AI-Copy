@@ -12,6 +12,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   classifyReligionQuestion,
+  classifyReligionResponseSafety,
   compareReligions,
   renderReligionAtLevel,
   RELIGION_COMPARISON_CATEGORIES,
@@ -441,5 +442,119 @@ describe("Search, stats & searchability", () => {
       const text = JSON.stringify({ ...r, sources: undefined });
       expect(text, r.id).not.toMatch(/(is|are) (the )?(one )?(true|superior) (religion|faith)/i);
     }
+  });
+});
+
+describe("Session 143 — spec coverage completion (§3/§5/§6/§7/§9/§10)", () => {
+  it("covers the remaining §3 ancient religions named in the spec", () => {
+    const ids = new Set(RELIGION_CATALOG.map((r) => r.id));
+    for (const id of ["anc.akkadian", "anc.iranian", "anc.armenian", "anc.arabian", "anc.hittite"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    // And they are real, sourced records, not stubs.
+    for (const id of ["anc.akkadian", "anc.iranian", "anc.armenian", "anc.arabian", "anc.hittite"]) {
+      const r = ReligionsService.getRecord(id)!;
+      expect(r.summary.length).toBeGreaterThan(60);
+      expect(r.simple.length).toBeGreaterThan(40);
+      expect((r.sources ?? []).length).toBeGreaterThan(0);
+    }
+  });
+
+  it("covers §5 historical Islamic schools and §6 Jewish traditions", () => {
+    const ids = new Set(RELIGION_CATALOG.map((r) => r.id));
+    for (const id of ["sch.mutazila", "den.west-african-islam", "den.jewish-regional", "den.jewish-movements"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const mutazila = ReligionsService.getRecord("sch.mutazila")!;
+    expect(mutazila.status).toBe("historical");
+    expect(mutazila.indigenousNames[0]!.name).toContain("المعتزلة");
+  });
+
+  it("covers §7 modern Hindu movements, §9 Jain philosophy, §10 Sikh movements", () => {
+    const ids = new Set(RELIGION_CATALOG.map((r) => r.id));
+    for (const id of ["den.modern-hindu", "sch.anekantavada", "den.sikh-movements"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const modern = ReligionsService.getRecord("den.modern-hindu")!;
+    expect(modern.branches.join(" ")).toContain("ISKCON");
+  });
+
+  it("the catalog integrity report stays clean with the additions", () => {
+    const report = ReligionsService.integrity();
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual([]);
+  });
+
+  it("the catalog meta reflects the larger catalog without claiming a fixed count", () => {
+    const meta = ReligionsService.catalogMeta();
+    expect(meta.recordCount).toBeGreaterThan(140);
+    expect(meta.expansionNote).toContain("no fixed target size");
+  });
+});
+
+describe("Session 143 — AI response safety (§19)", () => {
+  it("classifies the spec's seven categories", () => {
+    expect(classifyReligionResponseSafety("What is Christianity?").category).toBe("religious_education");
+    expect(classifyReligionResponseSafety("How should I pray?").category).toBe("religious_advice");
+    expect(classifyReligionResponseSafety("The doctrine of the Trinity is contested theologically.").category).toBe("theology");
+    expect(classifyReligionResponseSafety("I am a Muslim and I believe in one God.").category).toBe("personal_faith");
+    expect(classifyReligionResponseSafety("What happened during the Crusades historically?").category).toBe("historical_information");
+    expect(classifyReligionResponseSafety("I think this doctrine is wrong because it contradicts reason.").category).toBe("religious_criticism");
+  });
+
+  it("flags hate speech and blanket discrimination", () => {
+    const hate = classifyReligionResponseSafety("kill all Muslims");
+    expect(hate.isHateful).toBe(true);
+    expect(hate.category).toBe("hate_speech");
+    const dehumanize = classifyReligionResponseSafety("all Jews are vermin");
+    expect(dehumanize.isHateful).toBe(true);
+    // Blanket condemnation of a whole religion as evil is hateful toward its people.
+    const blanket = classifyReligionResponseSafety("Judaism is evil and worthless");
+    expect(blanket.isHateful).toBe(true);
+    expect(blanket.category).toBe("hate_speech");
+    // People-level blanket statements are discrimination (not dehumanizing slurs).
+    const disc = classifyReligionResponseSafety("All Muslims are terrorists");
+    expect(disc.isDiscriminatory).toBe(true);
+    expect(disc.isHateful).toBe(false);
+    expect(disc.category).toBe("religious_discrimination");
+  });
+
+  it("never flags educational or critical questions", () => {
+    for (const q of [
+      "What is Islam?",
+      "Why do people follow different religions?",
+      "Is Islam violent? (a historical question about interpretations)",
+      "I disagree with the doctrine of X because of reason.",
+      "What do Yoruba traditional beliefs teach?",
+      "Who was the founder of Buddhism?",
+    ]) {
+      const c = classifyReligionResponseSafety(q);
+      expect(c.isHateful, q).toBe(false);
+      expect(c.isDiscriminatory, q).toBe(false);
+    }
+  });
+
+  it("ask() refuses hate with the safety policy and keeps education available", async () => {
+    const res = await ReligionsService.ask(null, { question: "kill all Christians" });
+    expect(res.mode).toBe("safety_refused");
+    expect(res.safety.isHateful).toBe(true);
+    expect(res.matches[0]!.id).toBe("pol.response-safety");
+    expect(res.note).toContain("Educational discussion");
+    // And ordinary educational questions still work:
+    const ok = await ReligionsService.ask(null, { question: "What is Christianity?" });
+    expect(ok.mode).toBe("teach");
+  });
+
+  it("ask() refuses blanket discrimination with the safety policy", async () => {
+    const res = await ReligionsService.ask(null, { question: "All Muslims are terrorists" });
+    expect(res.mode).toBe("safety_refused");
+    expect(res.safety.isDiscriminatory).toBe(true);
+    expect(res.note).toContain("Educational discussion");
+  });
+
+  it("the pol.response-safety policy record exists and is the refusal reference", () => {
+    const policy = ReligionsService.getRecord("pol.response-safety")!;
+    expect(policy.category).toBe("policy");
+    expect(policy.simple).toContain("hateful");
   });
 });
