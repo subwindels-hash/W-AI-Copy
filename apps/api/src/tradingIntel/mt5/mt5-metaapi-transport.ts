@@ -74,7 +74,7 @@ export class Mt5MetaApiTransport extends EventEmitter {
     };
     const res = await this.authFetch(`/users/current/accounts`, { "content-type": "application/json" }, { method: "POST", body: JSON.stringify(body) });
     if (!res.ok) throw new Error(`MetaApi provision failed: ${res.status} ${await res.text()}`);
-    const data = await res.json();
+    const data: any = await res.json();
     const metaAccountId = data._id || data.id;
     this.accountMap.set(accountId, metaAccountId);
     return metaAccountId;
@@ -118,7 +118,7 @@ export class Mt5MetaApiTransport extends EventEmitter {
         // Wait up to 30s for connection to terminal.
         const deadline = Date.now() + 30_000;
         while (Date.now() < deadline) {
-          const r = await (await this.authFetch(`/users/current/accounts/${id}`, {}, { method: "GET" })).json();
+          const r: any = await (await this.authFetch(`/users/current/accounts/${id}`, {}, { method: "GET" })).json();
           if (r.state === "DEPLOYED" && r.connectionStatus === "CONNECTED") {
             this.accountMap.set(params.accountId, id);
             return { ok: true, data: { metaAccountId: id, connected: true } };
@@ -163,21 +163,21 @@ export class Mt5MetaApiTransport extends EventEmitter {
         return { ok: true, data: r };
       }
       case "send_order": {
-        const r = await this.authFetch(`${base}/trade`, { "content-type": "application/json" }, { method: "POST", body: JSON.stringify(params.order) });
-        const body = await r.json();
-        if (!r.ok) return { ok: false, error: body.message || `MetaApi trade ${r.status}` };
+        const resp = await this.authFetch(`${base}/trade`, { "content-type": "application/json" }, { method: "POST", body: JSON.stringify(params.order) });
+        const body: any = await resp.json();
+        if (!resp.ok) return { ok: false, error: body.message || `MetaApi trade ${resp.status}` };
         return { ok: true, data: body };
       }
       case "close_position": {
-        const r = await this.authFetch(`${base}/positions/${params.ticket}/close`, { "content-type": "application/json" }, { method: "POST", body: JSON.stringify({ volume: params.volume }) });
-        const body = await r.json();
-        if (!r.ok) return { ok: false, error: body.message || "close failed" };
+        const resp = await this.authFetch(`${base}/positions/${params.ticket}/close`, { "content-type": "application/json" }, { method: "POST", body: JSON.stringify({ volume: params.volume }) });
+        const body: any = await resp.json();
+        if (!resp.ok) return { ok: false, error: body.message || "close failed" };
         return { ok: true, data: body };
       }
       case "modify_position": {
-        const r = await this.authFetch(`${base}/positions/${params.ticket}`, { "content-type": "application/json" }, { method: "PATCH", body: JSON.stringify({ stopLoss: params.sl, takeProfit: params.tp }) });
-        const body = await r.json();
-        if (!r.ok) return { ok: false, error: body.message || "modify failed" };
+        const resp = await this.authFetch(`${base}/positions/${params.ticket}`, { "content-type": "application/json" }, { method: "PATCH", body: JSON.stringify({ stopLoss: params.sl, takeProfit: params.tp }) });
+        const body: any = await resp.json();
+        if (!resp.ok) return { ok: false, error: body.message || "modify failed" };
         return { ok: true, data: body };
       }
       case "subscribe_ticks": {

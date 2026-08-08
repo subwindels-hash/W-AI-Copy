@@ -101,10 +101,10 @@ class FakeMt5Transport extends EventEmitter {
   pushTick(aid: string, tick: BrokerTick) { this.emit("tick", aid, tick); }
 }
 
-function makeConnector() { return new Mt5Connector(); }
-function patchWithFake(connector: Mt5Connector, fake: FakeMt5Transport) {
-  (connector as any).buildHandle = () => fake;
-  (connector as any).pickTransport = () => "native_python_zmq";
+function makeConnector() { return new (Mt5Connector as any)(); }
+function patchWithFake(connector: any, fake: FakeMt5Transport) {
+  connector.buildHandle = () => fake;
+  connector.pickTransport = () => "native_python_zmq";
 }
 
 beforeEach(() => {

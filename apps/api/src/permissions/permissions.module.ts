@@ -30,55 +30,26 @@ import {
   revokePermission as coreRevokePermission,
   ensureRolePermissions,
 } from "../services/permissions.service.js";
-import type { Permission } from "@prisma/client";
-import type { Prisma } from "@prisma/client";
+import { Permission } from "@prisma/client";
 
 // ─── Permission List ─────────────────────────────────────────────────────────
 
-export const ALL_PERMISSIONS = [
-  // Organization
-  "ORG_READ",
-  "ORG_WRITE",
-  "ORG_ADMIN",
-  // Workflow
-  "WORKFLOW_READ",
-  "WORKFLOW_WRITE",
-  "WORKFLOW_RUN",
-  // Agents
-  "AGENT_READ",
-  "AGENT_WRITE",
-  // Talk
-  "TALK_READ",
-  "TALK_WRITE",
-  // Canvas
-  "CANVAS_READ",
-  "CANVAS_WRITE",
-  // Billing
-  "BILLING_READ",
-  "BILLING_WRITE",
-  // Developer
-  "DEVELOPER_READ",
-  "DEVELOPER_WRITE",
-  // Audit
-  "AUDIT_READ",
-  // Admin
-  "ADMIN_STAR",
-] as const;
+export { Permission };
 
-export type Permission = (typeof ALL_PERMISSIONS)[number];
+export const ALL_PERMISSIONS = Object.values(Permission);
 
 // ─── Permission Categories ───────────────────────────────────────────────────
 
 export const PERMISSION_CATEGORIES = {
-  organization: ["ORG_READ", "ORG_WRITE", "ORG_ADMIN"] as Permission[],
-  workflow: ["WORKFLOW_READ", "WORKFLOW_WRITE", "WORKFLOW_RUN"] as Permission[],
-  agents: ["AGENT_READ", "AGENT_WRITE"] as Permission[],
-  talk: ["TALK_READ", "TALK_WRITE"] as Permission[],
-  canvas: ["CANVAS_READ", "CANVAS_WRITE"] as Permission[],
-  billing: ["BILLING_READ", "BILLING_WRITE"] as Permission[],
-  developer: ["DEVELOPER_READ", "DEVELOPER_WRITE"] as Permission[],
-  audit: ["AUDIT_READ"] as Permission[],
-  admin: ["ADMIN_STAR"] as Permission[],
+  organization: [Permission.ORG_READ, Permission.ORG_WRITE, Permission.ORG_ADMIN],
+  workflow: [Permission.WORKFLOW_READ, Permission.WORKFLOW_WRITE, Permission.WORKFLOW_RUN],
+  agents: [Permission.AGENT_READ, Permission.AGENT_WRITE],
+  talk: [Permission.TALK_READ, Permission.TALK_WRITE],
+  canvas: [Permission.CANVAS_READ, Permission.CANVAS_WRITE],
+  billing: [Permission.BILLING_READ, Permission.BILLING_WRITE],
+  developer: [Permission.DEVELOPER_READ, Permission.DEVELOPER_WRITE],
+  audit: [Permission.AUDIT_READ],
+  admin: [Permission.ADMIN_STAR],
 } as const;
 
 // ─── Permissions Module API ──────────────────────────────────────────────────
@@ -103,7 +74,12 @@ export const permissionsModule = {
       resourceId: string | null;
     }>;
   }> {
-    return coreListPermissions(userId);
+    const res = await coreListPermissions(userId);
+    return {
+      role: res.role,
+      permissions: res.permissions as Permission[],
+      grants: res.grants as any,
+    };
   },
 
   /**
@@ -137,8 +113,16 @@ export const permissionsModule = {
    */
   getPermissionCatalog(): Record<string, Permission[]> {
     return {
-      ...PERMISSION_CATEGORIES,
-      all: [...ALL_PERMISSIONS] as Permission[],
+      organization: [...PERMISSION_CATEGORIES.organization],
+      workflow: [...PERMISSION_CATEGORIES.workflow],
+      agents: [...PERMISSION_CATEGORIES.agents],
+      talk: [...PERMISSION_CATEGORIES.talk],
+      canvas: [...PERMISSION_CATEGORIES.canvas],
+      billing: [...PERMISSION_CATEGORIES.billing],
+      developer: [...PERMISSION_CATEGORIES.developer],
+      audit: [...PERMISSION_CATEGORIES.audit],
+      admin: [...PERMISSION_CATEGORIES.admin],
+      all: [...ALL_PERMISSIONS],
     };
   },
 
