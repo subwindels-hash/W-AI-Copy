@@ -1431,3 +1431,45 @@
   integrity report caught nothing else because the seed was written with
   the pre-computed ID list, but the audit seed's 103 records were still
   verified record-by-record via `getRecord` + ask smoke tests.
+
+### Session 149 — Spec A Re-Audit Closure (§6–§9, `knowledge`)
+
+- **A fourth send of the S140 spec produced a smaller but real gap list.**
+  The audit loop never assumes the previous session was complete: this pass
+  found 13 unresolved items (religion-origin event, president-taking-office
+  event, technology-popularity event, towns/villages, businesses, country
+  and political-system comparisons, vocational education, postgraduate
+  degrees) that S147/S148 had not covered. Every re-send gets the full
+  walk, and the gap list shrinks only because the walk is honest.
+- **Spec example questions are answerable, and the answer must be the
+  right record.** "When did this religion begin?" previously surfaced the
+  Edict of Milan (313 CE — legalization, not origin); the fix was a
+  dedicated `when.christianity` event whose misconception section teaches
+  the origin-vs-legalization distinction. A match that is merely close is
+  an audit failure; the probe question must resolve to the intended
+  record.
+- **Single-token questions need the token in the title.** The ask() scorer
+  gives +2 for a title token and +1 for a text token with an if/else, so a
+  record whose key term lives only in aliases/text (e.g. "phd") scores 1
+  and is filtered (`score < 2`). "What is a PhD?" returned NO MATCH until
+  the title became "Doctorate (PhD) and master's degrees". Lesson: for
+  every alias a user might ask alone, consider whether the title carries
+  it.
+- **Cross-module coverage is documented, not duplicated.** "Religions as
+  an academic comparison" is implemented by the `religions` module's
+  18-category `compareReligions` (S141/S143); the knowledge audit records
+  that as covered rather than re-implementing it. The new country and
+  political-system comparisons are genuinely in-scope for the knowledge
+  comparison engine, so they were added with labeled profiles and
+  no-winner framing — and the country comparison explicitly notes its
+  statistics are dynamic.
+- **Comparison records for contested topics carry framing in the record,
+  not just in the engine.** `cmp.presidential-vs-parliamentary` says
+  "not an endorsement of any system or country" inside its guidance
+  section, and `cmp.nigeria-vs-kenya` carries a verificationNote — the
+  neutrality discipline is content-level, because the engine's generic
+  no-winner note is not enough for politically sensitive comparisons.
+- **Version assertions in tests track catalog versions.** The S148 test
+  pinned `catalogVersion` containing "148"; the 149 bump required updating
+  that one assertion. Version pins are expected to move with each session's
+  bump — they are guards against stale versions, not frozen strings.

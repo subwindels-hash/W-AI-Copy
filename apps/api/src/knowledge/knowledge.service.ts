@@ -55,6 +55,7 @@ import { KNOWLEDGE_SEED_PEOPLE_TIMELINE_PLACES } from "./knowledge.seed.people.j
 import { KNOWLEDGE_SEED_DOMAINS } from "./knowledge.seed.domains.js";
 import { KNOWLEDGE_SEED_EXPANSION } from "./knowledge.seed.expansion.js";
 import { KNOWLEDGE_SEED_AUDIT } from "./knowledge.seed.audit.js";
+import { KNOWLEDGE_SEED_AUDIT2 } from "./knowledge.seed.audit2.js";
 
 const K = {
   idx: (orgId: string) => `kn:rec:idx:${orgId}`,
@@ -107,6 +108,7 @@ const CATALOG: KnowledgeRecord[] = [
   ...KNOWLEDGE_SEED_DOMAINS,
   ...KNOWLEDGE_SEED_EXPANSION,
   ...KNOWLEDGE_SEED_AUDIT,
+  ...KNOWLEDGE_SEED_AUDIT2,
   ...ERA_RECORDS,
 ];
 

@@ -828,7 +828,7 @@ describe("Session 148 — Spec A re-send audit (§5–§23 + §8 comparisons)", 
     expect(report.ok).toBe(true);
     expect(report.issues).toEqual([]);
     expect(KnowledgeService.catalogMeta().recordCount).toBeGreaterThan(340);
-    expect(KnowledgeService.catalogMeta().catalogVersion).toContain("148");
+    expect(KnowledgeService.catalogMeta().catalogVersion).toContain("149");
   });
 
   it("every spec §5–§23 ask example resolves to a shipped record (no insufficient-knowledge on the explicit lists)", async () => {
@@ -849,6 +849,139 @@ describe("Session 148 — Spec A re-send audit (§5–§23 + §8 comparisons)", 
     for (const q of questions) {
       const res = await KnowledgeService.ask(null, { question: q });
       expect(res.matches.length, q).toBeGreaterThan(0);
+    }
+  });
+});
+
+describe("Session 149 — Spec A re-audit closure (§6–§9 explicit items)", () => {
+  it("covers the remaining §6 timeline examples: religion origin, president taking office, technology popularity", () => {
+    const christianity = KnowledgeService.getRecord("when.christianity")!;
+    expect(christianity.dateLabel).toBe("c. 33 CE");
+    expect(christianity.eraId).toBe("era-classical");
+    expect(christianity.sections.history).toContain("313");
+    const republic = KnowledgeService.getRecord("when.nigeria-republic")!;
+    expect(republic.year).toBe(1963);
+    expect(republic.summary).toContain("Azikiwe");
+    const smartphones = KnowledgeService.getRecord("when.smartphones")!;
+    expect(smartphones.year).toBe(2007);
+    expect(smartphones.summary).toContain("iPhone");
+  });
+
+  it("ask answers the §6 example questions with the timeline events", async () => {
+    const religion = await KnowledgeService.ask(null, { question: "When did Christianity begin?" });
+    expect(religion.matches.some((m: any) => m.id === "when.christianity")).toBe(true);
+    const office = await KnowledgeService.ask(null, { question: "When did Nigeria become a republic?" });
+    expect(office.matches.some((m: any) => m.id === "when.nigeria-republic")).toBe(true);
+    const popular = await KnowledgeService.ask(null, { question: "When did smartphones become popular?" });
+    expect(popular.matches.some((m: any) => m.id === "when.smartphones")).toBe(true);
+  });
+
+  it("covers the §7 towns/villages and businesses items", () => {
+    const ogidi = KnowledgeService.getRecord("place.ogidi")!;
+    expect(ogidi.sections.geography).toContain("Anambra");
+    expect(ogidi.summary).toContain("Chinua Achebe");
+    const wallStreet = KnowledgeService.getRecord("place.wall-street")!;
+    expect(wallStreet.sections.geography).toContain("New York City");
+    expect(wallStreet.sections.economy).toContain("metonym");
+  });
+
+  it("ask answers 'Where is Ogidi?' and 'Where is Wall Street?'", async () => {
+    const ogidi = await KnowledgeService.ask(null, { question: "Where is Ogidi?" });
+    expect(ogidi.matches.some((m: any) => m.id === "place.ogidi")).toBe(true);
+    const ws = await KnowledgeService.ask(null, { question: "Where is Wall Street?" });
+    expect(ws.matches.some((m: any) => m.id === "place.wall-street")).toBe(true);
+  });
+
+  it("covers the §9 vocational education and postgraduate degree items", () => {
+    const vet = KnowledgeService.getRecord("disc.vocational-education")!;
+    expect(vet.sections.learning_path).toContain("FOUNDATIONS");
+    expect(vet.summary).toContain("certificates");
+    const pg = KnowledgeService.getRecord("con.postgraduate")!;
+    expect(pg.title).toContain("PhD");
+    expect(pg.sections.history).toContain("medieval");
+    expect(pg.misconceptions!.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("ask answers 'What is a PhD?', 'What is a doctorate?', 'What is a master's degree?' and 'What is vocational education?'", async () => {
+    const phd = await KnowledgeService.ask(null, { question: "What is a PhD?" });
+    expect(phd.matches.some((m: any) => m.id === "con.postgraduate")).toBe(true);
+    const doctorate = await KnowledgeService.ask(null, { question: "What is a doctorate?" });
+    expect(doctorate.matches.some((m: any) => m.id === "con.postgraduate")).toBe(true);
+    const masters = await KnowledgeService.ask(null, { question: "What is a master's degree?" });
+    expect(masters.matches.some((m: any) => m.id === "con.postgraduate")).toBe(true);
+    const vet = await KnowledgeService.ask(null, { question: "What is vocational education?" });
+    expect(vet.matches.some((m: any) => m.id === "disc.vocational-education")).toBe(true);
+  });
+
+  it("covers the §8 countries comparison with labeled profiles and no winner", () => {
+    const cmp = KnowledgeService.getRecord("cmp.nigeria-vs-kenya")!;
+    expect(cmp.sections.criteria).toContain("Nigeria 95");
+    const result = compareKnowledge([KnowledgeService.getRecord("cmp.item.nigeria")!, KnowledgeService.getRecord("cmp.item.kenya")!]);
+    expect(result.criteria.length).toBeGreaterThanOrEqual(5);
+    for (const item of result.items) {
+      for (const score of item.scores) {
+        expect(score.basis).toBe("labeled");
+      }
+    }
+    expect(result.note).toContain("universal winner");
+    expect(KnowledgeService.getRecord("cmp.nigeria-vs-kenya")!.verificationNote).toContain("dynamic");
+  });
+
+  it("covers the §8 political-systems comparison academically, without endorsing either system", () => {
+    const cmp = KnowledgeService.getRecord("cmp.presidential-vs-parliamentary")!;
+    expect(cmp.summary).toContain("trade-offs");
+    expect(cmp.sections.guidance).toContain("not an endorsement");
+    const result = compareKnowledge([
+      KnowledgeService.getRecord("cmp.item.presidential-system")!,
+      KnowledgeService.getRecord("cmp.item.parliamentary-system")!,
+    ]);
+    expect(result.criteria.length).toBeGreaterThanOrEqual(5);
+    expect(result.criteria.some((c) => c.key === "leader_removal")).toBe(true);
+    for (const item of result.items) {
+      for (const score of item.scores) {
+        expect(score.basis).toBe("labeled");
+      }
+    }
+  });
+
+  it("ask routes 'Compare Nigeria and Kenya' and the political-systems comparison", async () => {
+    const countries = await KnowledgeService.ask(null, { question: "Compare Nigeria and Kenya" });
+    expect(countries.matches.some((m: any) => m.id === "cmp.nigeria-vs-kenya")).toBe(true);
+    const systems = await KnowledgeService.ask(null, { question: "Which is better: presidential or parliamentary system?" });
+    expect(systems.matches.some((m: any) => m.id === "cmp.presidential-vs-parliamentary")).toBe(true);
+    // The comparison presents criteria — never a declared winner.
+    expect(countries.matches[0]!.kind).toBe("comparison");
+  });
+
+  it("the knowledge graph links the new records (Ogidi ↔ Achebe, Nigeria profile ↔ place)", () => {
+    const ogidi = KnowledgeService.graphNode("place.ogidi")!;
+    expect(ogidi.nodes.some((n: any) => n.id === "who.achebe")).toBe(true);
+    const nigeria = KnowledgeService.graphNode("cmp.item.nigeria")!;
+    expect(nigeria.nodes.some((n: any) => n.id === "place.nigeria")).toBe(true);
+  });
+
+  it("the integrity report stays clean at 360+ records with version 149", () => {
+    const report = KnowledgeService.integrity();
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual([]);
+    expect(KnowledgeService.catalogMeta().recordCount).toBeGreaterThan(360);
+    expect(KnowledgeService.catalogMeta().catalogVersion).toContain("149");
+  });
+
+  it("the Session 140–148 anchors all still resolve after the additions", async () => {
+    const anchors: Array<[string, string]> = [
+      ["What is democracy?", "con.democracy"],
+      ["How do I start a business?", "ins.start-business"],
+      ["Why does inflation happen?", "why.inflation"],
+      ["Who was Thomas Edison?", "who.edison"],
+      ["Where is Nairobi?", "place.nairobi"],
+      ["What is earth science?", "sci.earth-science"],
+      ["Which is better: university or polytechnic?", "cmp.university-vs-polytechnic"],
+      ["Explain electricity to a child", "con.electricity"],
+    ];
+    for (const [q, id] of anchors) {
+      const res = await KnowledgeService.ask(null, { question: q, audienceLevel: q.includes("child") ? "child" : "high_school" });
+      expect(res.matches.some((m: any) => m.id === id), q).toBe(true);
     }
   });
 });

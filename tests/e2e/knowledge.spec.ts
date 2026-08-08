@@ -370,4 +370,54 @@ test.describe("Session 147 — knowledge coverage completion", () => {
     }
     expect(res.data.note).toContain("universal winner");
   });
+
+  test("the Session 149 audit-closure records resolve by id", async () => {
+    for (const id of [
+      "when.christianity", "when.nigeria-republic", "when.smartphones",
+      "place.ogidi", "place.wall-street",
+      "disc.vocational-education", "con.postgraduate",
+      "cmp.nigeria-vs-kenya", "cmp.item.nigeria", "cmp.item.kenya",
+      "cmp.presidential-vs-parliamentary", "cmp.item.presidential-system", "cmp.item.parliamentary-system",
+    ]) {
+      const res = await get(`/knowledge/records/${id}`);
+      expect(res.status, id).toBe(200);
+    }
+    const meta = await get("/knowledge/catalog");
+    expect(meta.data.catalogVersion).toContain("149");
+    expect(meta.data.recordCount).toBeGreaterThan(360);
+    const integrity = await get("/knowledge/integrity");
+    expect(integrity.data.ok).toBe(true);
+  });
+
+  test("ask answers the remaining spec example questions", async () => {
+    const cases: Array<[string, string]> = [
+      ["When did Christianity begin?", "when.christianity"],
+      ["When did Nigeria become a republic?", "when.nigeria-republic"],
+      ["When did smartphones become popular?", "when.smartphones"],
+      ["Where is Ogidi?", "place.ogidi"],
+      ["Where is Wall Street?", "place.wall-street"],
+      ["What is a PhD?", "con.postgraduate"],
+      ["What is vocational education?", "disc.vocational-education"],
+      ["Compare Nigeria and Kenya", "cmp.nigeria-vs-kenya"],
+      ["Which is better: presidential or parliamentary system?", "cmp.presidential-vs-parliamentary"],
+    ];
+    for (const [question, id] of cases) {
+      const res = await send("POST", "/knowledge/ask", { question });
+      expect(res.status).toBe(200);
+      expect(res.data.matches.some((m: any) => m.id === id), `${question} -> ${id}`).toBe(true);
+    }
+  });
+
+  test("the Session 149 comparison profiles score with labeled criteria only", async () => {
+    const res = await send("POST", "/knowledge/compare", {
+      recordIds: ["cmp.item.presidential-system", "cmp.item.parliamentary-system"],
+    });
+    expect(res.status).toBe(200);
+    expect(res.data.criteria.length).toBeGreaterThanOrEqual(5);
+    for (const item of res.data.items) {
+      for (const score of item.scores) {
+        expect(score.basis).toBe("labeled");
+      }
+    }
+  });
 });
