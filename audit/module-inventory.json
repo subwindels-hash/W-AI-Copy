@@ -6092,14 +6092,15 @@
       "serviceFile": {
         "file": "knowledge.service.ts",
         "path": "/home/user/WIN/apps/api/src/knowledge/knowledge.service.ts",
-        "sloc": 621,
+        "sloc": 623,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 6001,
+      "serviceTotalSloc": 7848,
       "serviceFiles": [
         "knowledge.catalog.ts",
         "knowledge.seed.domains.ts",
+        "knowledge.seed.expansion.ts",
         "knowledge.seed.people.ts",
         "knowledge.seed.ts",
         "knowledge.service.ts",
@@ -6157,12 +6158,14 @@
         "User",
         "Organization",
         "Workspace",
+        "Agent",
         "Task",
         "Activity",
         "Conversation",
         "Message",
         "Meeting",
         "Workflow",
+        "Invoice",
         "Integration"
       ],
       "migrations": [],

@@ -222,3 +222,63 @@ test.describe("Session 140 — Global Knowledge & Everyday Question Intelligence
     expect(res.data.results.every((r: any) => r.kind === "concept" && r.tier === "stable")).toBe(true);
   });
 });
+
+test.describe("Session 147 — knowledge coverage completion", () => {
+  let token = "";
+
+  test.beforeAll(async () => {
+    token = await apiLogin();
+  });
+
+  const auth = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+  async function get(path: string) {
+    const res = await fetch(`${BASE}${path}`, { headers: auth() });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  async function send(method: string, path: string, body?: unknown) {
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: auth(),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  test("the catalog exceeds 240 records and integrity stays clean", async () => {
+    const meta = await get("/knowledge/catalog");
+    expect(meta.data.recordCount).toBeGreaterThan(240);
+    const integrity = await get("/knowledge/integrity");
+    expect(integrity.data.ok).toBe(true);
+    expect(integrity.data.issues).toEqual([]);
+  });
+
+  test("the §5–§23 additions resolve", async () => {
+    for (const id of [
+      "who.nkrumah", "who.dangote", "who.socrates", "who.fela-kuti", "who.serena-williams",
+      "place.nile", "place.lagos", "disc.sociology", "disc.accounting", "disc.political-science",
+      "sci.oceanography", "sci.materials-science", "tech.machine-learning", "tech.semiconductors",
+      "tech.devops", "bus.marketing", "bus.investment", "bus.leadership", "car.freelancing",
+      "law.criminal", "law.family", "law.international", "hlth.medications", "hlth.public-health",
+      "rel.negotiation", "ent.music", "lng.linguistics", "day.parenting", "cre.photography", "trv.planning",
+    ]) {
+      const res = await get(`/knowledge/records/${id}`);
+      expect(res.status, id).toBe(200);
+    }
+  });
+
+  test("ask answers the new coverage", async () => {
+    const nkrumah = await send("POST", "/knowledge/ask", { question: "Who was Kwame Nkrumah?" });
+    expect(nkrumah.data.matches.some((m: any) => m.id === "who.nkrumah")).toBe(true);
+
+    const ml = await send("POST", "/knowledge/ask", { question: "What is machine learning?" });
+    expect(ml.data.matches.some((m: any) => m.id === "tech.machine-learning")).toBe(true);
+
+    const civil = await send("POST", "/knowledge/ask", { question: "What is civil law?" });
+    expect(civil.data.matches.some((m: any) => m.id === "law.civil")).toBe(true);
+
+    const lagos = await send("POST", "/knowledge/ask", { question: "Where is Lagos?" });
+    expect(lagos.data.matches.some((m: any) => m.id === "place.lagos")).toBe(true);
+  });
+});

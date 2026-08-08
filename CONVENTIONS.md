@@ -1355,3 +1355,26 @@
 - **Revolutions and wars are educational records.** The French, American
   and Russian Revolutions and the Kenya National Accord carry
   non-glorification notes (§15) alongside their historical content.
+
+### Session 147 — Knowledge Coverage Completion (§5–§23, `knowledge`)
+
+- **The audit loop applies to every module, every re-send.** The S140 spec
+  arrived again; a line-by-line audit against the shipped catalog found 66
+  genuine gaps across §5–§23 — none of them engine bugs, all of them missing
+  content — and the expansion seed closed them. The pattern: content
+  coverage is never "done" until every explicitly listed item resolves.
+- **Cross-module relatedIds must not leak.** The integrity report proved
+  its worth again: six new records initially referenced ids from the
+  `politics` module (`pol.leader.uk.starmer`, `pol.form.presidential-republic`,
+  `pol.mov.endsars`, `pol.gov.lagos.sanwo-olu`, `place.ethiopia`,
+  `bus.project-management`). The rule: a knowledge record's `relatedIds`
+  may only reference knowledge-module ids — cross-module links belong to
+  the integration layer, not the seed.
+- **Disclaimers travel with the content.** All nine new law records and
+  three new health records carry professional-assistance notes; the new
+  people records carry historical-context and contested-legacy sections
+  (Churchill and empire, Socrates's trial, Nkrumah's later rule) — the
+  neutrality discipline applies to biography as much as to politics.
+- **New coverage is pinned by new questions.** "Who was Kwame Nkrumah?",
+  "What is machine learning?", "What is civil law?" and "Where is Lagos?"
+  are unit- and e2e-tested so the coverage cannot silently regress.

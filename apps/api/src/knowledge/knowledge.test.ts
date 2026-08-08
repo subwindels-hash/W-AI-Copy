@@ -471,3 +471,120 @@ describe("Stats & graph (spec §28)", () => {
     expect(KnowledgeService.graphNode("nope")).toBeNull();
   });
 });
+
+describe("Session 147 — knowledge coverage completion (§5–§23)", () => {
+  it("covers the §5 people categories (political leaders, entrepreneurs, philosophers, artists, athletes)", () => {
+    const ids = new Set((KnowledgeService as any).catalogMeta().byKind ? Object.keys((KnowledgeService as any).catalogMeta().byKind) : []);
+    void ids;
+    for (const id of ["who.nkrumah", "who.churchill", "who.dangote", "who.socrates", "who.confucius", "who.fela-kuti", "who.serena-williams"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.biography?.length).toBeGreaterThan(50);
+    }
+    const nkrumah = KnowledgeService.getRecord("who.nkrumah")!;
+    expect(nkrumah.summary).toContain("Ghana");
+    const socrates = KnowledgeService.getRecord("who.socrates")!;
+    expect(socrates.sections.biography).toContain("hemlock");
+  });
+
+  it("covers the §7 geography: rivers, mountains, oceans, cities", () => {
+    for (const id of ["place.nile", "place.kilimanjaro", "place.atlantic-ocean", "place.lagos"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.geography?.length).toBeGreaterThan(50);
+    }
+    const nile = KnowledgeService.getRecord("place.nile")!;
+    expect(nile.summary).toContain("longest river");
+  });
+
+  it("covers the §9 discipline additions", () => {
+    for (const id of ["disc.sociology", "disc.philosophy", "disc.history", "disc.geography", "disc.accounting", "disc.political-science"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.learning_path?.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("covers the §10 science field additions with levels", () => {
+    for (const id of ["sci.oceanography", "sci.meteorology", "sci.microbiology", "sci.materials-science"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.levels).toContain("RESEARCH");
+    }
+  });
+
+  it("covers the §11 technology additions (smartphones, OS, networking, APIs, ML, robotics, semiconductors, telecom, DevOps)", () => {
+    for (const id of ["tech.smartphones", "tech.operating-systems", "tech.networking", "tech.apis", "tech.machine-learning", "tech.robotics", "tech.semiconductors", "tech.telecommunications", "tech.devops"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.how_it_works?.length).toBeGreaterThan(20);
+    }
+  });
+
+  it("covers the §12 business additions", () => {
+    for (const id of ["bus.marketing", "bus.sales", "bus.accounting", "bus.investment", "bus.supply-chains", "bus.management", "bus.leadership", "bus.customer-service"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+    }
+  });
+
+  it("covers the §13 career additions (remote work, freelancing)", () => {
+    for (const id of ["car.remote-work", "car.freelancing"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.detailed?.length).toBeGreaterThan(50);
+    }
+  });
+
+  it("covers the §14 law additions with professional-assistance notes", () => {
+    for (const id of ["law.criminal", "law.civil", "law.property", "law.family", "law.employment", "law.business", "law.legislatures", "law.executive", "law.international"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+    }
+    const criminal = KnowledgeService.getRecord("law.criminal")!;
+    expect(criminal.professionalAssistanceNote).toContain("lawyer");
+    const civil = KnowledgeService.getRecord("law.civil")!;
+    expect(civil.professionalAssistanceNote).toContain("lawyer");
+  });
+
+  it("covers the §15 health additions with professional-assistance notes", () => {
+    for (const id of ["hlth.diseases", "hlth.medications", "hlth.public-health"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.detailed?.length).toBeGreaterThan(50);
+    }
+    expect(KnowledgeService.getRecord("hlth.medications")!.professionalAssistanceNote).toContain("professionals");
+  });
+
+  it("covers the §19/§20/§21/§22/§23/§18 additions", () => {
+    for (const id of ["rel.negotiation", "rel.emotional-intelligence", "ent.music", "ent.games", "ent.sports", "lng.grammar", "lng.linguistics", "day.shopping", "day.basic-tech", "day.parenting", "cre.graphic-design", "cre.photography", "cre.content-creation", "trv.accommodation", "trv.planning"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+    }
+    const parenting = KnowledgeService.getRecord("day.parenting")!;
+    expect(parenting.summary).toContain("warmth");
+  });
+
+  it("the integrity report stays clean with the 240+ record catalog", () => {
+    const report = KnowledgeService.integrity();
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual([]);
+    expect(KnowledgeService.catalogMeta().recordCount).toBeGreaterThan(240);
+  });
+
+  it("ask answers new questions: 'Who was Kwame Nkrumah?' and 'What is machine learning?'", async () => {
+    const nkrumah = await KnowledgeService.ask(null, { question: "Who was Kwame Nkrumah?" });
+    expect(nkrumah.matches.some((m: any) => m.id === "who.nkrumah")).toBe(true);
+    const ml = await KnowledgeService.ask(null, { question: "What is machine learning?" });
+    expect(ml.matches.some((m: any) => m.id === "tech.machine-learning")).toBe(true);
+    const civil = await KnowledgeService.ask(null, { question: "What is civil law?" });
+    expect(civil.matches.some((m: any) => m.id === "law.civil")).toBe(true);
+    const lagos = await KnowledgeService.ask(null, { question: "Where is Lagos?" });
+    expect(lagos.matches.some((m: any) => m.id === "place.lagos")).toBe(true);
+  });
+
+  it("teaches at levels: 'Explain electricity to a child' still works alongside new records", async () => {
+    const res = await KnowledgeService.ask(null, { question: "What is electricity?", audienceLevel: "child" });
+    expect(res.matches.some((m: any) => m.id === "con.electricity")).toBe(true);
+  });
+});
