@@ -1261,6 +1261,7 @@
       "sustainability.spec.ts",
       "talk.spec.ts",
       "tenantIsolation.spec.ts",
+      "university.spec.ts",
       "usage.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
@@ -3778,7 +3779,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1985,
+      "serviceTotalSloc": 2060,
       "serviceFiles": [
         "bootstrap.ts",
         "cyberCloudAcademy.service.ts",
@@ -10392,7 +10393,7 @@
     ],
     "sharedTypes": "packages/shared/src/university.ts (305 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/university.ts (94 LOC)",
       "pages": []
     },
     "db": {
@@ -10404,13 +10405,14 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "university.spec.ts",
       "education/cyberCloudAcademy.test.ts",
       "education/lecturer.test.ts",
       "education/university.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "universityEngine",

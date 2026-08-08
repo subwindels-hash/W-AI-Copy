@@ -1572,3 +1572,32 @@
   started, the path must recommend exactly one topic per track and it must
   be the beginner entry point whose prerequisites are met (all of them,
   vacuously) — pinned for both tracks.
+
+### Session 153 — Module Completion 2/3: University Education (`university`)
+
+- **The one-by-one pattern compounds.** Session 152's scanner fix removed
+  the `hasTests` gate for all three education modules at once, so
+  `university` needed only the client + console + tests + e2e. The
+  remaining PARTIAL flag is now almost always "no web client" — check the
+  scanner's four gates (routes ≥ 5, client, types, tests) before assuming
+  a module is unfinished in substance.
+- **Catalog integrity tests must encode the catalog's real design rules.**
+  The first integrity draft asserted `credits > 0` for every course and
+  failed on doctoral research courses — which legitimately carry 0 credits
+  (thesis research work, not taught modules). The pinned rule is
+  "non-doctor courses > 0; doctoral research may be 0" — the test now
+  documents the design instead of fighting it.
+- **Degree-plan semantics are pinned for EVERY faculty, not just one.**
+  The original suite checked `computing`; the completion suite iterates
+  all 10 faculties and asserts: non-empty plans, level → term ordering,
+  exactly one next-recommended, bachelor level, prerequisites met. This is
+  the same fresh-learner-pinning discipline used for the academy tracks.
+- **The web client re-exports the shared contract; the page imports both.**
+  In S152 the type-only re-export alone left the function signatures
+  unresolved (TS2304) — the lesson is to import the types for local scope
+  AND re-export them for consumers. Applied correctly this time; the page
+  uses the typed lib functions (never raw fetch).
+- **Session count discipline:** 152/153/154 = cyberCloudAcademy /
+  university / universityEngine — one module, one commit, one PROGRESS
+  row, one CONVENTIONS section, one inventory regeneration. The audit
+  trail stays reviewable module by module.
