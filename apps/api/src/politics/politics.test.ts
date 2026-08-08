@@ -420,3 +420,136 @@ describe("Stats & search", () => {
     expect(list[0]!.title.length).toBeGreaterThan(0);
   });
 });
+
+describe("Session 145 — coverage completion (§17/§13/§14/§26/§31)", () => {
+  it("covers the §17 diplomacy database", () => {
+    const ids = new Set(POLITICS_CATALOG.map((r) => r.id));
+    for (const id of ["pol.dip.nigeria-us", "pol.dip.nigeria-china", "pol.dip.nigeria-uk", "pol.dip.treaty-lagos", "pol.dip.treaty-abuja", "pol.dip.ecowas-alliance"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const us = PoliticsService.getRecord("pol.dip.nigeria-us") as any;
+    expect(us.kind).toBe("diplomacy");
+    expect(us.relationshipType).toBe("bilateral_relationship");
+    expect(us.partners).toContain("Nigeria");
+    // Ambassadorial changes are noted as dynamic, not frozen.
+    expect(us.note).toContain("dynamic information");
+  });
+
+  it("covers the §13 additions: democratic socialism and pan-nationalism", () => {
+    const ds = PoliticsService.getRecord("pol.ideo.democratic-socialism") as any;
+    expect(ds).not.toBeNull();
+    expect(ds.advocacyNote).toContain("does not advocate it");
+    expect(PoliticsService.getRecord("pol.ideo.pan-nationalism")).not.toBeNull();
+  });
+
+  it("covers the §14 additions: Ogoni, Mau Mau and #EndSARS movements", () => {
+    const ids = new Set(POLITICS_CATALOG.map((r) => r.id));
+    for (const id of ["pol.mov.ogoni", "pol.mov.mau-mau", "pol.mov.endsars"]) {
+      expect(ids.has(id), id).toBe(true);
+    }
+    const ogoni = PoliticsService.getRecord("pol.mov.ogoni") as any;
+    expect(ogoni.leaders).toContain("Ken Saro-Wiwa");
+  });
+
+  it("covers §16 international courts with the ICC", () => {
+    const icc = PoliticsService.getRecord("org.icc") as any;
+    expect(icc).not.toBeNull();
+    expect(icc.membership).toContain("124");
+  });
+
+  it("covers the §31 education concepts: democracy, elections, multi-party system", () => {
+    const democracy = PoliticsService.getRecord("pol.concept.democracy") as any;
+    expect(democracy).not.toBeNull();
+    expect(democracy.kind).toBe("concept");
+    expect(democracy.definition).toContain("people");
+    expect(PoliticsService.getRecord("pol.concept.elections")).not.toBeNull();
+    expect(PoliticsService.getRecord("pol.form.multi-party")).not.toBeNull();
+  });
+
+  it("covers the first head of government: Balewa (pre-independence)", () => {
+    const balewa = PoliticsService.getRecord("pol.leader.nigeria.balewa") as any;
+    expect(balewa).not.toBeNull();
+    expect(balewa.role).toBe("head_of_government");
+    expect(balewa.officeStart).toContain("1957");
+    expect(balewa.historicalSignificance).toContain("before independence");
+  });
+
+  it("covers current Nigerian senators and the expanded ministries (§26)", () => {
+    const senators = PoliticsService.listByKind("legislator").filter((l) => (l as any).officeKind === "senator" && l.countryId === "pol.country.nigeria");
+    expect(senators.length).toBeGreaterThanOrEqual(3);
+    const akpabio = PoliticsService.getRecord("pol.sen.nigeria.akpabio") as any;
+    expect(akpabio.meta.verification).toBe("current_as_of");
+    const ministries = PoliticsService.listByKind("ministry").filter((m) => m.countryId === "pol.country.nigeria");
+    expect(ministries.length).toBeGreaterThanOrEqual(7);
+  });
+
+  it("covers Germany chancellors (§4/§5 Chancellor)", () => {
+    const merkel = PoliticsService.getRecord("pol.leader.germany.merkel") as any;
+    expect(merkel.titleKind).toBe("chancellor");
+    expect(merkel.role).toBe("head_of_government");
+    const merz = PoliticsService.getRecord("pol.leader.germany.merz") as any;
+    expect(merz.meta.verification).toBe("current_as_of");
+  });
+
+  it("covers non-Nigeria §15 events (Kenya)", () => {
+    const ids = new Set(POLITICS_CATALOG.map((r) => r.id));
+    expect(ids.has("pol.event.kenya.2008-crisis")).toBe(true);
+    expect(ids.has("pol.event.kenya.2017-annulment")).toBe(true);
+    const annulment = PoliticsService.getRecord("pol.event.kenya.2017-annulment") as any;
+    expect(annulment.eventType).toBe("constitutional crisis");
+  });
+
+  it("the catalog integrity report stays clean with the additions", () => {
+    const report = PoliticsService.integrity();
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual([]);
+  });
+});
+
+describe("Session 145 — the completed §26 questions", () => {
+  it("answers 'Who are the current Nigerian senators?'", async () => {
+    const res = await PoliticsService.ask(null, { question: "Who are the current Nigerian senators?" });
+    expect(res.matches.some((m) => m.id === "pol.sen.nigeria.akpabio")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.sen.nigeria.oshiomhole")).toBe(true);
+  });
+
+  it("answers 'Who are Nigeria's current ministers?'", async () => {
+    const res = await PoliticsService.ask(null, { question: "Who are Nigeria's current ministers?", limit: 8 });
+    expect(res.matches.some((m) => m.id === "pol.ministry.nigeria.finance")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.ministry.nigeria.education")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.ministry.nigeria.health")).toBe(true);
+  });
+
+  it("answers 'Who governed Nigeria before independence?' with Balewa", async () => {
+    const res = await PoliticsService.ask(null, { question: "Who governed Nigeria before independence?" });
+    expect(res.matches.some((m) => m.id === "pol.leader.nigeria.balewa")).toBe(true);
+  });
+
+  it("answers 'Who was Nigeria's first prime minister?'", async () => {
+    const res = await PoliticsService.ask(null, { question: "Who was Nigeria's first prime minister?" });
+    expect(res.matches.some((m) => m.id === "pol.leader.nigeria.balewa")).toBe(true);
+  });
+
+  it("answers 'Explain democracy' and 'Explain elections' with the concept records", async () => {
+    const democracy = await PoliticsService.ask(null, { question: "Explain democracy" });
+    expect(democracy.matches.some((m) => m.id === "pol.concept.democracy")).toBe(true);
+    const elections = await PoliticsService.ask(null, { question: "Explain elections" });
+    expect(elections.matches.some((m) => m.id === "pol.concept.elections")).toBe(true);
+  });
+
+  it("answers 'Tell me about Nigeria's military governments' with the military rulers", async () => {
+    const res = await PoliticsService.ask(null, { question: "Tell me about Nigeria's military governments", limit: 10 });
+    const militaryRulers = res.matches.filter((m: any) => m.kind === "leader");
+    expect(militaryRulers.length).toBeGreaterThanOrEqual(4);
+    expect(res.matches.some((m) => m.id === "pol.leader.nigeria.ironsi")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.leader.nigeria.abacha")).toBe(true);
+    expect(res.matches.some((m) => m.id === "pol.leader.nigeria.obasanjo")).toBe(true);
+  });
+
+  it("finds diplomacy records by search", async () => {
+    const res = await PoliticsService.search(null, { q: "Nigeria and China" });
+    expect(res.results.some((r) => r.id === "pol.dip.nigeria-china")).toBe(true);
+    const treaty = await PoliticsService.search(null, { q: "Treaty of Lagos" });
+    expect(treaty.results.some((r) => r.id === "pol.dip.treaty-lagos")).toBe(true);
+  });
+});

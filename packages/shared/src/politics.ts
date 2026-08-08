@@ -111,6 +111,8 @@ export const POLITICS_ENTITY_KINDS = [
   "ideology",
   "international_organization",
   "government_form",
+  "diplomacy",
+  "concept",
   "policy",
 ] as const;
 export type PoliticsEntityKind = (typeof POLITICS_ENTITY_KINDS)[number];
@@ -640,6 +642,43 @@ export const InternationalOrgRecordSchema = z.object({
   memberExamples: z.array(z.string().min(1).max(100)).max(20).default([]),
 });
 export type InternationalOrgRecord = z.infer<typeof InternationalOrgRecordSchema>;
+
+/** §17 diplomacy record (ambassadors, foreign ministers, treaties,
+ *  bilateral relationships, alliances, disputes, negotiations). */
+export const DiplomacyRecordSchema = z.object({
+  ...baseRecord,
+  kind: z.literal("diplomacy"),
+  countryIds: z.array(z.string().min(1).max(64)).max(10).default([]),
+  partners: z.array(z.string().min(1).max(200)).min(1).max(10),
+  relationshipType: z.enum([
+    "bilateral_relationship",
+    "treaty",
+    "alliance",
+    "strategic_partnership",
+    "diplomatic_recognition",
+    "dispute",
+    "negotiation",
+    "summit",
+    "diplomatic_mission",
+  ]),
+  signedAt: z.string().min(1).max(200),          // date label of the treaty/relationship's founding
+  keyEvents: z.string().min(1).max(3000),
+  currentStatus: z.string().min(1).max(1500),
+  note: z.string().max(800).optional(),           // e.g. ambassadorial appointments are dynamic
+});
+export type DiplomacyRecord = z.infer<typeof DiplomacyRecordSchema>;
+
+/** §31 education concept records ("Explain democracy", "Explain elections"). */
+export const ConceptRecordSchema = z.object({
+  ...baseRecord,
+  kind: z.literal("concept"),
+  definition: z.string().min(1).max(2000),
+  howItWorks: z.string().min(1).max(2500),
+  examples: z.array(z.string().min(1).max(120)).max(15).default([]),
+  strengths: z.string().min(1).max(1500),
+  weaknesses: z.string().min(1).max(1500),
+});
+export type ConceptRecord = z.infer<typeof ConceptRecordSchema>;
 
 /** §12 government form — educational. */
 export const GovernmentFormRecordSchema = z.object({

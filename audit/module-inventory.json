@@ -8115,13 +8115,14 @@
       "serviceFile": {
         "file": "politics.service.ts",
         "path": "/home/user/WIN/apps/api/src/politics/politics.service.ts",
-        "sloc": 721,
+        "sloc": 731,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 5301,
+      "serviceTotalSloc": 5973,
       "serviceFiles": [
         "politics.catalog.ts",
+        "politics.seed.completion.ts",
         "politics.seed.countries.ts",
         "politics.seed.ideas.ts",
         "politics.seed.leaders.ts",
@@ -8172,7 +8173,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/politics.ts (912 LOC)",
+    "sharedTypes": "packages/shared/src/politics.ts (951 LOC)",
     "web": {
       "client": "apps/web/src/lib/politics.ts (195 LOC)",
       "pages": []

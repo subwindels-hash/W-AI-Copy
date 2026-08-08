@@ -40,9 +40,10 @@ import {
 } from "@windels/shared";
 import { POLITICS_CATALOG_VERSION } from "./politics.catalog.js";
 import { COUNTRY_PROFILES, GLOBAL_CONSTITUTIONS } from "./politics.seed.countries.js";
-import { NIGERIA_LEADERS, NIGERIA_PARTIES, NIGERIA_ELECTIONS, LAGOS_GOVERNORS, NIGERIA_MINISTRIES, NIGERIA_CONSTITUTIONS, NIGERIA_EVENTS, NIGERIA_LEGISLATORS } from "./politics.seed.nigeria.js";
+import { NIGERIA_LEADERS, NIGERIA_PARTIES, NIGERIA_ELECTIONS, LAGOS_GOVERNORS, NIGERIA_MINISTRIES, NIGERIA_CONSTITUTIONS, NIGERIA_EVENTS, NIGERIA_LEGISLATORS, NIGERIA_FIRST_GOVERNMENT, NIGERIA_SENATORS } from "./politics.seed.nigeria.js";
 import { GLOBAL_LEADERS } from "./politics.seed.leaders.js";
 import { IDEOLOGIES, MOVEMENTS, INTERNATIONAL_ORGS, GOVERNMENT_FORMS_RECORDS, POLICY_RECORDS } from "./politics.seed.ideas.js";
+import { GLOBAL_DIPLOMACY, GLOBAL_CONCEPTS, KENYA_EVENTS } from "./politics.seed.completion.js";
 
 const K = {
   updIdx: (orgId: string) => `pol:upd:idx:${orgId}`,
@@ -87,6 +88,11 @@ export const POLITICS_CATALOG: AnyPoliticalRecord[] = [
   ...NIGERIA_CONSTITUTIONS,
   ...NIGERIA_EVENTS,
   ...NIGERIA_LEGISLATORS,
+  ...NIGERIA_FIRST_GOVERNMENT,
+  ...NIGERIA_SENATORS,
+  ...KENYA_EVENTS,
+  ...GLOBAL_DIPLOMACY,
+  ...GLOBAL_CONCEPTS,
   ...IDEOLOGIES,
   ...MOVEMENTS,
   ...INTERNATIONAL_ORGS,
@@ -95,7 +101,7 @@ export const POLITICS_CATALOG: AnyPoliticalRecord[] = [
 ];
 
 const CATALOG_BY_ID = new Map(POLITICS_CATALOG.map((r) => [r.id, r]));
-const KIND_SET = new Set<string>(["country", "leader", "party", "election", "ministry", "governor", "legislator", "constitution", "event", "movement", "ideology", "international_organization", "government_form", "policy"]);
+const KIND_SET = new Set<string>(["country", "leader", "party", "election", "ministry", "governor", "legislator", "constitution", "event", "movement", "ideology", "international_organization", "government_form", "diplomacy", "concept", "policy"]);
 
 function nameStrings(record: AnyPoliticalRecord): string[] {
   return [record.name, ...(record.altNames ?? [])].filter(Boolean);
@@ -108,14 +114,14 @@ function normalize(t: string): string {
 const STOPWORDS = new Set(["the", "a", "an", "of", "and", "or", "what", "is", "are", "was", "were", "do", "does", "did", "how", "why", "when", "where", "who", "which", "about", "me", "my", "its", "it", "in", "on", "for", "to", "i", "you", "your", "all", "list", "tell", "explain", "country", "politics", "political", "government"]);
 
 function tokens(text: string): string[] {
-  return normalize(text).split(/\s+/).filter((t) => t.length >= 2 && !STOPWORDS.has(t));
+  return normalize(text).split(/\s+/).filter((t) => t.length >= 3 && !STOPWORDS.has(t));
 }
 
 function scoreRecord(record: AnyPoliticalRecord, qTokens: string[]): { score: number; matchedBy: string[] } {
   const names = nameStrings(record).map(normalize);
   let score = 0;
   const matchedBy: string[] = [];
-  const full = normalize(`${record.name} ${(record.altNames ?? []).join(" ")} ${record.summary}`);
+  const full = normalize(`${record.name} ${(record.altNames ?? []).join(" ")} ${record.title ?? ""} ${record.summary}`);
   for (const tok of qTokens) {
     if (names.some((n) => n === tok)) {
       score += 6; // exact name word
@@ -278,16 +284,18 @@ export const PoliticsService = {
     const scored: Array<{ record: AnyPoliticalRecord; score: number }> = [];
     for (const record of pool) {
       const { score } = scoreRecord(record, qTokens);
-      if (score < 4) continue;
       let boost = 0;
       if (classification.intent === "current_office" && record.meta.verification === "current_as_of") boost += 4;
       if (classification.intent === "leader" && record.kind === "leader") boost += 2;
+      if (classification.intent === "leader" && (record.kind === "ministry" || record.kind === "governor" || record.kind === "legislator")) boost += 3;
+      if (classification.intent === "country_history" && record.kind === "leader" && (record as any).titleKind === "military_ruler") boost += 3;
       if (classification.intent === "election" && record.kind === "election") boost += 2;
       if (classification.intent === "constitution" && record.kind === "constitution") boost += 2;
       if (classification.intent === "international" && record.kind === "international_organization") boost += 2;
       if (classification.intent === "ideology" && record.kind === "ideology") boost += 2;
       if (classification.intent === "country_history" && record.kind === "country") boost += 2;
       if (classification.intent === "government_how" && record.kind === "country") boost += 1;
+      if (score + boost < 4) continue;
       scored.push({ record, score: score + boost });
     }
     scored.sort((a, b) => b.score - a.score || a.record.id.localeCompare(b.record.id));
@@ -347,6 +355,8 @@ export const PoliticsService = {
       ["resultSummary", "Result"],
       ["disputes", "Disputes"],
       ["criticism", "Criticism & debate"],
+      ["keyEvents", "Key events"],
+      ["currentStatus", "Current status"],
     ];
     for (const [key, heading] of fields) {
       const body = (record as any)[key];

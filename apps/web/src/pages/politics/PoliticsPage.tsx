@@ -129,6 +129,13 @@ export function PoliticsPage() {
     setResults((await searchPolitics({ q, level: "intermediate", limit: 20 }).catch(() => ({ results: [] }))).results);
   }, []);
 
+  const [diplomacy, setDiplomacy] = useState<any[]>([]);
+  const loadDiplomacy = useCallback(async () => {
+    const res = await searchPolitics({ q: "", kind: "diplomacy", limit: 20 }).catch(() => ({ results: [] }));
+    setDiplomacy(res.results);
+  }, []);
+  useEffect(() => { void loadDiplomacy(); }, [loadDiplomacy]);
+
   const loadTimeline = useCallback(async (cid: string) => {
     setCountryId(cid);
     const [t, l] = await Promise.all([
@@ -403,6 +410,22 @@ export function PoliticsPage() {
                   {leaders.length === 0 && <div className="text-sm text-text-muted">No leader records for this country yet.</div>}
                 </CardContent>
               </Card>
+              <Card>
+                <CardHeader>
+                  <CardTitle>Diplomacy (§17)</CardTitle>
+                  <CardDescription>Bilateral relationships, treaties, strategic partnerships and disputes.</CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-1 max-h-[240px] overflow-y-auto">
+                  {diplomacy.map((d) => (
+                    <button key={d.id} onClick={() => openDetail(d.id)} className="w-full text-left px-2 py-1.5 rounded hover:bg-white/5 text-sm flex justify-between gap-2">
+                      <span className="text-text-main">{d.name}</span>
+                      <span className="text-text-muted text-xs shrink-0">{d.relationshipType?.replace(/_/g, " ")}</span>
+                    </button>
+                  ))}
+                  {diplomacy.length === 0 && <div className="text-sm text-text-muted">No diplomacy records found.</div>}
+                </CardContent>
+              </Card>
+
               {detail && (
                 <Card>
                   <CardHeader>

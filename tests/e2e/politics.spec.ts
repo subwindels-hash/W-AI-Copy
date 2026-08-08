@@ -192,3 +192,71 @@ test.describe("Session 144 — Global Politics, Government & Political History",
     expect(tinubu.data.meta.asOfDate).toBeTruthy();
   });
 });
+
+test.describe("Session 145 — Politics coverage completion (§17 diplomacy & remaining items)", () => {
+  let token = "";
+
+  test.beforeAll(async () => {
+    token = await apiLogin();
+  });
+
+  const auth = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+  async function get(path: string) {
+    const res = await fetch(`${BASE}${path}`, { headers: auth() });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  async function send(method: string, path: string, body?: unknown) {
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: auth(),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  test("the §17 diplomacy database resolves with real content", async () => {
+    for (const id of ["pol.dip.nigeria-us", "pol.dip.nigeria-china", "pol.dip.nigeria-uk", "pol.dip.treaty-lagos", "pol.dip.treaty-abuja", "pol.dip.ecowas-alliance"]) {
+      const res = await get(`/politics/records/${id}`);
+      expect(res.status, id).toBe(200);
+      expect(res.data.kind).toBe("diplomacy");
+      expect(res.data.partners.length).toBeGreaterThan(0);
+    }
+    const us = await get("/politics/records/pol.dip.nigeria-us");
+    expect(us.data.relationshipType).toBe("bilateral_relationship");
+  });
+
+  test("the §26 additions answer: senators, ministers, pre-independence leader, democracy", async () => {
+    const senators = await send("POST", "/politics/ask", { question: "Who are the current Nigerian senators?", limit: 6 });
+    expect(senators.data.matches.some((m: any) => m.id === "pol.sen.nigeria.akpabio")).toBe(true);
+    expect(senators.data.matches.some((m: any) => m.id === "pol.sen.nigeria.oshiomhole")).toBe(true);
+
+    const ministers = await send("POST", "/politics/ask", { question: "Who are Nigeria's current ministers?", limit: 8 });
+    expect(ministers.data.matches.some((m: any) => m.id === "pol.ministry.nigeria.finance")).toBe(true);
+    expect(ministers.data.matches.some((m: any) => m.id === "pol.ministry.nigeria.health")).toBe(true);
+
+    const before = await send("POST", "/politics/ask", { question: "Who governed Nigeria before independence?" });
+    expect(before.data.matches.some((m: any) => m.id === "pol.leader.nigeria.balewa")).toBe(true);
+
+    const democracy = await send("POST", "/politics/ask", { question: "Explain democracy" });
+    expect(democracy.data.matches.some((m: any) => m.id === "pol.concept.democracy")).toBe(true);
+  });
+
+  test("new §13/§14/§16/§4 records resolve", async () => {
+    for (const id of ["pol.ideo.democratic-socialism", "pol.ideo.pan-nationalism", "pol.mov.ogoni", "pol.mov.mau-mau", "pol.mov.endsars", "org.icc", "pol.leader.germany.merkel", "pol.leader.germany.merz", "pol.event.kenya.2008-crisis", "pol.event.kenya.2017-annulment"]) {
+      const res = await get(`/politics/records/${id}`);
+      expect(res.status, id).toBe(200);
+    }
+    const merz = await get("/politics/records/pol.leader.germany.merz");
+    expect(merz.data.meta.verification).toBe("current_as_of");
+    const icc = await get("/politics/records/org.icc");
+    expect(icc.data.membership).toContain("124");
+  });
+
+  test("the integrity report stays clean with the additions", async () => {
+    const res = await get("/politics/integrity");
+    expect(res.data.ok).toBe(true);
+    expect(res.data.issues).toEqual([]);
+  });
+});

@@ -9,8 +9,10 @@
  * `current_as_of` with a Last Verified timestamp (§21).
  */
 import type {
+  ConceptRecord,
   CountryProfile,
   ConstitutionRecord,
+  DiplomacyRecord,
   ElectionRecord,
   GovernmentForm,
   GovernmentFormRecord,
@@ -419,6 +421,48 @@ export function buildOrg(input: OrgInput): InternationalOrgRecord {
     achievements: input.achievements,
     criticisms: input.criticisms,
     memberExamples: input.memberExamples ?? [],
+  };
+}
+
+export interface DiplomacyInput extends SeedInput {
+  countryIds?: string[];
+  partners: string[];
+  relationshipType: DiplomacyRecord["relationshipType"];
+  signedAt: string;
+  keyEvents: string;
+  currentStatus: string;
+  note?: string;
+}
+
+export function buildDiplomacy(input: DiplomacyInput): DiplomacyRecord {
+  return {
+    ...base(input, "diplomacy"),
+    countryIds: input.countryIds ?? [],
+    partners: input.partners,
+    relationshipType: input.relationshipType,
+    signedAt: input.signedAt,
+    keyEvents: input.keyEvents,
+    currentStatus: input.currentStatus,
+    note: input.note,
+  };
+}
+
+export interface ConceptInput extends SeedInput {
+  definition: string;
+  howItWorks: string;
+  examples?: string[];
+  strengths: string;
+  weaknesses: string;
+}
+
+export function buildConcept(input: ConceptInput): ConceptRecord {
+  return {
+    ...base(input, "concept"),
+    definition: input.definition,
+    howItWorks: input.howItWorks,
+    examples: input.examples ?? [],
+    strengths: input.strengths,
+    weaknesses: input.weaknesses,
   };
 }
 

@@ -1304,3 +1304,29 @@
   (+6) outrank name prefixes (+3), so "president" does not let election
   records outrank the actual president; current_as_of records get a
   current-office boost. Pinned by the §26 question tests.
+
+### Session 145 — Politics Coverage Completion: Diplomacy Layer & Remaining Spec Items (`politics`)
+
+- **Spec re-sends are audits.** When a spec arrives again after implementation,
+  the work is a line-by-line gap analysis — this session found and closed 14
+  genuine gaps, including an entire missing section (§17 Diplomacy Database).
+- **§17 diplomacy is entity-based, not text-based.** `diplomacy` records
+  carry partners, a relationship-type enum (bilateral_relationship / treaty /
+  alliance / strategic_partnership / diplomatic_recognition / dispute /
+  negotiation / summit / diplomatic_mission), a signed-at date, key events
+  and a current status — and dynamic items like ambassadorial appointments
+  are explicitly noted as "dynamic information to verify at query time"
+  rather than frozen into records (§21).
+- **"Current" records stay honest.** The new senators and ministers carry
+  `current_as_of` + `lastVerified`; the first-PM record (Balewa) is stable
+  history. The never-overwrite rule is untouched.
+- **Scoring fixes are pinned by questions, not preferences.** The §26
+  question suite drove three engine refinements: leader titles join the
+  searchable text (so "military head of state" matches military rulers),
+  intent boosts apply before the acceptance threshold (ministries answer
+  "who are the current ministers?"), and tokens shorter than 3 characters
+  are excluded (a bare "at" no longer makes nonsense questions match).
+  Each fix is covered by a unit test.
+- **Education concepts are records, not code.** "Explain democracy" and
+  "Explain elections" are `concept` records in the catalog — teachable,
+  searchable and versionable like every other entity (§27).
