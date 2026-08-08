@@ -281,4 +281,93 @@ test.describe("Session 147 — knowledge coverage completion", () => {
     const lagos = await send("POST", "/knowledge/ask", { question: "Where is Lagos?" });
     expect(lagos.data.matches.some((m: any) => m.id === "place.lagos")).toBe(true);
   });
+
+  test("the catalog exceeds 340 records after the Session 148 audit seed", async () => {
+    const meta = await get("/knowledge/catalog");
+    expect(meta.status).toBe(200);
+    expect(meta.data.catalogVersion).toContain("148");
+    expect(meta.data.recordCount).toBeGreaterThan(340);
+    const integrity = await get("/knowledge/integrity");
+    expect(integrity.data.ok).toBe(true);
+  });
+
+  test("the Session 148 §5–§23 additions resolve by id", async () => {
+    for (const id of [
+      "who.edison", "who.achebe", "who.angelou", "who.enwonwu", "who.poitier", "who.tutu",
+      "who.hopper", "who.bello", "who.wachuku", "who.okadigbo",
+      "when.first-computer", "when.arpabet", "when.us-constitution",
+      "place.california", "place.ontario", "place.nairobi", "place.new-york-city",
+      "place.murtala-muhammed-airport", "place.university-of-ibadan", "place.uch-ibadan",
+      "place.aso-rock", "place.timbuktu", "place.mecca", "place.silicon-valley", "place.victoria-falls",
+      "disc.chemistry", "disc.international-relations", "disc.agriculture", "disc.architecture",
+      "disc.education", "disc.communications", "disc.arts", "disc.music",
+      "sci.earth-science", "sci.space-science", "tech.software-engineering",
+      "bus.entrepreneurship", "bus.bookkeeping", "bus.payments", "bus.procurement", "bus.human-resources",
+      "car.job-search", "car.skills-qualifications", "car.certifications", "car.professional-development", "car.salaries",
+      "cult.customs-traditions", "cult.food-cuisine", "cult.clothing-fashion", "cult.arts",
+      "cult.family-structures", "cult.social-institutions", "cult.regional-cultures", "cult.diaspora",
+      "trv.transportation", "trv.currency-money", "trv.weather-climate", "trv.customs-etiquette",
+      "rel.friendship", "rel.family", "rel.marriage", "rel.workplace-communication", "rel.personal-development",
+      "ent.television", "ent.books", "ent.celebrities", "ent.artists-creators", "ent.history-trends",
+      "lng.vocabulary", "lng.pronunciation", "lng.dialects-slang", "lng.historical-languages",
+      "lng.indigenous-languages", "lng.reading",
+      "day.clothing", "day.personal-organization", "day.transportation", "day.problem-solving",
+      "cre.poetry", "cre.music", "cre.art", "cre.video", "cre.presentations", "cre.branding", "cre.advertising",
+      "cmp.university-vs-polytechnic", "cmp.bootstrapping-vs-funding", "cmp.saving-vs-investing",
+      "cmp.beach-vs-city-break", "cmp.ww1-vs-ww2", "cmp.open-source-vs-proprietary",
+    ]) {
+      const res = await get(`/knowledge/records/${id}`);
+      expect(res.status, id).toBe(200);
+    }
+  });
+
+  test("ask answers the Session 148 coverage questions", async () => {
+    const cases: Array<[string, string]> = [
+      ["Who was Thomas Edison?", "who.edison"],
+      ["Who was Chinua Achebe?", "who.achebe"],
+      ["Who was Desmond Tutu?", "who.tutu"],
+      ["Who was Grace Hopper?", "who.hopper"],
+      ["When was the first computer built?", "when.first-computer"],
+      ["When was the internet created?", "when.arpabet"],
+      ["When was the constitution adopted?", "when.us-constitution"],
+      ["Where is Nairobi?", "place.nairobi"],
+      ["Where is the University of Ibadan?", "place.university-of-ibadan"],
+      ["Where is Aso Rock?", "place.aso-rock"],
+      ["What is earth science?", "sci.earth-science"],
+      ["What is space science?", "sci.space-science"],
+      ["What is software engineering?", "tech.software-engineering"],
+      ["What is entrepreneurship?", "bus.entrepreneurship"],
+      ["What is human resources?", "bus.human-resources"],
+      ["What are certifications?", "car.certifications"],
+      ["What are customs and traditions?", "cult.customs-traditions"],
+      ["What are diaspora communities?", "cult.diaspora"],
+      ["How do I handle money while travelling?", "trv.currency-money"],
+      ["How do marriages work?", "rel.marriage"],
+      ["What is branding?", "cre.branding"],
+      ["Which is better: university or polytechnic?", "cmp.university-vs-polytechnic"],
+      ["Should I bootstrap my business or raise funding?", "cmp.bootstrapping-vs-funding"],
+      ["Which is better: saving or investing?", "cmp.saving-vs-investing"],
+      ["How do the World Wars compare?", "cmp.ww1-vs-ww2"],
+      ["Open source vs proprietary software", "cmp.open-source-vs-proprietary"],
+    ];
+    for (const [question, id] of cases) {
+      const res = await send("POST", "/knowledge/ask", { question });
+      expect(res.status).toBe(200);
+      expect(res.data.matches.some((m: any) => m.id === id), `${question} -> ${id}`).toBe(true);
+    }
+  });
+
+  test("the compare endpoint scores the Session 148 profiles with labeled criteria only", async () => {
+    const res = await send("POST", "/knowledge/compare", {
+      recordIds: ["cmp.item.university-route", "cmp.item.polytechnic-route"],
+    });
+    expect(res.status).toBe(200);
+    expect(res.data.criteria.length).toBeGreaterThanOrEqual(5);
+    for (const item of res.data.items) {
+      for (const score of item.scores) {
+        expect(score.basis).toBe("labeled");
+      }
+    }
+    expect(res.data.note).toContain("universal winner");
+  });
 });

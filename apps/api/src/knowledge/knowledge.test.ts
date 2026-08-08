@@ -588,3 +588,267 @@ describe("Session 147 — knowledge coverage completion (§5–§23)", () => {
     expect(res.matches.some((m: any) => m.id === "con.electricity")).toBe(true);
   });
 });
+
+describe("Session 148 — Spec A re-send audit (§5–§23 + §8 comparisons)", () => {
+  it("covers every remaining §5 people role category with biography, achievements and sources", () => {
+    const people = {
+      "who.edison": "inventor",
+      "who.achebe": "author",
+      "who.angelou": "author",
+      "who.enwonwu": "artist",
+      "who.poitier": "actor",
+      "who.tutu": "religious figure",
+      "who.hopper": "engineer",
+      "who.bello": "regional leader",
+      "who.wachuku": "minister",
+      "who.okadigbo": "senator",
+    };
+    for (const [id, role] of Object.entries(people)) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, `${id} (${role})`).not.toBeNull();
+      expect(r!.sections.biography?.length, `${id} biography`).toBeGreaterThan(50);
+      expect(r!.sections.achievements?.length, `${id} achievements`).toBeGreaterThan(20);
+      expect((r!.sources ?? []).length, `${id} sources`).toBeGreaterThan(0);
+      expect(r!.confidence).not.toBe("unverified");
+    }
+    // Historical-context neutrality discipline on contested figures.
+    expect(KnowledgeService.getRecord("who.bello")!.sections.guidance).toMatch(/differ|contested/);
+    expect(KnowledgeService.getRecord("who.okadigbo")!.sections.guidance).toMatch(/denied|contested/);
+  });
+
+  it("covers the §6 timeline examples: first computer, internet origin, constitution adoption", () => {
+    const first = KnowledgeService.getRecord("when.first-computer")!;
+    expect(first.dateLabel).toBe("1945");
+    expect(first.eraId).toBe("era-modern");
+    const arpa = KnowledgeService.getRecord("when.arpabet")!;
+    expect(arpa.year).toBe(1969);
+    expect(arpa.eraId).toBe("era-contemporary");
+    const us = KnowledgeService.getRecord("when.us-constitution")!;
+    expect(us.year).toBe(1787);
+    expect(us.eraId).toBe("era-early-modern");
+  });
+
+  it("ask answers the §6 timeline example questions", async () => {
+    const computer = await KnowledgeService.ask(null, { question: "When was the first computer built?" });
+    expect(computer.matches.some((m: any) => m.id === "when.first-computer")).toBe(true);
+    const internet = await KnowledgeService.ask(null, { question: "When was the internet created?" });
+    expect(internet.matches.some((m: any) => m.id === "when.arpabet")).toBe(true);
+    const constitution = await KnowledgeService.ask(null, { question: "When was the constitution adopted?" });
+    expect(constitution.matches.some((m: any) => m.id === "when.us-constitution")).toBe(true);
+  });
+
+  it("covers the §7 geography item types: states, provinces, cities, airports, universities, hospitals, institutions, sites, attractions", () => {
+    const places = [
+      "place.california", "place.ontario", "place.nairobi", "place.new-york-city",
+      "place.murtala-muhammed-airport", "place.university-of-ibadan", "place.uch-ibadan",
+      "place.aso-rock", "place.timbuktu", "place.mecca", "place.silicon-valley", "place.victoria-falls",
+    ];
+    for (const id of places) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.geography?.length, `${id} geography`).toBeGreaterThan(50);
+    }
+    const mecca = KnowledgeService.getRecord("place.mecca")!;
+    expect(mecca.summary).toContain("holiest city of Islam");
+    expect(mecca.misconceptions?.length).toBeGreaterThan(0);
+  });
+
+  it("ask routes the new where-questions to the right place records", async () => {
+    const nairobi = await KnowledgeService.ask(null, { question: "Where is Nairobi?" });
+    expect(nairobi.matches.some((m: any) => m.id === "place.nairobi")).toBe(true);
+    const ui = await KnowledgeService.ask(null, { question: "Where is the University of Ibadan?" });
+    expect(ui.matches.some((m: any) => m.id === "place.university-of-ibadan")).toBe(true);
+    const uche = await KnowledgeService.ask(null, { question: "Where is University College Hospital, Ibadan?" });
+    expect(uche.matches.some((m: any) => m.id === "place.uch-ibadan")).toBe(true);
+    const falls = await KnowledgeService.ask(null, { question: "Where are Victoria Falls?" });
+    expect(falls.matches.some((m: any) => m.id === "place.victoria-falls")).toBe(true);
+  });
+
+  it("covers the remaining §9 disciplines with learning paths", () => {
+    for (const id of ["disc.chemistry", "disc.international-relations", "disc.agriculture", "disc.architecture", "disc.education", "disc.communications", "disc.arts", "disc.music"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.learning_path?.length, `${id} learning_path`).toBeGreaterThan(20);
+    }
+  });
+
+  it("covers the §10 science fields earth science and space science with levels and definition intent", () => {
+    for (const id of ["sci.earth-science", "sci.space-science"]) {
+      const r = KnowledgeService.getRecord(id)!;
+      expect(r.sections.levels).toContain("FOUNDATIONS");
+      expect(r.sections.levels).toContain("RESEARCH");
+      expect(r.intents).toContain("definition");
+    }
+  });
+
+  it("ask answers 'What is earth science?' / 'What is space science?' with the field records first", async () => {
+    const earth = await KnowledgeService.ask(null, { question: "What is earth science?" });
+    expect(earth.matches[0]!.id).toBe("sci.earth-science");
+    const space = await KnowledgeService.ask(null, { question: "What is space science?" });
+    expect(space.matches[0]!.id).toBe("sci.space-science");
+  });
+
+  it("covers the §11 software engineering technology with how-it-works", () => {
+    const r = KnowledgeService.getRecord("tech.software-engineering")!;
+    expect(r.sections.how_it_works?.length).toBeGreaterThan(20);
+    expect(r.sections.history).toContain("1960s");
+  });
+
+  it("covers the §12 business additions (entrepreneurship, bookkeeping, payments, procurement, HR)", () => {
+    for (const id of ["bus.entrepreneurship", "bus.bookkeeping", "bus.payments", "bus.procurement", "bus.human-resources"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.detailed?.length).toBeGreaterThan(50);
+    }
+    expect(KnowledgeService.getRecord("bus.entrepreneurship")!.misconceptions!.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it("covers the §13 career additions, with salaries treated as dynamic information", () => {
+    for (const id of ["car.job-search", "car.skills-qualifications", "car.certifications", "car.professional-development", "car.salaries"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+    }
+    const salaries = KnowledgeService.getRecord("car.salaries")!;
+    expect(salaries.summary).toContain("does not memorize");
+    expect(salaries.sections.guidance).toContain("DYNAMIC");
+    const jobSearch = KnowledgeService.getRecord("car.job-search")!;
+    expect(jobSearch.sections.steps).toContain("1.");
+  });
+
+  it("covers the §17 culture items with the no-stereotype discipline", () => {
+    for (const id of ["cult.customs-traditions", "cult.food-cuisine", "cult.clothing-fashion", "cult.arts", "cult.family-structures", "cult.social-institutions", "cult.regional-cultures", "cult.diaspora"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      const guidance = (r!.sections.guidance ?? "").toLowerCase();
+      expect(guidance, `${id} no-stereotype guidance`).toMatch(/varies|differ|diverse|no custom|not rules|individuals|no single|patterns|own cultural|distorts both/i);
+    }
+    expect(KnowledgeService.getRecord("cult.diaspora")!.summary).toContain("Nigerian");
+  });
+
+  it("covers the §18 travel items with time-sensitive verification", () => {
+    for (const id of ["trv.transportation", "trv.currency-money", "trv.weather-climate", "trv.customs-etiquette"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+    }
+    expect(KnowledgeService.getRecord("trv.currency-money")!.sections.warning).toContain("memorized");
+    expect(KnowledgeService.getRecord("trv.weather-climate")!.sections.guidance).toContain("dynamic");
+  });
+
+  it("covers the §19 relationship items with balanced guidance (no single answer)", () => {
+    for (const id of ["rel.friendship", "rel.family", "rel.marriage", "rel.workplace-communication", "rel.personal-development"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect((r!.sections.guidance ?? "").toLowerCase()).toMatch(/no single|no universal|no one|depends|varies|vary|different amounts/i);
+    }
+  });
+
+  it("covers the §20 entertainment items with current-information verification", () => {
+    for (const id of ["ent.television", "ent.books", "ent.celebrities", "ent.artists-creators", "ent.history-trends"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+    }
+    expect(KnowledgeService.getRecord("ent.celebrities")!.sections.guidance).toMatch(/verif|check/);
+    expect(KnowledgeService.getRecord("ent.history-trends")!.sections.guidance).toContain("dynamic");
+  });
+
+  it("covers the §21 language items preserving cultural meaning", () => {
+    for (const id of ["lng.vocabulary", "lng.pronunciation", "lng.dialects-slang", "lng.historical-languages", "lng.indigenous-languages", "lng.reading"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+    }
+    expect(KnowledgeService.getRecord("lng.indigenous-languages")!.sections.guidance).toContain("complete and complex");
+    expect(KnowledgeService.getRecord("lng.dialects-slang")!.sections.guidance).toContain("descriptive");
+  });
+
+  it("covers the §22 everyday items (clothing, organization, transport, problem solving)", () => {
+    for (const id of ["day.clothing", "day.personal-organization", "day.transportation", "day.problem-solving"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.detailed?.length).toBeGreaterThan(50);
+    }
+    expect(KnowledgeService.getRecord("day.problem-solving")!.sections.detailed).toContain("define");
+  });
+
+  it("covers the §23 creative items (poetry, music, art, video, presentations, branding, advertising)", () => {
+    for (const id of ["cre.poetry", "cre.music", "cre.art", "cre.video", "cre.presentations", "cre.branding", "cre.advertising"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.detailed?.length).toBeGreaterThan(50);
+    }
+    expect(KnowledgeService.getRecord("cre.branding")!.sections.guidance).toContain("not manipulation");
+  });
+
+  it("covers the §8 comparison categories: universities, business strategies, investment concepts, travel destinations, historical events, software tools", () => {
+    for (const id of ["cmp.university-vs-polytechnic", "cmp.bootstrapping-vs-funding", "cmp.saving-vs-investing", "cmp.beach-vs-city-break", "cmp.ww1-vs-ww2", "cmp.open-source-vs-proprietary"]) {
+      const r = KnowledgeService.getRecord(id);
+      expect(r, id).not.toBeNull();
+      expect(r!.sections.criteria).toBeTruthy();
+      expect(r!.intents).toContain("comparison");
+    }
+    // Each comparison resolves its item profiles with labeled criteria.
+    const pairs: Array<[string, string]> = [
+      ["cmp.item.university-route", "cmp.item.polytechnic-route"],
+      ["cmp.item.bootstrapping", "cmp.item.investor-funding"],
+      ["cmp.item.saving", "cmp.item.investing"],
+      ["cmp.item.beach-break", "cmp.item.city-break"],
+      ["cmp.item.ww1", "cmp.item.ww2"],
+      ["cmp.item.open-source", "cmp.item.proprietary"],
+    ];
+    for (const [a, b] of pairs) {
+      const result = compareKnowledge([KnowledgeService.getRecord(a)!, KnowledgeService.getRecord(b)!]);
+      expect(result.criteria.length, `${a} vs ${b}`).toBeGreaterThanOrEqual(5);
+      for (const item of result.items) {
+        for (const score of item.scores) {
+          expect(score.basis).toBe("labeled");
+        }
+      }
+      expect(result.note).toContain("universal winner");
+    }
+  });
+
+  it("ask routes the new comparison questions to the comparison layer", async () => {
+    const uni = await KnowledgeService.ask(null, { question: "Which is better: university or polytechnic?" });
+    expect(uni.matches.some((m: any) => m.id === "cmp.university-vs-polytechnic")).toBe(true);
+    const wars = await KnowledgeService.ask(null, { question: "How do the World Wars compare?" });
+    expect(wars.matches.some((m: any) => m.id === "cmp.ww1-vs-ww2")).toBe(true);
+    const software = await KnowledgeService.ask(null, { question: "Open source vs proprietary software" });
+    expect(software.matches.some((m: any) => m.id === "cmp.open-source-vs-proprietary")).toBe(true);
+  });
+
+  it("the knowledge graph resolves the new records' related edges", () => {
+    const node = KnowledgeService.graphNode("place.university-of-ibadan")!;
+    expect(node.node.title).toBe("University of Ibadan");
+    expect(node.nodes.some((n: any) => n.id === "con.university")).toBe(true);
+    const ww2 = KnowledgeService.graphNode("cmp.item.ww2")!;
+    expect(ww2.nodes.some((n: any) => n.id === "when.ww2")).toBe(true);
+  });
+
+  it("the integrity report stays clean at 340+ records with the audit seed", () => {
+    const report = KnowledgeService.integrity();
+    expect(report.ok).toBe(true);
+    expect(report.issues).toEqual([]);
+    expect(KnowledgeService.catalogMeta().recordCount).toBeGreaterThan(340);
+    expect(KnowledgeService.catalogMeta().catalogVersion).toContain("148");
+  });
+
+  it("every spec §5–§23 ask example resolves to a shipped record (no insufficient-knowledge on the explicit lists)", async () => {
+    const questions = [
+      "Who was Thomas Edison?", "Who was Maya Angelou?", "Who was Sidney Poitier?",
+      "Who was Desmond Tutu?", "Who was Grace Hopper?", "Who was Ahmadu Bello?",
+      "Who was Jaja Wachuku?", "Who was Chuba Okadigbo?",
+      "What is entrepreneurship?", "What is bookkeeping?", "What is procurement?",
+      "What is human resources?", "What are certifications?", "How do I find and apply for jobs?",
+      "What are customs and traditions?", "What are diaspora communities?",
+      "How do I get around while travelling?", "How do I respect local customs when travelling?",
+      "How do friendships work?", "How do marriages work?",
+      "What is television?", "What is branding?", "What is advertising?",
+      "How do I build my vocabulary?", "What are indigenous languages?",
+      "How do I stay organized?", "How do I solve everyday problems?",
+      "How do I write poetry?", "How do I create music?", "How do I create visual art?",
+    ];
+    for (const q of questions) {
+      const res = await KnowledgeService.ask(null, { question: q });
+      expect(res.matches.length, q).toBeGreaterThan(0);
+    }
+  });
+});

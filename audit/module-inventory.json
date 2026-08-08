@@ -6092,13 +6092,14 @@
       "serviceFile": {
         "file": "knowledge.service.ts",
         "path": "/home/user/WIN/apps/api/src/knowledge/knowledge.service.ts",
-        "sloc": 623,
+        "sloc": 625,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 7848,
+      "serviceTotalSloc": 10436,
       "serviceFiles": [
         "knowledge.catalog.ts",
+        "knowledge.seed.audit.ts",
         "knowledge.seed.domains.ts",
         "knowledge.seed.expansion.ts",
         "knowledge.seed.people.ts",

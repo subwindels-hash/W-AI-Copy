@@ -1378,3 +1378,56 @@
 - **New coverage is pinned by new questions.** "Who was Kwame Nkrumah?",
   "What is machine learning?", "What is civil law?" and "Where is Lagos?"
   are unit- and e2e-tested so the coverage cannot silently regress.
+
+### Session 148 — Spec A Re-Send Audit: Knowledge Coverage Completion (§5–§23 + §8, `knowledge`)
+
+- **A third send of the S140 spec triggered a third audit — and the audit
+  still found 103 genuine gaps.** S147 closed §5–§23 partially; the
+  re-audit walked every explicit list item and found the remaining items:
+  10 people role categories, 3 spec-example timeline events, 12 place item
+  types, 8 disciplines, 2 science fields, software engineering, 5 business,
+  5 career, 8 culture, 4 travel, 5 relationship, 5 entertainment, 6
+  language, 4 everyday, 7 creative records and 6 comparison categories with
+  12 profiles. The audit loop is a discipline, not a one-time event:
+  coverage is judged against the spec text, never against the previous
+  session's claims.
+- **"Spec example questions" are first-class audit items.** §6's example
+  questions ("When was the first computer built?", "When was the internet
+  created?", "When was the constitution adopted?") are answerable by the
+  engine — each now has a pinned record and a pinned ask test. If a spec
+  lists a question, the module must answer it.
+- **Ranking ties are resolved by id order, and intent boost can create
+  ties.** Two-token "What is X science?" questions tie between the
+  `science_field` record (both tokens in title, no `definition` intent) and
+  `discipline` records (one token + intent boost) — the lexicographically
+  earlier id then wins, so `disc.computer-science` can outrank
+  `sci.materials-science`. Pre-existing behaviour; this session's new
+  science fields carry the `definition` intent (semantically correct) so
+  they rank first, and the quirk is documented rather than silently
+  "fixed" in the engine (additive-only).
+- **DYNAMIC-content guidance records are legitimate catalog content.**
+  `car.salaries` and `trv.currency-money` contain no salary figures or
+  exchange rates — they teach that such data is dynamic and must carry
+  SOURCE + DATE + VERIFICATION STATUS. The no-memorized-numbers rule
+  applies to catalog content, and guidance records are how the rule is
+  itself represented.
+- **Comparison profiles must never carry an unlabeled score.** The six new
+  comparison categories (university vs polytechnic, bootstrap vs funding,
+  saving vs investing, beach vs city break, WW1 vs WW2, open source vs
+  proprietary) follow the established pattern: a text comparison record
+  plus item profiles whose `criteria` arrays are 100% labeled — the engine
+  reports `not_labeled` rather than inventing values, and the WW1/WW2
+  comparison is framed as analysis ("never a verdict") so even historical
+  comparison avoids declaring a winner.
+- **No-stereotype and no-single-answer rules are test-pinned, not just
+  written.** Culture records' guidance sections and relationship records'
+  guidance sections are asserted against anti-stereotype/anti-formula
+  regexes in unit tests, so a future edit cannot silently regress the
+  neutrality discipline.
+- **Seed writing hygiene for big seeds:** timeline events need
+  `dateLabel`/`year`/`eraId` threaded through the helper (the first
+  integrity run caught three missing), source constants must exist before
+  use (`SRC_NASA`), and every `relatedIds` entry must resolve — the
+  integrity report caught nothing else because the seed was written with
+  the pre-computed ID list, but the audit seed's 103 records were still
+  verified record-by-record via `getRecord` + ask smoke tests.

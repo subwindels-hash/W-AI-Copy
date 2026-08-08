@@ -9,7 +9,7 @@
 import type { AudienceLevel, KnowledgeKind } from "@windels/shared";
 
 /** Bump when the curated catalog (categories, eras or seed records) changes. */
-export const KNOWLEDGE_CATALOG_VERSION = "2026.08.140.1";
+export const KNOWLEDGE_CATALOG_VERSION = "2026.08.148.1";
 
 export interface MasterCategory {
   id: string;
