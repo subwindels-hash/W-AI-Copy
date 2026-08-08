@@ -231,6 +231,14 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // `kn:rec:i:<org>:<id>` (string) — the org sits in the segment after the
   // index marker, same shape as usg:evt / pay:tx.
   { prefix: "kn:rec", scope: "org_scoped" },
+  // Session 141 religion expansion pipeline: org-scoped submissions
+  // (rel:sub) and the globally shared approved-extension store (rel:ext).
+  // Submissions shape: `rel:sub:idx:<org>` / `rel:sub:i:<org>:<id>` — org in
+  // the segment after the index marker (usg:evt/pay:tx shape). Approved
+  // extensions (`rel:ext:idx` / `rel:ext:i:<id>`) are global curated
+  // knowledge by design — there is no organization segment at all.
+  { prefix: "rel:sub", scope: "org_scoped" },
+  { prefix: "rel:ext", scope: "shared" },
   // Global/shared infra namespaces (expected to be shared)
   { prefix: "org:membership", scope: "shared" },
   // MFA principal-scoped state — one key per *user* id, not per tenant. A

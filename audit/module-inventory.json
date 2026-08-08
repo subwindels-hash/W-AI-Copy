@@ -1247,6 +1247,7 @@
       "publicApi.spec.ts",
       "qa.spec.ts",
       "release.spec.ts",
+      "religions.spec.ts",
       "sessions37-40.spec.ts",
       "sessions41-76-80.spec.ts",
       "sessions42-47.spec.ts",
@@ -4391,11 +4392,11 @@
       "serviceFile": {
         "file": "enterpriseSearch.service.ts",
         "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
-        "sloc": 412,
+        "sloc": 427,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1085,
+      "serviceTotalSloc": 1115,
       "serviceFiles": [
         "bootstrap.ts",
         "enterpriseSearch.service.ts",
@@ -8791,6 +8792,94 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "religions",
+    "title": "religions",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/religions",
+    "backend": {
+      "serviceDir": "apps/api/src/religions",
+      "serviceFile": {
+        "file": "religions.service.ts",
+        "path": "/home/user/WIN/apps/api/src/religions/religions.service.ts",
+        "sloc": 734,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 7663,
+      "serviceFiles": [
+        "religions.catalog.ts",
+        "religions.seed.abrahamic.ts",
+        "religions.seed.ancient.ts",
+        "religions.seed.dharmic.ts",
+        "religions.seed.traditional.ts",
+        "religions.service.ts",
+        "religions.test.ts",
+        "religions/religions.service.ts"
+      ],
+      "importedServiceFiles": [
+        "religions/religions.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/religions.ts",
+        "sloc": 165,
+        "counts": {
+          "total": 13,
+          "GET": 8,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /catalog",
+          "GET /families",
+          "GET /integrity",
+          "GET /search",
+          "GET /records/:id",
+          "GET /records/:id/teach",
+          "POST /ask",
+          "POST /compare",
+          "POST /submissions",
+          "GET /submissions",
+          "GET /submissions/:id",
+          "DELETE /submissions/:id",
+          "PATCH /submissions/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/religions.ts (672 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/religions.ts (208 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Membership",
+        "Activity",
+        "Message",
+        "Meeting",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "religions.spec.ts",
+      "religions/religions.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "revenueGuardian",
     "title": "revenueGuardian",
     "sessions": [],
@@ -9715,11 +9804,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 523,
+        "sloc": 531,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1222,
+      "serviceTotalSloc": 1238,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

@@ -254,6 +254,19 @@ export const EnterpriseSearchService = {
         }
         break;
       }
+      case "religion": {
+        // Session 141 — the curated religion knowledge catalog (families,
+        // denominations, indigenous traditions, ancient religions). Static
+        // global knowledge — searched with the same relevance ranking.
+        const { ReligionsService } = await import("../religions/religions.service.js");
+        for (const r of ReligionsService.listSearchable()) {
+          push(
+            { id: r.id, title: r.title, updatedAt: r.updatedAt, meta: r.meta },
+            [[r.title, 3], [r.body, 2], [r.meta, 1]]
+          );
+        }
+        break;
+      }
       case "knowledge": {
         // Session 125 — approved identity-knowledge records (Super Admin
         // biography, company/organization profiles, brand, mission, FAQs…).
@@ -395,6 +408,8 @@ export const EnterpriseSearchService = {
       // Session 125 — approved identity-knowledge records (counted for the
       // search viewer's own permissions via the service's public list).
       knowledge: (await ik.IdentityKnowledgeService.listSearchable(org, { id: "", role: null })).length,
+      // Session 141 — curated religion knowledge catalog (static count).
+      religion: (await import("../religions/religions.service.js")).RELIGION_CATALOG.length,
     };
   },
 

@@ -1186,3 +1186,48 @@
   with confidence labels and sources, authored into a versioned seed — no
   `WINDELS_DEMO_DATA` gate is needed because nothing is synthetic; the
   no-fabricated-data guards pass untouched.
+
+### Session 141 — Global Religion, Belief & Spirituality Knowledge System (`religions`)
+
+- **Module prefix:** `Religion*` types in `packages/shared/src/religions.ts`
+  (the module's first dedicated contract — ~900 LOC of types + Zod + the pure
+  engines), **`rel:sub` Redis keys** (org-scoped submissions, org in the
+  segment after the index marker — the `usg:evt`/`pay:tx` shape) and
+  **`rel:ext` keys** (globally shared approved extensions — catalogued
+  `shared` with the rationale that there is no org segment at all),
+  `/api/v1/religions` route prefix (additive), `apps/web/src/lib/religions.ts`
+  client, `/app/religions` route + sidebar label "World Religions", and a new
+  `religion` entity type in Enterprise Search.
+- **Neutrality is structural, not a disclaimer.** No record in the catalog
+  ranks religions; the comparison engine presents each tradition's own text
+  across the 18 spec categories and never a winner; truth-claim questions
+  ("Which religion is true?") are answered by the `pol.neutrality` policy —
+  truth claims are matters of faith, theology, philosophy and personal
+  belief, and WINDELS never claims to have chosen a religion. The unit tests
+  pin that no non-policy record claims its own truth or superiority.
+- **Attribution before assertion.** Contested claims are phrased as "X
+  traditions generally teach A, while Y traditions generally teach B", and
+  `controversialNote` corrects documented popular misconceptions (Vodun vs
+  "voodoo dolls"; Yazidism vs devil worship; Rastafari vs Selassie's own
+  position) — the system never manufactures teachings and never treats
+  followers of a religion as identical.
+- **Indigenous names are primary, not footnotes.** Records carry
+  `indigenousNames` (with language and script) and `namesByLanguage`; search
+  is Unicode-aware so `Ìṣẹ̀ṣe` and Hebrew names match; oral tradition is a
+  first-class source type alongside academic/primary/historical/community.
+- **Denominations are not religions.** Every denomination, school and
+  mystical tradition is its own record with its relation to the parent
+  explained (`den.*`, `sch.*`, `mys.*`); the catalog's integrity check
+  guarantees every related-tradition reference resolves.
+- **Expansion is a ten-step gate, and aliases are never duplicated.** New
+  traditions enter through the pipeline (§18): identity, classification,
+  sources (required), history, community review (advisory), duplicate
+  detection against the catalog AND pending submissions, related/branch
+  mapping, confidence scoring (defaults to UNVERIFIED), and the Super Admin
+  approval gate (service-level role check, so a mis-wired route cannot
+  bypass it). Approved records publish into the shared `rel:ext` store,
+  which search/ask merge for every organization. There is deliberately no
+  fixed target count and no fabricated traditions.
+- **Honest uncertainty.** Fragmentary ancient religions carry `uncertain`
+  confidence with research notes; "I do not have sufficient verified
+  knowledge" is the standing no-match answer — never a guess.

@@ -43,6 +43,7 @@ import { registerBillingRoutes } from "./routes/billing.js";
 import { registerPaymentsRoutes } from "./routes/payments.js";
 import { registerGeoBillingRoutes } from "./routes/geoBilling.js";
 import { registerKnowledgeRoutes } from "./routes/knowledge.js";
+import { registerReligionsRoutes } from "./routes/religions.js";
 import { registerEnterpriseRoutes } from "./routes/enterprise.js";
 import { registerDataPlatformRoutes } from "./routes/dataPlatform.js";
 import { registerGovernanceRoutes } from "./routes/governance.js";
