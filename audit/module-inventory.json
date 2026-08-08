@@ -1262,6 +1262,7 @@
       "talk.spec.ts",
       "tenantIsolation.spec.ts",
       "university.spec.ts",
+      "universityEngine.spec.ts",
       "usage.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
@@ -3779,7 +3780,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2060,
+      "serviceTotalSloc": 2184,
       "serviceFiles": [
         "bootstrap.ts",
         "cyberCloudAcademy.service.ts",
@@ -3845,6 +3846,7 @@
     "tests": [
       "religions.spec.ts",
       "sessions61-72-82.spec.ts",
+      "universityEngine.spec.ts",
       "education/cyberCloudAcademy.test.ts",
       "education/lecturer.test.ts",
       "education/university.test.ts",
@@ -8399,6 +8401,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "universityEngine.spec.ts",
       "config/liveFabrication.test.ts"
     ],
     "syntheticData": [],
@@ -10441,7 +10444,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/universityEngine.ts",
-        "sloc": 140,
+        "sloc": 147,
         "counts": {
           "total": 16,
           "GET": 13,
@@ -10472,12 +10475,13 @@
     ],
     "sharedTypes": "packages/shared/src/universityEngine.ts (233 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/universityEngine.ts (152 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -10487,7 +10491,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "updates",

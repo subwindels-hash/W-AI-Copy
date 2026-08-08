@@ -75,6 +75,7 @@ const PoliticsPage = lazy(() => import("./pages/politics/PoliticsPage").then((m)
 const LifePrinciplesPage = lazy(() => import("./pages/lifePrinciples/LifePrinciplesPage").then((m) => ({ default: m.LifePrinciplesPage })));
 const CyberCloudAcademyPage = lazy(() => import("./pages/cyberCloudAcademy/CyberCloudAcademyPage").then((m) => ({ default: m.CyberCloudAcademyPage })));
 const UniversityPage = lazy(() => import("./pages/university/UniversityPage").then((m) => ({ default: m.UniversityPage })));
+const UniversityEnginePage = lazy(() => import("./pages/universityEngine/UniversityEnginePage").then((m) => ({ default: m.UniversityEnginePage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
 const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
 const NotificationsPage = lazy(() => import("./pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
@@ -339,6 +340,7 @@ export const router = createBrowserRouter([
       { path: "life-principles", element: withSuspense(<LifePrinciplesPage />) },
       { path: "cyber-cloud-academy", element: withSuspense(<CyberCloudAcademyPage />) },
       { path: "university", element: withSuspense(<UniversityPage />) },
+      { path: "education-engine", element: withSuspense(<UniversityEnginePage />) },
       { path: "geo-billing", element: withSuspense(<GeoBillingConsolePage />) },
       { path: "commerce", element: withSuspense(<CommercePage />) },
       { path: "notifications", element: withSuspense(<NotificationsPage />) },

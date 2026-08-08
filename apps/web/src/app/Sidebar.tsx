@@ -121,6 +121,7 @@ const navItems = [
   { to: "/app/life-principles", icon: Lightbulb, label: "Rules of Life" },
   { to: "/app/cyber-cloud-academy", icon: ShieldCheck, label: "Cyber & Cloud Academy" },
   { to: "/app/university", icon: GraduationCap, label: "University Education" },
+  { to: "/app/education-engine", icon: BookOpen, label: "Higher Education Engine" },
   { to: "/app/geo-billing", icon: Globe2, label: "Geo-Billing Engine" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },
   { to: "/app/cognitive", icon: Brain, label: "Cognitive / World Model" },

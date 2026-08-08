@@ -1601,3 +1601,36 @@
   university / universityEngine — one module, one commit, one PROGRESS
   row, one CONVENTIONS section, one inventory regeneration. The audit
   trail stays reviewable module by module.
+
+### Session 154 — Module Completion 3/3: Universal University & Higher Education Engine (`universityEngine`)
+
+- **The one-by-one completion is finished: 0 PARTIAL modules remain.**
+  cyberCloudAcademy (S152), university (S153), universityEngine (S154) —
+  each got a client, a console page, extended unit tests, an e2e spec and
+  docs. The inventory now reads 125/125 COMPLETE. When every module is
+  COMPLETE, the inventory's job becomes regression detection: any future
+  PARTIAL is a new defect, not a legacy one.
+- **Integrity tests must match the contract's real field names.** Three
+  assertion drafts failed against the actual shared types: fields have no
+  `domainId` (resolve via FIELD_BY_ID), UniversityRecord uses `founded`/
+  `notes` not `foundedYear`/`rankNote`, and the PhD label is "Doctor of
+  Philosophy (PhD)". The pattern: read the contract before writing the
+  assertions — the tests document the shipped shape, not an imagined one.
+- **Error paths are part of module completion.** `POST /teach` with no
+  field/title returned 500 INTERNAL_ERROR for a client-input mistake. The
+  completion session fixed it to 400 VALIDATION_ERROR — an error-path
+  correction is additive in spirit (no successful-response shape changed)
+  and is exactly the kind of defect a completion audit should find.
+- **Honest-failure semantics were pinned, not invented.** The advisor's
+  no-match behaviour (empty pathway + "could not strongly match" rationale)
+  predates the session; the completion tests pin it so a future change
+  cannot silently start fabricating recommendations. Same for study-plan
+  bounds and the 0-credit doctoral research design.
+- **The web layer imports types for scope AND re-exports them.** Applied
+  the S152 lesson to the third client in a row (S153 and S154 both
+  correct); the pattern is now the standing convention for module clients.
+- **Session 154 completes the education trio, not the platform.** The
+  three modules were PARTIAL in *inventory classification*; they were never
+  broken. The real value of the completion pass: every module now has a
+  console surface, e2e coverage and pinned semantics — and the scanner
+  truthfully reports 0 unfinished modules.
