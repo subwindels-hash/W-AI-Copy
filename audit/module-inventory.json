@@ -1583,11 +1583,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 1321,
+        "sloc": 1359,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1321,
+      "serviceTotalSloc": 1359,
       "serviceFiles": [
         "tradingIntel/brokerIntegration.service.ts"
       ],
@@ -1599,10 +1599,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/brokerIntegration.ts",
-        "sloc": 374,
+        "sloc": 383,
         "counts": {
-          "total": 46,
-          "GET": 22,
+          "total": 48,
+          "GET": 24,
           "POST": 19,
           "PUT": 0,
           "PATCH": 3,
@@ -1643,6 +1643,8 @@
           "POST /brokers/risk/kill-switch",
           "GET /brokers/demo-preset/instructions",
           "POST /brokers/demo-preset",
+          "GET /brokers/crypto/intelligence",
+          "GET /brokers/crypto/market-data",
           "GET /brokers/health/detailed",
           "POST /brokers/backtest/history",
           "GET /brokers/pnl/sparkline",
@@ -1660,7 +1662,7 @@
     ],
     "sharedTypes": "packages/shared/src/brokerIntegration.ts (588 LOC)",
     "web": {
-      "client": "apps/web/src/lib/brokerIntegration.ts (258 LOC)",
+      "client": "apps/web/src/lib/brokerIntegration.ts (260 LOC)",
       "pages": []
     },
     "db": {
@@ -3670,7 +3672,7 @@
     ],
     "sharedTypes": "packages/shared/src/ea.ts (261 LOC)",
     "web": {
-      "client": "apps/web/src/lib/brokerIntegration.ts (258 LOC, serves /ea)",
+      "client": "apps/web/src/lib/brokerIntegration.ts (260 LOC, serves /ea)",
       "pages": []
     },
     "db": {
@@ -9614,11 +9616,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 1321,
+        "sloc": 1359,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 7330,
+      "serviceTotalSloc": 7368,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
@@ -9749,6 +9751,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [
+      "AWS",
       "AlphaVantage",
       "TwelveData",
       "Polygon.io",

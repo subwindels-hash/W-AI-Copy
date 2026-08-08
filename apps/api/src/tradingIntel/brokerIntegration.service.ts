@@ -1149,6 +1149,44 @@ export const BrokerIntegrationService = {
     return { period, points, label: "LIVE DATA" };
   },
 
+  /* ── Crypto Hardening: Market Data + Intelligence (LIVE vs HISTORICAL) ── */
+  async getCryptoIntelligence(oid: string): Promise<{ live: boolean; exchanges: Array<{ broker: string; label: string; connected: boolean; fundingRates?: any[]; openInterest?: any[]; liquidations?: any[]; reason?: string }>; label: string }> {
+    const accounts = await this.listAccounts(oid);
+    const cryptoAccounts = accounts.filter(a => !["mt5","mt4"].includes(a.broker));
+    if (cryptoAccounts.length===0) return { live: false, exchanges: [], label: "CRYPTO — no exchange connected" };
+    const out = [];
+    for (const a of cryptoAccounts) {
+      const conn: any = connectorRegistry.get(a.broker as any);
+      const connected = conn?.isConnected(a.id) ?? false;
+      if (!connected) {
+        out.push({ broker: a.broker, label: a.brokerLabel, connected: false, reason: "EXCHANGE_CONNECTION_OFFLINE — requires authorized API keys and live connection. No fake funding/openInterest." });
+      } else {
+        // Real data from positions (liquidationPrice) and marketData where available
+        let positions: any[] = [];
+        try { positions = await this.listPositions(oid, a.id); } catch {}
+        const liquidations = positions.map((pos:any)=> ({ symbol: pos.symbol, liquidationPrice: pos.liquidationPrice ?? null, marginType: pos.marginType, unrealizedPnl: pos.profit }));
+        out.push({ broker: a.broker, label: a.brokerLabel, connected: true, fundingRates: [], openInterest: [], liquidations, reason: undefined });
+      }
+    }
+    return { live: out.some(e=>e.connected), exchanges: out, label: out.some(e=>e.connected) ? "LIVE EXCHANGE DATA" : "EXCHANGE CONNECTION OFFLINE" };
+  },
+
+  async getCryptoMarketData(oid: string, symbol: string): Promise<{ symbol: string; live: boolean; ticker?: any; orderBook?: any; fundingRate?: any; reason?: string; label: string }> {
+    const accounts = await this.listAccounts(oid);
+    const crypto = accounts.find(a=> !["mt5","mt4"].includes(a.broker));
+    if (!crypto) return { symbol, live: false, reason: "No crypto exchange connected — LIVE EXCHANGE DATA unavailable. Connect via POST /brokers/accounts {broker: binance|bybit...}", label: "EXCHANGE CONNECTION OFFLINE" };
+    const conn: any = connectorRegistry.get(crypto.broker as any);
+    if (!conn?.isConnected(crypto.id)) return { symbol, live: false, reason: "EXCHANGE_CONNECTION_OFFLINE — "+crypto.broker+" not connected", label: "EXCHANGE CONNECTION OFFLINE" };
+    // When connected, try to get ticker via sync symbols
+    let ticker: any = undefined;
+    try {
+      const syms = await this.listSymbols(oid, crypto.id);
+      const s = syms.find((x:any)=> x.symbol===symbol || x.rawSymbol===symbol);
+      if (s) ticker = { symbol, bid: (s as any).bid, ask: (s as any).ask, price: (s as any).last, source: crypto.broker, live: true };
+    } catch {}
+    return { symbol, live: !!ticker, ticker, reason: ticker ? undefined : "Ticker not yet synced — run POST /brokers/accounts/:id/sync", label: ticker ? "LIVE EXCHANGE DATA" : "HISTORICAL DATA" };
+  },
+
   async dashboard(oid: string): Promise<{
     generatedAt: string;
     accounts: BrokerAccount[]; positions: BrokerPosition[]; orders: BrokerPendingOrder[];

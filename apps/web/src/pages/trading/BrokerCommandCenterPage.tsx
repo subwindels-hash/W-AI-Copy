@@ -70,6 +70,9 @@ export function BrokerCommandCenterPage() {
   const [btStart, setBtStart] = useState("2024-01-01");
   const [btEnd, setBtEnd] = useState("2024-02-01");
   const [btResult, setBtResult] = useState<any>(null);
+  const [cryptoIntel, setCryptoIntel] = useState<any>(null);
+  const [cryptoSymbol, setCryptoSymbol] = useState("BTC/USDT");
+  const [cryptoTicker, setCryptoTicker] = useState<any>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -78,6 +81,7 @@ export function BrokerCommandCenterPage() {
       try { const inst = await brokerApi.demoInstructions(); setDemoInstructions(inst.instructions); } catch {}
       try { const hd = await brokerApi.detailedHealth(); setHealthDetailed(hd); } catch {}
       try { const sp = await brokerApi.pnlSparkline("7d"); setSparkline(sp); } catch {}
+      try { const ci = await brokerApi.cryptoIntelligence(); setCryptoIntel(ci); } catch {}
     } catch { /* degrades before server config */ }
   }, []);
 
@@ -240,6 +244,26 @@ export function BrokerCommandCenterPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* ── Crypto Intelligence (LIVE EXCHANGE DATA vs OFFLINE) ── */}
+      <Card className="mb-4 border-violet-500/30 bg-violet-500/5">
+        <CardHeader><CardTitle className="text-sm">Crypto Trading Intelligence — {cryptoIntel?.label || "EXCHANGE CONNECTION OFFLINE"}</CardTitle><CardDescription>WINDELS is NOT an exchange — custody & execution remain on external exchange. LIVE vs HISTORICAL labeled.</CardDescription></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={cryptoSymbol} onChange={e=>setCryptoSymbol(e.target.value)} placeholder="BTC/USDT" className="max-w-[160px]" />
+            <Button size="sm" onClick={async()=>{ try{ const r=await brokerApi.cryptoMarketData(cryptoSymbol); setCryptoTicker(r); }catch(e){ setErr(e instanceof Error?e.message:String(e)); }}}>Fetch Live Ticker</Button>
+            <Badge className={cryptoTicker?.live ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}>{cryptoTicker?.label || cryptoIntel?.label || "OFFLINE"}</Badge>
+          </div>
+          {cryptoTicker?.ticker ? <div className="text-xs border border-border rounded p-2">Live {cryptoTicker.ticker.symbol} — bid {cryptoTicker.ticker.bid} ask {cryptoTicker.ticker.ask} price {cryptoTicker.ticker.price} ({cryptoTicker.ticker.source})</div> : cryptoTicker?.reason ? <div className="text-xs text-amber-300">{cryptoTicker.reason}</div> : null}
+          {cryptoIntel?.exchanges?.length ? cryptoIntel.exchanges.map((ex:any)=>(
+            <div key={ex.broker} className={`rounded border p-2 text-xs ${ex.connected ? "border-emerald-500/30 bg-emerald-500/10" : "border-slate-500/30 bg-slate-500/10"}`}>
+              <div className="font-medium">{ex.label} ({ex.broker}) — {ex.connected ? "LIVE EXCHANGE DATA" : ex.reason}</div>
+              {ex.liquidations?.length ? <div className="mt-1">Liquidations: {ex.liquidations.slice(0,2).map((l:any)=> `${l.symbol} liq ${l.liquidationPrice ?? "—"}`).join(", ")}</div> : null}
+            </div>
+          )) : <p className="text-xs text-text-muted">No crypto exchange connected — connect Binance/Bybit/OKX via Add Broker Account (choose crypto broker). Paper trading uses exchange testnet — not internal custody.</p>}
+          <div className="text-[11px] text-text-muted">Security: API keys encrypted at rest, never logged, RBAC + audit, withdrawal permission never requested — use IP allowlist + disable withdrawal on exchange.</div>
+        </CardContent>
+      </Card>
 
       {/* Key stats */}
       {cc && (

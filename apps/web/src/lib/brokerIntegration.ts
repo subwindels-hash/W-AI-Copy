@@ -249,6 +249,8 @@ export const brokerApi = {
   agents: () => api<BrokerTradingAgent[]>("/brokers/agents"),
   runAgent: (key: string, payload?: Record<string, any>) => api<{ agent: string; verdict: string; detail: string; data?: any }>(`/brokers/agents/${key}/run`, { method: "POST", json: payload ?? {} }),
   detailedHealth: () => api<Array<{accountId:string;name:string;broker:string;state:string;connected:boolean;reason?:string;latencyMs?:number}>>("/brokers/health/detailed"),
+  cryptoIntelligence: () => api<{live:boolean;exchanges:any[];label:string}>("/brokers/crypto/intelligence"),
+  cryptoMarketData: (symbol:string) => api<{symbol:string;live:boolean;ticker?:any;reason?:string;label:string}>(`/brokers/crypto/market-data?symbol=${encodeURIComponent(symbol)}`),
   backtestHistory: (body:{symbol:string;timeframe:string;startDate:string;endDate:string;strategyId?:string;riskPct?:number}) => api<{symbol:string;timeframe:string;candles:any[];backtest?:any;labels:string[];disclaimer:string}>("/brokers/backtest/history",{method:"POST", json: body}),
   pnlSparkline: (period?:string) => api<{period:string;points:Array<{t:string;equity:number;balance:number;floatingPnL:number}>;reason?:string;label:string}>(`/brokers/pnl/sparkline${period?`?period=${period}`:""}`),
   eas: () => api<EaSummary[]>("/ea"),

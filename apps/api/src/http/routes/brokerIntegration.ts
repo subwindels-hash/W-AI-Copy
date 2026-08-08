@@ -241,6 +241,15 @@ export function registerBrokerIntegrationRoutes(router: Router) {
   });
 
 
+
+  // ── Crypto Hardening: Intelligence + Market Data (LIVE vs OFFLINE) ──
+  router.get("/brokers/crypto/intelligence", async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.getCryptoIntelligence(oid(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.get("/brokers/crypto/market-data", validate({ query: z.object({ symbol: z.string().min(1) }) }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.getCryptoMarketData(oid(req), String((req.query as any).symbol)), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+
   // ── Hardening: Detailed Health State Machine + Backtest History + PnL Sparkline ──
   router.get("/brokers/health/detailed", async (req, res, next) => {
     try { res.json({ ok: true, data: await BrokerIntegrationService.detailedHealth(oid(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
