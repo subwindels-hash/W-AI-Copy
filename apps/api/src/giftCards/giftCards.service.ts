@@ -15,6 +15,7 @@
  */
 import { randomUUID, createHash, randomInt } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
 import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import type {
@@ -356,6 +357,42 @@ export const GiftCardsService = {
   },
 
   listAgents() { return AI_AGENTS; },
+
+  async applyToInvoice(cardId: string, invoiceId: string, pin?: string): Promise<any> {
+    const inv = await prisma.invoice.findUnique({ where: { id: invoiceId } });
+    if (!inv) throw AppError.notFound("Invoice not found");
+    if (inv.status === "paid") throw AppError.badRequest("Invoice already paid");
+
+    const card = await this.getCard(cardId);
+    if (!card) throw AppError.notFound("Gift card not found");
+
+    const amountToCharge = inv.amountCents / 100;
+    const redemption = await this.redeem(cardId, amountToCharge, pin, `inv-${invoiceId}`);
+
+    const ledgerEntry = await prisma.billingLedgerEntry.create({
+      data: {
+        organizationId: inv.organizationId,
+        invoiceId: inv.id,
+        giftCardId: cardId,
+        amountCents: Math.round(redemption.redeemed * 100),
+        debitAccount: "accounts_receivable",
+        creditAccount: "gift_card_liability",
+      },
+    });
+
+    const updatedInvoice = await prisma.invoice.update({
+      where: { id: inv.id },
+      data: { status: "paid", paidAt: new Date() },
+    });
+
+    return {
+      success: true,
+      card: redemption.card,
+      redeemedCents: Math.round(redemption.redeemed * 100),
+      invoice: updatedInvoice,
+      ledgerEntry,
+    };
+  },
 
   /** Payment Method Registration: exposes a descriptor that the existing Payment Gateway can consume. */
   paymentMethodDescriptor() {

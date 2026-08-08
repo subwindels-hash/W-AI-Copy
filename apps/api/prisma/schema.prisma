@@ -1429,3 +1429,91 @@ model Notification {
   @@index([userId, createdAt])
   @@index([readAt])
 }
+
+// ─────────────────────────── Enterprise Governance & Ledger Extensions ───────────────────────────
+enum AccessReviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AccessItemStatus {
+  PENDING
+  APPROVED
+  REVOKED
+  QUARANTINED
+}
+
+model AccessReviewCampaign {
+  id             String             @id @default(cuid())
+  organizationId String
+  status         AccessReviewStatus @default(IN_PROGRESS)
+  dormantDays    Int                @default(90)
+  completedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  items          AccessReviewItem[]
+
+  @@index([organizationId, status])
+}
+
+model AccessReviewItem {
+  id           String           @id @default(cuid())
+  campaignId   String
+  campaign     AccessReviewCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId       String
+  status       AccessItemStatus @default(PENDING)
+  reviewedById String?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([campaignId])
+  @@index([userId])
+}
+
+model IncidentRunbook {
+  id              String   @id @default(cuid())
+  organizationId  String?
+  name            String
+  triggerSeverity String   // low, medium, high, critical
+  triggerArea     String   // auth, data, ai, billing, infra, abuse, other
+  actions         Json     @default("[]") // ["REVOKE_TOKENS", "NOTIFY_ADMIN", "QUARANTINE_USER"]
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  executions      RunbookExecution[]
+
+  @@index([organizationId, enabled])
+}
+
+model RunbookExecution {
+  id         String          @id @default(cuid())
+  runbookId  String
+  runbook    IncidentRunbook @relation(fields: [runbookId], references: [id], onDelete: Cascade)
+  incidentId String
+  status     String          @default("success") // success, failed
+  output     Json            @default("{}")
+  createdAt  DateTime        @default(now())
+
+  @@index([runbookId])
+  @@index([incidentId])
+}
+
+model BillingLedgerEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  giftCardId     String
+  amountCents    Int
+  debitAccount   String   // e.g. "accounts_receivable"
+  creditAccount  String   // e.g. "gift_card_liability"
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@index([giftCardId])
+}
+
