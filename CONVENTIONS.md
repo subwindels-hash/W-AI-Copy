@@ -1231,3 +1231,13 @@
 - **Honest uncertainty.** Fragmentary ancient religions carry `uncertain`
   confidence with research notes; "I do not have sufficient verified
   knowledge" is the standing no-match answer — never a guess.
+
+### Session 142 — Religion Knowledge Integration & Teaching Systems (`religions/integrations`)
+
+- **Integration channels:** `rel:int:mem:<org>` (last memory sync marker) and `rel:int:ds:<org>` (created training dataset marker) Redis keys; the `religionsIntegrations` route file is mapped to the `religions` module in the inventory's `ROUTE_OVERRIDES` (the `conversationOps` convention).
+- **Memory sync is idempotent by design.** The Memory Fabric deduplicates by content+scope, so re-syncs of the catalog never create duplicates; the integration reports honest attempted/succeeded/failed counts and records the last sync instead of pretending anything was "imported" twice.
+- **Agent knowledge is labelled provenance, not content-dumping.** Attached rows are `SNIPPET`s titled `Religion: <name>` with `source: WINDELS religion catalog <version>`; re-attach skips titles already present. Agent ownership stays with the existing agentKnowledge service (org assertion) — the integration never bypasses it.
+- **Training datasets declare their honesty.** The curated religion corpus is created with `syntheticPct: 0`, `cleaned: true`, `ragbuilderIncluded: true`, and every JSONL row carries the catalog version as its source — the same "label the provenance" rule as memory and agents.
+- **The Lecturer AI handoff keeps facts in the catalog.** `POST /education/lesson` returns both the curated course and the adaptive tutor session; level mapping is explicit (research→advanced) and the note states that the catalog is the source of truth.
+- **The chat surface inherits the neutrality guarantee.** `POST /chat` reuses the religion question engine, so truth-claim questions get the policy answer and out-of-catalog questions get the honest no-match — the conversational channel cannot bypass the Session 141 neutrality rules.
+- **Route mounting is verified, not assumed.** Session 141's router mount silently failed to insert (anchor drift; unit tests exercise services directly, so they stayed green). Session 142 mounts both routers and the fix is pinned by the inventory route count — future route-file additions must assert the mount exists in `server.ts`.

@@ -3838,6 +3838,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "religions.spec.ts",
       "sessions61-72-82.spec.ts",
       "education/cyberCloudAcademy.test.ts",
       "education/lecturer.test.ts",
@@ -8800,25 +8801,29 @@
     "backend": {
       "serviceDir": "apps/api/src/religions",
       "serviceFile": {
-        "file": "religions.service.ts",
-        "path": "/home/user/WIN/apps/api/src/religions/religions.service.ts",
-        "sloc": 734,
+        "file": "religions.integrations.service.ts",
+        "path": "/home/user/WIN/apps/api/src/religions/religions.integrations.service.ts",
+        "sloc": 384,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 7663,
+      "serviceTotalSloc": 8710,
       "serviceFiles": [
         "religions.catalog.ts",
+        "religions.integrations.service.ts",
+        "religions.integrations.test.ts",
         "religions.seed.abrahamic.ts",
         "religions.seed.ancient.ts",
         "religions.seed.dharmic.ts",
         "religions.seed.traditional.ts",
         "religions.service.ts",
         "religions.test.ts",
-        "religions/religions.service.ts"
+        "religions/religions.service.ts",
+        "religions/religions.integrations.service.ts"
       ],
       "importedServiceFiles": [
-        "religions/religions.service.ts"
+        "religions/religions.service.ts",
+        "religions/religions.integrations.service.ts"
       ],
       "bootstrapFile": null
     },
@@ -8849,11 +8854,35 @@
           "DELETE /submissions/:id",
           "PATCH /submissions/:id"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/religionsIntegrations.ts",
+        "sloc": 147,
+        "counts": {
+          "total": 10,
+          "GET": 5,
+          "POST": 5,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /",
+          "GET /memory",
+          "POST /memory/sync",
+          "POST /agents/:agentId/attach",
+          "GET /agents/:agentId",
+          "POST /training/dataset",
+          "GET /training/export",
+          "GET /education/catalog",
+          "POST /education/lesson",
+          "POST /chat"
+        ]
       }
     ],
     "sharedTypes": "packages/shared/src/religions.ts (672 LOC)",
     "web": {
-      "client": "apps/web/src/lib/religions.ts (208 LOC)",
+      "client": "apps/web/src/lib/religions.ts (326 LOC)",
       "pages": []
     },
     "db": {
@@ -8861,8 +8890,10 @@
         "User",
         "Organization",
         "Membership",
+        "Agent",
         "Activity",
         "Message",
+        "AgentKnowledge",
         "Meeting",
         "Integration"
       ],
@@ -8871,6 +8902,7 @@
     },
     "tests": [
       "religions.spec.ts",
+      "religions/religions.integrations.test.ts",
       "religions/religions.test.ts"
     ],
     "syntheticData": [],
@@ -10099,6 +10131,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "religions.spec.ts",
       "sessions54-60.spec.ts",
       "training/training.test.ts",
       "config/seedGate.test.ts"

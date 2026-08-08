@@ -211,3 +211,110 @@ test.describe("Session 141 — Global Religion, Belief & Spirituality Knowledge 
     expect(res.status).toBe(404);
   });
 });
+
+test.describe("Session 142 — Religion Knowledge Integration & Teaching Systems", () => {
+  let token = "";
+  const marker = `e2e-rel-int-${Date.now()}`;
+
+  test.beforeAll(async () => {
+    token = await apiLogin();
+  });
+
+  const auth = () => ({ "Content-Type": "application/json", Authorization: `Bearer ${token}` });
+
+  async function get(path: string) {
+    const res = await fetch(`${BASE}${path}`, { headers: auth() });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  async function send(method: string, path: string, body?: unknown) {
+    const res = await fetch(`${BASE}${path}`, {
+      method,
+      headers: auth(),
+      body: body === undefined ? undefined : JSON.stringify(body),
+    });
+    return { status: res.status, ...(await res.json().catch(() => ({}))) } as any;
+  }
+
+  test("GET /religions/integrations reports the five channels", async () => {
+    const res = await get("/religions/integrations");
+    expect(res.status).toBe(200);
+    expect(res.data.channel).toBe("overview");
+    expect(res.data.recordCount).toBeGreaterThan(100);
+    expect(res.data.educationCourseCount).toBeGreaterThan(100);
+    expect(res.data.chatSurface).toBe("available");
+    expect(res.data.memory).toHaveProperty("lastSyncAt");
+    expect(res.data.memory).toHaveProperty("synced");
+  });
+
+  test("POST /religions/integrations/memory/sync syncs the catalog into the memory fabric", async () => {
+    const res = await send("POST", "/religions/integrations/memory/sync", {});
+    expect(res.status).toBe(200);
+    expect(res.data.channel).toBe("memory");
+    expect(res.data.attempted).toBeGreaterThan(100);
+    expect(res.data.succeeded).toBe(res.data.attempted);
+    expect(res.data.failed).toBe(0);
+    expect(res.data.catalogVersion).toContain("2026.08");
+    const status = await get("/religions/integrations/memory");
+    expect(status.data.lastSync).not.toBeNull();
+  });
+
+  test("POST /religions/integrations/training/dataset creates the curated dataset", async () => {
+    const res = await send("POST", "/religions/integrations/training/dataset", {});
+    expect(res.status).toBe(200);
+    expect(res.data.channel).toBe("training");
+    expect(res.data.syntheticPct).toBe(0);
+    expect(res.data.cleaned).toBe(true);
+    expect(res.data.ragbuilderIncluded).toBe(true);
+    expect(res.data.rows).toBeGreaterThan(100);
+    expect(res.data.dataset.id).toBeTruthy();
+    expect(res.data.exportNote).toContain("syntheticPct is 0");
+  });
+
+  test("GET /religions/integrations/training/export returns JSONL with provenance", async () => {
+    const res = await fetch(`${BASE}/religions/integrations/training/export?family=ancient`, { headers: auth() });
+    expect(res.status).toBe(200);
+    const text = await res.text();
+    const lines = text.split("\n").filter(Boolean);
+    expect(lines.length).toBeGreaterThan(10);
+    const row = JSON.parse(lines[0]!);
+    expect(row.source).toContain("WINDELS religion catalog");
+    expect(row.question).toMatch(/^What is /);
+  });
+
+  test("POST /religions/integrations/education/lesson hands off to the Lecturer AI", async () => {
+    const res = await send("POST", "/religions/integrations/education/lesson", { recordId: "rel.buddhism", level: "beginner" });
+    expect(res.status).toBe(200);
+    expect(res.data.channel).toBe("education");
+    expect(res.data.course.id).toBe("rel.buddhism");
+    expect(res.data.lecturer.sessionId).toBeTruthy();
+    expect(res.data.note).toContain("Lecturer AI");
+  });
+
+  test("GET /religions/integrations/education/catalog lists every record as a course", async () => {
+    const res = await get("/religions/integrations/education/catalog");
+    expect(res.status).toBe(200);
+    expect(res.data.length).toBeGreaterThan(100);
+    expect(res.data[0].courseId).toBeTruthy();
+    expect(res.data[0].topics.length).toBeGreaterThan(0);
+  });
+
+  test("POST /religions/integrations/chat answers with the neutrality note for truth claims", async () => {
+    const res = await send("POST", "/religions/integrations/chat", { question: "Which religion is true?", level: "intermediate" });
+    expect(res.status).toBe(200);
+    expect(res.data.channel).toBe("chat");
+    expect(res.data.role).toBe("assistant");
+    expect(res.data.mode).toBe("neutrality");
+    expect(res.data.answer).toContain("does not claim to have chosen a religion");
+    expect(res.data.followUp.length).toBeGreaterThan(0);
+  });
+
+  test("POST /religions/integrations/chat teaches definitions conversationally", async () => {
+    const res = await send("POST", "/religions/integrations/chat", { question: "What is the Yoruba traditional religion?", level: "beginner" });
+    expect(res.status).toBe(200);
+    expect(res.data.mode).toBe("teach");
+    expect(res.data.answer).toContain("Yoruba");
+    expect(res.data.sections.length).toBeGreaterThan(0);
+    expect(res.data.sources.length).toBeGreaterThan(0);
+  });
+});

@@ -24,6 +24,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import {
   BookOpen, Search, Scale, GraduationCap, Database, Send, Trash2,
   ShieldCheck, AlertTriangle, FileQuestion, Sparkles, ExternalLink,
+  Plug, MemoryStick, Bot, Cpu, MessagesSquare, Download,
 } from "lucide-react";
 import type {
   ReligionFamily,
@@ -34,16 +35,26 @@ import type {
 } from "@windels/shared";
 import {
   askReligion,
+  attachReligionKnowledgeToAgent,
+  chatReligion,
   compareReligionsByIds,
+  createReligionTrainingDataset,
   deleteReligionSubmission,
+  getAgentReligionStatus,
   getReligionCatalogMeta,
-  getReligionStats,
+  getReligionEducationCatalog,
+  getReligionsIntegrationsOverview,
+  getReligionsMemoryStatus,
   listReligionSubmissions,
+  religionTrainingExportUrl,
   reviewReligionSubmission,
   searchReligions,
+  startReligionLesson,
   submitReligion,
+  syncReligionsMemory,
   teachReligion,
 } from "@/lib/religions";
+import type { ReligionChatTurn } from "@/lib/religions";
 import type {
   ReligionAskResponse,
   ReligionCatalogMeta,
@@ -230,6 +241,83 @@ export function ReligionsPage() {
     await loadSubs();
   }, [loadSubs]);
 
+  // ── Integrations (Session 142) ─────────────────────────────────────
+  const [integrationOverview, setIntegrationOverview] = useState<any>(null);
+  const [memSyncMsg, setMemSyncMsg] = useState<string | null>(null);
+  const [agentId, setAgentId] = useState("");
+  const [agentMsg, setAgentMsg] = useState<string | null>(null);
+  const [agentStatus, setAgentStatus] = useState<{ attachedCount: number; attachedTitles: string[] } | null>(null);
+  const [trainMsg, setTrainMsg] = useState<string | null>(null);
+  const [eduMsg, setEduMsg] = useState<string | null>(null);
+  const [eduLesson, setEduLesson] = useState<any>(null);
+  const [chatQ, setChatQ] = useState("What do different religions teach about the afterlife?");
+  const [chatTurn, setChatTurn] = useState<ReligionChatTurn | null>(null);
+
+  const loadIntegrations = useCallback(async () => {
+    setIntegrationOverview(await getReligionsIntegrationsOverview().catch(() => null));
+  }, []);
+
+  useEffect(() => {
+    void loadIntegrations();
+  }, [loadIntegrations]);
+
+  const runMemSync = useCallback(async () => {
+    setMemSyncMsg(null);
+    try {
+      const res = await syncReligionsMemory();
+      setMemSyncMsg(`Memory Fabric sync: ${res.succeeded}/${res.attempted} records synced (${res.failed} failed). ${res.skippedDuplicateNote}`);
+      await loadIntegrations();
+    } catch (e: any) {
+      setMemSyncMsg(String(e?.message ?? e));
+    }
+  }, [loadIntegrations]);
+
+  const runAttach = useCallback(async () => {
+    setAgentMsg(null);
+    setAgentStatus(null);
+    if (!agentId.trim()) {
+      setAgentMsg("Enter an agent id first.");
+      return;
+    }
+    try {
+      const res = await attachReligionKnowledgeToAgent(agentId.trim());
+      setAgentMsg(`Attached ${res.attached} records to agent ${res.agentId} (${res.alreadyPresent} already present). ${res.note}`);
+      const st = await getAgentReligionStatus(agentId.trim());
+      setAgentStatus({ attachedCount: st.attachedCount, attachedTitles: st.attachedTitles });
+    } catch (e: any) {
+      setAgentMsg(String(e?.message ?? e));
+    }
+  }, [agentId]);
+
+  const runTraining = useCallback(async () => {
+    setTrainMsg(null);
+    try {
+      const res = await createReligionTrainingDataset();
+      setTrainMsg(`Dataset "${res.dataset.name}" created (id ${res.dataset.id}): ${res.rows} rows, ${(res.sizeBytes / 1024).toFixed(1)} KB, syntheticPct ${res.syntheticPct}. ${res.exportNote}`);
+      await loadIntegrations();
+    } catch (e: any) {
+      setTrainMsg(String(e?.message ?? e));
+    }
+  }, [loadIntegrations]);
+
+  const runLesson = useCallback(async () => {
+    setEduMsg(null);
+    setEduLesson(null);
+    if (!learnId.trim()) {
+      setEduMsg("Enter a record id (e.g. rel.buddhism) in the Learn tab field first, or type one here.");
+      return;
+    }
+    try {
+      setEduLesson(await startReligionLesson(learnId.trim(), learnLevel));
+    } catch (e: any) {
+      setEduMsg(String(e?.message ?? e));
+    }
+  }, [learnId, learnLevel]);
+
+  const runChat = useCallback(async () => {
+    setChatTurn(await chatReligion({ question: chatQ, level }).catch(() => null));
+  }, [chatQ, level]);
+
   return (
     <div className="space-y-6">
       <div>
@@ -260,6 +348,7 @@ export function ReligionsPage() {
           <TabsTrigger value="compare"><Scale className="w-3.5 h-3.5 inline mr-1" /> Compare</TabsTrigger>
           <TabsTrigger value="learn"><GraduationCap className="w-3.5 h-3.5 inline mr-1" /> Learn</TabsTrigger>
           <TabsTrigger value="expand"><Database className="w-3.5 h-3.5 inline mr-1" /> Expand</TabsTrigger>
+          <TabsTrigger value="integrations"><Plug className="w-3.5 h-3.5 inline mr-1" /> Integrations</TabsTrigger>
         </TabsList>
 
         {/* ── Ask ─────────────────────────────────────────────────────── */}
@@ -585,6 +674,152 @@ export function ReligionsPage() {
                     {s.reviewNote && <div className="text-xs text-text-muted">{s.reviewNote}</div>}
                   </div>
                 ))}
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        {/* ── Integrations (Session 142) ─────────────────────────────── */}
+        <TabsContent value="integrations">
+          <div className="grid gap-4 lg:grid-cols-2">
+            <Card>
+              <CardHeader>
+                <CardTitle>§20 integration overview</CardTitle>
+                <CardDescription>
+                  The religion knowledge system is wired into the five remaining channels of WINDELS AI OS: Memory Fabric, AI agents, AI Training Center, Lecturer AI education and conversational teaching.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2 text-sm">
+                {integrationOverview ? (
+                  <>
+                    <div className="flex items-center gap-2">
+                      <Badge>catalog {integrationOverview.catalogVersion}</Badge>
+                      <Badge>{integrationOverview.recordCount} records</Badge>
+                      <Badge>{integrationOverview.extensionCount} extensions</Badge>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MemoryStick className="w-4 h-4 text-azure" />
+                      <span className="text-text-main">Memory Fabric: {integrationOverview.memory.synced ? `synced at ${integrationOverview.memory.lastSyncAt?.slice(0, 19).replace("T", " ")}` : "not synced yet"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Cpu className="w-4 h-4 text-azure" />
+                      <span className="text-text-main">Training Center dataset: {integrationOverview.trainingDataset.created ? `${integrationOverview.trainingDataset.datasetId} (${integrationOverview.trainingDataset.rows} rows)` : "not created yet"}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <GraduationCap className="w-4 h-4 text-azure" />
+                      <span className="text-text-main">Education courses: {integrationOverview.educationCourseCount}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MessagesSquare className="w-4 h-4 text-azure" />
+                      <span className="text-text-main">Chat surface: {integrationOverview.chatSurface}</span>
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-text-muted">Overview unavailable.</div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Memory Fabric</CardTitle>
+                <CardDescription>Sync the curated catalog into the Enterprise Memory Fabric. The fabric deduplicates by content+scope, so re-syncs never create duplicates.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <Button onClick={runMemSync}><MemoryStick className="w-4 h-4 mr-1" /> Sync religion knowledge to memory</Button>
+                {memSyncMsg && <div className="text-xs text-text-muted">{memSyncMsg}</div>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>AI agents</CardTitle>
+                <CardDescription>Attach the religion catalog to an AI workforce agent as version-labelled SNIPPET knowledge. Re-attaching skips titles already present.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex gap-2">
+                  <Input value={agentId} onChange={(e) => setAgentId(e.target.value)} placeholder="agent id" />
+                  <Button onClick={runAttach} className="shrink-0"><Bot className="w-4 h-4 mr-1" /> Attach</Button>
+                </div>
+                {agentMsg && <div className="text-xs text-text-muted">{agentMsg}</div>}
+                {agentStatus && (
+                  <div className="text-xs text-text-muted">
+                    Attached: {agentStatus.attachedCount} records — {agentStatus.attachedTitles.slice(0, 6).join(", ")}{agentStatus.attachedTitles.length > 6 ? "…" : ""}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>AI Training Center</CardTitle>
+                <CardDescription>Create a zero-synthetic, curated RAG dataset (JSONL) in the Session 60 training module — every row labelled with the catalog version as its source.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex gap-2 flex-wrap">
+                  <Button onClick={runTraining}><Cpu className="w-4 h-4 mr-1" /> Create training dataset</Button>
+                  <a href={religionTrainingExportUrl()} target="_blank" rel="noreferrer" className="inline-flex items-center px-3 py-2 text-sm rounded-lg border border-white/20 text-slate-200 hover:bg-white/5">
+                    <Download className="w-4 h-4 mr-1" /> Export JSONL
+                  </a>
+                </div>
+                {trainMsg && <div className="text-xs text-text-muted">{trainMsg}</div>}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Education — Lecturer AI</CardTitle>
+                <CardDescription>Hand any record to the real Lecturer AI: the curated record is the source material; the tutor adapts the lesson and grades practice questions.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex gap-2">
+                  <Input value={learnId} onChange={(e) => setLearnId(e.target.value)} placeholder="record id (e.g. rel.buddhism)" />
+                  <Select value={learnLevel} onChange={(e) => setLearnLevel(e.target.value as ReligionLevel)} className="w-36 shrink-0">
+                    {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
+                  </Select>
+                  <Button onClick={runLesson} className="shrink-0"><GraduationCap className="w-4 h-4 mr-1" /> Start lesson</Button>
+                </div>
+                {eduMsg && <div className="text-xs text-rose-300">{eduMsg}</div>}
+                {eduLesson && (
+                  <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm space-y-1">
+                    <div className="font-medium text-text-bright">{eduLesson.course?.name} — Lecturer session {eduLesson.lecturer.sessionId}</div>
+                    <div className="text-text-main">{eduLesson.lecturer.text}</div>
+                    {eduLesson.lecturer.question && (
+                      <div className="text-xs text-text-muted">Q: {eduLesson.lecturer.question.stem}</div>
+                    )}
+                    <div className="text-xs text-text-muted">{eduLesson.note}</div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversational teaching</CardTitle>
+                <CardDescription>A chat-ready teaching turn: intent classification, rendered sections, sources, the neutrality answer for truth claims, and follow-up suggestions.</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-2">
+                <div className="flex gap-2">
+                  <Input value={chatQ} onChange={(e) => setChatQ(e.target.value)} placeholder="Ask about religions…" onKeyDown={(e) => e.key === "Enter" && runChat()} />
+                  <Button onClick={runChat} className="shrink-0"><MessagesSquare className="w-4 h-4 mr-1" /> Ask</Button>
+                </div>
+                {chatTurn && (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <Badge className="bg-violet-500/20 text-violet-300 border-violet-500/40">intent: {chatTurn.intent.intent}</Badge>
+                      <Badge>{chatTurn.mode}</Badge>
+                      {chatTurn.confidence && <Badge>{chatTurn.confidence}</Badge>}
+                    </div>
+                    <div className="rounded-lg border border-white/10 bg-white/[0.03] p-3 text-sm text-text-main whitespace-pre-wrap">{chatTurn.answer}</div>
+                    {chatTurn.controversialNote && (
+                      <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">{chatTurn.controversialNote}</div>
+                    )}
+                    <div className="text-xs text-text-muted">
+                      Sources: {chatTurn.sources.map((s) => s.label).join(", ") || "—"}
+                      {chatTurn.followUp.length > 0 && <div className="mt-1">Try next: {chatTurn.followUp.join(" · ")}</div>}
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>

@@ -205,3 +205,121 @@ export function reviewReligionSubmission(id: string, status: "approved" | "rejec
 export function getReligionStats(): Promise<ReligionStats> {
   return api<ReligionStats>("/religions/stats");
 }
+
+/* ── Session 142 — §20 integration channels ─────────────────────────────── */
+
+export interface ReligionMemorySyncResult {
+  channel: "memory";
+  attempted: number;
+  succeeded: number;
+  failed: number;
+  skippedDuplicateNote: string;
+  lastSyncedAt: string;
+  catalogVersion: string;
+}
+
+export interface ReligionAgentAttachResult {
+  channel: "agents";
+  agentId: string;
+  attached: number;
+  alreadyPresent: number;
+  totalInCatalog: number;
+  catalogVersion: string;
+  note: string;
+}
+
+export interface ReligionTrainingDatasetResult {
+  channel: "training";
+  dataset: { id: string; name: string; rows: number; syntheticPct: number };
+  rows: number;
+  sizeBytes: number;
+  syntheticPct: 0;
+  cleaned: true;
+  ragbuilderIncluded: true;
+  exportNote: string;
+}
+
+export interface ReligionChatTurn {
+  channel: "chat";
+  role: "assistant";
+  question: string;
+  intent: ReligionQuestionClassification;
+  mode: string;
+  level: ReligionLevel;
+  answer: string;
+  sections: Array<{ key: string; heading: string; body: string }>;
+  sources: ReligionRecord["sources"];
+  confidence: string | null;
+  controversialNote?: string;
+  followUp: string[];
+  note?: string;
+}
+
+/** Integration overview: status of all five channels. */
+export function getReligionsIntegrationsOverview(): Promise<{
+  channel: "overview";
+  catalogVersion: string;
+  recordCount: number;
+  extensionCount: number;
+  memory: { synced: boolean; lastSyncAt: string | null };
+  trainingDataset: { created: boolean; datasetId: string | null; rows: number | null };
+  educationCourseCount: number;
+  chatSurface: "available";
+}> {
+  return api("/religions/integrations");
+}
+
+/** Sync the curated catalog into the Enterprise Memory Fabric (idempotent). */
+export function syncReligionsMemory(opts?: { family?: string; force?: boolean }): Promise<ReligionMemorySyncResult> {
+  return api<ReligionMemorySyncResult>("/religions/integrations/memory/sync", { method: "POST", json: opts ?? {} });
+}
+
+/** Last memory-fabric sync status. */
+export function getReligionsMemoryStatus(): Promise<{ channel: "memory"; lastSync: { at: string; count: number; version: string } | null }> {
+  return api("/religions/integrations/memory");
+}
+
+/** Attach religion knowledge to an AI workforce agent (deduplicated by title). */
+export function attachReligionKnowledgeToAgent(agentId: string, opts?: { family?: string; limit?: number }): Promise<ReligionAgentAttachResult> {
+  const usp = new URLSearchParams();
+  if (opts?.family) usp.set("family", opts.family);
+  if (opts?.limit) usp.set("limit", String(opts.limit));
+  const qs = usp.toString();
+  return api<ReligionAgentAttachResult>(`/religions/integrations/agents/${encodeURIComponent(agentId)}/attach${qs ? `?${qs}` : ""}`, { method: "POST" });
+}
+
+/** Which catalog records are already attached to an agent. */
+export function getAgentReligionStatus(agentId: string): Promise<{ channel: "agents"; agentId: string; attachedCount: number; attachedTitles: string[] }> {
+  return api(`/religions/integrations/agents/${encodeURIComponent(agentId)}`);
+}
+
+/** Create the zero-synthetic curated RAG dataset in the AI Training Center. */
+export function createReligionTrainingDataset(opts?: { family?: string }): Promise<ReligionTrainingDatasetResult> {
+  const usp = new URLSearchParams();
+  if (opts?.family) usp.set("family", opts.family);
+  const qs = usp.toString();
+  return api<ReligionTrainingDatasetResult>(`/religions/integrations/training/dataset${qs ? `?${qs}` : ""}`, { method: "POST" });
+}
+
+/** JSONL export URL of the curated training corpus. */
+export function religionTrainingExportUrl(opts?: { family?: string }): string {
+  const usp = new URLSearchParams();
+  if (opts?.family) usp.set("family", opts.family);
+  const qs = usp.toString();
+  return `/api/v1/religions/integrations/training/export${qs ? `?${qs}` : ""}`;
+}
+
+/** Every record as a teachable course. */
+export function getReligionEducationCatalog(): Promise<Array<{ courseId: string; title: string; family: string; category: string; status: string; level: string; topics: string[]; summary: string }>> {
+  return api("/religions/integrations/education/catalog");
+}
+
+/** Curated lesson + real Lecturer AI session for a record. */
+export function startReligionLesson(recordId: string, level: ReligionLevel): Promise<{ channel: "education"; course: ReligionTeachResponse; lecturer: any; note: string }> {
+  return api("/religions/integrations/education/lesson", { method: "POST", json: { recordId, level } });
+}
+
+/** Conversational teaching turn. */
+export function chatReligion(input: { question: string; level?: ReligionLevel }): Promise<ReligionChatTurn> {
+  return api<ReligionChatTurn>("/religions/integrations/chat", { method: "POST", json: input });
+}

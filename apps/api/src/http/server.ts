@@ -44,6 +44,7 @@ import { registerPaymentsRoutes } from "./routes/payments.js";
 import { registerGeoBillingRoutes } from "./routes/geoBilling.js";
 import { registerKnowledgeRoutes } from "./routes/knowledge.js";
 import { registerReligionsRoutes } from "./routes/religions.js";
+import { registerReligionsIntegrationsRoutes } from "./routes/religionsIntegrations.js";
 import { registerEnterpriseRoutes } from "./routes/enterprise.js";
 import { registerDataPlatformRoutes } from "./routes/dataPlatform.js";
 import { registerGovernanceRoutes } from "./routes/governance.js";
@@ -316,6 +317,24 @@ export function createApp() {
   v1.use("/knowledge", knowledgeRouter);
   knowledgeRouter.use(authenticate);
   registerKnowledgeRoutes(knowledgeRouter);
+
+  // /religions — Session 141: Global Religion, Belief & Spirituality
+  // Knowledge System (families, denominations, indigenous traditions,
+  // ancient religions, the comparison engine, educational levels and the
+  // ten-step expansion pipeline). Catalog reads work for any authenticated
+  // member; submissions are organization-scoped; approval is Super Admin only.
+  const religionsRouter = express.Router();
+  v1.use("/religions", religionsRouter);
+  religionsRouter.use(authenticate);
+  registerReligionsRoutes(religionsRouter);
+
+  // /religions/integrations — Session 142: the five §20 integration channels
+  // (Memory Fabric, AI agents, AI Training Center, Lecturer AI education,
+  // conversational teaching).
+  const religionsIntegrationsRouter = express.Router();
+  religionsIntegrationsRouter.use(authenticate);
+  registerReligionsIntegrationsRoutes(religionsIntegrationsRouter);
+  religionsRouter.use("/integrations", religionsIntegrationsRouter);
 
   // /enterprise (models, AI monitoring, plugins, integrations, SSO, org/white-label, + Session 18 governance/discovery/events/api-governance)
   const enterpriseRouter = express.Router();

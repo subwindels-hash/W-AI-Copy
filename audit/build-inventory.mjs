@@ -40,6 +40,7 @@ const ROUTE_OVERRIDES = {
   collaboration: "collaboration", command: "command", composer: "composer",
   constitution: "constitution", conversations: "conversations",
   conversationOps: "conversations",
+  religionsIntegrations: "religions",
   coreIntegration: "coreIntegration", cryptoIntelligence: "cryptoIntelligence",
   cyber: "cyber", dataMarketplace: "dataMarketplace", dataPlatform: "dataMarketplace",
   deployment: "deployment", derivativesDesk: "derivatives",
