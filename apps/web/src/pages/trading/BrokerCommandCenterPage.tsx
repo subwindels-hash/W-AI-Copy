@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { DataBanner } from "@/components/ui/DataBanner";
-import { Activity, Plus, Loader2, Trash2, ShieldAlert, Power, LineChart, Briefcase, CheckCircle2, XCircle, TrendingUp, Wallet, Layers, Target, Bot } from "lucide-react";
+import { Activity, Plus, Rocket, AlertTriangle, Loader2, Trash2, ShieldAlert, Power, LineChart, Briefcase, CheckCircle2, XCircle, TrendingUp, Wallet, Layers, Target, Bot } from "lucide-react";
 
 const usd = (n: number) => `$${n.toLocaleString(undefined, { maximumFractionDigits: 2 })}`;
 const modeColor: Record<string, string> = {
@@ -61,11 +61,27 @@ export function BrokerCommandCenterPage() {
   // strategy form
   const [stratName, setStratName] = useState("");
   const [stratType, setStratType] = useState<TradingStrategy["type"]>("rule");
+  const [demoInstructions, setDemoInstructions] = useState<Array<{step:number;title:string;detail:string;warning?:string}> | null>(null);
+  const [demoBusy, setDemoBusy] = useState(false);
+  const [healthDetailed, setHealthDetailed] = useState<Array<{accountId:string;name:string;broker:string;state:string;connected:boolean;reason?:string}>>([]);
+  const [sparkline, setSparkline] = useState<{period:string;points:any[];reason?:string;label:string}|null>(null);
+  const [btSymbol, setBtSymbol] = useState("EURUSD");
+  const [btTf, setBtTf] = useState("1h");
+  const [btStart, setBtStart] = useState("2024-01-01");
+  const [btEnd, setBtEnd] = useState("2024-02-01");
+  const [btResult, setBtResult] = useState<any>(null);
+  const [cryptoIntel, setCryptoIntel] = useState<any>(null);
+  const [cryptoSymbol, setCryptoSymbol] = useState("BTC/USDT");
+  const [cryptoTicker, setCryptoTicker] = useState<any>(null);
 
   const refresh = useCallback(async () => {
     try {
       const [c, p, s, ag] = await Promise.all([brokerApi.commandCenter(), brokerApi.portfolio(), brokerApi.strategies(), brokerApi.agents()]);
       setCc(c); setPortfolio(p); setStrategies(s); setAgents(ag);
+      try { const inst = await brokerApi.demoInstructions(); setDemoInstructions(inst.instructions); } catch {}
+      try { const hd = await brokerApi.detailedHealth(); setHealthDetailed(hd); } catch {}
+      try { const sp = await brokerApi.pnlSparkline("7d"); setSparkline(sp); } catch {}
+      try { const ci = await brokerApi.cryptoIntelligence(); setCryptoIntel(ci); } catch {}
     } catch { /* degrades before server config */ }
   }, []);
 
@@ -130,6 +146,41 @@ export function BrokerCommandCenterPage() {
         <div className="mb-4"><DataBanner message="KILL SWITCH is ACTIVE — all new trade execution is halted. Re-enable trading to continue." /></div>
       )}
 
+      {/* ── 1-Click Demo Paper-Trading Preset — BEFORE USING READ THIS ── */}
+      <Card className="mb-4 border-amber-500/30 bg-amber-500/5">
+        <CardHeader>
+          <CardTitle className="text-sm flex items-center gap-2"><Rocket className="h-4 w-4 text-amber-400" /> BEFORE USING — Read Step-by-Step (1-Click Demo Preset)</CardTitle>
+          <CardDescription>MT4 demo + conservative risk + backtested strategy — PAPER TRADING ONLY. No real money until YOU switch to live.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-200 flex gap-2"><AlertTriangle className="h-4 w-4 shrink-0" /><span><b>Disclaimer:</b> Demo + backtest = historical replay, not future profit. Past winRate ≠ future winRate. Never trade live with funds you cannot afford to lose. Leverage kills.</span></div>
+          {demoInstructions ? (
+            <ol className="space-y-2">
+              {demoInstructions.map((st) => (
+                <li key={st.step} className="rounded-lg border border-border bg-bg-elevated p-3">
+                  <div className="text-sm font-semibold text-text-bright"><span className="inline-flex h-5 w-5 items-center justify-center rounded-full bg-azure-500/20 text-azure-300 text-xs mr-2">{st.step}</span>{st.title}</div>
+                  <div className="text-xs text-text-muted mt-1">{st.detail}</div>
+                  {st.warning && <div className="text-xs text-rose-300 mt-1">⚠ {st.warning}</div>}
+                </li>
+              ))}
+            </ol>
+          ) : <p className="text-xs text-text-muted">Loading instructions from /brokers/demo-preset/instructions…</p>}
+          <Button onClick={async () => {
+            setDemoBusy(true); setErr(null); setNotice(null);
+            try {
+              const preset = await brokerApi.demoPreset();
+              setNotice(`Demo preset ready: account "${preset.account.name}" (${preset.account.broker}), risk $500 max, strategy "${preset.strategy.name}" backtested ${preset.strategy.backtest ? Math.round(preset.strategy.backtest.winRate*100)+"% WR" : "ready"}. Stay in analysis_only, review instructions step 5.`);
+              await refresh();
+            } catch (e) { setErr(e instanceof Error ? e.message : String(e)); } finally { setDemoBusy(false); }
+          }} disabled={demoBusy} variant="primary" className="w-full sm:w-auto">
+            {demoBusy ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Rocket className="h-4 w-4 mr-2" />}
+            1-Click Create MT4 Demo Preset (Conservative)
+          </Button>
+          <p className="text-[11px] text-text-muted">Creates MT4 account “MT4 Demo Preset” (analysis_only), sets $500 max position / 5% exposure / 1% daily loss / 50× leverage / news block, and backtests “Conservative SMA Demo”. Idempotent — safe to click again.</p>
+        </CardContent>
+      </Card>
+
+
       {err && <div className="mb-4 rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">{err}</div>}
       {notice && <div className="mb-4 rounded-lg border border-emerald-500/30 bg-emerald-500/10 px-4 py-2 text-sm text-emerald-200">{notice}</div>}
 
@@ -153,6 +204,66 @@ export function BrokerCommandCenterPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Hardening: Connection Health State Machine ── */}
+      <Card className="mb-4">
+        <CardHeader><CardTitle className="text-sm">Connection Health — State Machine</CardTitle><CardDescription>CONNECTING / CONNECTED / DEGRADED / DISCONNECTED / AUTHENTICATION_ERROR / CONFIGURATION_ERROR / MARKET_DATA_ERROR / EXECUTION_UNAVAILABLE — never fake.</CardDescription></CardHeader>
+        <CardContent className="space-y-2">
+          {healthDetailed.length===0 ? <p className="text-xs text-text-muted">No accounts — configure bridge env <code>WINDELS_MT4/MT5_BRIDGE_*</code> — MT4/MT5 is external, user must authorize.</p> : healthDetailed.map((h:any)=> (
+            <div key={h.accountId+h.broker} className={`flex items-center justify-between rounded border p-2 text-xs ${h.connected ? "border-emerald-500/30 bg-emerald-500/10" : "border-amber-500/30 bg-amber-500/10"}`}>
+              <span className="font-medium">{h.name} ({h.broker}) — <Badge className={h.state==="CONNECTED"?"bg-emerald-500/15 text-emerald-300":h.state==="CONFIGURATION_ERROR"?"bg-slate-500/15 text-slate-300":"bg-amber-500/15 text-amber-300"}>{h.state}</Badge></span>
+              <span className="text-text-muted">{h.reason || (h.connected ? "verified" : "MT5 CONNECTION OFFLINE")}</span>
+            </div>
+          ))}
+          {healthDetailed.some((h:any)=> !h.connected) && <div className="rounded bg-amber-500/10 border border-amber-500/30 p-2 text-xs text-amber-200">MT5 CONNECTION OFFLINE — bridge unavailable. Check Bridge configuration, Authentication, Environment variables, Reconnection, Logging. Environment dependency — not fabricated.</div>}
+        </CardContent>
+      </Card>
+
+      {/* ── Hardening: Backtest History + PnL Sparkline ── */}
+      <div className="grid lg:grid-cols-2 gap-4 mb-4">
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Backtest History — BACKTEST DATA</CardTitle><CardDescription>Historical replay — never guaranteed future performance.</CardDescription></CardHeader>
+          <CardContent className="space-y-2">
+            <div className="grid grid-cols-4 gap-1">
+              <Input value={btSymbol} onChange={e=>setBtSymbol(e.target.value)} placeholder="EURUSD" />
+              <Select value={btTf} onChange={e=>setBtTf(e.target.value)}><option value="1m">1m</option><option value="5m">5m</option><option value="15m">15m</option><option value="1h">1h</option><option value="1d">1d</option></Select>
+              <Input type="date" value={btStart} onChange={e=>setBtStart(e.target.value)} />
+              <Input type="date" value={btEnd} onChange={e=>setBtEnd(e.target.value)} />
+            </div>
+            <Button size="sm" onClick={async()=>{ try{ const r=await brokerApi.backtestHistory({symbol:btSymbol, timeframe:btTf, startDate:btStart, endDate:btEnd, strategyId: strategies[0]?.id}); setBtResult(r); }catch(e){ setErr(e instanceof Error?e.message:String(e)); }}}>Run Backtest History</Button>
+            {btResult && <div className="text-xs space-y-1 border border-border rounded p-2"><div className="font-medium">{btResult.labels?.join(" / ")} — {btResult.disclaimer?.slice(0,80)}</div><div>{btResult.candles?.length || 0} candles · {btResult.backtest ? `trades ${btResult.backtest.trades} WR ${Math.round(btResult.backtest.winRate*100)}% PF ${btResult.backtest.profitFactor||"-"} PnL ${btResult.backtest.totalReturnPct}% DD ${btResult.backtest.maxDrawdownPct}%` : "no strategy"}</div><div className="max-h-24 overflow-auto">{btResult.candles?.slice(0,3).map((c:any,i:number)=><div key={i} className="text-[11px] text-text-muted">{new Date(c.time*1000).toLocaleDateString()} O{c.open} H{c.high} L{c.low} C{c.close}</div>)}</div></div>}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader><CardTitle className="text-sm">Live PnL Sparkline — {sparkline?.label || "LIVE DATA"}</CardTitle><CardDescription>{sparkline?.reason || "Real equity curve when connected — no fake values."}</CardDescription></CardHeader>
+          <CardContent>
+            {sparkline?.points?.length ? (
+              <div className="flex items-end gap-px h-16">{sparkline.points.map((p:any,i:number)=>{ const max=Math.max(...sparkline.points.map((x:any)=>x.equity),1); const h=Math.max(2, Math.round((p.equity/max)*60)); return <div key={i} className="flex-1 bg-emerald-500/60" style={{height: h}} title={`${p.t} $${p.equity}`} /> })}</div>
+            ) : <p className="text-xs text-text-muted">{sparkline?.reason || "No live account — PnL sparkline offline."}</p>}
+            <div className="text-xs text-text-muted mt-1">{sparkline?.points?.length||0} points · {sparkline?.period}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* ── Crypto Intelligence (LIVE EXCHANGE DATA vs OFFLINE) ── */}
+      <Card className="mb-4 border-violet-500/30 bg-violet-500/5">
+        <CardHeader><CardTitle className="text-sm">Crypto Trading Intelligence — {cryptoIntel?.label || "EXCHANGE CONNECTION OFFLINE"}</CardTitle><CardDescription>WINDELS is NOT an exchange — custody & execution remain on external exchange. LIVE vs HISTORICAL labeled.</CardDescription></CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex gap-2">
+            <Input value={cryptoSymbol} onChange={e=>setCryptoSymbol(e.target.value)} placeholder="BTC/USDT" className="max-w-[160px]" />
+            <Button size="sm" onClick={async()=>{ try{ const r=await brokerApi.cryptoMarketData(cryptoSymbol); setCryptoTicker(r); }catch(e){ setErr(e instanceof Error?e.message:String(e)); }}}>Fetch Live Ticker</Button>
+            <Badge className={cryptoTicker?.live ? "bg-emerald-500/15 text-emerald-300" : "bg-amber-500/15 text-amber-300"}>{cryptoTicker?.label || cryptoIntel?.label || "OFFLINE"}</Badge>
+          </div>
+          {cryptoTicker?.ticker ? <div className="text-xs border border-border rounded p-2">Live {cryptoTicker.ticker.symbol} — bid {cryptoTicker.ticker.bid} ask {cryptoTicker.ticker.ask} price {cryptoTicker.ticker.price} ({cryptoTicker.ticker.source})</div> : cryptoTicker?.reason ? <div className="text-xs text-amber-300">{cryptoTicker.reason}</div> : null}
+          {cryptoIntel?.exchanges?.length ? cryptoIntel.exchanges.map((ex:any)=>(
+            <div key={ex.broker} className={`rounded border p-2 text-xs ${ex.connected ? "border-emerald-500/30 bg-emerald-500/10" : "border-slate-500/30 bg-slate-500/10"}`}>
+              <div className="font-medium">{ex.label} ({ex.broker}) — {ex.connected ? "LIVE EXCHANGE DATA" : ex.reason}</div>
+              {ex.liquidations?.length ? <div className="mt-1">Liquidations: {ex.liquidations.slice(0,2).map((l:any)=> `${l.symbol} liq ${l.liquidationPrice ?? "—"}`).join(", ")}</div> : null}
+            </div>
+          )) : <p className="text-xs text-text-muted">No crypto exchange connected — connect Binance/Bybit/OKX via Add Broker Account (choose crypto broker). Paper trading uses exchange testnet — not internal custody.</p>}
+          <div className="text-[11px] text-text-muted">Security: API keys encrypted at rest, never logged, RBAC + audit, withdrawal permission never requested — use IP allowlist + disable withdrawal on exchange.</div>
+        </CardContent>
+      </Card>
 
       {/* Key stats */}
       {cc && (

@@ -1,5 +1,8 @@
 /**
  * Audit Module — Shared Types & Schemas
+ *
+ * Covers 47 audit actions across 7 categories and 16 resource types.
+ * Used by every WINDELS AI OS module via auditService.log().
  */
 
 import { z } from "zod";
@@ -91,7 +94,26 @@ export const AUDIT_RESOURCE_TYPES = [
 
 export type AuditResourceType = (typeof AUDIT_RESOURCE_TYPES)[number];
 
-// ─── Audit Log Shape ─────────────────────────────────────────────────────────
+// ─── Action Categories (for UI badges/filtering) ────────────────────────────
+
+export const AUDIT_ACTION_CATEGORIES = {
+  authentication: ["auth.login","auth.logout","auth.register","auth.password_change","auth.mfa_enable","auth.mfa_disable","auth.mfa_challenge","auth.session_create","auth.session_revoke"],
+  authorization: ["authz.role_assign","authz.role_revoke","authz.permission_grant","authz.permission_revoke","authz.api_key_create","authz.api_key_revoke","authz.api_key_rotate"],
+  data: ["data.create","data.read","data.update","data.delete","data.export","data.import"],
+  system: ["system.config_change","system.feature_flag_toggle","system.deployment","system.release_promote","system.release_rollback","system.environment_create","system.environment_delete"],
+  security: ["security.incident_create","security.incident_update","security.access_review_run","security.policy_violation","security.rate_limit_triggered","security.prompt_guard_block"],
+  billing: ["billing.subscription_create","billing.subscription_update","billing.subscription_cancel","billing.invoice_create","billing.invoice_paid","billing.invoice_void","billing.payment_success","billing.payment_failed","billing.webhook_receive"],
+  ai: ["ai.model_invoke","ai.agent_task_start","ai.agent_task_complete","ai.agent_task_fail","ai.workflow_execute","ai.prompt_evaluated"],
+} as const;
+
+export function auditActionCategory(action: AuditAction): keyof typeof AUDIT_ACTION_CATEGORIES {
+  for (const [cat, actions] of Object.entries(AUDIT_ACTION_CATEGORIES)) {
+    if ((actions as readonly string[]).includes(action)) return cat as keyof typeof AUDIT_ACTION_CATEGORIES;
+  }
+  return "data";
+}
+
+// ─── Audit Log Shapes ────────────────────────────────────────────────────────
 
 export interface AuditLog {
   id: string;
@@ -104,7 +126,7 @@ export interface AuditLog {
   userAgent: string | null;
   requestId: string | null;
   metadata: Record<string, unknown>;
-  createdAt: Date;
+  createdAt: string; // ISO datetime (wire)
 }
 
 export interface AuditLogSummary {
@@ -117,12 +139,32 @@ export interface AuditLogSummary {
   ipAddress: string | null;
   requestId: string | null;
   metadata: Record<string, unknown>;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface AuditStats {
-  stats: Record<AuditAction, number>;
+  stats: Record<string, number>;
   period: { days: number };
+}
+
+export interface AuditDetail extends AuditLog {
+  apiKeyId: string | null;
+}
+
+export interface AuditTimelineEntry {
+  date: string; // YYYY-MM-DD
+  total: number;
+  byAction: Record<string, number>;
+}
+
+export interface AuditTimelineResponse {
+  days: number;
+  entries: AuditTimelineEntry[];
+}
+
+export interface AuditQueryResult {
+  logs: AuditLog[];
+  total: number;
 }
 
 // ─── Route Validation Schemas ────────────────────────────────────────────────
@@ -144,4 +186,16 @@ export const auditRoutesSchema = {
     endDate: z.string().datetime(),
     format: z.enum(["json", "csv"]).optional(),
   }),
+
+  byId: z.object({
+    id: z.string().min(1),
+  }),
+
+  timeline: z.object({
+    days: z.coerce.number().int().min(1).max(90).optional().default(14),
+  }),
 };
+
+export type AuditQueryInput = z.input<typeof auditRoutesSchema.query>;
+export type AuditExportInput = z.input<typeof auditRoutesSchema.export>;
+export type AuditTimelineInput = z.input<typeof auditRoutesSchema.timeline>;

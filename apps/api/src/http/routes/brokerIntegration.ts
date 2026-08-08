@@ -226,6 +226,41 @@ export function registerBrokerIntegrationRoutes(router: Router) {
     catch (e) { next(e); }
   });
 
+  // ── 1-Click Demo Paper-Trading Preset ──
+  router.get("/brokers/demo-preset/instructions", async (req, res, next) => {
+    try {
+      const instructions = await BrokerIntegrationService.getDemoPresetInstructions();
+      res.json({ ok: true, data: { instructions, disclaimer: "Paper trading only — backtest is historical replay, not future profit. Never trade live with funds you cannot afford to lose." }, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.post("/brokers/demo-preset", async (req, res, next) => {
+    try {
+      const preset = await BrokerIntegrationService.createDemoPreset(oid(req), uid(req));
+      res.status(201).json({ ok: true, data: preset, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
+
+
+  // ── Crypto Hardening: Intelligence + Market Data (LIVE vs OFFLINE) ──
+  router.get("/brokers/crypto/intelligence", async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.getCryptoIntelligence(oid(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.get("/brokers/crypto/market-data", validate({ query: z.object({ symbol: z.string().min(1) }) }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.getCryptoMarketData(oid(req), String((req.query as any).symbol)), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+
+  // ── Hardening: Detailed Health State Machine + Backtest History + PnL Sparkline ──
+  router.get("/brokers/health/detailed", async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.detailedHealth(oid(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.post("/brokers/backtest/history", validate({ body: z.object({ symbol: z.string().min(1), timeframe: z.string().min(1), startDate: z.string().min(1), endDate: z.string().min(1), strategyId: z.string().optional(), riskPct: z.number().optional(), spread: z.number().optional(), slippage: z.number().optional() }) }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.backtestHistory(oid(req), req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+  router.get("/brokers/pnl/sparkline", async (req, res, next) => {
+    try { const period = String((req.query as any).period || "7d"); res.json({ ok: true, data: await BrokerIntegrationService.pnlSparkline(oid(req), period), meta: { requestId: req.requestId } }); } catch (e) { next(e); }
+  });
+
   // Portfolio intelligence
   router.get("/brokers/portfolio", async (req, res, next) => {
     try {

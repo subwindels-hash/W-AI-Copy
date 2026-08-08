@@ -108,4 +108,40 @@ export function registerAuditRoutes(router: Router) {
       next(e);
     }
   });
+
+  /**
+   * GET /api/v1/audit/timeline
+   * Daily buckets for last N days (zero-filled, deterministic)
+   * Must be before /:id to avoid shadowing.
+   */
+  router.get("/timeline", validate({ query: auditRoutesSchema.timeline }), async (req, res, next) => {
+    try {
+      const days = req.query.days ? parseInt(req.query.days as string) : 14;
+      const entries = await auditService.getTimeline(req.user!.organizationId!, days);
+      res.json({
+        ok: true,
+        data: { days, entries },
+        meta: { requestId: req.requestId },
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  /**
+   * GET /api/v1/audit/:id
+   * Single audit entry (org-scoped)
+   */
+  router.get("/:id", validate({ params: auditRoutesSchema.byId }), async (req, res, next) => {
+    try {
+      const entry = await auditService.getById(req.params.id as string, req.user!.organizationId!);
+      res.json({
+        ok: true,
+        data: entry,
+        meta: { requestId: req.requestId },
+      });
+    } catch (e) {
+      next(e);
+    }
+  });
 }

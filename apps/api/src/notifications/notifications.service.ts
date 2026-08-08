@@ -146,8 +146,8 @@ export const notificationsService = {
    */
   async queueDelivery(notificationId: string, channel: NotificationChannel): Promise<void> {
     const key = `notif:delivery:${notificationId}:${channel}`;
-    await redis.set(key, "pending", "EX", 3600); // 1-hour TTL
-    await redis.lPush("notif:delivery:queue", JSON.stringify({ notificationId, channel }));
+    await (redis as any).set(key, "pending", "EX", 3600); // 1-hour TTL
+    await (redis as any).lpush("notif:delivery:queue", JSON.stringify({ notificationId, channel }));
   },
 
   /**
@@ -157,7 +157,7 @@ export const notificationsService = {
     const results = { processed: 0, failed: 0 };
 
     while (true) {
-      const item = await redis.rPop("notif:delivery:queue");
+      const item = await (redis as any).rpop("notif:delivery:queue");
       if (!item) break;
 
       try {
@@ -217,9 +217,9 @@ export const notificationsService = {
     data?: Record<string, unknown>;
   }): Promise<void> {
     // Import here to avoid circular dependency
-    const { sendPushNotification } = await import("../services/push.service.js");
+    const { sendToUser } = await import("../services/push.service.js");
 
-    await sendPushNotification({
+    await (sendToUser as any)({
       userId: notification.userId,
       title: notification.title,
       body: notification.body,
@@ -242,6 +242,7 @@ export const notificationsService = {
    * Send email notification (stub — implement with SMTP)
    */
   async sendEmail(notification: {
+    id?: string;
     userId: string;
     title: string;
     body: string;
@@ -258,7 +259,7 @@ export const notificationsService = {
   /**
    * Send SMS notification (stub — implement with SMS provider)
    */
-  async sendSms(notification: { userId: string; title: string; body: string }): Promise<void> {
+  async sendSms(notification: { id?: string; userId: string; title: string; body: string }): Promise<void> {
     // TODO: Implement SMS sending via Twilio/etc
     logger.info("SMS notification would be sent", {
       notificationId: notification.id,

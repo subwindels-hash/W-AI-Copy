@@ -905,10 +905,11 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 120,
+      "serviceTotalSloc": 214,
       "serviceFiles": [
         "architecture.service.ts",
         "bootstrap.ts",
+        "notes.service.ts",
         "architecture/architecture.service.ts"
       ],
       "importedServiceFiles": [
@@ -1034,6 +1035,85 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "audit",
+    "title": "audit",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/audit",
+    "backend": {
+      "serviceDir": "apps/api/src/audit",
+      "serviceFile": {
+        "file": "audit.service.ts",
+        "path": "/home/user/WIN/apps/api/src/audit/audit.service.ts",
+        "sloc": 434,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1015,
+      "serviceFiles": [
+        "audit.service.ts",
+        "audit.test.ts",
+        "audit/audit.service.ts"
+      ],
+      "importedServiceFiles": [
+        "audit/audit.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/audit.ts",
+        "sloc": 148,
+        "counts": {
+          "total": 6,
+          "GET": 6,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /",
+          "GET /recent",
+          "GET /stats",
+          "GET /export",
+          "GET /timeline",
+          "GET /:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/audit.ts (202 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/audit.ts (64 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "AuditLog",
+        "Agent",
+        "Conversation",
+        "Message",
+        "Workflow",
+        "ApiKey",
+        "Invoice",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "audit.spec.ts",
+      "mediaPublishing.spec.ts",
+      "audit/audit.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "auth",
     "title": "Authentication / Authorization",
     "sessions": [
@@ -1111,7 +1191,7 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/permissions.ts (25 LOC, imported)",
+    "sharedTypes": "packages/shared/src/permissions.ts (60 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/api.ts (261 LOC, serves /auth)",
       "pages": []
@@ -1132,8 +1212,10 @@
       "agentComm.spec.ts",
       "aiEcosystem.spec.ts",
       "aiEngineering.spec.ts",
+      "audit.spec.ts",
       "auth.spec.ts",
       "collaboration.spec.ts",
+      "commerce.spec.ts",
       "conversations.spec.ts",
       "dataPlatform.spec.ts",
       "derivatives.spec.ts",
@@ -1154,8 +1236,10 @@
       "mfaAssurance.spec.ts",
       "mlOps.spec.ts",
       "mobileSync.spec.ts",
+      "notifications.spec.ts",
       "opexAssurance.spec.ts",
       "payments.spec.ts",
+      "permissions.spec.ts",
       "platformServices.spec.ts",
       "program.spec.ts",
       "promptTemplates.spec.ts",
@@ -1499,11 +1583,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 608,
+        "sloc": 1359,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
-      "serviceTotalSloc": 608,
+      "serviceTotalSloc": 1359,
       "serviceFiles": [
         "tradingIntel/brokerIntegration.service.ts"
       ],
@@ -1515,13 +1599,13 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/brokerIntegration.ts",
-        "sloc": 141,
+        "sloc": 383,
         "counts": {
-          "total": 25,
-          "GET": 10,
-          "POST": 11,
+          "total": 48,
+          "GET": 24,
+          "POST": 19,
           "PUT": 0,
-          "PATCH": 2,
+          "PATCH": 3,
           "DELETE": 2
         },
         "endpoints": [
@@ -1531,12 +1615,24 @@
           "PATCH /brokers/accounts/:id",
           "DELETE /brokers/accounts/:id",
           "POST /brokers/accounts/:id/verify",
+          "POST /brokers/accounts/:id/connect",
+          "POST /brokers/accounts/:id/disconnect",
+          "POST /brokers/accounts/:id/sync",
+          "GET /brokers/accounts/:id/health",
           "GET /brokers/accounts/:id/positions",
           "GET /brokers/accounts/:id/orders",
+          "GET /brokers/accounts/:id/symbols",
+          "GET /brokers/accounts/:id/deals",
+          "GET /brokers/accounts/:id/candles",
+          "POST /brokers/accounts/:id/positions/:ticket/close",
+          "PATCH /brokers/accounts/:id/positions/:ticket",
+          "POST /brokers/accounts/:id/orders/:orderId/cancel",
+          "POST /brokers/accounts/:id/orders",
           "POST /brokers/trade",
           "GET /brokers/executions",
           "POST /brokers/executions/:id/approve",
           "POST /brokers/executions/:id/reject",
+          "GET /brokers/audit",
           "GET /brokers/strategies",
           "POST /brokers/strategies",
           "POST /brokers/strategies/:id/toggle",
@@ -1545,29 +1641,42 @@
           "GET /brokers/risk",
           "PATCH /brokers/risk",
           "POST /brokers/risk/kill-switch",
+          "GET /brokers/demo-preset/instructions",
+          "POST /brokers/demo-preset",
+          "GET /brokers/crypto/intelligence",
+          "GET /brokers/crypto/market-data",
+          "GET /brokers/health/detailed",
+          "POST /brokers/backtest/history",
+          "GET /brokers/pnl/sparkline",
           "GET /brokers/portfolio",
           "GET /brokers/command-center",
+          "GET /brokers/dashboard",
+          "GET /brokers/recent-errors",
           "GET /brokers/agents",
           "POST /brokers/agents/:key/heartbeat",
-          "POST /brokers/agents/:key/run"
+          "POST /brokers/agents/:key/run",
+          "GET /brokers/accounts/:id/ticks/stream",
+          "GET /brokers/events/stream"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/brokerIntegration.ts (306 LOC)",
+    "sharedTypes": "packages/shared/src/brokerIntegration.ts (588 LOC)",
     "web": {
-      "client": "apps/web/src/lib/brokerIntegration.ts (144 LOC)",
+      "client": "apps/web/src/lib/brokerIntegration.ts (260 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Message",
         "Integration"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "tradingIntel/brokerIntegration.test.ts"
+      "tradingIntel/brokerIntegration.test.ts",
+      "tradingIntel/ea.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -2199,6 +2308,85 @@
     "externalIntegrations": [
       "Azure"
     ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "commerce",
+    "title": "commerce",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/commerce",
+    "backend": {
+      "serviceDir": "apps/api/src/commerce",
+      "serviceFile": {
+        "file": "commerce.service.ts",
+        "path": "/home/user/WIN/apps/api/src/commerce/commerce.service.ts",
+        "sloc": 197,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 536,
+      "serviceFiles": [
+        "commerce.service.ts",
+        "commerce.test.ts",
+        "commerce/commerce.service.ts"
+      ],
+      "importedServiceFiles": [
+        "commerce/commerce.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/commerce.ts",
+        "sloc": 65,
+        "counts": {
+          "total": 16,
+          "GET": 7,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 3
+        },
+        "endpoints": [
+          "GET /products",
+          "GET /products/:id",
+          "GET /cart",
+          "POST /cart/items",
+          "PATCH /cart/items/:productId",
+          "DELETE /cart/items/:productId",
+          "DELETE /cart",
+          "POST /checkout",
+          "GET /orders",
+          "GET /orders/:id",
+          "PATCH /orders/:id/status",
+          "GET /dashboard",
+          "GET /notes",
+          "POST /notes",
+          "PATCH /notes/:id",
+          "DELETE /notes/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/commerce.ts (27 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/commerce.ts (18 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "commerce.spec.ts",
+      "commerce/commerce.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
     "status": "COMPLETE"
   },
   {
@@ -3430,6 +3618,73 @@
     },
     "tests": [
       "config/moduleGates.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "ea",
+    "title": "ea",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/ea",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "ea.service.ts",
+        "path": "/home/user/WIN/apps/api/src/tradingIntel/ea.service.ts",
+        "sloc": 429,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 429,
+      "serviceFiles": [
+        "tradingIntel/ea.service.ts"
+      ],
+      "importedServiceFiles": [
+        "tradingIntel/ea.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/ea.ts",
+        "sloc": 105,
+        "counts": {
+          "total": 7,
+          "GET": 3,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "POST /ea/register",
+          "GET /ea",
+          "DELETE /ea/:eaId",
+          "GET /ea/poll",
+          "POST /ea/fill",
+          "POST /ea/heartbeat",
+          "GET /ea/config"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/ea.ts (261 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/brokerIntegration.ts (260 LOC, serves /ea)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "tradingIntel/ea.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -7072,6 +7327,81 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "notifications",
+    "title": "notifications",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/notifications",
+    "backend": {
+      "serviceDir": "apps/api/src/notifications",
+      "serviceFile": {
+        "file": "notifications.service.ts",
+        "path": "/home/user/WIN/apps/api/src/notifications/notifications.service.ts",
+        "sloc": 444,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 972,
+      "serviceFiles": [
+        "notifications.service.ts",
+        "notifications.test.ts",
+        "notifications/notifications.service.ts"
+      ],
+      "importedServiceFiles": [
+        "notifications/notifications.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/notifications.ts",
+        "sloc": 154,
+        "counts": {
+          "total": 7,
+          "GET": 3,
+          "POST": 2,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /",
+          "GET /unread-count",
+          "POST /:id/read",
+          "POST /read-all",
+          "GET /preferences",
+          "PATCH /preferences",
+          "DELETE /:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/notifications.ts (112 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/notifications.ts (16 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Message",
+        "Workflow",
+        "Alert",
+        "Notification"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "notifications.spec.ts",
+      "notifications/notifications.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "Twilio"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "opex",
     "title": "OpEx / Trust / Safety (S73)",
     "sessions": [
@@ -7269,6 +7599,79 @@
       "Stripe",
       "Google"
     ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "permissions",
+    "title": "permissions",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/permissions",
+    "backend": {
+      "serviceDir": "apps/api/src/permissions",
+      "serviceFile": {
+        "file": "permissions.module.ts",
+        "path": "/home/user/WIN/apps/api/src/permissions/permissions.module.ts",
+        "sloc": 161,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 281,
+      "serviceFiles": [
+        "permissions.module.ts",
+        "permissions.test.ts",
+        "services/permissions.service.ts"
+      ],
+      "importedServiceFiles": [
+        "services/permissions.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/permissions.ts",
+        "sloc": 134,
+        "counts": {
+          "total": 6,
+          "GET": 4,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /",
+          "GET /catalog",
+          "GET /users/:userId",
+          "POST /grant",
+          "DELETE /grant/:grantId",
+          "GET /check"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/permissions.ts (60 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/permissions.ts (8 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Agent",
+        "Canvas",
+        "Workflow"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "permissions.spec.ts",
+      "permissions/permissions.test.ts",
+      "services/permissions.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
     "status": "COMPLETE"
   },
   {
@@ -7875,6 +8278,91 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "publishing",
+    "title": "publishing",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/publishing",
+    "backend": {
+      "serviceDir": "apps/api/src/publishing",
+      "serviceFile": {
+        "file": "publishing.module.ts",
+        "path": "/home/user/WIN/apps/api/src/publishing/publishing.module.ts",
+        "sloc": 94,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 94,
+      "serviceFiles": [
+        "publishing.module.ts"
+      ],
+      "importedServiceFiles": [],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/publishing.ts",
+        "sloc": 65,
+        "counts": {
+          "total": 20,
+          "GET": 7,
+          "POST": 8,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 4
+        },
+        "endpoints": [
+          "GET /platforms",
+          "POST /:platform/connect/start",
+          "POST /oauth/callback",
+          "DELETE /:platform/connect",
+          "GET /:platform/status",
+          "POST /:platform/publish",
+          "GET /jobs",
+          "GET /jobs/:id",
+          "POST /jobs/:id/retry",
+          "POST /jobs/:id/cancel",
+          "GET /audit",
+          "POST /webhooks/:platform/register",
+          "DELETE /webhooks/:platform",
+          "POST /upload/:kind",
+          "GET /uploads",
+          "DELETE /uploads/:file",
+          "GET /notes",
+          "POST /notes",
+          "PATCH /notes/:id",
+          "DELETE /notes/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/publishing.ts (13 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/publishing.ts (9 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Workspace"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "mediaPublishing.spec.ts",
+      "config/liveFabrication.test.ts",
+      "config/moduleGates.test.ts",
+      "config/seedGate.test.ts",
+      "services/auth.test.ts",
+      "services/googleAuth.test.ts",
+      "services/mfa.test.ts",
+      "services/permissions.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "qa",
     "title": "QA Engine",
     "sessions": [],
@@ -8119,6 +8607,110 @@
     "tests": [
       "release/production.test.ts",
       "config/liveFabrication.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "revenueGuardian",
+    "title": "revenueGuardian",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/revenueGuardian",
+    "backend": {
+      "serviceDir": "apps/api/src/revenueGuardian",
+      "serviceFile": {
+        "file": "revenueGuardian.service.ts",
+        "path": "/home/user/WIN/apps/api/src/revenueGuardian/revenueGuardian.service.ts",
+        "sloc": 1039,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2466,
+      "serviceFiles": [
+        "revenueGuardian.service.ts",
+        "revenueGuardian.test.ts",
+        "revenueGuardian/revenueGuardian.service.ts"
+      ],
+      "importedServiceFiles": [
+        "revenueGuardian/revenueGuardian.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/revenueGuardian.ts",
+        "sloc": 345,
+        "counts": {
+          "total": 37,
+          "GET": 14,
+          "POST": 14,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 6
+        },
+        "endpoints": [
+          "GET /dashboard/rollup",
+          "GET /reports/executive",
+          "GET /customers",
+          "POST /customers",
+          "GET /customers/:id",
+          "PATCH /customers/:id",
+          "DELETE /customers/:id",
+          "GET /invoices",
+          "POST /invoices",
+          "GET /invoices/:id",
+          "POST /invoices/:id/pay",
+          "DELETE /invoices/:id",
+          "GET /cases",
+          "POST /cases",
+          "GET /cases/:id",
+          "PATCH /cases/:id",
+          "DELETE /cases/:id",
+          "GET /promises",
+          "POST /promises",
+          "POST /promises/evaluate",
+          "GET /communications",
+          "POST /communications",
+          "GET /ai-employees",
+          "POST /ai-employees",
+          "DELETE /ai-employees/:id",
+          "GET /tasks",
+          "POST /tasks",
+          "PATCH /tasks/:id/status",
+          "DELETE /tasks/:id",
+          "GET /rules",
+          "POST /rules",
+          "POST /rules/evaluate",
+          "DELETE /rules/:id",
+          "GET /workspace/account-manager",
+          "POST /automation/evaluate-promises",
+          "POST /automation/evaluate-rules",
+          "POST /automation/refresh-customer/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/revenueGuardian.ts (492 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/revenueGuardian.ts (147 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Workspace",
+        "Agent",
+        "Task",
+        "Message",
+        "Workflow",
+        "Invoice"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "revenueGuardian/revenueGuardian.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -9024,11 +9616,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 608,
+        "sloc": 1359,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
-      "serviceTotalSloc": 5858,
+      "serviceTotalSloc": 7368,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
@@ -9038,6 +9630,8 @@
         "derivatives.test.ts",
         "derivatives.ts",
         "derivativesContract.test.ts",
+        "ea.service.ts",
+        "ea.test.ts",
         "indicators.test.ts",
         "indicators.ts",
         "journal.ts",
@@ -9045,6 +9639,8 @@
         "marketData.ts",
         "risk.test.ts",
         "risk.ts",
+        "trading-events.test.ts",
+        "trading-events.ts",
         "tradingIntel.service.ts",
         "tradingIntel/tradingIntel.service.ts",
         "tradingIntel/analysis.ts",
@@ -9123,13 +9719,39 @@
       "tradingIntel/brokerIntegration.test.ts",
       "tradingIntel/derivatives.test.ts",
       "tradingIntel/derivativesContract.test.ts",
+      "tradingIntel/ea.test.ts",
       "tradingIntel/indicators.test.ts",
       "tradingIntel/marketData.test.ts",
       "tradingIntel/risk.test.ts",
+      "tradingIntel/trading-events.test.ts",
+      "tradingIntel/backtest/strategy-backtest.test.ts",
+      "tradingIntel/crypto/crypto-connectors.test.ts",
+      "tradingIntel/crypto/crypto-phase10-live-book.test.ts",
+      "tradingIntel/crypto/crypto-phase11-mexc-private-ws.test.ts",
+      "tradingIntel/crypto/crypto-phase12-kucoin-private-ws.test.ts",
+      "tradingIntel/crypto/crypto-phase13-readonly-toggle.test.ts",
+      "tradingIntel/crypto/crypto-phase14-latency.test.ts",
+      "tradingIntel/crypto/crypto-phase15-bitget-private-ws.test.ts",
+      "tradingIntel/crypto/crypto-phase16-gateio-private-ws.test.ts",
+      "tradingIntel/crypto/crypto-phase17-sync-errors.test.ts",
+      "tradingIntel/crypto/crypto-phase18-kraken-private-ws.test.ts",
+      "tradingIntel/crypto/crypto-phase19-htx-private-ws.test.ts",
+      "tradingIntel/crypto/crypto-phase2.test.ts",
+      "tradingIntel/crypto/crypto-phase20-cryptocom-private-ws.test.ts",
+      "tradingIntel/crypto/crypto-phase21-recent-errors.test.ts",
+      "tradingIntel/crypto/crypto-phase5.test.ts",
+      "tradingIntel/crypto/crypto-phase6-pause.test.ts",
+      "tradingIntel/crypto/crypto-phase7-health.test.ts",
+      "tradingIntel/crypto/crypto-phase8-manual-actions.test.ts",
+      "tradingIntel/crypto/crypto-phase9-markets.test.ts",
+      "tradingIntel/crypto/exchange-http.test.ts",
+      "tradingIntel/crypto/signing.test.ts",
+      "tradingIntel/mt5/mt5-connector.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
+      "AWS",
       "AlphaVantage",
       "TwelveData",
       "Polygon.io",
@@ -9538,6 +10160,85 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "voice",
+    "title": "voice",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/voice",
+    "backend": {
+      "serviceDir": "apps/api/src/voice",
+      "serviceFile": {
+        "file": "voice.module.ts",
+        "path": "/home/user/WIN/apps/api/src/voice/voice.module.ts",
+        "sloc": 450,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 450,
+      "serviceFiles": [
+        "voice.module.ts"
+      ],
+      "importedServiceFiles": [],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/voice.ts",
+        "sloc": 263,
+        "counts": {
+          "total": 15,
+          "GET": 8,
+          "POST": 5,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /dashboard",
+          "GET /builtin",
+          "GET /custom",
+          "GET /presets",
+          "POST /synthesize",
+          "GET /generated",
+          "POST /design",
+          "POST /:voiceId/evolve",
+          "GET /deployments",
+          "POST /:voiceId/deploy",
+          "GET /packs",
+          "GET /notes",
+          "POST /notes",
+          "PATCH /notes/:id",
+          "DELETE /notes/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/voice.ts (267 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/voice.ts (10 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "Agent",
+        "Message",
+        "Meeting"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "aiEcosystem.spec.ts",
+      "sessions37-40.spec.ts",
+      "sessions41-76-80.spec.ts",
+      "sessions42-47.spec.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "ElevenLabs"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "voiceFoundry",
     "title": "Voice Foundry (S41)",
     "sessions": [
@@ -9791,13 +10492,14 @@
       "serviceFile": {
         "file": "wakeIntelligence.service.ts",
         "path": "/home/user/WIN/apps/api/src/wakeIntel/wakeIntelligence.service.ts",
-        "sloc": 293,
+        "sloc": 571,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 680,
+      "serviceTotalSloc": 1460,
       "serviceFiles": [
         "bootstrap.ts",
+        "voice-activation.test.ts",
         "wakeIntelligence.service.ts",
         "wakeIntel/wakeIntelligence.service.ts"
       ],
@@ -9809,14 +10511,14 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/wakeIntel.ts",
-        "sloc": 162,
+        "sloc": 310,
         "counts": {
-          "total": 25,
-          "GET": 12,
-          "POST": 11,
+          "total": 40,
+          "GET": 18,
+          "POST": 17,
           "PUT": 0,
-          "PATCH": 1,
-          "DELETE": 1
+          "PATCH": 2,
+          "DELETE": 3
         },
         "endpoints": [
           "GET /dashboard/rollup",
@@ -9843,11 +10545,26 @@
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
-          "DELETE /notes/:id"
+          "DELETE /notes/:id",
+          "GET /voice/dashboard",
+          "GET /voice/config",
+          "PATCH /voice/config",
+          "POST /voice/phrases",
+          "DELETE /voice/phrases",
+          "POST /voice/detect",
+          "POST /voice/deactivate",
+          "GET /voice/profiles",
+          "POST /voice/profiles",
+          "DELETE /voice/profiles/:id",
+          "GET /voice/sessions",
+          "POST /voice/sessions/start",
+          "POST /voice/sessions/:id/end",
+          "GET /voice/logs",
+          "GET /voice/builtin-phrases"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/wakeIntel.ts (199 LOC)",
+    "sharedTypes": "packages/shared/src/wakeIntel.ts (395 LOC)",
     "web": {
       "client": "apps/web/src/lib/wakeIntel.ts (30 LOC)",
       "pages": []
@@ -9865,7 +10582,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "marketplace.spec.ts"
+      "marketplace.spec.ts",
+      "wakeIntel/voice-activation.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],

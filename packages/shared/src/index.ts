@@ -1,6 +1,7 @@
 export * from "./ids.js";
 export * from "./api.js";
 export * from "./permissions.js";
+export * from "./publishing.js";
 export * from "./desktop.js";
 export * from "./enterprise.js";
 export * from "./dataPlatform.js";
@@ -133,3 +134,5 @@ export * from "./events.js";
 export * from "./webhook.js";
 export * from "./payments.js";
 export * from "./geoBilling.js";
+export * from "./audit.js";
+export * from "./commerce.js";

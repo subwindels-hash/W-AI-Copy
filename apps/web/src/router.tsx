@@ -21,6 +21,7 @@ const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
 const AnalyticsPage = lazy(() => import("./pages/analytics/AnalyticsPage"));
 const TradingIntelPage = lazy(() => import("./pages/trading/TradingIntelPage").then((m) => ({ default: m.TradingIntelPage })));
 const VoiceStudioPage = lazy(() => import("./pages/voice/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
+const VoiceConsolePage = lazy(() => import("./pages/voice/VoiceConsolePage").then((m) => ({ default: m.VoiceConsolePage })));
 const MediaFactoryPage = lazy(() => import("./pages/media/MediaFactoryPage").then((m) => ({ default: m.MediaFactoryPage })));
 const LearnPage = lazy(() => import("./pages/learn/LearnPage").then((m) => ({ default: m.LearnPage })));
 const ProjectsPage = lazy(() => import("./pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
@@ -69,11 +70,16 @@ const AutonomousPage = lazy(() => import("./pages/autonomous/AutonomousPage").th
 const BillingPage = lazy(() => import("./pages/billing/BillingPage").then((m) => ({ default: m.BillingPage })));
 const PaymentGatewaysPage = lazy(() => import("./pages/billing/PaymentGatewaysPage").then((m) => ({ default: m.PaymentGatewaysPage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
+const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
+const NotificationsPage = lazy(() => import("./pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
+const PermissionsPage = lazy(() => import("./pages/permissions/PermissionsPage").then((m) => ({ default: m.PermissionsPage })));
+const PublishingPage = lazy(() => import("./pages/publishing/PublishingPage").then((m) => ({ default: m.PublishingPage })));
 const CameraPage = lazy(() => import("./pages/camera/CameraPage").then((m) => ({ default: m.CameraPage })));
 const CognitivePage = lazy(() => import("./pages/cognitive/CognitivePage").then((m) => ({ default: m.CognitivePage })));
 const CommandCenterPage = lazy(() => import("./pages/command/CommandCenterPage").then((m) => ({ default: m.CommandCenterPage })));
 const ConversationsPage = lazy(() => import("./pages/conversations/ConversationsPage").then((m) => ({ default: m.ConversationsPage })));
 const DerivativesPage = lazy(() => import("./pages/derivatives/DerivativesPage").then((m) => ({ default: m.DerivativesPage })));
+const AuditConsolePage = lazy(() => import("./pages/audit/AuditConsolePage").then((m) => ({ default: m.AuditConsolePage })));
 const GoogleIdentityPage = lazy(() => import("./pages/googleAuth/GoogleIdentityPage").then((m) => ({ default: m.GoogleIdentityPage })));
 const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then((m) => ({ default: m.GoogleCallbackPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
@@ -274,6 +280,7 @@ export const router = createBrowserRouter([
       { path: "trading/dashboard", element: withSuspense(<TradingDashboardPage />) },
       { path: "marketing", element: withSuspense(<MarketingDashboardPage />) },
       { path: "voice", element: withSuspense(<VoiceStudioPage />) },
+      { path: "voice-console", element: withSuspense(<VoiceConsolePage />) },
       { path: "media", element: withSuspense(<MediaFactoryPage />) },
       { path: "learn", element: withSuspense(<LearnPage />) },
       { path: "projects", element: withSuspense(<ProjectsPage />) },
@@ -321,11 +328,16 @@ export const router = createBrowserRouter([
       { path: "billing", element: withSuspense(<BillingPage />) },
       { path: "payments", element: withSuspense(<PaymentGatewaysPage />) },
       { path: "geo-billing", element: withSuspense(<GeoBillingConsolePage />) },
+      { path: "commerce", element: withSuspense(<CommercePage />) },
+      { path: "notifications", element: withSuspense(<NotificationsPage />) },
+      { path: "permissions", element: withSuspense(<PermissionsPage />) },
+      { path: "publishing", element: withSuspense(<PublishingPage />) },
       { path: "camera", element: withSuspense(<CameraPage />) },
       { path: "cognitive", element: withSuspense(<CognitivePage />) },
       { path: "command", element: withSuspense(<CommandCenterPage />) },
       { path: "conversations", element: withSuspense(<ConversationsPage />) },
       { path: "derivatives", element: withSuspense(<DerivativesPage />) },
+      { path: "audit", element: withSuspense(<AuditConsolePage />) },
       { path: "google-identity", element: withSuspense(<GoogleIdentityPage />) },
     ],
   },

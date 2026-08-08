@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { authenticate } from "../middleware/auth.js";
+import { validate } from "../middleware/validate.js";
 import voiceModule from "../../voice/voice.module.js";
 import { voiceRoutesSchema } from "@windels/shared/voice";
 
@@ -82,9 +83,9 @@ export function registerVoiceRoutes(router: Router) {
    */
   router.post(
     "/synthesize",
-    voiceModule.ensureBootstrapped,
     async (req, res, next) => {
       try {
+        await voiceModule.ensureBootstrapped();
         const { text, voiceId, settings } = req.body;
         const job = await voiceModule.synthesize(text, voiceId, settings);
         res.json({

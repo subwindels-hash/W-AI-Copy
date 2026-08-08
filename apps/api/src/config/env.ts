@@ -122,6 +122,17 @@ const EnvSchema = z.object({
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
 
+  // ── MetaTrader 4 (MT4) Connector (Session 136 — MT4 parity with MT5) ──
+  WINDELS_MT4_BRIDGE_ZMQ: z.string().max(200).optional(),
+  WINDELS_MT4_BRIDGE_HTTP: z.string().url().optional(),
+  WINDELS_MT4_BRIDGE_TOKEN: z.string().min(16).optional(),
+  WINDELS_MT4_TERMINAL_PATH: z.string().max(400).optional(),
+  WINDELS_MT4_METAAPI_TOKEN: z.string().min(16).optional(),
+  WINDELS_MT4_GLOBAL_READONLY: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+
   // ── Crypto Exchange connectors (Crypto vertical, Phase 1) ──
 
   /** Global kill-switch for crypto: when true, all crypto connectors refuse

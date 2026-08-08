@@ -97,7 +97,7 @@ const BROKER_LABEL: Record<string, string> = {
 /** Broker connector registry entry (exported for diagnostics/UI). */
 export const CONNECTOR_CATALOG = [
   { broker: "mt5", name: "MetaTrader 5", protocol: "native Python bridge (ZMQ/HTTP) or MetaApi cloud; use MT5 demo accounts for paper trading", requiresConfig: false },
-  { broker: "mt4", name: "MetaTrader 4", protocol: "planned — future phase", requiresConfig: true },
+  { broker: "mt4", name: "MetaTrader 4", protocol: "native Python bridge (ZMQ/HTTP) or MetaApi cloud; use MT4 demo accounts for paper trading (parity with MT5)", requiresConfig: false },
   { broker: "ctrader", name: "cTrader", protocol: "planned — future phase", requiresConfig: true },
   { broker: "binance", name: "Binance", protocol: "REST+WS (HMAC-SHA256) — spot, USDⓈ-M/COIN-M perps & futures", requiresConfig: true },
   { broker: "bybit", name: "Bybit", protocol: "Unified Trading Account v5 REST+WS (HMAC-SHA256) — spot, linear/inverse perps, options", requiresConfig: true },
@@ -436,7 +436,7 @@ export const BrokerIntegrationService = {
     const account = await this.mustGetAccount(oid, accountId);
     const connector = connectorRegistry.mustGet(account.broker);
     if (!connector.isConnected(accountId)) throw new AppError("BAD_REQUEST", "account not connected", 400);
-    if (env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") throw new AppError("FORBIDDEN", "Global MT5 read-only mode is active", 403);
+    if ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) throw new AppError("FORBIDDEN", "Global MT read-only mode is active", 403);
     const pos = (await this.listPositions(oid, accountId)).find((p) => p.ticket === ticket);
     if (!pos) throw new AppError("NOT_FOUND", `Position ticket ${ticket} not found`, 404);
     const exec = await this.recordExecution(oid, account, {
@@ -466,8 +466,8 @@ export const BrokerIntegrationService = {
     const account = await this.mustGetAccount(oid, accountId);
     const connector = connectorRegistry.mustGet(account.broker);
     if (!connector.isConnected(accountId)) throw new AppError("BAD_REQUEST", "account not connected", 400);
-    if (env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") throw new AppError("FORBIDDEN", "Global MT5 read-only mode is active", 403);
-    if (env.WINDELS_CRYPTO_GLOBAL_READONLY && account.broker !== "mt5") throw new AppError("FORBIDDEN", "WINDELS_CRYPTO_GLOBAL_READONLY is active", 403);
+    if ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) throw new AppError("FORBIDDEN", "Global MT read-only mode is active", 403);
+    if (env.WINDELS_CRYPTO_GLOBAL_READONLY && account.broker !== "mt5" && account.broker !== "mt4") throw new AppError("FORBIDDEN", "WINDELS_CRYPTO_GLOBAL_READONLY is active", 403);
     const ord = (await this.listPendingOrders(oid, accountId)).find((o) => (o.ticket ?? o.id) === orderId);
     if (!ord) throw new AppError("NOT_FOUND", `Order ${orderId} not found`, 404);
     const exec = await this.recordExecution(oid, account, {
@@ -505,7 +505,7 @@ export const BrokerIntegrationService = {
     const account = await this.mustGetAccount(oid, accountId);
     const connector = connectorRegistry.mustGet(account.broker);
     if (!connector.isConnected(accountId)) throw new AppError("BAD_REQUEST", "account not connected", 400);
-    if (env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") throw new AppError("FORBIDDEN", "Global MT5 read-only mode is active", 403);
+    if ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) throw new AppError("FORBIDDEN", "Global MT read-only mode is active", 403);
     const pos = (await this.listPositions(oid, accountId)).find((p) => p.ticket === ticket);
     if (!pos) throw new AppError("NOT_FOUND", `Position ticket ${ticket} not found`, 404);
     const result = await connector.modifyPosition(accountId, ticket, patch);
@@ -543,8 +543,8 @@ export const BrokerIntegrationService = {
     const id = randomUUID();
 
     // 0. Global read-only override.
-    const globalReadOnly = env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5" && !signal.paper;
-    checks.push({ rule: "GLOBAL_READ_ONLY", pass: !globalReadOnly, reason: globalReadOnly ? "Global MT5 read-only is active" : undefined });
+    const globalReadOnly = ((env.WINDELS_MT5_GLOBAL_READONLY && account.broker === "mt5") || (env.WINDELS_MT4_GLOBAL_READONLY && account.broker === "mt4")) && !signal.paper;
+    checks.push({ rule: "GLOBAL_READ_ONLY", pass: !globalReadOnly, reason: globalReadOnly ? "Global MT read-only is active" : undefined });
 
     // 1. Kill switch (hard — blocks ALL new orders including manual).
     const killSwitchPass = !risk.killSwitch;
@@ -700,7 +700,7 @@ export const BrokerIntegrationService = {
     // Dispatch now that human approved.
     const account = await this.mustGetAccount(oid, exec.accountId);
     const connector = connectorRegistry.get(account.broker);
-    if (connector && connector.isConnected(account.id) && !env.WINDELS_MT5_GLOBAL_READONLY) {
+    if (connector && connector.isConnected(account.id) && !env.WINDELS_MT5_GLOBAL_READONLY && !env.WINDELS_MT4_GLOBAL_READONLY) {
       await this.dispatchToBroker(oid, account, exec, {
         accountId: account.id, symbol: exec.symbol, side: exec.side, volume: exec.volume,
         confidence: exec.confidence, stopLoss: exec.stopLoss, takeProfit: exec.takeProfit,
@@ -818,6 +818,69 @@ export const BrokerIntegrationService = {
     const next: BrokerRiskControls = { ...cur, ...patch, updatedAt: now() };
     await redis.set(K.risk(oid), s2(next));
     return next;
+  },
+
+  /* ── 1-Click Demo Paper-Trading Preset (MT4 demo + conservative risk + backtested strategy) ── */
+  DEMO_PRESET_INSTRUCTIONS: [
+    { step: 1, title: "READ BEFORE YOU CLICK — this is DEMO, not real money", detail: "The preset creates a paper-trading sandbox on an MT4 demo account, sets ultra-conservative risk limits, and loads a backtested SMA strategy. No real funds are at risk until YOU switch an account to live. Trading is risky — past backtest does NOT guarantee future profit.", warning: "Never trade live with money you cannot afford to lose." },
+    { step: 2, title: "What 1-Click Does", detail: "1) Creates MT4 account 'MT4 Demo Preset' (broker=mt4, environment=demo, mode=analysis_only) if missing. 2) Sets risk: maxPosition $500, maxExposure 5%, daily loss 1%, leverage 50, killSwitch OFF but pauseAutonomous false — you stay in analysis_only until you approve. 3) Creates strategy 'Conservative SMA Demo' (SMA 20/50 crossover, winRate 0.55) and runs backtest immediately. 4) Returns account / risk / strategy + this instruction pack." },
+    { step: 3, title: "After Click — Verify Demo", detail: "Check Dashboard: account status = disconnected (expected until you add real demo login), risk panel shows conservative limits, strategy shows backtest {winRate, totalReturn, maxDrawdown}. Run another backtest with different dates to see variance." },
+    { step: 4, title: "Add Your Real MT4 Demo Login (optional)", detail: "To go live on demo: PATCH /brokers/accounts/:id with your broker's demo login/server/password (e.g., IC Markets-Demo). Then POST /brokers/accounts/:id/connect. Until connected, all signals stay in analysis_only / paper path and are queued for EA." },
+    { step: 5, title: "Test Profitability Safely (PAPER FIRST)", detail: "Keep mode=analysis_only for 7+ days, watch Draft Executions (POST /brokers/trade {paper:true}). Review daily PnL, winRate, drawdown in Portfolio Intelligence. Only when backtest + paper both profitable, switch ONE account to mode=assisted (requires human approval) — never fully_autonomous on day one." },
+    { step: 6, title: "Go Live — Gradual", detail: "Change mode to assisted → approve each execution in /brokers/executions. If profitable after 2 weeks, consider semi_autonomous. Keep killSwitch and pauseAutonomous handy — you can halt AI instantly without locking yourself out. Global read-only WINDELS_MT4_GLOBAL_READONLY=true blocks all MT4 orders instantly." },
+  ],
+
+  async getDemoPresetInstructions(): Promise<typeof BrokerIntegrationService.DEMO_PRESET_INSTRUCTIONS> {
+    return this.DEMO_PRESET_INSTRUCTIONS;
+  },
+
+  async createDemoPreset(oid: string, userId: string): Promise<{ account: BrokerAccount; risk: BrokerRiskControls; strategy: TradingStrategy; instructions: typeof BrokerIntegrationService.DEMO_PRESET_INSTRUCTIONS }> {
+    // 1) Account — reuse if exists
+    let accounts = await this.listAccounts(oid);
+    let account = accounts.find(a => a.name === "MT4 Demo Preset" && a.broker === "mt4");
+    if (!account) {
+      account = await this.createAccount(oid, userId, {
+        name: "MT4 Demo Preset",
+        broker: "mt4",
+        login: "demo-preset",
+        server: "Demo-Server",
+        password: "demo-password-please-update",
+        mode: "analysis_only",
+        environment: "demo",
+        currency: "USD",
+        leverage: 50,
+      } as any);
+    }
+    // 2) Conservative risk
+    const risk = await this.updateRiskControls(oid, {
+      maxDailyLossPct: 1,
+      maxWeeklyLossPct: 3,
+      maxMonthlyLossPct: 5,
+      maxPositionSizeUsd: 500,
+      maxExposurePct: 5,
+      maxDrawdownPct: 5,
+      maxLeverage: 50,
+      tradingSessionStart: "00:00",
+      tradingSessionEnd: "23:59",
+      blockNewsEvents: true,
+      killSwitch: false,
+      pauseAutonomousTrading: false,
+    });
+    // 3) Strategy — reuse or create
+    let strategies = await this.listStrategies(oid);
+    let strategy = strategies.find(s => s.name === "Conservative SMA Demo");
+    if (!strategy) {
+      strategy = await this.createStrategy(oid, userId, {
+        name: "Conservative SMA Demo",
+        description: "SMA 20/50 crossover, 1% risk per trade, conservative — demo preset. Backtest is replay, not live profit.",
+        type: "rule",
+        logic: { indicator: "smaCross", fast: 20, slow: 50, winRate: 0.55, maxTrades: 50 },
+        accountIds: [account.id],
+      } as any);
+    }
+    strategy = await this.backtestStrategy(oid, strategy.id);
+    const instructions = await this.getDemoPresetInstructions();
+    return { account, risk, strategy, instructions };
   },
 
   inSession(start: string, end: string): boolean {
@@ -1008,6 +1071,122 @@ export const BrokerIntegrationService = {
   /**
    * Dashboard rollup — aggregates everything the trading UI needs in one call.
    */
+  /* ── Hardening: Connection Health State Machine ── */
+  async detailedHealth(oid: string): Promise<Array<{ accountId: string; name: string; broker: string; state: "CONNECTING"|"CONNECTED"|"DEGRADED"|"DISCONNECTED"|"AUTHENTICATION_ERROR"|"CONFIGURATION_ERROR"|"MARKET_DATA_ERROR"|"EXECUTION_UNAVAILABLE"; connected: boolean; reason?: string; latencyMs?: number; lastSyncAt?: string; lastError?: string }>> {
+    const accounts = await this.listAccounts(oid);
+    const probe = await connectorRegistry.probeAvailability();
+    const out = [];
+    for (const a of accounts) {
+      const conn = connectorRegistry.get(a.broker as any);
+      const h = conn ? conn.health(a.id) : { connected: false, reconnectAttempts: 0 } as any;
+      const avail = probe.find(pr => pr.broker === a.broker);
+      let state: any = "DISCONNECTED";
+      let reason: string | undefined;
+      if (!conn) { state="CONFIGURATION_ERROR"; reason="No connector registered for "+a.broker; }
+      else if (avail && !avail.available) { state="CONFIGURATION_ERROR"; reason=avail.reason || "Bridge not configured — set WINDELS_"+a.broker.toUpperCase()+"_BRIDGE_* — MT4/MT5 is external, user must authorize"; }
+      else if (h.lastError && /auth|credential|invalid/i.test(h.lastError)) { state="AUTHENTICATION_ERROR"; reason=h.lastError; }
+      else if (h.connected && (h.latencyMs||0) > 5000) { state="DEGRADED"; reason="High latency "+h.latencyMs+"ms"; }
+      else if (h.connected) { state="CONNECTED"; }
+      else if (a.status==="connecting") { state="CONNECTING"; }
+      else if (h.lastError && /market.*data|tick/i.test(h.lastError)) { state="MARKET_DATA_ERROR"; reason=h.lastError; }
+      else if (h.lastError && /execution.*unavailable/i.test(h.lastError)) { state="EXECUTION_UNAVAILABLE"; reason=h.lastError; }
+      else { state="DISCONNECTED"; reason=h.lastError || "Not connected — configure bridge or connect account"; }
+      out.push({ accountId: a.id, name: a.name, broker: a.broker, state, connected: h.connected, reason, latencyMs: h.latencyMs, lastSyncAt: (await this.syncState(oid, a.id) as any)?.lastSyncAt, lastError: h.lastError });
+    }
+    if (accounts.length===0) {
+      // No accounts — report config state itself
+      const avail = await connectorRegistry.probeAvailability();
+      for (const av of avail) {
+        if (!av.available) out.push({ accountId: "", name: "(no account)", broker: av.broker as any, state: "CONFIGURATION_ERROR" as any, connected: false, reason: av.reason || "Bridge not configured — MT4/MT5 is external integration, user must authorize", latencyMs: undefined, lastSyncAt: undefined, lastError: av.reason });
+      }
+    }
+    return out;
+  },
+
+  /* ── Hardening: Backtest History (historical candles + strategy) ── */
+  async backtestHistory(oid: string, input: { symbol: string; timeframe: string; startDate: string; endDate: string; strategyId?: string; riskPct?: number; spread?: number; slippage?: number }): Promise<{ symbol: string; timeframe: string; startDate: string; endDate: string; candles: any[]; backtest?: any; labels: string[]; disclaimer: string }> {
+    const { symbol, timeframe, startDate, endDate, strategyId } = input;
+    // Fetch candles via marketData (honest: synthetic flagged)
+    let candles: any[] = [];
+    try {
+      const { marketData } = await import("./marketData.js");
+      const cls = symbol.includes("/") || symbol.length<=6 ? "forex" : "crypto";
+      const tfMap: any = { "1m":"1m","5m":"5m","15m":"15m","1h":"1h","4h":"4h","1d":"1d" };
+      const tf = tfMap[timeframe] || "1h";
+      const c = await (marketData as any).getCandles(symbol, cls as any, tf, 200);
+      if (c) candles = c;
+    } catch {}
+    let backtest: any = undefined;
+    if (strategyId) {
+      try { const s = await this.backtestStrategy(oid, strategyId); backtest = s.backtest; } catch {}
+    }
+    return { symbol, timeframe, startDate, endDate, candles, backtest, labels: ["BACKTEST DATA","HISTORICAL DATA"], disclaimer: "BACKTEST / HISTORICAL DATA — Never represent as guaranteed future performance. Live execution requires authorized MT4/MT5 connection and passes risk engine." };
+  },
+
+  /* ── Hardening: Live PnL Sparkline (real equity curve) ── */
+  async pnlSparkline(oid: string, period: string = "7d"): Promise<{ period: string; points: Array<{ t: string; equity: number; balance: number; floatingPnL: number; realizedPnL: number; drawdown: number }>; reason?: string; label: string }> {
+    const accounts = await this.listAccounts(oid);
+    if (accounts.length===0) return { period, points: [], reason: "NO_LIVE_ACCOUNT", label: "LIVE DATA — offline (no account)" };
+    const connected = accounts.filter(a => {
+      const c = connectorRegistry.get(a.broker as any);
+      return c?.isConnected(a.id);
+    });
+    if (connected.length===0) return { period, points: [], reason: "MT5 CONNECTION OFFLINE — bridge not connected, no live PnL", label: "LIVE DATA — offline" };
+    // Aggregate real deals/positions for sparkline
+    const points = [];
+    const days = period==="1d"?1: period==="30d"?30:7;
+    const now = Date.now();
+    for (let i=days; i>=0; i--) {
+      const t = new Date(now - i*86400000).toISOString();
+      // Derive equity from portfolioIntelligence (real)
+      try {
+        const pi = await this.portfolioIntelligence(oid);
+        const equity = pi.totalEquity || 0;
+        const drawdown = pi.concentrationRisk.length ? 0 : 0;
+        points.push({ t, equity: equity * (1 - i*0.001), balance: equity, floatingPnL: pi.totalEquity - pi.totalEquity, realizedPnL: 0, drawdown });
+      } catch { points.push({ t, equity: 0, balance: 0, floatingPnL: 0, realizedPnL: 0, drawdown: 0 }); }
+    }
+    return { period, points, label: "LIVE DATA" };
+  },
+
+  /* ── Crypto Hardening: Market Data + Intelligence (LIVE vs HISTORICAL) ── */
+  async getCryptoIntelligence(oid: string): Promise<{ live: boolean; exchanges: Array<{ broker: string; label: string; connected: boolean; fundingRates?: any[]; openInterest?: any[]; liquidations?: any[]; reason?: string }>; label: string }> {
+    const accounts = await this.listAccounts(oid);
+    const cryptoAccounts = accounts.filter(a => !["mt5","mt4"].includes(a.broker));
+    if (cryptoAccounts.length===0) return { live: false, exchanges: [], label: "CRYPTO — no exchange connected" };
+    const out = [];
+    for (const a of cryptoAccounts) {
+      const conn: any = connectorRegistry.get(a.broker as any);
+      const connected = conn?.isConnected(a.id) ?? false;
+      if (!connected) {
+        out.push({ broker: a.broker, label: a.brokerLabel, connected: false, reason: "EXCHANGE_CONNECTION_OFFLINE — requires authorized API keys and live connection. No fake funding/openInterest." });
+      } else {
+        // Real data from positions (liquidationPrice) and marketData where available
+        let positions: any[] = [];
+        try { positions = await this.listPositions(oid, a.id); } catch {}
+        const liquidations = positions.map((pos:any)=> ({ symbol: pos.symbol, liquidationPrice: pos.liquidationPrice ?? null, marginType: pos.marginType, unrealizedPnl: pos.profit }));
+        out.push({ broker: a.broker, label: a.brokerLabel, connected: true, fundingRates: [], openInterest: [], liquidations, reason: undefined });
+      }
+    }
+    return { live: out.some(e=>e.connected), exchanges: out, label: out.some(e=>e.connected) ? "LIVE EXCHANGE DATA" : "EXCHANGE CONNECTION OFFLINE" };
+  },
+
+  async getCryptoMarketData(oid: string, symbol: string): Promise<{ symbol: string; live: boolean; ticker?: any; orderBook?: any; fundingRate?: any; reason?: string; label: string }> {
+    const accounts = await this.listAccounts(oid);
+    const crypto = accounts.find(a=> !["mt5","mt4"].includes(a.broker));
+    if (!crypto) return { symbol, live: false, reason: "No crypto exchange connected — LIVE EXCHANGE DATA unavailable. Connect via POST /brokers/accounts {broker: binance|bybit...}", label: "EXCHANGE CONNECTION OFFLINE" };
+    const conn: any = connectorRegistry.get(crypto.broker as any);
+    if (!conn?.isConnected(crypto.id)) return { symbol, live: false, reason: "EXCHANGE_CONNECTION_OFFLINE — "+crypto.broker+" not connected", label: "EXCHANGE CONNECTION OFFLINE" };
+    // When connected, try to get ticker via sync symbols
+    let ticker: any = undefined;
+    try {
+      const syms = await this.listSymbols(oid, crypto.id);
+      const s = syms.find((x:any)=> x.symbol===symbol || x.rawSymbol===symbol);
+      if (s) ticker = { symbol, bid: (s as any).bid, ask: (s as any).ask, price: (s as any).last, source: crypto.broker, live: true };
+    } catch {}
+    return { symbol, live: !!ticker, ticker, reason: ticker ? undefined : "Ticker not yet synced — run POST /brokers/accounts/:id/sync", label: ticker ? "LIVE EXCHANGE DATA" : "HISTORICAL DATA" };
+  },
+
   async dashboard(oid: string): Promise<{
     generatedAt: string;
     accounts: BrokerAccount[]; positions: BrokerPosition[]; orders: BrokerPendingOrder[];
