@@ -74,11 +74,10 @@ export const Mt5Monitor = {
     }
     try {
       KernelService.dispatch({
-        domain: "trading.mt5",
         type: event,
-        payload: { organizationId, accountId, ...detail },
+        payload: { organizationId, accountId, domain: "trading.mt5", ...detail },
         severity: event === "error" || event === "order_fail" ? "high" : event === "risk_block" ? "medium" : "low",
-      }).catch(() => {});
+      } as any).catch(() => {});
     } catch (e) { logger.debug("[mt5-monitor] kernel dispatch failed", { err: e }); }
   },
 

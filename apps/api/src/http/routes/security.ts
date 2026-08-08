@@ -145,10 +145,27 @@ export function registerSecurityRoutes(router: Router) {
   });
   router.post("/access-reviews/run", validate({ body: z.object({ dormantDays: z.coerce.number().int().min(7).max(365).optional() }) }), async (req, res, next) => {
     try {
-      res.json({ ok: true, data: await SecurityGovernanceService.runAccessReview(Number(req.body.dormantDays ?? 90)) });
+      res.json({ ok: true, data: await SecurityGovernanceService.runAccessReview((req.user as any).organizationId ?? "default", Number(req.body.dormantDays ?? 90)) });
     } catch (e) { next(e); }
   });
   router.get("/access-reviews/latest", async (_req, res, next) => {
     try { res.json({ ok: true, data: await SecurityGovernanceService.latestAccessReview() }); } catch (e) { next(e); }
+  });
+  router.post("/access-reviews/attest", validate({ body: z.object({ itemId: z.string().cuid(), status: z.enum(["APPROVED","REVOKED","QUARANTINED"]), notes: z.string().max(500).optional() }) }), async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await SecurityGovernanceService.attestAccessItem(req.body.itemId, req.body.status, (req.user as any).id, req.body.notes) });
+    } catch (e) { next(e); }
+  });
+
+  // Incident Runbooks
+  router.get("/runbooks", async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await SecurityGovernanceService.listRunbooks((req.user as any).organizationId) });
+    } catch (e) { next(e); }
+  });
+  router.post("/runbooks", validate({ body: z.object({ name: z.string().min(2).max(100), triggerSeverity: z.enum(["low","medium","high","critical"]), triggerArea: z.enum(["auth","data","ai","billing","infra","abuse","other"]), actions: z.array(z.string()).min(1) }) }), async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await SecurityGovernanceService.createRunbook((req.user as any).organizationId ?? null, req.body) });
+    } catch (e) { next(e); }
   });
 }

@@ -25,7 +25,7 @@ import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import { makeRng } from "../utils/detRng.js";
 import type {
   BuiltInVoice, CustomVoice, VoiceSettings, VoicePreset, TtsJob,
-  VoiceStudioDashboard, VoiceFoundryDashboard, VfGeneratedVoice,
+  VoiceStudioDashboard, VfDashboard, VfGeneratedVoice,
   VfVoiceDesign, VfVoicePack, VfDeployment, VsVoiceGender, VsVoiceAge,
 } from "@windels/shared";
 
@@ -108,8 +108,8 @@ for (const v of FEMALE_DEFS) {
 }
 
 // Children voices
-BUILTIN_VOICES.push(bv("win-boy", "Boy", "neutral", "child-boy", "en", undefined, "child", ["child"]));
-BUILTIN_VOICES.push(bv("win-girl", "Girl", "neutral", "child-girl", "en", undefined, "child", ["child"]));
+BUILTIN_VOICES.push(bv("win-boy", "Boy", "neutral", "child-boy" as any, "en", undefined, "child", ["child"]));
+BUILTIN_VOICES.push(bv("win-girl", "Girl", "neutral", "child-girl" as any, "en", undefined, "child", ["child"]));
 BUILTIN_VOICES.push(bv("win-teen-b", "Teen Boy", "masculine", "teen", "en", undefined, "teen", ["teen"]));
 
 // Regional/multilingual voices
@@ -197,13 +197,13 @@ export const voiceModule = {
       for (const sd of VOICE_FOUNDRY_SEEDS) {
         const design: VfVoiceDesign = {
           ...DEFAULT_DESIGN,
-          gender: sd.gender, estimatedAge: sd.age,
-          speakingStyle: sd.style, personality: sd.personality,
+          gender: sd.gender as any, estimatedAge: sd.age,
+          speakingStyle: sd.style as any, personality: sd.personality,
         };
         const v: VfGeneratedVoice = {
           id: uid("vf-"),
           name: sd.name,
-          category: sd.cat,
+          category: sd.cat as any,
           design,
           version: 1,
           auditTrail: [`bootstrap:${new Date().toISOString()}:foundry-generated`],
@@ -297,20 +297,18 @@ export const voiceModule = {
     // In a real implementation, this would call ElevenLabs/Play.ht/browser
     const job: TtsJob = {
       id: uid("tts-"),
-      text,
       voiceId,
-      status: "pending",
-      provider: "browser", // Default to browser SpeechSynthesis
-      clientSide: true,
-      createdAt: new Date().toISOString(),
+      status: "queued" as any,
+      requestedAt: new Date().toISOString(),
     };
+    (job as any).text = text;
 
     await redis.hset(K.jobs + ":" + job.id, "_doc", JSON.stringify(job));
     await redis.zadd(K.jobs, Date.now(), job.id);
 
     // Simulate completion
     setTimeout(async () => {
-      job.status = "completed";
+      job.status = "ready" as any;
       job.audioUrl = `/api/v1/voice/audio/${job.id}.wav`;
       await redis.hset(K.jobs + ":" + job.id, "_doc", JSON.stringify(job));
     }, 1000);
@@ -388,7 +386,7 @@ export const voiceModule = {
     const dep: VfDeployment = {
       id: uid("dep-"),
       voiceId,
-      target,
+      target: target as any,
       deployedAt: new Date().toISOString(),
       active: true,
     };
@@ -413,7 +411,7 @@ export const voiceModule = {
 
   // ─── Dashboard APIs ───────────────────────────────────────────────────────
 
-  async getDashboard(): Promise<VoiceStudioDashboard & VoiceFoundryDashboard> {
+  async getDashboard(): Promise<VoiceStudioDashboard & VfDashboard> {
     const [builtinCount, customCount, jobCount, foundryVoiceCount, packCount, depIds] = await Promise.all([
       redis.keys(`${K.builtin}:*`).then(r => r.length / 2),
       redis.zcard(K.custom),
@@ -434,7 +432,7 @@ export const voiceModule = {
 
     return {
       // Voice Studio dashboard
-      builtinVoices: builtinCount,
+      builtInVoices: builtinCount,
       customVoices: customCount,
       synthesisJobs24h: jobCount,
       // Voice Foundry dashboard
@@ -442,7 +440,7 @@ export const voiceModule = {
       voicePacks: packCount,
       activeDeployments: activeTargets.size,
       deploymentTargets: Array.from(activeTargets),
-    };
+    } as any;
   },
 };
 

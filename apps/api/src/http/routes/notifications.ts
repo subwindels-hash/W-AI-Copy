@@ -19,8 +19,8 @@ export function registerNotificationsRoutes(router: Router) {
       try {
         const notifications = await notificationsService.getForUser(req.user!.id, {
           unreadOnly: req.query.unreadOnly === "true",
-          limit: req.query.limit ? parseInt(req.query.limit) : undefined,
-          offset: req.query.offset ? parseInt(req.query.offset) : undefined,
+          limit: req.query.limit ? parseInt(req.query.limit as string) : undefined,
+          offset: req.query.offset ? parseInt(req.query.offset as string) : undefined,
         });
 
         const unreadCount = await notificationsService.getUnreadCount(req.user!.id);
