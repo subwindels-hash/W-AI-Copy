@@ -96,3 +96,43 @@ describe("incident reporting lifecycle", () => {
     expect((await SecurityGovernanceService.listIncidents(undefined, 2)).length).toBe(2);
   });
 });
+
+describe("SecurityStandardsService", () => {
+  beforeEach(() => {
+    kv.hashes.clear();
+  });
+
+  it("seeds the full control checklist and computes a score", async () => {
+    const { SecurityStandardsService } = await import("./securityStandards.service.js");
+    const controls = await SecurityStandardsService.list();
+    expect(controls.length).toBeGreaterThan(15);
+    const posture = await SecurityStandardsService.posture();
+    expect(posture.total).toBe(controls.length);
+    expect(posture.score).toBeGreaterThanOrEqual(0);
+    expect(posture.score).toBeLessThanOrEqual(100);
+  });
+
+  it("reports the six previously-stubbed controls as implemented", async () => {
+    const { SecurityStandardsService } = await import("./securityStandards.service.js");
+    const controls = await SecurityStandardsService.list();
+    const byId = new Map(controls.map((c) => [c.control, c.status]));
+    expect(byId.get("AUTH-03: MFA option for admin accounts")).toBe("implemented");
+    expect(byId.get("ENC-02: AES-256 at rest for sensitive fields")).toBe("implemented");
+    expect(byId.get("LOG-02: PII redaction in logs")).toBe("implemented");
+    expect(byId.get("ACCESS-02: Principle of least privilege for service tokens")).toBe("implemented");
+    expect(byId.get("INCIDENT-02: Runbook for common incidents")).toBe("implemented");
+    expect(byId.get("COMP-02: SOC2-aligned access reviews")).toBe("implemented");
+  });
+
+  it("allows CRUD on custom controls", async () => {
+    const { SecurityStandardsService } = await import("./securityStandards.service.js");
+    const created = await SecurityStandardsService.create({
+      control: "TEST-01: Example", category: "auth", status: "missing", description: "d", implementation: "",
+    });
+    const updated = await SecurityStandardsService.updateStatus(created.id, "implemented", "somewhere");
+    expect(updated!.status).toBe("implemented");
+    expect((await SecurityStandardsService.list()).some((c) => c.id === created.id)).toBe(true);
+    await SecurityStandardsService.remove(created.id);
+    expect((await SecurityStandardsService.list()).some((c) => c.id === created.id)).toBe(false);
+  });
+});

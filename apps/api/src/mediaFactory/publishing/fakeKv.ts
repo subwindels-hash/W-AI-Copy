@@ -133,6 +133,16 @@ export class FakeKv {
 
   async hgetall(key: string): Promise<Record<string, string>> { return this.hashes.get(key) ?? {}; }
 
+  async hlen(key: string): Promise<number> { return this.hashes.get(key) ? Object.keys(this.hashes.get(key)!).length : 0; }
+
+  async hdel(key: string, ...fields: string[]): Promise<number> {
+    const h = this.hashes.get(key);
+    if (!h) return 0;
+    let removed = 0;
+    for (const f of fields) if (delete h[f]) removed++;
+    return removed;
+  }
+
   async hget(key: string, field: string): Promise<string | null> {
     return this.hashes.get(key)?.[field] ?? null;
   }
