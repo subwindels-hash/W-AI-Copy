@@ -184,6 +184,44 @@ export class FakeKv {
     return v === undefined ? null : String(v);
   }
 
+  /** zcount — count members with a score within [min,max] (inclusive bounds
+   *  parsed from numbers; Redis "(min" exclusive syntax is not used here). */
+  async zcount(key: string, min: number | string, max: number | string): Promise<number> {
+    const z = this.zsets.get(key) ?? new Map<string, number>();
+    const lo = min === "-inf" ? Number.NEGATIVE_INFINITY : Number(min);
+    const hi = max === "+inf" ? Number.POSITIVE_INFINITY : Number(max);
+    let n = 0;
+    for (const sc of z.values()) if (sc >= lo && sc <= hi) n++;
+    return n;
+  }
+
+  /** incrbyfloat — decimal increment on a string value. */
+  async incrbyfloat(key: string, by: number): Promise<string> {
+    const next = Number(this.fresh(key)?.value ?? 0) + by;
+    this.strings.set(key, { value: String(next) });
+    return String(next);
+  }
+
+  /** eval — supports the simple NX/PX SET lock script and check-and-del used by
+   *  the gift-card redemption lock. Unknown scripts return 0. */
+  async eval(script: string, _numkeys: number, ...args: any[]): Promise<number> {
+    const a = args.map(String);
+    if (script.includes("NX')") || /NX','PX/.test(script)) {
+      // SET key val NX PX ttl
+      const [key, val, , , ttl] = a;
+      if (this.strings.has(key)) return 0;
+      this.strings.set(key, { value: val, expiresAt: Date.now() + Number(ttl) });
+      return 1;
+    }
+    if (script.includes("GET")) {
+      // if GET key == val then DEL key
+      const [key, val] = a;
+      if (this.strings.get(key)?.value === val) { this.strings.delete(key); return 1; }
+      return 0;
+    }
+    return 0;
+  }
+
   /** Trim a sorted set to the given rank window (negative indexes count back). */
   async zremrangebyrank(key: string, start: number, stop: number): Promise<number> {
     const z = this.zsets.get(key);
