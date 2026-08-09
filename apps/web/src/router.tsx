@@ -51,6 +51,7 @@ const EnterprisePage = lazy(() => import("./pages/admin/EnterprisePage"));
 const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
+const AdminApiControlPage = lazy(() => import("./pages/admin/AdminApiControlPage"));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
 const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
 const EmailIntelPage = lazy(() => import("./pages/emailIntel/EmailIntelPage").then((m) => ({ default: m.EmailIntelPage })));
@@ -96,6 +97,8 @@ const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
 const MarketingEnterprise = lazy(() => import("./pages/marketing/EnterprisePage"));
 const MarketingDevelopers = lazy(() => import("./pages/marketing/DevelopersPage"));
+const MarketingApiPlatform = lazy(() => import("./pages/marketing/ApiPlatformPage"));
+const MarketingApiDocs = lazy(() => import("./pages/marketing/ApiDocsPage"));
 const MarketingDocs = lazy(() => import("./pages/marketing/DocsPage"));
 const MarketingBlog = lazy(() => import("./pages/marketing/BlogPage"));
 const MarketingSupport = lazy(() => import("./pages/marketing/SupportPage"));
@@ -207,7 +210,9 @@ export const router = createBrowserRouter([
   { path: "/pricing", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingPricing/>) }] },
   { path: "/enterprise", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingEnterprise/>) }] },
   { path: "/developers", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingDevelopers/>) }] },
+  { path: "/api", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingApiPlatform/>) }] },
   { path: "/docs", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingDocs/>) }] },
+  { path: "/docs/api", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingApiDocs/>) }] },
   { path: "/blog", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
   { path: "/blog/:slug", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
   { path: "/support", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingSupport/>) }] },
@@ -373,6 +378,7 @@ export const router = createBrowserRouter([
       { path: "governance", element: withSuspense(<GovernancePage />) },
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
+      { path: "api-platform", element: withSuspense(<AdminApiControlPage />) },
     ],
   },
   {

@@ -136,6 +136,7 @@ const navItems = [
   { to: "/app/publishing", icon: Megaphone, label: "Publishing" },
   { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
+  { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },
