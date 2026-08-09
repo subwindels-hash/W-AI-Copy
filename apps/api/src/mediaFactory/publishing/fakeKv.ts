@@ -352,6 +352,7 @@ export class FakeKv {
       set(key: string, value: string, ...args: any[]) { ops.push(() => self.set(key, value, ...args)); return chain; },
       del(...keys: string[]) { for (const k of keys.flat()) ops.push(() => self.del(k)); return chain; },
       hset(key: string, ...rest: any[]) { ops.push(() => self.hset(key, ...rest)); return chain; },
+      hincrby(key: string, field: string, by: number) { ops.push(() => self.hincrby(key, field, by)); return chain; },
       sadd(key: string, ...members: string[]) { ops.push(() => self.sadd(key, ...members)); return chain; },
       srem(key: string, ...members: string[]) { ops.push(() => self.srem(key, ...members)); return chain; },
       zadd(key: string, score: number, member: string) { ops.push(() => self.zadd(key, score, member)); return chain; },

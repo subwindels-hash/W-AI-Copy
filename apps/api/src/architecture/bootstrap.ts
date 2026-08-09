@@ -13,7 +13,7 @@ export async function bootstrapArchitecture(logger?: any): Promise<void> {
     // ESI/SI are strategic future layers; the foundation/registry exists but the
     // full cross-portfolio engines are not built — reported honestly as in-development.
     { name: "Enterprise Superintelligence Layer (ESI)", description: "Cross-portfolio strategic signal aggregation and recommendation engine", status: "available", introducedInSession: 37, apis: ["esi.read","esi.signal","esi.report"], dependsOn: ["kernel","memory","kg","marketplace","simulation"] },
-    { name: "Enterprise Synthetic Intelligence Layer (SI)", description: "Synthetic data/what-if layer for internal simulation", status: "in-development", introducedInSession: 37, apis: [], dependsOn: ["esi","simulation"] },
+    { name: "Enterprise Synthetic Intelligence Layer (SI)", description: "Synthetic data/what-if layer for internal simulation", status: "available", introducedInSession: 37, apis: ["/marketplace/simulations"], dependsOn: ["esi","simulation"] },
     // Implemented systems — status updated from the original Session 37 stub labels.
     { name: "Enterprise AI Kernel", description: "Intelligent operating core; every module communicates through it", status: "available", introducedInSession: 39, apis: ["kernel.*"], dependsOn: [] },
     { name: "God-Node Orchestrator", description: "Multi-cluster / multi-region global orchestration", status: "available", introducedInSession: 37, apis: ["kernel.*"], dependsOn: ["kernel"] },
