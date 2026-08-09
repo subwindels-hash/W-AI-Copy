@@ -48,6 +48,12 @@ const EnvSchema = z.object({
   WINDELS_MAIL_FROM: z.string().email().default("no-reply@windels.ai"),
   WINDELS_MAIL_FROM_NAME: z.string().default("WINDELS AI OS"),
 
+  // ── Web search tool providers (optional; the tool returns an honest
+  // "not configured" result when none are set) ──────────────────────────
+  BRAVE_SEARCH_API_KEY: z.string().optional(),
+  SERPAPI_KEY: z.string().optional(),
+  TAVILY_API_KEY: z.string().optional(),
+
 
   SESSION_COOKIE_NAME: z.string().default("windels_sid"),
   SESSION_COOKIE_SECURE: z
