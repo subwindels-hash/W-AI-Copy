@@ -86,6 +86,24 @@ export class FakeKv {
 
   async smembers(key: string): Promise<string[]> { return [...(this.sets.get(key) ?? [])]; }
 
+  /** keys(pattern) — matches the Redis glob (supports `prefix*`). */
+  async keys(pattern: string): Promise<string[]> {
+    const out: string[] = [];
+    const collect = (k: string) => {
+      if (pattern === "*") { out.push(k); return; }
+      if (pattern.endsWith("*")) {
+        const prefix = pattern.slice(0, -1);
+        if (k.startsWith(prefix)) out.push(k);
+      } else if (k === pattern) out.push(k);
+    };
+    for (const k of this.strings.keys()) collect(k);
+    for (const k of this.hashes.keys()) collect(k);
+    for (const k of this.zsets.keys()) collect(k);
+    for (const k of this.lists.keys()) collect(k);
+    for (const k of this.sets.keys()) collect(k);
+    return out;
+  }
+
   /**
    * SISMEMBER — returns 1/0 like ioredis (not a boolean).
    *
