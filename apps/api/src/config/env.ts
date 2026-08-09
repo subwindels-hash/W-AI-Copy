@@ -60,6 +60,12 @@ const EnvSchema = z.object({
   UPDATE_SIGNING_PRIVATE_KEY: z.string().optional(),
   UPDATE_SIGNING_PUBLIC_KEY: z.string().optional(),
 
+  // ── Service-to-service mTLS (optional) ───────────────────────────────
+  // PEM of the trusted CA that issues service client certificates, and an
+  // optional expected subject CN to bind a specific service identity.
+  S2S_MTLS_CA_CERT: z.string().optional(),
+  S2S_MTLS_EXPECTED_CN: z.string().optional(),
+
 
   SESSION_COOKIE_NAME: z.string().default("windels_sid"),
   SESSION_COOKIE_SECURE: z

@@ -4,7 +4,7 @@
  * Service-to-service authentication:
  * - JWT token generation and validation
  * - Service identity verification
- * - mTLS certificate validation (stub)
+ * - mTLS certificate validation
  * - Token refresh and rotation
  * - Service-to-service authorization
  * - Zero-trust networking principles
@@ -311,10 +311,20 @@ export async function canAccessService(
   return hasAccess;
 }
 
-// ─── mTLS Support (Stub) ────────────────────────────────────────
+// ─── mTLS Support ───────────────────────────────────────────────
 
 /**
- * Validate mTLS certificate (stub implementation)
+ * Validate an mTLS client certificate (PEM).
+ *
+ * Performs real validation with Node's X509Certificate parser:
+ *   1. the certificate must be parseable PEM;
+ *   2. it must be valid at the current time;
+ *   3. when `S2S_MTLS_CA_CERT` is configured, the client cert must be issued by
+ *      that CA (chain check via `checkIssued`);
+ *   4. when `S2S_MTLS_EXPECTED_CN` is configured, the certificate's subject
+ *      common name must match (a concrete service-identity binding).
+ *
+ * The certificate's subject CN is used as the authenticated `serviceId`.
  */
 export async function validateMutualTLS(
   clientCert: string,
@@ -323,19 +333,63 @@ export async function validateMutualTLS(
   const authConfig = { ...DEFAULT_CONFIG, ...config };
 
   if (!authConfig.requireMutualTLS) {
-    return {
-      authenticated: false,
-      error: "mTLS not required",
-    };
+    return { authenticated: false, error: "mTLS not required" };
+  }
+  if (!clientCert || !clientCert.trim()) {
+    return { authenticated: false, error: "No client certificate provided" };
   }
 
-  // Stub implementation - in production, validate certificate chain
-  logger.warn("mTLS validation not implemented", { clientCert: clientCert.slice(0, 50) });
+  let cert: import("node:crypto").X509Certificate;
+  try {
+    cert = new (await import("node:crypto")).X509Certificate(clientCert);
+  } catch (e: any) {
+    return { authenticated: false, error: `Invalid client certificate: ${e?.message ?? "parse failed"}` };
+  }
 
-  return {
-    authenticated: false,
-    error: "mTLS validation not implemented",
-  };
+  // 2. Validity window (handles both clock skew guards and expired certs).
+  const now = Date.now();
+  const validFrom = new Date(cert.validFrom).getTime();
+  const validTo = new Date(cert.validTo).getTime();
+  if (now < validFrom) {
+    return { authenticated: false, error: "Client certificate is not yet valid" };
+  }
+  if (now > validTo) {
+    return { authenticated: false, error: "Client certificate has expired" };
+  }
+
+  // 3. CA chain check when a trusted CA is configured.
+  const caPem = process.env.S2S_MTLS_CA_CERT;
+  if (caPem) {
+    try {
+      const ca = new (await import("node:crypto")).X509Certificate(caPem);
+      if (!cert.checkIssued(ca)) {
+        return { authenticated: false, error: "Client certificate was not issued by the trusted CA" };
+      }
+    } catch {
+      return { authenticated: false, error: "Configured CA certificate is invalid" };
+    }
+  }
+
+  // 4. Expected service identity (subject CN) when configured.
+  const cn = extractCommonName(cert.subject);
+  const expected = process.env.S2S_MTLS_EXPECTED_CN;
+  if (expected && cn !== expected) {
+    return { authenticated: false, error: `Client certificate subject does not match expected service (${expected})` };
+  }
+  if (!cn) {
+    return { authenticated: false, error: "Client certificate has no subject common name" };
+  }
+
+  logger.info("mTLS client authenticated", { serviceId: cn });
+  Metrics.increment("s2s.mtls.authenticated", 1, { serviceId: cn });
+  return { authenticated: true, serviceId: cn, scopes: [`service:${cn}`] };
+}
+
+/** Extract the Common Name (CN=...) from an RFC4514 subject string. */
+function extractCommonName(subject: string): string {
+  // subject format: "CN=svc, OU=..., O=..."
+  const m = subject.match(/(?:^|,)\s*CN=([^,]+)/);
+  return m ? m[1]!.trim() : "";
 }
 
 // ─── Express Middleware ─────────────────────────────────────────
