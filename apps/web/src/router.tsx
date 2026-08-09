@@ -101,7 +101,9 @@ const MarketingApiPlatform = lazy(() => import("./pages/marketing/ApiPlatformPag
 const MarketingApiDocs = lazy(() => import("./pages/marketing/ApiDocsPage"));
 const MarketingDocs = lazy(() => import("./pages/marketing/DocsPage"));
 const MarketingBlog = lazy(() => import("./pages/marketing/BlogPage"));
-const MarketingSupport = lazy(() => import("./pages/marketing/SupportPage"));
+const ContactPage = lazy(() => import("./pages/contact/ContactPage").then((m) => ({ default: m.ContactPage })));
+const MySupportPage = lazy(() => import("./pages/support/MySupportPage").then((m) => ({ default: m.MySupportPage })));
+const ContactCenterPage = lazy(() => import("./pages/support/ContactCenterPage").then((m) => ({ default: m.ContactCenterPage })));
 const MarketingLegal = lazy(() => import("./pages/marketing/LegalPage"));
 
 // Mobile (Session 15)
@@ -215,7 +217,7 @@ export const router = createBrowserRouter([
   { path: "/docs/api", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingApiDocs/>) }] },
   { path: "/blog", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
   { path: "/blog/:slug", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
-  { path: "/support", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingSupport/>) }] },
+  { path: "/support", element: withSuspense(<ContactPage />) },
   { path: "/legal", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingLegal/>) }] },
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },
   { path: "/auth/login", element: withSuspense(<LoginPage />) },
@@ -321,10 +323,12 @@ export const router = createBrowserRouter([
       { path: "developer-portal", element: withSuspense(<DeveloperPortalPage />) },
       { path: "files", element: withSuspense(<FilesPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
+      { path: "my-support", element: withSuspense(<MySupportPage />) },
       { path: "enterprise", element: withSuspense(<EnterprisePage />) },
       { path: "governance", element: withSuspense(<GovernancePage />) },
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
+      { path: "contact-center", element: withSuspense(<ContactCenterPage />) },
       { path: "tenant-isolation", element: withSuspense(<TenantIsolationPage />) },
       { path: "crm", element: withSuspense(<CrmPage />) },
       { path: "email-intel", element: withSuspense(<EmailIntelPage />) },

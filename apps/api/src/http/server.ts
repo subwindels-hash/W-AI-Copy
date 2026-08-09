@@ -57,6 +57,7 @@ import { registerPublicApiRoutes } from "./routes/publicApi.js";
 import { registerDeveloperGatewayRoutes } from "./routes/developerGateway.js";
 import { registerDeveloperPlatformRoutes } from "./routes/developerPlatform.js";
 import { registerAdminApiControlRoutes } from "./routes/adminApiControl.js";
+import { registerContactRoutes } from "./routes/contact.js";
 import { registerMobileRoutes } from "./routes/mobile.js";
 import { registerMobileSyncRoutes } from "./routes/mobileSync.js";
 import { registerQaRoutes } from "./routes/qa.js";
@@ -1429,6 +1430,8 @@ export function createApp() {
   registerDeveloperPlatformRoutes(v1);
   // Admin API Control Center (Super Admin) — platform-wide developer control.
   registerAdminApiControlRoutes(v1);
+  // Contact & Support Center (public form, AI assistant, my-requests, admin).
+  registerContactRoutes(v1);
 
   app.use((req, res) => {
     res.status(404).json({

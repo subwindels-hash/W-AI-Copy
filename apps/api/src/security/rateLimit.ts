@@ -106,6 +106,8 @@ export const Limits = {
   admin: { key: "rl:admin:user:", max: 120, refillPerSec: 5, blockSeconds: 30 },               // Relaxed for admin operations
   sseConnect: { key: "rl:sse:ip:", max: 5, refillPerSec: 1 / 30, blockSeconds: 60 },           // Max 5 SSE connections per IP
   mfa: { key: "rl:mfa:ip:", max: 10, refillPerSec: 1 / 6, blockSeconds: 300 },                 // Same as login — MFA is part of auth
+  contact: { key: "rl:contact:ip:", max: 10, refillPerSec: 1 / 60, blockSeconds: 600 },        // Contact form / AI chat anti-spam
+  contactAdmin: { key: "rl:contactadmin:user:", max: 200, refillPerSec: 10, blockSeconds: 30 },
 } satisfies Record<string, Limit>;
 
 export type LimitName = keyof typeof Limits;

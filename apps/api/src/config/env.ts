@@ -32,6 +32,23 @@ const EnvSchema = z.object({
   BOOTSTRAP_SUPERADMIN_EMAIL: z.string().email().default("admin@windels.ai"),
   BOOTSTRAP_SUPERADMIN_PASSWORD: z.string().min(8).default("ChangeMe!234"),
 
+  // ── Contact & Support Center email (Session: contact center) ────────────
+  // Support mailbox that contact requests are sent to. Never hardcoded.
+  WINDELS_SUPPORT_EMAIL: z.string().email().optional(),
+  // SMTP relay for outbound contact emails (system + user confirmation).
+  // Reuses the same env relay convention as the Email Intelligence outbox.
+  WINDELS_SMTP_HOST: z.string().optional(),
+  WINDELS_SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+  WINDELS_SMTP_USER: z.string().optional(),
+  WINDELS_SMTP_PASS: z.string().optional(),
+  WINDELS_SMTP_SECURE: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+  WINDELS_MAIL_FROM: z.string().email().default("no-reply@windels.ai"),
+  WINDELS_MAIL_FROM_NAME: z.string().default("WINDELS AI OS"),
+
+
   SESSION_COOKIE_NAME: z.string().default("windels_sid"),
   SESSION_COOKIE_SECURE: z
     .union([z.boolean(), z.enum(["true", "false"])])

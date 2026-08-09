@@ -260,6 +260,7 @@ model User {
   notifications           Notification[]
   conversationSharesCreated ConversationShare[] @relation("conversation_shares_created")
   ownedDeveloperApps        DeveloperApp[]        @relation("developer_app_owner")
+  contactRequests           ContactRequest[]      @relation("contact_requests")
 
   @@index([role])
   @@index([createdAt])
@@ -1601,6 +1602,74 @@ model ApiUsageRecord {
   @@index([apiKeyId])
   @@index([endpoint])
   @@index([appId])
+}
+
+// ─────────────────── Session: Contact & Support Center ───────────────────
+// Persistent contact requests and their communication/status history.
+model ContactRequest {
+  id             String        @id @default(cuid())
+  requestNumber  String        @unique
+  organizationId String?
+  userId         String?
+  user           User?         @relation("contact_requests", fields: [userId], references: [id], onDelete: SetNull)
+  accountId      String?
+  name           String
+  email          String
+  phone          String?
+  country        String?
+  company        String?
+  category       String
+  subject        String
+  message        String        @db.Text
+  preferredContactMethod String @default("email")
+  aiConversationId String?
+  aiSummary      String?       @db.Text
+  priority       String        @default("normal")
+  status         String        @default("new")
+  department     String        @default("general")
+  assignedUserId String?
+  assignedAgentId String?
+  source         String        @default("web")
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  messages       ContactMessage[]
+  statusHistory  ContactStatusHistory[]
+
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+  @@index([category])
+  @@index([department])
+  @@index([createdAt])
+}
+
+model ContactMessage {
+  id           String         @id @default(cuid())
+  requestId    String
+  request      ContactRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorType   String         @default("user") // user | staff | ai | system
+  authorId     String?
+  authorName   String?
+  body         String         @db.Text
+  isInternal   Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+
+  @@index([requestId])
+}
+
+model ContactStatusHistory {
+  id              String         @id @default(cuid())
+  requestId       String
+  request         ContactRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fromStatus      String?
+  toStatus        String
+  changedByUserId String?
+  createdAt       DateTime       @default(now())
+
+  @@index([requestId])
 }
 
 // ─────────────────────────── Enterprise Governance & Ledger Extensions ───────────────────────────
