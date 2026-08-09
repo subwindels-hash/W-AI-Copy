@@ -25,7 +25,7 @@ export function registerConversationRoutes(r: Router) {
 
   r.get(
     "/",
-    validate({ query: PaginationQuery.extend({ pinned: z.enum(["true", "false"]).optional() }) }),
+    validate({ query: PaginationQuery.extend({ pinned: z.enum(["true", "false"]).optional(), archived: z.enum(["true", "false"]).optional(), q: z.string().max(200).optional() }) }),
     async (req, res, next) => {
       try {
         const data = await listConversations(req.user!.id, req.query as any);

@@ -24,6 +24,7 @@ import { registerWorkspaceRoutes } from "./routes/workspace.js";
 import { registerConversationRoutes } from "./routes/conversations.js";
 import { registerMessageRoutes } from "./routes/messages.js";
 import { registerConversationOpsRoutes } from "./routes/conversationOps.js";
+import { registerConversationManageRoutes, registerShareResolveRoutes } from "./routes/conversationManage.js";
 import { registerAttachmentRoutes } from "./routes/attachments.js";
 import { registerProjectContinuityRoutes } from "./routes/projectContinuity.js";
 import { registerLeadDiscoveryRoutes } from "./routes/leadDiscovery.js";
@@ -152,6 +153,7 @@ import { rateLimit } from "./middleware/rateLimit.js";
 import { csrfMiddleware } from "../security/csrf.js";
 import { orgScope } from "./middleware/orgScope.js";
 import { registerSSERoutes } from "./routes/events.js";
+import jwt from "jsonwebtoken";
 import type { ApiEnvelope } from "@windels/shared/api";
 
 export function createApp() {
@@ -264,8 +266,30 @@ export function createApp() {
   // Session 112 first: /search, /unread and /deleted are literal paths that the
   // Session 2 router's `GET /:id` (cuid-validated) would otherwise reject.
   registerConversationOpsRoutes(conversationsRouter);
+  // Conversation-management (pin/archive/rename/share) — paths are all
+  // `/:id/...` so they never collide with the literal collection paths above
+  // or the Session 2 `/:id` handlers below.
+  registerConversationManageRoutes(conversationsRouter);
   registerConversationRoutes(conversationsRouter);
   registerMessageRoutes(conversationsRouter);
+
+  // Public share-link resolution. Attaches the user *opportunistically* when a
+  // valid JWT is supplied so anonymous `anyone_with_link` shares still resolve.
+  const shareResolveRouter = express.Router();
+  v1.use("/share", shareResolveRouter);
+  shareResolveRouter.use((req, _res, next) => {
+    const header = req.headers.authorization;
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) return next();
+    try {
+      const payload = jwt.verify(token, env.JWT_SECRET, { issuer: env.JWT_ISSUER }) as any;
+      req.user = { id: payload.id, email: payload.email, role: payload.role, organizationId: payload.organizationId };
+    } catch {
+      /* ignore invalid token — anonymous access still applies */
+    }
+    next();
+  });
+  registerShareResolveRoutes(shareResolveRouter);
 
   // /agents + /agents/:id/memories + /agents/:id/knowledge share a sub-router
   const agentsRouter = express.Router();

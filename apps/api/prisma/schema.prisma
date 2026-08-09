@@ -258,6 +258,7 @@ model User {
   pushSubscriptions       PushSubscription[]
   biometricCredentials    BiometricCredential[]
   notifications           Notification[]
+  conversationSharesCreated ConversationShare[] @relation("conversation_shares_created")
 
   @@index([role])
   @@index([createdAt])
@@ -515,7 +516,11 @@ model Conversation {
   summary        String?
   createdById    String
   createdBy      User          @relation("conversations_created", fields: [createdById], references: [id])
+  // ── Conversation-management state (Session 1xx sidebar upgrade) ──
   pinned         Boolean       @default(false)
+  pinnedAt       DateTime?
+  isArchived     Boolean       @default(false)
+  archivedAt     DateTime?
   modelId        String?
   metadata       Json          @default("{}")
   lastMessageAt  DateTime      @default(now())
@@ -526,10 +531,13 @@ model Conversation {
   messages       Message[]
   participants   ConversationParticipant[]
   attachments    MessageAttachment[]
+  shares         ConversationShare[]
 
   @@index([organizationId, lastMessageAt])
   @@index([workspaceId])
   @@index([createdById])
+  @@index([organizationId, isArchived, pinned, lastMessageAt])
+  @@index([organizationId, title])
 }
 
 model Message {
@@ -1428,6 +1436,51 @@ model Notification {
 
   @@index([userId, createdAt])
   @@index([readAt])
+}
+
+// ─────────────────── Session 1xx: Chat conversation management & sharing ───────────────────
+model ConversationShare {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User     @relation("conversation_shares_created", fields: [createdById], references: [id])
+  /// Opaque, unguessable link token. Never derivable from the conversation id.
+  token          String   @unique
+  /// anyone_with_link | organization | restricted | specific
+  access         String   @default("anyone_with_link")
+  /// view | comment | edit
+  permissions    String   @default("view")
+  /// For `restricted`/`specific`: the allowed user ids (cuid) or emails.
+  allowed        String[] @default([])
+  /// Optional link password (bcrypt). When set, resolution requires it.
+  passwordHash   String?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  lastAccessedAt DateTime?
+  accessCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  accessLog      ConversationShareAccess[]
+
+  @@index([conversationId])
+  @@index([createdById])
+  @@index([expiresAt])
+}
+
+model ConversationShareAccess {
+  id        String   @id @default(cuid())
+  shareId   String
+  share     ConversationShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  granted   Boolean  @default(false)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([shareId])
 }
 
 // ─────────────────────────── Enterprise Governance & Ledger Extensions ───────────────────────────

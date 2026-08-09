@@ -6,6 +6,11 @@ export interface Conversation {
   title: string;
   summary: string | null;
   pinned: boolean;
+  pinnedAt: string | null;
+  isArchived: boolean;
+  archivedAt: string | null;
+  deletedAt: string | null;
+  createdAt: string;
   modelId: string | null;
   lastMessageAt: string;
   messageCount?: number;
@@ -40,8 +45,15 @@ export interface PromptTemplate {
 }
 
 export const chatApi = {
-  async listConversations(): Promise<{ items: Conversation[]; pagination: any }> {
-    return api("/conversations?perPage=50");
+  async listConversations(opts: { archived?: boolean; q?: string; page?: number; perPage?: number } = {}): Promise<{ items: Conversation[]; pagination: any }> {
+    return api("/conversations", {
+      params: {
+        perPage: opts.perPage ?? 100,
+        page: opts.page ?? 1,
+        ...(opts.archived !== undefined ? { archived: opts.archived ? "true" : "false" } : {}),
+        ...(opts.q ? { q: opts.q } : {}),
+      },
+    });
   },
   async createConversation(input: { title?: string; firstMessage?: string; modelId?: string; agentIds?: string[] }) {
     return api<Conversation>("/conversations", { method: "POST", json: input });
@@ -51,6 +63,24 @@ export const chatApi = {
   },
   async deleteConversation(id: string): Promise<{ deleted: true; id: string }> {
     return api(`/conversations/${id}`, { method: "DELETE" });
+  },
+  async permanentDeleteConversation(id: string): Promise<{ deleted: true; id: string; permanent: boolean }> {
+    return api(`/conversations/${id}/permanent`, { method: "DELETE" });
+  },
+  async renameConversation(id: string, title: string): Promise<Conversation> {
+    return api(`/conversations/${id}/rename`, { method: "PATCH", json: { title } });
+  },
+  async pinConversation(id: string): Promise<Conversation> {
+    return api(`/conversations/${id}/pin`, { method: "POST" });
+  },
+  async unpinConversation(id: string): Promise<Conversation> {
+    return api(`/conversations/${id}/pin`, { method: "DELETE" });
+  },
+  async archiveConversation(id: string): Promise<Conversation> {
+    return api(`/conversations/${id}/archive`, { method: "POST" });
+  },
+  async unarchiveConversation(id: string): Promise<Conversation> {
+    return api(`/conversations/${id}/unarchive`, { method: "POST" });
   },
   async listMessages(conversationId: string): Promise<{ messages: ChatMessage[] }> {
     return api(`/conversations/${conversationId}/messages`);

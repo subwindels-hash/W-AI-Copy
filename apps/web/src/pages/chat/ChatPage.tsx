@@ -1,14 +1,19 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { cn } from "@/lib/cn";
 import { chatApi, type ChatMessage, type Conversation, type PromptTemplate } from "@/lib/chat";
+import { conversationsApi } from "@/lib/conversations";
 import { api } from "@/lib/api";
 import { aiApi, type AIHealth } from "@/lib/ai";
 import { ChatBubble } from "@/components/ai/ChatBubble";
 import { Composer } from "@/components/ai/Composer";
 import { ConversationList } from "@/components/ai/ConversationList";
+import { ConfirmDialog } from "@/components/ai/ConfirmDialog";
+import { RenameDialog } from "@/components/ai/RenameDialog";
+import { ShareDialog } from "@/components/ai/ShareDialog";
 import { useAuthStore } from "@/store/auth";
 import { DataBanner } from "@/components/ui/DataBanner";
+import { toast } from "@/lib/toast";
 import { Loader2, Sparkles, PanelLeft, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
@@ -20,7 +25,6 @@ export function ChatPage() {
   const navigate = useNavigate();
   const { id: paramId } = useParams<{ id?: string }>();
   const [conversations, setConversations] = useState<Conversation[]>([]);
-  // Initialize activeId from URL param (if any); select handler will also sync URL.
   const [activeId, setActiveId] = useState<string | null>(paramId ?? null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [templates, setTemplates] = useState<PromptTemplate[]>([]);
@@ -33,16 +37,50 @@ export function ChatPage() {
   const [streaming, setStreaming] = useState(false);
   const [streamingMsgId, setStreamingMsgId] = useState<string | null>(null);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+
+  // Conversation-management state
+  const [viewArchived, setViewArchived] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [renameTarget, setRenameTarget] = useState<Conversation | null>(null);
+  const [shareTarget, setShareTarget] = useState<Conversation | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Conversation | null>(null);
+
   const scrollRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef<AbortController | null>(null);
+
+  const refreshList = useCallback(async (q?: string) => {
+    const query = q?.trim() ? q.trim() : undefined;
+    // Title search (scoped to the current mode) + message-content search, merged.
+    const [list, msgResults] = await Promise.all([
+      chatApi.listConversations({ archived: viewArchived, q: query }),
+      query && query.length >= 2
+        ? conversationsApi.search({ q: query, perPage: 100 }).catch(() => null)
+        : Promise.resolve(null),
+    ]);
+    if (msgResults?.hits?.length) {
+      const extraIds = new Set(msgResults.hits.map((h) => h.conversationId));
+      const extra = list.items.filter((c) => extraIds.has(c.id));
+      const hits = msgResults.hits
+        .filter((h) => !extra.some((c) => c.id === h.conversationId))
+        .map((h) => ({
+          id: h.conversationId,
+          title: h.conversationTitle || "Untitled",
+          summary: null, pinned: false, pinnedAt: null, isArchived: false, archivedAt: null,
+          deletedAt: null, createdAt: h.createdAt, modelId: null, lastMessageAt: h.createdAt,
+          participants: [] as never[],
+        } as unknown as Conversation));
+      setConversations([...list.items, ...hits, ...extra]);
+    } else {
+      setConversations(list.items);
+    }
+  }, [viewArchived]);
 
   // Initial load
   useEffect(() => {
     (async () => {
       setLoadingConv(true);
       try {
-        const [{ items }, tpl, mdls, dash, health] = await Promise.all([
-          chatApi.listConversations(),
+        const [tpl, mdls, dash, health] = await Promise.all([
           chatApi.listTemplates(),
           chatApi.listModels(),
           fetch("/api/v1/workspace/dashboard", {
@@ -50,12 +88,12 @@ export function ChatPage() {
           }).then((r) => r.json()),
           aiApi.getHealth().catch(() => null),
         ]);
-        setConversations(items);
         setTemplates(tpl);
         setModels(mdls);
         setAiHealth(health);
         if (dash.ok) setAgents(dash.data.agents.map((a: any) => ({ id: a.id, name: a.name, color: a.color, emoji: a.emoji, role: a.role })));
-        // If URL specifies :id, honor it; otherwise auto-select most recent.
+        await refreshList();
+        const { items } = await chatApi.listConversations({ archived: false });
         const targetId = paramId ?? (items.length > 0 ? items[0]!.id : null);
         if (targetId) setActiveId(targetId);
       } finally { setLoadingConv(false); }
@@ -124,10 +162,8 @@ export function ChatPage() {
           setMessages((m) => m.map((msg) => msg.id === finalId ? { ...msg, content: acc } : msg));
         } else if (event === "message.done") {
           setMessages((m) => m.map((msg) => msg.id === finalId ? { ...msg, content: data.content ?? acc, status: "completed" } : msg));
-          // Refresh conv list (for updated lastMessageAt)
-          chatApi.listConversations().then(({ items }) => setConversations(items));
+          chatApi.listConversations({ archived: viewArchived }).then(({ items }) => setConversations(items));
         } else if (event === "message.error") {
-          // data.error can be string or {code,message}; normalize
           const errObj = typeof data.error === "object" && data.error ? data.error : null;
           const errMsg = errObj?.message ?? (typeof data.error === "string" ? data.error : data.message ?? "Error");
           setMessages((m) => m.map((msg) => msg.id === finalId ? { ...msg, status: "failed", content: acc || errMsg } : msg));
@@ -146,28 +182,76 @@ export function ChatPage() {
 
   function stop() { abortRef.current?.abort(); }
 
-  async function handleDelete(id: string) {
+  /* ── Conversation-management handlers ─────────────────────────────── */
+
+  async function handleDeleteConfirmed() {
+    const id = deleteTarget?.id;
     if (!id) return;
-    if (!confirm("Delete this conversation? This cannot be undone.")) return;
     setDeletingId(id);
     try {
       await chatApi.deleteConversation(id);
       setConversations((cs) => cs.filter((c) => c.id !== id));
+      toast.success("Chat deleted.");
       if (activeId === id) {
         setActiveId(null);
         setMessages([]);
         navigate("/app/chat", { replace: true });
       }
+      await refreshList(searchQuery);
     } catch (e: any) {
-      alert(e?.message ?? "Failed to delete conversation");
+      toast.error(e?.message ?? "Failed to delete conversation");
     } finally {
       setDeletingId(null);
+      setDeleteTarget(null);
     }
+  }
+
+  async function handlePin(c: Conversation) {
+    try { await chatApi.pinConversation(c.id); toast.success("Chat pinned."); await refreshList(searchQuery); }
+    catch (e: any) { toast.error(e?.message ?? "Failed to pin chat."); }
+  }
+  async function handleUnpin(c: Conversation) {
+    try { await chatApi.unpinConversation(c.id); toast.success("Chat unpinned."); await refreshList(searchQuery); }
+    catch (e: any) { toast.error(e?.message ?? "Failed to unpin chat."); }
+  }
+  async function handleArchive(c: Conversation) {
+    try {
+      await chatApi.archiveConversation(c.id);
+      toast.success("Chat archived.", undefined);
+      if (activeId === c.id) { setActiveId(null); setMessages([]); navigate("/app/chat", { replace: true }); }
+      await refreshList(searchQuery);
+    } catch (e: any) { toast.error(e?.message ?? "Failed to archive chat."); }
+  }
+  async function handleUnarchive(c: Conversation) {
+    try {
+      await chatApi.unarchiveConversation(c.id);
+      toast.success("Chat restored.");
+      await refreshList(searchQuery);
+    } catch (e: any) { toast.error(e?.message ?? "Failed to restore chat."); }
+  }
+  async function handleRenameSave(title: string) {
+    if (!renameTarget) return;
+    await chatApi.renameConversation(renameTarget.id, title);
+    toast.success("Chat renamed successfully.");
+    await refreshList(searchQuery);
+    setRenameTarget(null);
   }
 
   function handleSelect(id: string) {
     setActiveId(id);
     navigate(`/app/chat/${id}`, { replace: true });
+  }
+
+  function toggleArchivedView() {
+    const next = !viewArchived;
+    setViewArchived(next);
+    setSearchQuery("");
+    void refreshList(undefined);
+  }
+
+  function handleSearch(q: string) {
+    setSearchQuery(q);
+    void refreshList(q);
   }
 
   async function handleUpload(file: File) {
@@ -185,6 +269,16 @@ export function ChatPage() {
 
   const active = conversations.find((c) => c.id === activeId);
 
+  const menuHandlers = {
+    onPin: handlePin,
+    onUnpin: handleUnpin,
+    onShare: (c: Conversation) => setShareTarget(c),
+    onRename: (c: Conversation) => setRenameTarget(c),
+    onArchive: handleArchive,
+    onUnarchive: handleUnarchive,
+    onDelete: (c: Conversation) => setDeleteTarget(c),
+  };
+
   return (
     <div className="h-[calc(100vh-56px)] flex overflow-hidden">
       {/* Sidebar */}
@@ -197,7 +291,11 @@ export function ChatPage() {
           activeId={activeId}
           onSelect={handleSelect}
           onNew={() => newConversation()}
+          onSearch={handleSearch}
           loading={loadingConv}
+          archivedMode={viewArchived}
+          onToggleArchivedView={toggleArchivedView}
+          handlers={menuHandlers}
         />
       </div>
 
@@ -210,18 +308,18 @@ export function ChatPage() {
           </button>
           <div className="flex-1 min-w-0">
             <div className="text-sm font-semibold text-text-bright truncate">
-              {active?.title ?? "New conversation"}
+              {viewArchived ? "Archived chats" : (active?.title ?? "New conversation")}
             </div>
-            {active && <div className="text-[11px] text-text-muted flex items-center gap-2">
+            {active && !viewArchived && <div className="text-[11px] text-text-muted flex items-center gap-2">
               <Badge variant="azure">{active.modelId ?? "windels-assistant"}</Badge>
               <span>{active.participants.length} participant{active.participants.length === 1 ? "" : "s"}</span>
             </div>}
           </div>
-          {active && (
+          {active && !viewArchived && (
             <Button
               variant="ghost"
               size="sm"
-              onClick={() => handleDelete(active.id)}
+              onClick={() => setDeleteTarget(active)}
               disabled={deletingId === active.id}
               title="Delete conversation"
               aria-label="Delete conversation"
@@ -241,7 +339,7 @@ export function ChatPage() {
                 message="No real AI provider is configured. Set OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, or OLLAMA_BASE_URL+OLLAMA_MODEL to enable real responses. Until configured, the assistant cannot reply."
               />
             )}
-            {!activeId && !loadingConv && (
+            {!activeId && !loadingConv && !viewArchived && (
               <div className="text-center py-20 space-y-4">
                 <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-azure/30 to-violet/30 grid place-items-center mx-auto">
                   <Sparkles className="h-8 w-8 text-azure" />
@@ -301,6 +399,29 @@ export function ChatPage() {
           </div>
         </div>
       </div>
+
+      {/* Dialogs */}
+      <ConfirmDialog
+        open={Boolean(deleteTarget)}
+        title="Delete chat?"
+        message={`"${deleteTarget?.title ?? ""}" will be soft-deleted and removed from this list. It can be restored from the recovery console during the retention window.`}
+        confirmLabel="Delete"
+        loading={deletingId === deleteTarget?.id}
+        onConfirm={() => void handleDeleteConfirmed()}
+        onClose={() => setDeleteTarget(null)}
+      />
+      <RenameDialog
+        open={Boolean(renameTarget)}
+        currentTitle={renameTarget?.title ?? ""}
+        onClose={() => setRenameTarget(null)}
+        onSave={(t) => handleRenameSave(t)}
+      />
+      <ShareDialog
+        open={Boolean(shareTarget)}
+        conversationId={shareTarget?.id ?? ""}
+        conversationTitle={shareTarget?.title ?? ""}
+        onClose={() => setShareTarget(null)}
+      />
     </div>
   );
 }

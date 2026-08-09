@@ -11,6 +11,7 @@ const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard").the
 const AdminPage = lazy(() => import("./pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const SuperAdminDashboard = lazy(() => import("./pages/dashboard/SuperAdminDashboard").then((m) => ({ default: m.SuperAdminDashboard })));
 const ChatPage = lazy(() => import("./pages/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
+const SharePage = lazy(() => import("./pages/share/SharePage").then((m) => ({ default: m.SharePage })));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 const CanvasPage = lazy(() => import("./pages/canvas/CanvasPage"));
 const TalkPage = lazy(() => import("./pages/talk/TalkPage").then((m) => ({ default: m.default })));
@@ -217,6 +218,9 @@ export const router = createBrowserRouter([
   // until now the route did not exist and the token in the fragment was lost.
   { path: "/auth/callback", element: withSuspense(<GoogleCallbackPage />) },
   { path: "/auth/forgot", element: placeholder("Password reset", "Password reset flow is implemented when auth is hardened in later slices.") },
+
+  // Public shared-conversation view (no auth required for anyone_with_link).
+  { path: "/share/:token", element: withSuspense(<SharePage />) },
 
   // Desktop App (/d/*) — Session 16
   {
