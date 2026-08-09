@@ -5,6 +5,7 @@ import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../middleware/validate.js";
 import { ArchitectureService } from "../../architecture/architecture.service.js";
+import { EsiAggregationService } from "../../architecture/esiAggregation.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
 import { z as z_notes } from "zod";
@@ -28,6 +29,10 @@ export function registerArchitectureRoutes(router: Router) {
   });
   router.post("/esi/signals", validate({ body: signalBody }), async (req, res, next) => {
     try { res.json({ ok: true, data: await ArchitectureService.pushEsiSignal(req.body) }); } catch (e) { next(e); }
+  });
+  // Cross-portfolio ESI aggregation — reads the real module dashboards.
+  router.get("/esi/report", async (_req, res, next) => {
+    try { res.json({ ok: true, data: await EsiAggregationService.portfolioReport() }); } catch (e) { next(e); }
   });
 
 
