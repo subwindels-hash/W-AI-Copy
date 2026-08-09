@@ -14,14 +14,15 @@
 import { z } from "zod";
 
 /** Formats the run engine can actually parse today. */
-export const ETL_SOURCE_FORMATS = ["CSV", "JSON", "XML", "SQL"] as const;
+export const ETL_SOURCE_FORMATS = ["CSV", "TSV", "JSON", "XML", "SQL"] as const;
 export type EtlSourceFormat = (typeof ETL_SOURCE_FORMATS)[number];
 
 /**
- * Only CSV and JSON are implemented; XML and SQL are accepted by the schema but
- * rejected at run time with UNSUPPORTED_FORMAT rather than silently succeeding.
+ * Implemented parsers: CSV, TSV and JSON (array or JSON-lines). XML and SQL are
+ * accepted by the schema but rejected at run time with UNSUPPORTED_FORMAT rather
+ * than silently succeeding.
  */
-export const ETL_IMPLEMENTED_FORMATS: readonly EtlSourceFormat[] = ["CSV", "JSON"] as const;
+export const ETL_IMPLEMENTED_FORMATS: readonly EtlSourceFormat[] = ["CSV", "TSV", "JSON"] as const;
 
 export const ETL_PIPELINE_STATUSES = ["draft", "active", "paused", "archived"] as const;
 export type EtlPipelineStatus = (typeof ETL_PIPELINE_STATUSES)[number];
