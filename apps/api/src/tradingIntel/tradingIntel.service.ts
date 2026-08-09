@@ -50,10 +50,10 @@ const AGENT_DEFS: Array<Omit<TiAgent, "lastHeartbeat" | "signals24h" | "decision
   { key: "crypto-intel",       name: "Cryptocurrency Intelligence Agent", description: "Multi-chain/on-chain/whale/DeFi/NFT/DAO/stablecoin/risk (extends S35)",         status: "online" },
   { key: "stocks-intel",       name: "Stock Market Intelligence Agent", description: "Equities, fundamentals, earnings, sectors, factors",                              status: "online" },
   { key: "etf-intel",          name: "ETF Analysis Agent",              description: "Sector/thematic/leveraged ETF flows, holdings, arbitrage",                        status: "online" },
-  { key: "commodities-intel",  name: "Commodities Analysis Agent",      description: "Metals, energy, agriculture supply/demand, seasonals, inventory",                 status: "stub" },
-  { key: "futures-intel",      name: "Futures Intelligence Agent",      description: "Futures curves, term structure, contango/backwardation, roll yield",             status: "stub" },
-  { key: "options-intel",      name: "Options Intelligence Agent",      description: "Greeks, IV surfaces, skew, option flow, max pain, OI concentration",             status: "stub" },
-  { key: "bonds-intel",        name: "Bond Market Intelligence Agent",  description: "Yield curves, credit spreads, sovereign/corporate debt, duration",               status: "stub" },
+  { key: "commodities-intel",  name: "Commodities Analysis Agent",      description: "Metals, energy, agriculture supply/demand, seasonals, inventory",                 status: "online" },
+  { key: "futures-intel",      name: "Futures Intelligence Agent",      description: "Futures curves, term structure, contango/backwardation, roll yield",             status: "online" },
+  { key: "options-intel",      name: "Options Intelligence Agent",      description: "Greeks, IV surfaces, skew, option flow, max pain, OI concentration",             status: "online" },
+  { key: "bonds-intel",        name: "Bond Market Intelligence Agent",  description: "Yield curves, credit spreads, sovereign/corporate debt, duration",               status: "online" },
   { key: "portfolio-intel",    name: "Portfolio Intelligence Agent",    description: "Portfolio construction, optimization, rebalancing, factor exposure",             status: "online" },
   { key: "strategy-opt",       name: "Strategy Optimization Agent",     description: "Backtesting, walk-forward, parameter sweep, strategy ensemble",                  status: "online" },
   { key: "market-sentiment",   name: "Market Sentiment Agent",          description: "News/social/earnings/regulatory/blockchain/community/institutional sentiment",  status: "online" },
@@ -61,7 +61,7 @@ const AGENT_DEFS: Array<Omit<TiAgent, "lastHeartbeat" | "signals24h" | "decision
   { key: "risk-mgmt",          name: "Risk Management Agent",           description: "Position sizing, VaR, drawdown protection, exposure, corr/vol regime",          status: "online" },
   { key: "trade-validation",   name: "Trade Validation Agent",          description: "Pre-trade checks: pattern validity, policy, size, duplicate, fat-finger",       status: "online" },
   { key: "compliance-gov",     name: "Compliance & Governance Agent",   description: "Regulatory, internal policy, KYC/AML, restricted-asset rules, audit",           status: "online" },
-  { key: "perf-analytics",     name: "Performance Analytics Agent",     description: "Attribution, win-rate, Sharpe, Sortino, drawdown analysis",                      status: "stub" },
+  { key: "perf-analytics",     name: "Performance Analytics Agent",     description: "Attribution, win-rate, Sharpe, Sortino, drawdown analysis",                      status: "online" },
   { key: "continuous-learning",name: "Continuous Learning Agent",       description: "Feeds trades/results/outcomes into Memory Fabric and Knowledge Graph",          status: "online" },
 ];
 
