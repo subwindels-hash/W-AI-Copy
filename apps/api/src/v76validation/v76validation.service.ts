@@ -87,9 +87,9 @@ export const V76ValidationService = {
       { key: "desktop", name: "Desktop (Electron)", status: "wired", notes: "Electron 33 shell with web build loaded" },
       { key: "mobile",  name: "Mobile Layer",       status: "wired", notes: "/mobile routes + push subs + offline sync" },
       { key: "web",     name: "Web Client",         status: "wired", notes: "React 19 + Vite + Tailwind v4, 47 screens" },
-      { key: "cloud",   name: "Cloud Deployment",   status: "stub", notes: "Self-host capable; cloud not in MVP scope" },
-      { key: "edge",    name: "Edge Runtime",       status: "stub", notes: "Foundation ready; edge workers deferred" },
-      { key: "airgap",  name: "Airgap Mode",        status: "stub", notes: "Offline cache seeded; full airgap testing deferred" },
+      { key: "cloud",   name: "Cloud Deployment",   status: "stub", notes: "Self-host capable; managed cloud hosting not in MVP scope" },
+      { key: "edge",    name: "Edge Runtime",       status: "stub", notes: "Self-hosted edge-node kind + airgap flags present; edge worker runtime deferred" },
+      { key: "airgap",  name: "Airgap Mode",        status: "stub", notes: "Self-hosted airgap flag + offline cache seeded; full airgap certification deferred" },
       { key: "offline", name: "Offline Fallbacks",  status: "wired", notes: "Global currency offline rates present; kernel replay queue" },
       { key: "notification", name: "Notifications", status: "wired", notes: "EventBus subscribers present" },
       { key: "identity", name: "Identity (Auth)",   status: "wired", notes: "JWT + SUPER_ADMIN bootstrapping, ORG_ADMIN guards" },
@@ -98,8 +98,8 @@ export const V76ValidationService = {
       { key: "trust-center", name: "Trust Center",  status: "wired", notes: "Consent gates, privacy, audit logs" },
       { key: "mission-control", name: "Mission Control / Platform Admin", status: "wired", notes: "PlatformPage with per-module tabs" },
       { key: "developer", name: "Developer Portal", status: "wired", notes: "DevPortal routes, API keys" },
-      { key: "federated", name: "Federated Learning", status: "stub", notes: "Future session" },
-      { key: "wearables", name: "Wearables",        status: "stub", notes: "UX device class registered; implementation deferred" },
+      { key: "federated", name: "Federated Learning", status: "wired", notes: "aiFederatedLearning service (federation, participants, local updates, aggregation, differential privacy)" },
+      { key: "wearables", name: "Wearables",        status: "wired", notes: "healthEcosystem wearable device tracking (hec:wearables)" },
     ];
     for (const s of staticSystems) {
       if (!systems.find(x => x.key === s.key && x.name === s.name)) {
