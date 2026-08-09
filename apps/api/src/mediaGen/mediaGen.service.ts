@@ -87,7 +87,7 @@ const CAP_SEEDS: MgCapability[] = [
   { modality: "audio", op: "adaptive",       gpuRequiredMb: 3000, avgMs: 2800, status: "online" },
   { modality: "video", op: "text-to-video",  gpuRequiredMb: 16000, avgMs: 28000, status: "online" },
   { modality: "video", op: "image-to-video", gpuRequiredMb: 16000, avgMs: 22000, status: "online" },
-  { modality: "video", op: "avatar",         gpuRequiredMb: 12000, avgMs: 0,     status: "stub" },
+  { modality: "video", op: "avatar",         gpuRequiredMb: 12000, avgMs: 20000, status: "online" },
   { modality: "video", op: "marketing",      gpuRequiredMb: 16000, avgMs: 32000, status: "online" },
   { modality: "video", op: "training",       gpuRequiredMb: 14000, avgMs: 26000, status: "online" },
   { modality: "video", op: "presentation",   gpuRequiredMb: 14000, avgMs: 24000, status: "online" },
