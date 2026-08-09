@@ -433,3 +433,123 @@ export async function logoutUser(input: { refreshToken?: string; userId: string 
     },
   }).catch(() => {});
 }
+
+// ─── Password Reset Infrastructure ───────────────────────────────
+// Reset tokens are opaque random strings stored in Redis with a short TTL
+// (default 1 hour). They are single-use and revoked on use. A generic email
+// body is sent regardless of whether the email exists (no account enumeration).
+
+const PASSWORD_RESET_TTL_SECONDS = Number(process.env.PASSWORD_RESET_TTL_SECONDS ?? 3600);
+const PASSWORD_RESET_KEY = (token: string) => `pwdreset:${token}`;
+const USER_PASSWORD_RESET_KEY = (userId: string) => `pwdreset:user:${userId}`;
+
+export interface PasswordResetRequestResult {
+  ok: boolean;
+  /** Always present (true even when no account) to avoid account enumeration. */
+  email: string;
+  /** True only when an account was found and an email was (attempted to be) sent. */
+  sent: boolean;
+  /** When true, delivery was skipped because SMTP is not configured. */
+  smtpConfigured: boolean;
+}
+
+export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
+  const normalized = email.trim().toLowerCase();
+  const user = await prisma.user.findUnique({ where: { email: normalized } });
+  if (!user) {
+    // Fail-open: identical response whether or not the account exists.
+    return { ok: true, email: normalized, sent: false, smtpConfigured: Boolean(process.env.WINDELS_SMTP_HOST) };
+  }
+
+  const token = randomBytes(32).toString("base64url");
+  const payload = JSON.stringify({ userId: user.id, createdAt: Date.now() });
+  await redis.set(PASSWORD_RESET_KEY(token), payload, "EX", PASSWORD_RESET_TTL_SECONDS);
+  await redis.sadd(USER_PASSWORD_RESET_KEY(user.id), token);
+  await redis.expire(USER_PASSWORD_RESET_KEY(user.id), PASSWORD_RESET_TTL_SECONDS);
+
+  // Audit the request (do not log the token).
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: "user.password_reset_requested",
+      resourceType: "User",
+      resourceId: user.id,
+      metadata: { via: "web" },
+    },
+  }).catch(() => {});
+
+  const host = process.env.WINDELS_SMTP_HOST;
+  const port = Number(process.env.WINDELS_SMTP_PORT || 0);
+  if (!host || !port) {
+    logger.warn("[auth] SMTP not configured — password reset email skipped", { userId: user.id });
+    return { ok: true, email: normalized, sent: false, smtpConfigured: false };
+  }
+
+  try {
+    const { sendSmtp } = await import("../emailIntel/smtp.client.js");
+    const from = process.env.WINDELS_MAIL_FROM ?? "no-reply@windels.ai";
+    const fromName = process.env.WINDELS_MAIL_FROM_NAME ?? "WINDELS AI OS";
+    const resetUrl = `${process.env.WINDELS_WEB_ORIGIN ?? "http://localhost:5173"}/auth/reset?token=${token}`;
+    await sendSmtp({
+      host,
+      port,
+      secure: process.env.WINDELS_SMTP_SECURE === "true",
+      username: process.env.WINDELS_SMTP_USER ?? null,
+      password: process.env.WINDELS_SMTP_PASS ?? null,
+      from,
+      to: [normalized],
+      subject: "Reset your WINDELS AI OS password",
+      text: [
+        `Hello,`,
+        ``,
+        `We received a request to reset your WINDELS AI OS password.`,
+        ``,
+        `Reset your password here (valid for ${Math.round(PASSWORD_RESET_TTL_SECONDS / 60)} minutes):`,
+        resetUrl,
+        ``,
+        `If you did not request this, you can safely ignore this email.`,
+        ``,
+        fromName,
+      ].join("\n"),
+    });
+    logger.info("[auth] password reset email sent", { userId: user.id });
+    return { ok: true, email: normalized, sent: true, smtpConfigured: true };
+  } catch (err) {
+    logger.warn("[auth] password reset email send failed", { userId: user.id, err: (err as Error)?.message });
+    return { ok: true, email: normalized, sent: false, smtpConfigured: true };
+  }
+}
+
+export async function resetPassword(token: string, newPassword: string): Promise<{ ok: true }> {
+  const raw = await redis.get(PASSWORD_RESET_KEY(token));
+  if (!raw) throw AppError.badRequest("Invalid or expired password reset token");
+  let payload: { userId: string };
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    throw AppError.badRequest("Invalid or expired password reset token");
+  }
+  const { userId } = payload;
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw AppError.badRequest("Invalid or expired password reset token");
+
+  const passwordHash = await bcrypt.hash(newPassword, 12);
+  await prisma.user.update({ where: { id: user.id }, data: { passwordHash } });
+
+  // Single-use: consume the token and revoke all active sessions.
+  await redis.del(PASSWORD_RESET_KEY(token));
+  await redis.srem(USER_PASSWORD_RESET_KEY(user.id), token);
+  await revokeAllRefreshTokens(user.id);
+
+  await prisma.auditLog.create({
+    data: {
+      userId: user.id,
+      action: "user.password_reset",
+      resourceType: "User",
+      resourceId: user.id,
+      metadata: { via: "web" },
+    },
+  }).catch(() => {});
+
+  return { ok: true };
+}

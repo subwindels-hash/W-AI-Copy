@@ -92,6 +92,8 @@ const DerivativesPage = lazy(() => import("./pages/derivatives/DerivativesPage")
 const AuditConsolePage = lazy(() => import("./pages/audit/AuditConsolePage").then((m) => ({ default: m.AuditConsolePage })));
 const GoogleIdentityPage = lazy(() => import("./pages/googleAuth/GoogleIdentityPage").then((m) => ({ default: m.GoogleIdentityPage })));
 const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then((m) => ({ default: m.GoogleCallbackPage })));
+const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
@@ -186,19 +188,6 @@ function AppShell() {
   );
 }
 
-const Placeholder = ({ title, description }: { title: string; description: string }) => (
-  <div className="max-w-2xl">
-    <h1 className="text-2xl font-bold text-text-bright">{title}</h1>
-    <p className="text-text-muted mt-2">{description}</p>
-    <p className="text-xs text-text-muted mt-6">
-      This module ships in a later session per the roadmap.
-    </p>
-  </div>
-);
-const placeholder = (title: string, description: string) => (
-  <Placeholder title={title} description={description} />
-);
-
 export const router = createBrowserRouter([
   { path: "/", element: <HomeRedirect/> },
   // Marketing website (public, no auth)
@@ -225,7 +214,8 @@ export const router = createBrowserRouter([
   // Session 114 — the API has always redirected here after a Google sign-in;
   // until now the route did not exist and the token in the fragment was lost.
   { path: "/auth/callback", element: withSuspense(<GoogleCallbackPage />) },
-  { path: "/auth/forgot", element: placeholder("Password reset", "Password reset flow is implemented when auth is hardened in later slices.") },
+  { path: "/auth/forgot", element: withSuspense(<ForgotPasswordPage />) },
+  { path: "/auth/reset", element: withSuspense(<ResetPasswordPage />) },
 
   // Public shared-conversation view (no auth required for anyone_with_link).
   { path: "/share/:token", element: withSuspense(<SharePage />) },

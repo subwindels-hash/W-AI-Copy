@@ -30,6 +30,8 @@ const {
   refreshAccessToken,
   logoutUser,
   revokeAllRefreshTokens,
+  requestPasswordReset,
+  resetPassword,
 } = await import("./auth.service.js");
 const { MfaService } = await import("./mfa.service.js");
 
@@ -219,5 +221,41 @@ describe("logoutUser / revokeAllRefreshTokens", () => {
     await revokeAllRefreshTokens("u1");
     await expect(refreshAccessToken({ refreshToken: s1.refreshToken })).rejects.toThrow("Invalid or expired refresh token");
     await expect(refreshAccessToken({ refreshToken: s2.refreshToken })).rejects.toThrow("Invalid or expired refresh token");
+  });
+});
+
+describe("password reset", () => {
+  it("returns a generic ok response for an unknown email (no account enumeration)", async () => {
+    const result = await requestPasswordReset("nobody@example.com");
+    expect(result.ok).toBe(true);
+    expect(result.sent).toBe(false);
+  });
+
+  it("creates a single-use reset token for a known account and lets it be consumed once", async () => {
+    seedUser({ id: "u-reset", email: "reset@example.com", orgId: "org1" });
+    const result = await requestPasswordReset("reset@example.com");
+    // SMTP is not configured in the test env, so no email is sent but the flow
+    // must still produce a token.
+    expect(result.ok).toBe(true);
+    expect(result.email).toBe("reset@example.com");
+
+    // The token is stored in redis under pwdreset:user:u-reset.
+    const tokens = await kv.smembers("pwdreset:user:u-reset");
+    expect(tokens.length).toBe(1);
+    const token = tokens[0]!;
+    expect(token.length).toBeGreaterThan(20);
+
+    // Consuming it updates the password hash.
+    await resetPassword(token, "NewStrongPass!234");
+    const user = db.tables.get("User")!.find((u) => u.id === "u-reset")!;
+    expect(user.passwordHash).not.toBe(HASH);
+
+    // Reusing the same token must fail.
+    await expect(resetPassword(token, "AnotherPass!234")).rejects.toThrow("Invalid or expired");
+  });
+
+  it("rejects reset with an invalid/expired token", async () => {
+    seedUser({ id: "u2", email: "u2@example.com", orgId: "org1" });
+    await expect(resetPassword("definitely-not-a-real-token", "NewStrongPass!234")).rejects.toThrow("Invalid or expired");
   });
 });
