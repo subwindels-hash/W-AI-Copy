@@ -54,6 +54,8 @@ import { registerGovernanceRoutes } from "./routes/governance.js";
 import { registerPlatformRoutes } from "./routes/platform.js";
 import { registerSecurityRoutes } from "./routes/security.js";
 import { registerPublicApiRoutes } from "./routes/publicApi.js";
+import { registerDeveloperGatewayRoutes } from "./routes/developerGateway.js";
+import { registerDeveloperPlatformRoutes } from "./routes/developerPlatform.js";
 import { registerMobileRoutes } from "./routes/mobile.js";
 import { registerMobileSyncRoutes } from "./routes/mobileSync.js";
 import { registerQaRoutes } from "./routes/qa.js";
@@ -1415,7 +1417,15 @@ export function createApp() {
   // Public API Gateway (api-key authenticated, stable REST surface)
   const publicRouter = express.Router();
   registerPublicApiRoutes(publicRouter);
+  // Developer gateway extensions (agent execution, workflows, knowledge,
+  // trading, media) mounted after the Session 120 predecessors so their exact
+  // paths remain authoritative.
+  registerDeveloperGatewayRoutes(publicRouter);
   app.use("/api/rest/v1", publicRouter);
+
+  // Developer Platform (applications, products, usage dashboard) on the
+  // authenticated /api/v1 surface.
+  registerDeveloperPlatformRoutes(v1);
 
   app.use((req, res) => {
     res.status(404).json({

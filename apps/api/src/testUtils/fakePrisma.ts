@@ -159,6 +159,10 @@ export class FakePrisma {
       // Named relation `createdById -> User` used by Canvas (and others); the
       // model name "CreatedBy" does not exist, so map it explicitly.
       createdBy: "User",
+      // DeveloperApp.owner references User via ownerId.
+      owner: "User",
+      // ApiSubscription.product references ApiProduct via productId.
+      product: "ApiProduct",
     };
     // Relations whose target is prefixed by the owning model rather than named
     // after the field — e.g. TalkChannel.members holds TalkMember rows, not

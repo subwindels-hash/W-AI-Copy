@@ -259,6 +259,7 @@ model User {
   biometricCredentials    BiometricCredential[]
   notifications           Notification[]
   conversationSharesCreated ConversationShare[] @relation("conversation_shares_created")
+  ownedDeveloperApps        DeveloperApp[]        @relation("developer_app_owner")
 
   @@index([role])
   @@index([createdAt])
@@ -316,6 +317,11 @@ model Organization {
   alertRules      AlertRule[]
   alerts          Alert[]
   dataExports     DataExport[]
+  // ── Developer Platform (Session: developer API platform upgrade) ──
+  developerApps     DeveloperApp[]
+  apiSubscriptions  ApiSubscription[]
+  apiProducts       ApiProduct[]
+  apiUsage          ApiUsageRecord[]
 }
 
 model Workspace {
@@ -1008,13 +1014,24 @@ model ApiKey {
   keyPrefix     String
   keyHash       String        @unique
   scopes        ApiKeyScope[] @default([READ])
-  lastUsedAt    DateTime?
-  expiresAt     DateTime?
-  revokedAt     DateTime?
-  createdAt     DateTime      @default(now())
-  updatedAt     DateTime      @updatedAt
+  // ── Developer Platform upgrade ────────────────────────────────────────
+  // Fine-grained capability scopes (e.g. "ai:read", "agents:execute"). The
+  // legacy READ/WRITE/ADMIN scopes remain for backwards compatibility; when
+  // granularScopes is non-empty it is authoritative for authorization.
+  granularScopes String[]      @default([])
+  appId          String?
+  app            DeveloperApp? @relation(fields: [appId], references: [id], onDelete: SetNull)
+  environment    String        @default("production") // development | test | production
+  ipRestrictions String[]      @default([])            // CIDRs allowed to use this key (empty = any)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
+  usage          ApiUsageRecord[]
   @@index([organizationId])
+  @@index([appId])
 }
 
 model WebhookEndpoint {
@@ -1481,6 +1498,109 @@ model ConversationShareAccess {
   createdAt DateTime @default(now())
 
   @@index([shareId])
+}
+
+// ─────────────────── Session: Developer / API Platform ───────────────────
+// A developer application owned by an organization. Multiple apps per org.
+model DeveloperApp {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerId         String
+  owner           User     @relation("developer_app_owner", fields: [ownerId], references: [id])
+  name            String
+  description     String?
+  logoUrl         String?
+  environment     String   @default("development") // development | test | production
+  redirectUrls    String[] @default([])            // OAuth redirect URLs
+  allowedScopes   String[] @default([])            // granted fine-grained scopes
+  active          Boolean  @default(true)
+  productionApproved Boolean @default(false)       // Super Admin approval gate
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  apiKeys         ApiKey[]
+  subscriptions   ApiSubscription[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+}
+
+// API product catalog / marketplace entries.
+model ApiProduct {
+  id             String   @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  category       String   // agents | workforce | trading | media | voice | knowledge | workflows | ...
+  description    String?
+  version        String   @default("v1")
+  requiredScopes String[] @default([])
+  basePriceUsd   Float    @default(0) // per-1000-calls notional (for quota)
+  enabled        Boolean  @default(true)
+  rateLimitPerMin Int     @default(60)
+  docsUrl        String?
+  example        Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscriptions  ApiSubscription[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+// Which products an org/app is subscribed to (quota + status).
+model ApiSubscription {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  appId          String?
+  app            DeveloperApp? @relation(fields: [appId], references: [id], onDelete: SetNull)
+  productId      String
+  product        ApiProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  status         String   @default("active") // active | suspended | cancelled
+  quota          Int      @default(0)        // monthly call allowance (0 = unlimited)
+  usedThisMonth  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([appId])
+  @@unique([appId, productId])
+}
+
+// Persistent API usage ledger (drives the Developer Dashboard metrics and
+// per-key billing). Recorded best-effort for every gateway request.
+model ApiUsageRecord {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  apiKeyId       String?
+  apiKey         ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  appId          String?
+  userId         String?
+  method         String
+  path           String
+  endpoint       String   // product route key e.g. "agents.execute"
+  status         Int
+  durationMs     Int      @default(0)
+  channel        String   // agents | workflows | knowledge | trading | media | voice | ...
+  productSlug    String?
+  tokensIn       Int      @default(0)
+  tokensOut      Int      @default(0)
+  aiCostMicros   Int      @default(0)
+  sourceIp       String?
+  environment    String   @default("production")
+  permission     String   // the scope decision that granted the request
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([apiKeyId])
+  @@index([endpoint])
+  @@index([appId])
 }
 
 // ─────────────────────────── Enterprise Governance & Ledger Extensions ───────────────────────────

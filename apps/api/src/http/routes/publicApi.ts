@@ -65,7 +65,7 @@ export function registerPublicApiRoutes(router: Router) {
   });
 
   // List workflows
-  router.get("/workflows", requireScope("READ"), validate({ query: PubListQuerySchema }), async (req, res, next) => {
+  router.get("/workflows", requireScope("workflows:read"), validate({ query: PubListQuerySchema }), async (req, res, next) => {
     try {
       const orgId = (req as any).apiOrganization.id;
       const limit = (req.query as any).limit;
@@ -79,7 +79,7 @@ export function registerPublicApiRoutes(router: Router) {
   });
 
   // Single workflow (Session 120 — additive)
-  router.get("/workflows/:id", requireScope("READ"), validate({ params: PubWorkflowIdSchema }), async (req, res, next) => {
+  router.get("/workflows/:id", requireScope("workflows:read"), validate({ params: PubWorkflowIdSchema }), async (req, res, next) => {
     try {
       const orgId = (req as any).apiOrganization.id;
       const w = await prisma.workflow.findFirst({
@@ -104,7 +104,7 @@ export function registerPublicApiRoutes(router: Router) {
   });
 
   // Trigger a workflow run — pinned to the API key's organization (S120 fix)
-  router.post("/workflows/:id/run", requireScope("WRITE", "ADMIN"), validate({ params: PubWorkflowIdSchema, body: PubRunWorkflowBodySchema }), async (req, res, next) => {
+  router.post("/workflows/:id/run", requireScope("workflows:execute", "workflows:read"), validate({ params: PubWorkflowIdSchema, body: PubRunWorkflowBodySchema }), async (req, res, next) => {
     try {
       const orgId = (req as any).apiOrganization.id;
       const result = await runWorkflow((req as any).apiUser.id, req.params.id, {
@@ -117,7 +117,7 @@ export function registerPublicApiRoutes(router: Router) {
   });
 
   // Per-key usage report (Session 120 — additive)
-  router.get("/usage", requireScope("READ"), validate({ query: PubUsageQuerySchema }), async (req, res, next) => {
+  router.get("/usage", requireScope("analytics:read", "billing:read"), validate({ query: PubUsageQuerySchema }), async (req, res, next) => {
     try {
       const orgId = (req as any).apiOrganization.id;
       const days = Number((req.query as any).days ?? 7);
@@ -127,7 +127,7 @@ export function registerPublicApiRoutes(router: Router) {
   });
 
   // List agents
-  router.get("/agents", requireScope("READ"), validate({ query: PubListQuerySchema }), async (req, res, next) => {
+  router.get("/agents", requireScope("agents:read"), validate({ query: PubListQuerySchema }), async (req, res, next) => {
     try {
       const orgId = (req as any).apiOrganization.id;
       const limit = (req.query as any).limit;
@@ -141,7 +141,7 @@ export function registerPublicApiRoutes(router: Router) {
   });
 
   // Send a Talk message
-  router.post("/talk/channels/:id/messages", requireScope("WRITE", "ADMIN"), validate({ params: PubTalkChannelIdSchema, body: PubTalkMessageBodySchema }), async (req, res, next) => {
+  router.post("/talk/channels/:id/messages", requireScope("ai:execute", "agents:execute"), validate({ params: PubTalkChannelIdSchema, body: PubTalkMessageBodySchema }), async (req, res, next) => {
     try {
       const orgId = (req as any).apiOrganization.id;
       const userId = (req as any).apiUser.id;
@@ -161,7 +161,7 @@ export function registerPublicApiRoutes(router: Router) {
   });
 
   // List Talk channels
-  router.get("/talk/channels", requireScope("READ"), validate({ query: PubListQuerySchema }), async (req, res, next) => {
+  router.get("/talk/channels", requireScope("ai:read", "agents:read"), validate({ query: PubListQuerySchema }), async (req, res, next) => {
     try {
       const orgId = (req as any).apiOrganization.id;
       const limit = (req.query as any).limit;

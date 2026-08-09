@@ -93,6 +93,7 @@ const navItems = [
   { to: "/app/flow", icon: GitBranch, label: "Flow" },
   { to: "/app/analytics", icon: BarChart3, label: "Analytics" },
   { to: "/app/developers", icon: Code2, label: "Developers" },
+  { to: "/app/developer-portal", icon: Code2, label: "Developer Portal" },
   { to: "/app/enterprise", icon: Building2, label: "Enterprise" },
   { to: "/app/governance", icon: Shield, label: "Governance" },
   { to: "/app/platform", icon: Globe2, label: "Platform" },

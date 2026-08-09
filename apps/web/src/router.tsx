@@ -11,6 +11,7 @@ const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard").the
 const AdminPage = lazy(() => import("./pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const SuperAdminDashboard = lazy(() => import("./pages/dashboard/SuperAdminDashboard").then((m) => ({ default: m.SuperAdminDashboard })));
 const ChatPage = lazy(() => import("./pages/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
+const DeveloperPortalPage = lazy(() => import("./pages/developerPortal/DeveloperPortalPage"));
 const SharePage = lazy(() => import("./pages/share/SharePage").then((m) => ({ default: m.SharePage })));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 const CanvasPage = lazy(() => import("./pages/canvas/CanvasPage"));
@@ -312,6 +313,7 @@ export const router = createBrowserRouter([
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },
       { path: "developers", element: withSuspense(<DeveloperPage />) },
+      { path: "developer-portal", element: withSuspense(<DeveloperPortalPage />) },
       { path: "files", element: withSuspense(<FilesPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
       { path: "enterprise", element: withSuspense(<EnterprisePage />) },
