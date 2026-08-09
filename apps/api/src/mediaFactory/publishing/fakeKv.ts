@@ -18,6 +18,19 @@ export class FakeKv {
 
   async get(key: string): Promise<string | null> { return this.fresh(key)?.value ?? null; }
 
+  /** DUMP — serialized value (here the string as a Buffer) or null. */
+  async dump(key: string): Promise<Buffer | null> {
+    const v = this.fresh(key)?.value;
+    return v === undefined ? null : Buffer.from(v);
+  }
+  /** RESTORE — recreate a key from a DUMP value (ttl ignored, seconds→ms). */
+  async restore(key: string, ttl: number, value: Buffer | string): Promise<"OK"> {
+    const v = Buffer.isBuffer(value) ? value.toString("utf8") : String(value);
+    const expiresAt = ttl > 0 ? Date.now() + ttl * 1000 : undefined;
+    this.strings.set(key, { value: v, expiresAt });
+    return "OK";
+  }
+
   /** INCR / INCRBY / DECR — used by id counters (sprint numbers, story keys). */
   async incrby(key: string, by: number): Promise<number> {
     const next = Number(this.fresh(key)?.value ?? 0) + by;
