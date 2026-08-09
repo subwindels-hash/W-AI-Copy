@@ -150,12 +150,20 @@ export const UpdateService = {
       return { ok: freeMb > 512, detail: `${freeMb} MB free` };
     });
 
-    // A signature can only be verified against a real artifact + public key.
+    // A signature is verified against the artifact digest with the configured
+    // public key. When no signing infrastructure is configured at all the check
+    // is skipped; once a key is configured, an unsigned or bad signature fails
+    // honestly.
     await run("signature", "Package signature verified", async () => {
-      if (p?.signature && process.env.UPDATE_SIGNING_PUBLIC_KEY) {
-        return { ok: false, detail: "Signature present but verification is not implemented" };
+      if (!p) return { ok: false, detail: "package not found" };
+      if (!process.env.UPDATE_SIGNING_PUBLIC_KEY && !process.env.UPDATE_SIGNING_PRIVATE_KEY) {
+        return "skip";
       }
-      return "skip";
+      const { verifyUpdateSignature } = await import("./updateSigning.service.js");
+      const verdict = verifyUpdateSignature(p.sha256, p.signature);
+      if (verdict.verified) return { ok: true, detail: verdict.detail };
+      if (verdict.unverifiable) return "skip";
+      return { ok: false, detail: verdict.detail };
     });
 
     // These require the artifact, a staging environment, and a snapshot target.

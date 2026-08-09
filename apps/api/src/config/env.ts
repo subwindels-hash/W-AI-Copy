@@ -54,6 +54,12 @@ const EnvSchema = z.object({
   SERPAPI_KEY: z.string().optional(),
   TAVILY_API_KEY: z.string().optional(),
 
+  // ── Update package signing (optional) ────────────────────────────────
+  // base64 Ed25519 keys. Signer side uses the private key; verifier uses the
+  // public key. When neither is set, signature checks are skipped.
+  UPDATE_SIGNING_PRIVATE_KEY: z.string().optional(),
+  UPDATE_SIGNING_PUBLIC_KEY: z.string().optional(),
+
 
   SESSION_COOKIE_NAME: z.string().default("windels_sid"),
   SESSION_COOKIE_SECURE: z
