@@ -42,7 +42,7 @@ const SEED: SeedControl[] = [
   { control: "ACCESS-01: RBAC enforced on all admin routes", category: "access", status: "implemented", description: "authenticate + hasPermission middleware on protected routes.", implementation: "permissions.service.ts, hasPermission guard" },
   { control: "ACCESS-02: Principle of least privilege for service tokens", category: "access", status: "implemented", description: "Service tokens carry scopes; API keys support granular capability scopes.", implementation: "serviceToServiceAuth (token scopes) + publicApi granularScopes" },
   // incident
-  { control: "INCIDENT-01: On-call + alerting pipeline", category: "incident", status: "partial", description: "Alerting framework exists but no paging integration yet.", implementation: "alerting.service" },
+  { control: "INCIDENT-01: On-call + alerting pipeline", category: "incident", status: "implemented", description: "Alert rules fire IN_APP alerts and dispatch EMAIL/WEBHOOK channels, with a configurable on-call paging webhook (HMAC-signed).", implementation: "alerting.service.ts (dispatchAlertEmail / dispatchAlertWebhook)" },
   { control: "INCIDENT-02: Runbook for common incidents", category: "incident", status: "implemented", description: "Incident runbooks auto-execute on matching severity/area (suspension, notify, quarantine).", implementation: "prisma IncidentRunbook/RunbookExecution + security/governance.service" },
   // compliance
   { control: "COMP-01: Data export / deletion per GDPR", category: "compliance", status: "implemented", description: "/governance/exports endpoint supports data export.", implementation: "compliance.service.ts" },

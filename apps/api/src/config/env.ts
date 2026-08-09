@@ -66,6 +66,16 @@ const EnvSchema = z.object({
   S2S_MTLS_CA_CERT: z.string().optional(),
   S2S_MTLS_EXPECTED_CN: z.string().optional(),
 
+  // ── Alerting / on-call paging (optional) ─────────────────────────────
+  // Generic webhook (e.g. a PagerDuty/Opsgenie-compatible or self-hosted
+  // endpoint) that receives high/critical alerts for on-call escalation.
+  WINDELS_ALERT_WEBHOOK_URL: z.string().url().optional(),
+  // Optional HMAC shared secret used to sign outbound alert webhooks.
+  WINDELS_ALERT_WEBHOOK_SECRET: z.string().optional(),
+  // When a high/critical alert fires and no webhook is configured, fall back
+  // to emailing this address (best-effort via the SMTP relay).
+  WINDELS_ALERT_EMAIL: z.string().email().optional(),
+
 
   SESSION_COOKIE_NAME: z.string().default("windels_sid"),
   SESSION_COOKIE_SECURE: z
