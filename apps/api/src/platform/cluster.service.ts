@@ -52,6 +52,160 @@ const DEFAULT_WORKLOADS: Array<{ name: string; kind: K8sWorkloadKind; ns: string
   { name: "grafana", kind: "Deployment", ns: "observability", image: "grafana/grafana:latest", replicas: 1 },
 ];
 
+/**
+ * Hydrate the cluster topology from a real Kubernetes API server (in-cluster).
+ *
+ * Uses the standard in-cluster service-account token and CA, then queries the
+ * nodes, deployments, statefulsets and pods. Returns null when no cluster is
+ * reachable so the caller can fall back to an honest "unknown" state — it never
+ * fabricates a topology.
+ */
+async function hydrateFromKube(): Promise<{ cluster: ClusterStatus; nodes: ClusterNode[]; workloads: K8sWorkload[]; pods: K8sPod[] } | null> {
+  const host = process.env.KUBERNETES_SERVICE_HOST;
+  const port = process.env.KUBERNETES_SERVICE_PORT_HTTPS ?? process.env.KUBERNETES_SERVICE_PORT ?? "443";
+  if (!host) return null;
+
+  let token: string;
+  let caPem: string;
+  try {
+    const { readFileSync } = await import("node:fs");
+    token = readFileSync("/var/run/secrets/kubernetes.io/serviceaccount/token", "utf8").trim();
+    try { caPem = readFileSync("/var/run/secrets/kubernetes.io/serviceaccount/ca.crt", "utf8"); } catch { caPem = ""; }
+  } catch {
+    return null; // not running inside a pod with a service account
+  }
+  if (!token) return null;
+
+  const base = `https://${host}:${port}`;
+  const headers = {
+    Authorization: `Bearer ${token}`,
+    Accept: "application/json",
+    "Content-Type": "application/json",
+  };
+  // Optional CA verification; fall back to system CAs / insecure only when no
+  // cluster CA is mounted.
+  let agent: any;
+  try {
+    const https = await import("node:https");
+    if (caPem) {
+      agent = new https.Agent({ ca: caPem });
+    }
+  } catch { /* ignore */ }
+
+  async function getJson<T>(path: string): Promise<T | null> {
+    const https = await import("node:https");
+    const url = new URL(base + path);
+    return new Promise((resolve) => {
+      const req = https.get(url, { headers, agent }, (res) => {
+        let body = "";
+        res.on("data", (c) => (body += c));
+        res.on("end", () => {
+          try { resolve(JSON.parse(body) as T); } catch { resolve(null); }
+        });
+      });
+      req.on("error", () => resolve(null));
+      req.setTimeout(8000, () => { req.destroy(); resolve(null); });
+    });
+  }
+
+  const [nodeList, deployList, stsList, podList] = await Promise.all([
+    getJson<any>("/api/v1/nodes"),
+    getJson<any>("/apis/apps/v1/deployments"),
+    getJson<any>("/apis/apps/v1/statefulsets"),
+    getJson<any>("/api/v1/pods"),
+  ]);
+  if (!nodeList) return null; // cluster API unreachable
+
+  const nodes: ClusterNode[] = (nodeList.items ?? []).map((n: any) => {
+    const cpu = parseCpu(n.status?.capacity?.cpu ?? "2");
+    const mem = parseMem(n.status?.capacity?.memory ?? "8Gi");
+    const cpuReq = n.status?.allocatable?.cpu ? parseCpu(n.status.allocatable.cpu) : cpu;
+    const memReq = n.status?.allocatable?.memory ? parseMem(n.status.allocatable.memory) : mem;
+    const cpuPct = clamp(Math.round((cpuReq / (cpu || 1)) * 100), 0, 100);
+    const memPct = clamp(Math.round((memReq / (mem || 1)) * 100), 0, 100);
+    const ready = (n.status?.conditions ?? []).some((c: any) => c.type === "Ready" && c.status === "True");
+    return {
+      id: n.metadata?.uid ?? n.metadata?.name ?? "node",
+      name: n.metadata?.name ?? "node",
+      zone: n.metadata?.labels?.["topology.kubernetes.io/zone"] ?? "unknown",
+      region: process.env.WINDELS_REGION ?? "unknown",
+      roles: n.metadata?.labels?.["node-role.kubernetes.io/control-plane"]
+        ? ["control-plane"] : (n.metadata?.labels?.["node-role.kubernetes.io/master"] ? ["control-plane"] : ["worker"]),
+      kubeletVersion: n.status?.nodeInfo?.kubeletVersion ?? "unknown",
+      capacity: { cpu: String(cpu), memory: `${Math.floor(mem / 1024 / 1024)}Mi`, pods: Number(n.status?.capacity?.pods ?? 110) },
+      allocatable: { cpu: String(cpuReq), memory: `${Math.floor(memReq / 1024 / 1024)}Mi`, pods: Number(n.status?.allocatable?.pods ?? 100) },
+      usage: { cpuCores: cpuReq, cpuPercent: cpuPct, memoryBytes: memReq, memoryPercent: memPct },
+      podCount: 0, status: ready ? "healthy" : "degraded",
+      conditions: (n.status?.conditions ?? []).map((c: any) => ({ type: c.type, status: c.status, lastTransition: c.lastTransitionTime ?? now() })),
+      startedAt: n.metadata?.creationTimestamp ?? now(),
+      labels: n.metadata?.labels ?? {},
+    } as ClusterNode;
+  });
+
+  const workloads: K8sWorkload[] = [];
+  const deployToReady = (d: any) => {
+    const replicas = d.spec?.replicas ?? 1;
+    const available = d.status?.availableReplicas ?? 0;
+    return {
+      id: d.metadata?.uid ?? d.metadata?.name ?? "wl",
+      name: d.metadata?.name ?? "workload",
+      namespace: d.metadata?.namespace ?? "default",
+      kind: "Deployment",
+      desiredReplicas: replicas, readyReplicas: available, availableReplicas: available,
+      currentRevision: d.metadata?.generation != null ? `rev-${d.metadata.generation}` : "rev-0",
+      updatedAt: d.metadata?.creationTimestamp ?? now(), image: d.spec?.template?.spec?.containers?.[0]?.image ?? "",
+      status: available >= replicas ? "healthy" : "degraded", labels: d.metadata?.labels ?? {},
+      strategy: d.spec?.strategy?.type ?? "RollingUpdate",
+    } as K8sWorkload;
+  };
+  for (const d of deployList?.items ?? []) workloads.push(deployToReady(d));
+  for (const s of stsList?.items ?? []) {
+    const replicas = s.spec?.replicas ?? 1;
+    const ready = s.status?.readyReplicas ?? 0;
+    workloads.push({
+      id: s.metadata?.uid ?? s.metadata?.name ?? "wl",
+      name: s.metadata?.name ?? "workload", namespace: s.metadata?.namespace ?? "default", kind: "StatefulSet",
+      desiredReplicas: replicas, readyReplicas: ready, availableReplicas: ready,
+      currentRevision: s.metadata?.generation != null ? `rev-${s.metadata.generation}` : "rev-0",
+      updatedAt: s.metadata?.creationTimestamp ?? now(), image: s.spec?.template?.spec?.containers?.[0]?.image ?? "",
+      status: ready >= replicas ? "healthy" : "degraded", labels: s.metadata?.labels ?? {},
+      strategy: "OnDelete",
+    } as unknown as K8sWorkload);
+  }
+
+  const pods: K8sPod[] = (podList?.items ?? []).map((p: any) => {
+    const container = p.spec?.containers?.[0];
+    const status = p.status?.phase === "Running" ? "healthy" : p.status?.phase ?? "Pending";
+    return {
+      id: p.metadata?.uid ?? p.metadata?.name ?? "pod",
+      name: p.metadata?.name ?? "pod",
+      namespace: p.metadata?.namespace ?? "default",
+      workloadName: p.metadata?.ownerReferences?.[0]?.name ?? "",
+      nodeName: p.spec?.nodeName ?? "",
+      phase: p.status?.phase ?? "Pending", ip: p.status?.podIP ?? "",
+      restartCount: container ? p.status?.containerStatuses?.[0]?.restartCount ?? 0 : 0,
+      startedAt: p.status?.startTime ?? p.metadata?.creationTimestamp ?? now(), status,
+    } as K8sPod;
+  });
+
+  // Assign pod counts to nodes and derive cluster-level metrics.
+  for (const n of nodes) n.podCount = pods.filter((p) => p.nodeName === n.name).length;
+  const avgCpu = avg(nodes.map((n) => n.usage.cpuPercent));
+  const avgMem = avg(nodes.map((n) => n.usage.memoryPercent));
+  const ready = workloads.filter((w) => w.availableReplicas >= w.desiredReplicas).length;
+  const cluster: ClusterStatus = {
+    clusterId: "kubernetes", name: "kubernetes", version: "kubernetes",
+    region: process.env.WINDELS_REGION ?? "unknown",
+    status: avgCpu > 85 || avgMem > 90 ? "degraded" : "healthy",
+    nodes: nodes.length, pods: pods.length,
+    deployments: workloads.filter((w) => w.kind === "Deployment").length,
+    cpuPercent: Math.round(avgCpu), memoryPercent: Math.round(avgMem),
+    podPercent: pods.length ? Math.round((pods.length / 330) * 100) : 0,
+    lastProbedAt: now(),
+  };
+  return { cluster, nodes, workloads, pods };
+}
+
 export const ClusterService = {
   async seed() {
     _rng.reseed(`seed`);
@@ -62,11 +216,19 @@ export const ClusterService = {
     } catch { /* redis optional */ }
 
     // A real in-cluster deployment exposes the API server through these vars.
-    // Hydration from the live API is not implemented yet, so we report unknown
-    // rather than substituting a fictional topology for a real one.
+    // Hydrate the topology from the live Kubernetes API (service-account auth);
+    // if that fails, report unknown rather than substituting a fictional
+    // topology for a real one.
     if (process.env.KUBERNETES_SERVICE_HOST) {
-      await saveAll({ cluster: unknownCluster("kubernetes"), nodes: [], workloads: [], pods: [] });
-      logger.info("cluster service: in-cluster detected; live hydration not implemented — reporting unknown");
+      const hydrated = await hydrateFromKube();
+      await saveAll(hydrated ?? { cluster: unknownCluster("kubernetes"), nodes: [], workloads: [], pods: [] });
+      if (hydrated) {
+        logger.info("cluster service: hydrated topology from Kubernetes API", {
+          nodes: hydrated.nodes.length, workloads: hydrated.workloads.length, pods: hydrated.pods.length,
+        });
+      } else {
+        logger.warn("cluster service: in-cluster detected but live hydration failed — reporting unknown");
+      }
       return;
     }
 

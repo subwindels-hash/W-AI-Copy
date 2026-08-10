@@ -276,31 +276,37 @@ const stringUtilsTool: Tool = {
   },
 };
 
-// ─── Web Search Stub Tool ───────────────────────────────────────
+// ─── Web Search Tool ────────────────────────────────────────────
 
 const webSearchTool: Tool = {
   definition: {
     name: "web_search",
-    description: "Search the web for information (stub — returns placeholder results)",
+    description: "Search the web for information via a configured provider (Brave, SerpAPI, or Tavily). Returns an honest 'not configured' result when no provider key is set.",
     category: "web",
     parameters: {
       query: { type: "string", description: "Search query" },
       maxResults: { type: "number", description: "Maximum results to return (default 5)" },
     },
     required: ["query"],
+    timeoutMs: 20000,
   },
   async execute(params: Record<string, any>): Promise<ToolResult> {
-    // Stub implementation — in production, integrate with SerpAPI, Brave Search, or similar
+    const query = String(params.query ?? "");
+    if (!query.trim()) {
+      return { success: false, error: "query is required" };
+    }
+    const { webSearch } = await import("../../webSearch.service.js");
+    const outcome = await webSearch(query, Number(params.maxResults) || 5);
     return {
       success: true,
       data: {
-        query: params.query,
-        results: [
-          { title: "Search result placeholder", url: "https://example.com", snippet: "This is a stub web search tool. Integrate a real search API for production use." },
-        ],
-        note: "Web search is currently stubbed. Configure a search API provider for real results.",
+        query: outcome.query,
+        configured: outcome.configured,
+        provider: outcome.provider,
+        results: outcome.results,
+        note: outcome.note,
       },
-      metadata: { stub: true },
+      metadata: { configured: outcome.configured, provider: outcome.provider ?? "none" },
     };
   },
 };

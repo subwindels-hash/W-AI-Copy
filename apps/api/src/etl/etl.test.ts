@@ -177,4 +177,32 @@ describe("EtlService.triggerRun (real execution)", () => {
     expect(done?.status).toBe("succeeded");
     expect(done?.rowsProcessed).toBe(2);
   });
+
+  it("TSV source parses with a tab delimiter", async () => {
+    const pipe = await EtlService.createPipeline(OID, "u1", {
+      name: "TSV ingest", sourceFormat: "TSV",
+      sourceConfig: { type: "upload" },
+      mappingSchema: [{ sourceColumn: "name", targetColumn: "name", type: "string" }],
+    });
+    const run = await EtlService.triggerRun(OID, pipe.id, { content: "name\tamount\nAda\t42\nBob\t7\n" });
+    await settle();
+    const done = await EtlService.getRun(pipe.id, run.id);
+    expect(done?.status).toBe("succeeded");
+    expect(done?.rowsProcessed).toBe(2);
+    expect(done?.rowsSucceeded).toBe(2);
+  });
+
+  it("unsupported format fails with UNSUPPORTED_FORMAT (no fabricated rows)", async () => {
+    const pipe = await EtlService.createPipeline(OID, "u1", {
+      name: "XML", sourceFormat: "XML",
+      sourceConfig: { type: "upload" },
+      mappingSchema: [{ sourceColumn: "a", targetColumn: "a", type: "string" }],
+    });
+    const run = await EtlService.triggerRun(OID, pipe.id, { content: "<root><a>1</a></root>" });
+    await settle();
+    const done = await EtlService.getRun(pipe.id, run.id);
+    expect(done?.status).toBe("failed");
+    expect(done?.errorSummary).toMatch(/UNSUPPORTED_FORMAT|unsupported source format/i);
+    expect(done?.rowsProcessed).toBe(0);
+  });
 });

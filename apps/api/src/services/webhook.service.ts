@@ -26,13 +26,46 @@ export const UpdateWebhookSchema = z.object({
 
 export const WEBHOOK_EVENTS = [
   "*",
+  // Workflow
+  "workflow.run.started",
   "workflow.run.succeeded",
   "workflow.run.failed",
   "workflow.run.waiting_approval",
+  "workflow.completed",
+  "workflow.failed",
+  // Agents / AI jobs
+  "agent.task.completed",
+  "agent.completed",
+  "agent.failed",
+  "agent.started",
+  "ai.job.completed",
+  "ai.job.failed",
+  // Messaging / collaboration
   "task.created",
   "task.completed",
   "message.created",
-  "agent.task.completed",
+  "ai.request",
+  "ai.error",
+  // Media generation
+  "media.generated",
+  "media.failed",
+  "video.generated",
+  "music.generated",
+  // Billing & payments
+  "payment.received",
+  "payment.failed",
+  "subscription.changed",
+  "invoice.created",
+  "gift_card.redeemed",
+  // Trading & market
+  "trading.signal",
+  "trading.execution",
+  "market.data",
+  // System
+  "user.event",
+  "subscription.event",
+  "webhook.delivery_failed",
+  "integration.connected",
 ] as const;
 
 function genSecret() {

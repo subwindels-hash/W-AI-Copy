@@ -195,7 +195,9 @@ export const GiftCardsService = {
     const r = await redis.hgetall(K.card(id));
     if (!r._doc) throw AppError.notFound("Card not found");
     const c: WmpcGiftCard = j(r._doc);
-    if (c.pinHash && pin && hashPin(pin) !== c.pinHash) {
+    // A card with a PIN must never be activated without the correct PIN. The
+    // guard is intentionally strict: an omitted PIN is treated as a mismatch.
+    if (c.pinHash && (!pin || hashPin(pin) !== c.pinHash)) {
       const ff: GcFraudFlag = { id: uid("ff-"), cardId: id, reason: "PIN mismatch on activate", severity: "low", flaggedAt: new Date().toISOString(), resolved: false };
       await redis.zadd(K.fraud, Date.now(), ff.id); await redis.hset(K.fraudFlag(ff.id), "_doc", s2(ff));
       throw AppError.badRequest("Invalid PIN", { code: "BAD_PIN" });
@@ -204,6 +206,7 @@ export const GiftCardsService = {
     await redis.hset(K.card(id), "_doc", s2(c));
     const t: GcTransaction = { id: uid("tx-"), cardId: id, kind: "activate", amount: 0, currency: c.currency, at: new Date().toISOString() };
     await redis.zadd(K.txns, Date.now(), t.id); await redis.hset(K.txn(t.id), "_doc", s2(t));
+    await emitKernel("card.activated", { cardId: id });
     return c;
   },
 
@@ -213,13 +216,14 @@ export const GiftCardsService = {
     if (!r._doc) throw AppError.notFound("Card not found");
     const c: WmpcGiftCard = j(r._doc);
     if (c.status === "redeemed" || c.status === "expired" || c.status === "frozen")
-      throw AppError.badRequest('`Cannot reload ${c.status} card`', { code: "INVALID_STATE" });
+      throw AppError.badRequest(`Cannot reload ${c.status} card`, { code: "INVALID_STATE" });
     c.balance = Math.round((c.balance + amount) * 100) / 100;
     if (c.status === "issued") c.status = "active";
     await redis.hset(K.card(id), "_doc", s2(c));
     const t: GcTransaction = { id: uid("tx-"), cardId: id, kind: "reload", amount, currency: c.currency, at: new Date().toISOString() };
     await redis.zadd(K.txns, Date.now(), t.id); await redis.hset(K.txn(t.id), "_doc", s2(t));
     await redis.incrbyfloat(K.metrics.volume24, amount);
+    await emitKernel("card.reloaded", { cardId: id, amount });
     return c;
   },
 
@@ -254,7 +258,9 @@ export const GiftCardsService = {
       const r = await redis.hgetall(K.card(id));
       if (!r._doc) throw AppError.notFound("Card not found");
       const c: WmpcGiftCard = j(r._doc);
-      if (c.pinHash && pin && hashPin(pin) !== c.pinHash) {
+      // A card with a PIN must never be redeemed without the correct PIN. An
+      // omitted PIN is treated as a mismatch (same strict guard as activate).
+      if (c.pinHash && (!pin || hashPin(pin) !== c.pinHash)) {
         const ff: GcFraudFlag = { id: uid("ff-"), cardId: id, reason: "PIN mismatch on redeem", severity: "medium", flaggedAt: new Date().toISOString(), resolved: false };
         await redis.zadd(K.fraud, Date.now(), ff.id); await redis.hset(K.fraudFlag(ff.id), "_doc", s2(ff));
         throw AppError.badRequest("Invalid PIN", { code: "BAD_PIN" });
@@ -267,10 +273,13 @@ export const GiftCardsService = {
       }
       if (amount > c.balance + 1e-9) throw AppError.badRequest("Insufficient balance", { code: "INSUFFICIENT_FUNDS" });
 
-      // Fraud heuristic: > 3 redeems in last 60s for same card
-      const oneMinAgo = Date.now() - 60_000;
-      const recentCount = await redis.zcount(K.txns, `(${oneMinAgo}`, Date.now());
-      if (recentCount > 20) {
+      // Fraud heuristic: more than 20 redeems within 60s for the SAME card.
+      // Tracked per card in its own counter (with a 60s TTL) so a busy card is
+      // judged against its own history, not the global transaction stream.
+      const velKey = `gc:vel:${id}`;
+      const after = await redis.incr(velKey);
+      if (after === 1) await redis.expire(velKey, 60);
+      if (after > 20) {
         const ff: GcFraudFlag = { id: uid("ff-"), cardId: id, reason: "Velocity fraud heuristic", severity: "high", flaggedAt: new Date().toISOString(), resolved: false };
         await redis.zadd(K.fraud, Date.now(), ff.id); await redis.hset(K.fraudFlag(ff.id), "_doc", s2(ff));
         await redis.incr(K.metrics.flagged24);
@@ -310,6 +319,7 @@ export const GiftCardsService = {
     await redis.hset(K.card(id), "_doc", s2(c));
     const t: GcTransaction = { id: uid("tx-"), cardId: id, kind: "expire", amount: c.balance, currency: c.currency, at: new Date().toISOString() };
     await redis.zadd(K.txns, Date.now(), t.id); await redis.hset(K.txn(t.id), "_doc", s2(t));
+    await emitKernel("card.expired", { cardId: id, balance: c.balance });
     return c;
   },
 
@@ -317,13 +327,48 @@ export const GiftCardsService = {
     const r = await redis.hgetall(K.card(id));
     if (!r._doc) throw AppError.notFound("Card not found");
     const c: WmpcGiftCard = j(r._doc);
+    if (c.status === "frozen") throw AppError.badRequest("Card is already frozen", { code: "INVALID_STATE" });
+    if (c.status === "redeemed" || c.status === "expired")
+      throw AppError.badRequest(`Cannot freeze ${c.status} card`, { code: "INVALID_STATE" });
     c.status = "frozen";
     await redis.hset(K.card(id), "_doc", s2(c));
     const t: GcTransaction = { id: uid("tx-"), cardId: id, kind: "freeze", amount: 0, currency: c.currency, at: new Date().toISOString(), orderId: reason };
     await redis.zadd(K.txns, Date.now(), t.id); await redis.hset(K.txn(t.id), "_doc", s2(t));
     const ff: GcFraudFlag = { id: uid("ff-"), cardId: id, reason, severity: "high", flaggedAt: new Date().toISOString(), resolved: false };
     await redis.zadd(K.fraud, Date.now(), ff.id); await redis.hset(K.fraudFlag(ff.id), "_doc", s2(ff));
+    await emitKernel("card.frozen", { cardId: id, reason });
     return c;
+  },
+
+  /** Thaw a frozen card, restoring it to its previous usable state. */
+  async unfreeze(id: string): Promise<WmpcGiftCard> {
+    const r = await redis.hgetall(K.card(id));
+    if (!r._doc) throw AppError.notFound("Card not found");
+    const c: WmpcGiftCard = j(r._doc);
+    if (c.status !== "frozen") throw AppError.badRequest("Card is not frozen", { code: "INVALID_STATE" });
+    if (c.expiresAt && new Date(c.expiresAt) < new Date()) {
+      c.status = "expired"; await redis.hset(K.card(id), "_doc", s2(c));
+      throw AppError.badRequest("Card expired while frozen", { code: "EXPIRED" });
+    }
+    c.status = c.balance === 0 ? "redeemed" : "active";
+    await redis.hset(K.card(id), "_doc", s2(c));
+    const t: GcTransaction = { id: uid("tx-"), cardId: id, kind: "unfreeze", amount: 0, currency: c.currency, at: new Date().toISOString() };
+    await redis.zadd(K.txns, Date.now(), t.id); await redis.hset(K.txn(t.id), "_doc", s2(t));
+    await emitKernel("card.unfrozen", { cardId: id });
+    return c;
+  },
+
+  /** Mark a fraud flag as resolved (false positive or investigated). */
+  async resolveFraudFlag(id: string, resolvedById?: string): Promise<GcFraudFlag> {
+    const r = await redis.hgetall(K.fraudFlag(id));
+    if (!r._doc) throw AppError.notFound("Fraud flag not found");
+    const f: GcFraudFlag = j(r._doc);
+    f.resolved = true;
+    f.resolvedAt = new Date().toISOString();
+    f.resolvedBy = resolvedById;
+    await redis.hset(K.fraudFlag(id), "_doc", s2(f));
+    await emitKernel("giftcard.fraud_resolved", { flagId: id, cardId: f.cardId });
+    return f;
   },
 
   async listTransactions(cardId?: string): Promise<GcTransaction[]> {
@@ -394,13 +439,14 @@ export const GiftCardsService = {
     };
   },
 
-  /** Payment Method Registration: exposes a descriptor that the existing Payment Gateway can consume. */
+  /** Payment Method Registration: exposes a descriptor that the existing Payment Gateway can consume.
+   *  Capabilities are listed honestly — only the operations this module actually implements. */
   paymentMethodDescriptor() {
     return {
       id: "wmpc-gift-cards",
       kind: "gift-card",
       name: "WMPC Gift Cards",
-      capabilities: ["authorize","capture","refund","balance-inquiry"],
+      capabilities: ["redeem", "balance-inquiry"],
       currencies: ["USD","NGN","EUR","GBP","JPY","CNY"],
       version: "0.82.0",
       registeredAt: new Date().toISOString(),

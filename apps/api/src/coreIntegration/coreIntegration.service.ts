@@ -32,8 +32,8 @@ LINK_DEFS.push(
   { id: "media-studio",     name: "Enterprise Media Generation Studio (S42)", critical: true,  probe: pfxHas("mg:") },
   { id: "voice-studio",     name: "Enterprise Voice Studio",                  critical: true,  probe: pfxHas("vs:") },
   { id: "voice-foundry",    name: "Enterprise AI Voice Foundry",              critical: true,  probe: pfxHas("vf:") },
-  { id: "digital-human",    name: "Enterprise Digital Human Platform",        critical: false, probe: async () => ({ status: "stub", evidence: "stubbed for Session 62" }) },
-  { id: "personality",      name: "Enterprise AI Personality Studio",         critical: false, probe: async () => ({ status: "stub", evidence: "shares agent personality registry in AI Ecosystem" }) },
+  { id: "digital-human",    name: "Enterprise Digital Human Platform",        critical: false, probe: pfxHas("dh:") },
+  { id: "personality",      name: "Enterprise AI Personality Studio",         critical: false, probe: pfxHas("ae:") },
   { id: "language-intel",   name: "Enterprise Language Intelligence",         critical: true,  probe: async () => ({ status: "wired", evidence: "multilingual TTS (S40) + NLU routing", routesThrough: ["voice-studio", "kernel"] }) },
   { id: "dev-portal",       name: "Enterprise Developer Platform",            critical: false, probe: routesPresent(["/dev-portal"]) },
   { id: "security",         name: "Enterprise Security Framework",            critical: true,  probe: async () => ({ status: "wired", evidence: "CSRF + rateLimit + securityStandards service", routesThrough: ["http-middleware"] }) },
@@ -41,7 +41,25 @@ LINK_DEFS.push(
   { id: "memory",           name: "Enterprise Memory Fabric",                 critical: true,  probe: pfxHas("windels:") },
   { id: "kg",               name: "Enterprise Knowledge Graph",               critical: true,  probe: pfxHas("ae:") },
   { id: "marketplace",      name: "Enterprise Marketplace Ecosystem",         critical: true,  probe: pfxHas("mk:") },
-  { id: "deployments",      name: "Desktop / Mobile / Web / Cloud / Edge / Airgap / Offline", critical: true, probe: async () => ({ status: "stub", evidence: "Web and mobile route registration exists; cloud, edge, airgap, and offline deployment paths have not been end-to-end verified", routesThrough: ["vite", "mobile-router"] }) },
+  { id: "deployments",      name: "Desktop / Mobile / Web / Cloud / Edge / Airgap / Offline", critical: true, probe: async () => {
+    try {
+      // Verify the real DeploymentService targets (aws/kubernetes/edge/etc.) are
+      // registered. A target's health is only claimed after a real validation
+      // run, so we report presence + validation state honestly.
+      const { DeploymentService } = await import("../deployment/deployment.service.js");
+      await DeploymentService.ensureBootstrapped();
+      const targets = await DeploymentService.list("org-windels");
+      if (!targets.length) return { status: "missing", evidence: "no deployment targets registered", routesThrough: ["deployment"] };
+      const validated = targets.filter((t) => t.validationPassed).length;
+      return {
+        status: "wired",
+        evidence: `${targets.length} deployment target(s) registered, ${validated} validated`,
+        routesThrough: ["deployment", "vite", "mobile-router"],
+      };
+    } catch (e: any) {
+      return { status: "missing", evidence: `deployment targets unavailable: ${e?.message ?? "error"}`, routesThrough: ["deployment"] };
+    }
+  } },
 );
 
 export const CoreIntegrationService = {

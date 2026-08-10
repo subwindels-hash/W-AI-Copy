@@ -345,3 +345,106 @@ export const CONV_DIGEST_DISCLAIMER =
   "Extractive digest: excerpts are verbatim slices of stored messages and " +
   "keywords are raw term counts. No language model produced this text and no " +
   "content was summarised or inferred.";
+
+/* ── Conversation-management sidebar (pin / archive / share) ─────────────── */
+
+export const CONV_SHARE_ACCESS = [
+  "anyone_with_link",
+  "organization",
+  "restricted",
+  "specific",
+] as const;
+export type ConvShareAccess = typeof CONV_SHARE_ACCESS[number];
+
+export const CONV_SHARE_PERMISSIONS = ["view", "comment", "edit"] as const;
+export type ConvSharePermission = typeof CONV_SHARE_PERMISSIONS[number];
+
+/**
+ * What a conversation-management action did, so the UI can show the exact
+ * confirmation copy the task description expects.
+ */
+export interface ConvAction {
+  id: string;
+  title: string;
+  action: string;
+  performedAt: string;
+}
+
+export interface ConversationShare {
+  id: string;
+  conversationId: string;
+  token: string;
+  access: ConvShareAccess;
+  permissions: ConvSharePermission;
+  allowed: string[];
+  hasPassword: boolean;
+  expiresAt: string | null;
+  revokedAt: string | null;
+  lastAccessedAt: string | null;
+  accessCount: number;
+  createdAt: string;
+  url: string;
+}
+
+export interface ConversationShareAccessRecord {
+  id: string;
+  shareId: string;
+  userId: string | null;
+  ipAddress: string | null;
+  userAgent: string | null;
+  granted: boolean;
+  reason: string | null;
+  createdAt: string;
+}
+
+export const ConvCreateShareSchema = z.object({
+  access: z.enum(CONV_SHARE_ACCESS).default("anyone_with_link"),
+  permissions: z.enum(CONV_SHARE_PERMISSIONS).default("view"),
+  /** For `restricted`/`specific`: user ids or emails that may open the link. */
+  allowed: z.array(z.string().min(3).max(320)).max(100).default([]),
+  /** Optional password protection. */
+  password: z.string().min(4).max(128).optional(),
+  /** Optional expiry. */
+  expiresAt: z.string().datetime().optional(),
+});
+/** Client-facing input: fields with defaults are optional on the way in. */
+export type ConvCreateShareInput = z.input<typeof ConvCreateShareSchema>;
+
+export const ConvUpdateShareSchema = z.object({
+  access: z.enum(CONV_SHARE_ACCESS).optional(),
+  permissions: z.enum(CONV_SHARE_PERMISSIONS).optional(),
+  allowed: z.array(z.string().min(3).max(320)).max(100).optional(),
+  password: z.string().min(4).max(128).optional().nullable(),
+  expiresAt: z.string().datetime().optional().nullable(),
+});
+export type ConvUpdateShareInput = z.input<typeof ConvUpdateShareSchema>;
+
+export const ConvResolveShareSchema = z.object({
+  password: z.string().min(4).max(128).optional(),
+});
+export type ConvResolveShareInput = z.infer<typeof ConvResolveShareSchema>;
+
+/** Public-ish representation of a resolved share (never includes private
+ * admin data such as the token owner's id or the share id). */
+export interface ConvSharedView {
+  conversationId: string;
+  title: string;
+  summary: string | null;
+  permissions: ConvSharePermission;
+  ownerName: string | null;
+  createdAt: string;
+  lastMessageAt: string;
+  messages: Array<{
+    id: string;
+    role: string;
+    author: string;
+    content: string;
+    createdAt: string;
+    redacted: boolean;
+  }>;
+}
+
+export const ConvRenameSchema = z.object({
+  title: z.string().trim().min(1).max(200),
+});
+export type ConvRenameInput = z.infer<typeof ConvRenameSchema>;

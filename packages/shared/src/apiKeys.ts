@@ -13,6 +13,10 @@ export interface AkApiKeyRow {
   name: string;
   keyPrefix: string;
   scopes: AkScope[];
+  granularScopes: string[];
+  appId: string | null;
+  environment: string;
+  ipRestrictions: string[];
   lastUsedAt: string | null;
   expiresAt: string | null;
   revoked: boolean;
@@ -27,6 +31,8 @@ export interface AkApiKeyCreated {
   key: string;
   keyPrefix: string;
   scopes: AkScope[];
+  granularScopes: string[];
+  environment: string;
   expiresAt: string | null;
   createdAt: string;
 }
@@ -35,6 +41,8 @@ export interface AkApiKeyMutation {
   id: string;
   name: string;
   scopes: AkScope[];
+  granularScopes: string[];
+  environment: string;
   revoked: boolean;
   revokedAt: string | null;
   /** Session 120 — present on update responses (renewal sets it). */
@@ -44,6 +52,10 @@ export interface AkApiKeyMutation {
 export const AkApiKeyCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).default(["READ"]),
+  granularScopes: z.array(z.string().min(3).max(64)).max(50).optional(),
+  appId: z.string().cuid().optional(),
+  environment: z.enum(["development", "test", "production"]).optional(),
+  ipRestrictions: z.array(z.string().min(7).max(64)).max(20).optional(),
   expiresInDays: z.number().int().min(1).max(365).optional(),
 });
 export type AkApiKeyCreateInput = z.infer<typeof AkApiKeyCreateSchema>;
@@ -51,6 +63,10 @@ export type AkApiKeyCreateInput = z.infer<typeof AkApiKeyCreateSchema>;
 export const AkApiKeyUpdateSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional(),
+  granularScopes: z.array(z.string().min(3).max(64)).max(50).optional(),
+  appId: z.string().cuid().optional().nullable(),
+  environment: z.enum(["development", "test", "production"]).optional(),
+  ipRestrictions: z.array(z.string().min(7).max(64)).max(20).optional(),
   revoked: z.boolean().optional(),
   /** Session 120 — renewal path: extend an expiring key's life from now.
    *  Rejected for revoked keys by the service. */

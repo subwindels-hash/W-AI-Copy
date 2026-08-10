@@ -18,6 +18,19 @@ export class FakeKv {
 
   async get(key: string): Promise<string | null> { return this.fresh(key)?.value ?? null; }
 
+  /** DUMP — serialized value (here the string as a Buffer) or null. */
+  async dump(key: string): Promise<Buffer | null> {
+    const v = this.fresh(key)?.value;
+    return v === undefined ? null : Buffer.from(v);
+  }
+  /** RESTORE — recreate a key from a DUMP value (ttl ignored, seconds→ms). */
+  async restore(key: string, ttl: number, value: Buffer | string): Promise<"OK"> {
+    const v = Buffer.isBuffer(value) ? value.toString("utf8") : String(value);
+    const expiresAt = ttl > 0 ? Date.now() + ttl * 1000 : undefined;
+    this.strings.set(key, { value: v, expiresAt });
+    return "OK";
+  }
+
   /** INCR / INCRBY / DECR — used by id counters (sprint numbers, story keys). */
   async incrby(key: string, by: number): Promise<number> {
     const next = Number(this.fresh(key)?.value ?? 0) + by;
@@ -73,6 +86,24 @@ export class FakeKv {
 
   async smembers(key: string): Promise<string[]> { return [...(this.sets.get(key) ?? [])]; }
 
+  /** keys(pattern) — matches the Redis glob (supports `prefix*`). */
+  async keys(pattern: string): Promise<string[]> {
+    const out: string[] = [];
+    const collect = (k: string) => {
+      if (pattern === "*") { out.push(k); return; }
+      if (pattern.endsWith("*")) {
+        const prefix = pattern.slice(0, -1);
+        if (k.startsWith(prefix)) out.push(k);
+      } else if (k === pattern) out.push(k);
+    };
+    for (const k of this.strings.keys()) collect(k);
+    for (const k of this.hashes.keys()) collect(k);
+    for (const k of this.zsets.keys()) collect(k);
+    for (const k of this.lists.keys()) collect(k);
+    for (const k of this.sets.keys()) collect(k);
+    return out;
+  }
+
   /**
    * SISMEMBER — returns 1/0 like ioredis (not a boolean).
    *
@@ -119,6 +150,16 @@ export class FakeKv {
   }
 
   async hgetall(key: string): Promise<Record<string, string>> { return this.hashes.get(key) ?? {}; }
+
+  async hlen(key: string): Promise<number> { return this.hashes.get(key) ? Object.keys(this.hashes.get(key)!).length : 0; }
+
+  async hdel(key: string, ...fields: string[]): Promise<number> {
+    const h = this.hashes.get(key);
+    if (!h) return 0;
+    let removed = 0;
+    for (const f of fields) if (delete h[f]) removed++;
+    return removed;
+  }
 
   async hget(key: string, field: string): Promise<string | null> {
     return this.hashes.get(key)?.[field] ?? null;
@@ -169,6 +210,44 @@ export class FakeKv {
   async zscore(key: string, member: string): Promise<string | null> {
     const v = this.zsets.get(key)?.get(member);
     return v === undefined ? null : String(v);
+  }
+
+  /** zcount — count members with a score within [min,max] (inclusive bounds
+   *  parsed from numbers; Redis "(min" exclusive syntax is not used here). */
+  async zcount(key: string, min: number | string, max: number | string): Promise<number> {
+    const z = this.zsets.get(key) ?? new Map<string, number>();
+    const lo = min === "-inf" ? Number.NEGATIVE_INFINITY : Number(min);
+    const hi = max === "+inf" ? Number.POSITIVE_INFINITY : Number(max);
+    let n = 0;
+    for (const sc of z.values()) if (sc >= lo && sc <= hi) n++;
+    return n;
+  }
+
+  /** incrbyfloat — decimal increment on a string value. */
+  async incrbyfloat(key: string, by: number): Promise<string> {
+    const next = Number(this.fresh(key)?.value ?? 0) + by;
+    this.strings.set(key, { value: String(next) });
+    return String(next);
+  }
+
+  /** eval — supports the simple NX/PX SET lock script and check-and-del used by
+   *  the gift-card redemption lock. Unknown scripts return 0. */
+  async eval(script: string, _numkeys: number, ...args: any[]): Promise<number> {
+    const a = args.map(String);
+    if (script.includes("NX')") || /NX','PX/.test(script)) {
+      // SET key val NX PX ttl
+      const [key, val, , , ttl] = a;
+      if (this.strings.has(key)) return 0;
+      this.strings.set(key, { value: val, expiresAt: Date.now() + Number(ttl) });
+      return 1;
+    }
+    if (script.includes("GET")) {
+      // if GET key == val then DEL key
+      const [key, val] = a;
+      if (this.strings.get(key)?.value === val) { this.strings.delete(key); return 1; }
+      return 0;
+    }
+    return 0;
   }
 
   /** Trim a sorted set to the given rank window (negative indexes count back). */
@@ -273,6 +352,7 @@ export class FakeKv {
       set(key: string, value: string, ...args: any[]) { ops.push(() => self.set(key, value, ...args)); return chain; },
       del(...keys: string[]) { for (const k of keys.flat()) ops.push(() => self.del(k)); return chain; },
       hset(key: string, ...rest: any[]) { ops.push(() => self.hset(key, ...rest)); return chain; },
+      hincrby(key: string, field: string, by: number) { ops.push(() => self.hincrby(key, field, by)); return chain; },
       sadd(key: string, ...members: string[]) { ops.push(() => self.sadd(key, ...members)); return chain; },
       srem(key: string, ...members: string[]) { ops.push(() => self.srem(key, ...members)); return chain; },
       zadd(key: string, score: number, member: string) { ops.push(() => self.zadd(key, score, member)); return chain; },

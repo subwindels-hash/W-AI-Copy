@@ -24,6 +24,7 @@ import { registerWorkspaceRoutes } from "./routes/workspace.js";
 import { registerConversationRoutes } from "./routes/conversations.js";
 import { registerMessageRoutes } from "./routes/messages.js";
 import { registerConversationOpsRoutes } from "./routes/conversationOps.js";
+import { registerConversationManageRoutes, registerShareResolveRoutes } from "./routes/conversationManage.js";
 import { registerAttachmentRoutes } from "./routes/attachments.js";
 import { registerProjectContinuityRoutes } from "./routes/projectContinuity.js";
 import { registerLeadDiscoveryRoutes } from "./routes/leadDiscovery.js";
@@ -53,6 +54,10 @@ import { registerGovernanceRoutes } from "./routes/governance.js";
 import { registerPlatformRoutes } from "./routes/platform.js";
 import { registerSecurityRoutes } from "./routes/security.js";
 import { registerPublicApiRoutes } from "./routes/publicApi.js";
+import { registerDeveloperGatewayRoutes } from "./routes/developerGateway.js";
+import { registerDeveloperPlatformRoutes } from "./routes/developerPlatform.js";
+import { registerAdminApiControlRoutes } from "./routes/adminApiControl.js";
+import { registerContactRoutes } from "./routes/contact.js";
 import { registerMobileRoutes } from "./routes/mobile.js";
 import { registerMobileSyncRoutes } from "./routes/mobileSync.js";
 import { registerQaRoutes } from "./routes/qa.js";
@@ -152,6 +157,7 @@ import { rateLimit } from "./middleware/rateLimit.js";
 import { csrfMiddleware } from "../security/csrf.js";
 import { orgScope } from "./middleware/orgScope.js";
 import { registerSSERoutes } from "./routes/events.js";
+import jwt from "jsonwebtoken";
 import type { ApiEnvelope } from "@windels/shared/api";
 
 export function createApp() {
@@ -264,8 +270,30 @@ export function createApp() {
   // Session 112 first: /search, /unread and /deleted are literal paths that the
   // Session 2 router's `GET /:id` (cuid-validated) would otherwise reject.
   registerConversationOpsRoutes(conversationsRouter);
+  // Conversation-management (pin/archive/rename/share) — paths are all
+  // `/:id/...` so they never collide with the literal collection paths above
+  // or the Session 2 `/:id` handlers below.
+  registerConversationManageRoutes(conversationsRouter);
   registerConversationRoutes(conversationsRouter);
   registerMessageRoutes(conversationsRouter);
+
+  // Public share-link resolution. Attaches the user *opportunistically* when a
+  // valid JWT is supplied so anonymous `anyone_with_link` shares still resolve.
+  const shareResolveRouter = express.Router();
+  v1.use("/share", shareResolveRouter);
+  shareResolveRouter.use((req, _res, next) => {
+    const header = req.headers.authorization;
+    const token = header?.startsWith("Bearer ") ? header.slice(7) : null;
+    if (!token) return next();
+    try {
+      const payload = jwt.verify(token, env.JWT_SECRET, { issuer: env.JWT_ISSUER }) as any;
+      req.user = { id: payload.id, email: payload.email, role: payload.role, organizationId: payload.organizationId };
+    } catch {
+      /* ignore invalid token — anonymous access still applies */
+    }
+    next();
+  });
+  registerShareResolveRoutes(shareResolveRouter);
 
   // /agents + /agents/:id/memories + /agents/:id/knowledge share a sub-router
   const agentsRouter = express.Router();
@@ -1391,7 +1419,19 @@ export function createApp() {
   // Public API Gateway (api-key authenticated, stable REST surface)
   const publicRouter = express.Router();
   registerPublicApiRoutes(publicRouter);
+  // Developer gateway extensions (agent execution, workflows, knowledge,
+  // trading, media) mounted after the Session 120 predecessors so their exact
+  // paths remain authoritative.
+  registerDeveloperGatewayRoutes(publicRouter);
   app.use("/api/rest/v1", publicRouter);
+
+  // Developer Platform (applications, products, usage dashboard) on the
+  // authenticated /api/v1 surface.
+  registerDeveloperPlatformRoutes(v1);
+  // Admin API Control Center (Super Admin) — platform-wide developer control.
+  registerAdminApiControlRoutes(v1);
+  // Contact & Support Center (public form, AI assistant, my-requests, admin).
+  registerContactRoutes(v1);
 
   app.use((req, res) => {
     res.status(404).json({

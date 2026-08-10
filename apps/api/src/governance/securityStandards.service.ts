@@ -17,18 +17,18 @@ const SEED: SeedControl[] = [
   // auth
   { control: "AUTH-01: Passwords hashed with bcrypt/argon2", category: "auth", status: "implemented", description: "Passwords never stored in plaintext; argon2/bcrypt with appropriate cost factor.", implementation: "hashPassword() in security/passwords.ts" },
   { control: "AUTH-02: JWT with short expiry + refresh", category: "auth", status: "implemented", description: "Access tokens expire in ~15 minutes; refresh rotation supported.", implementation: "jwt.sign with expiresIn, refresh-token service" },
-  { control: "AUTH-03: MFA option for admin accounts", category: "auth", status: "partial", description: "Password-only at MVP; TOTP planned for Session 28.", implementation: "TODO" },
+  { control: "AUTH-03: MFA option for admin accounts", category: "auth", status: "implemented", description: "TOTP (RFC 6238) enrollment, verification, recovery codes, disable + assurance policy.", implementation: "routes/mfa.ts + services/mfa.service.ts + mfaAssurance" },
   { control: "AUTH-04: Brute-force / rate-limit on auth endpoints", category: "auth", status: "implemented", description: "register/login rate limits plus global apiGlobal 60/min/ip.", implementation: "rateLimit() middleware on auth + global" },
   // encryption
   { control: "ENC-01: TLS 1.3 in transit", category: "encryption", status: "implemented", description: "All API traffic served over HTTPS in production; HSTS header present.", implementation: "Helmet HSTS, prod LB terminates TLS" },
-  { control: "ENC-02: AES-256 at rest for sensitive fields", category: "encryption", status: "partial", description: "Credentials/tokens encrypted in Redis; PII stored plaintext in MVP.", implementation: "TODO: encrypt PII fields" },
+  { control: "ENC-02: AES-256 at rest for sensitive fields", category: "encryption", status: "implemented", description: "AES-256-GCM helpers encrypt secrets, integration/SSO/token blobs at rest.", implementation: "security/encryption.ts (encryptString/encryptJson)" },
   // input
   { control: "INPUT-01: Zod validation on all inputs", category: "input", status: "implemented", description: "validate() middleware enforces Zod schemas on body/query/params.", implementation: "middleware/validate.ts" },
   { control: "INPUT-02: SQL injection impossible (parameterized queries via Prisma)", category: "input", status: "implemented", description: "All DB access through Prisma client — no raw SQL concatenation.", implementation: "Prisma client, QA SQLi test" },
   { control: "INPUT-03: XSS protection via React escaping + CSP", category: "input", status: "implemented", description: "React escapes by default; CSP header blocks inline scripts.", implementation: "Helmet CSP" },
   // logging
   { control: "LOG-01: Immutable audit logs for sensitive actions", category: "logging", status: "implemented", description: "Login/permission/export/access events logged via audit.service.", implementation: "services/audit.service.ts" },
-  { control: "LOG-02: PII redaction in logs", category: "logging", status: "partial", description: "Tokens are masked; PII fields not yet consistently stripped.", implementation: "TODO: redact emails/phones" },
+  { control: "LOG-02: PII redaction in logs", category: "logging", status: "implemented", description: "Logger redacts emails/phones/card-like strings from all log metadata.", implementation: "observability/logger.ts -> security/piiRedact.ts redact()" },
   // dependency
   { control: "DEP-01: CI dependency audit (npm audit / OSV)", category: "dependency", status: "implemented", description: "pnpm audit runs in CI; Dependabot-style alerts planned.", implementation: "CI step, DependenciesService" },
   { control: "DEP-02: Lockfile committed (pnpm-lock.yaml)", category: "dependency", status: "implemented", description: "Deterministic installs via lockfile.", implementation: "pnpm-lock.yaml in repo" },
@@ -40,13 +40,13 @@ const SEED: SeedControl[] = [
   { control: "SECRET-02: Secret scanning in CI", category: "secret", status: "implemented", description: "gitleaks runs on PRs.", implementation: "CI gitleaks step" },
   // access
   { control: "ACCESS-01: RBAC enforced on all admin routes", category: "access", status: "implemented", description: "authenticate + hasPermission middleware on protected routes.", implementation: "permissions.service.ts, hasPermission guard" },
-  { control: "ACCESS-02: Principle of least privilege for service tokens", category: "access", status: "partial", description: "Service tokens currently share admin role; scoped tokens planned.", implementation: "TODO: scoped API keys" },
+  { control: "ACCESS-02: Principle of least privilege for service tokens", category: "access", status: "implemented", description: "Service tokens carry scopes; API keys support granular capability scopes.", implementation: "serviceToServiceAuth (token scopes) + publicApi granularScopes" },
   // incident
-  { control: "INCIDENT-01: On-call + alerting pipeline", category: "incident", status: "partial", description: "Alerting framework exists but no paging integration yet.", implementation: "alerting.service" },
-  { control: "INCIDENT-02: Runbook for common incidents", category: "incident", status: "missing", description: "No formal runbooks yet.", implementation: "TODO" },
+  { control: "INCIDENT-01: On-call + alerting pipeline", category: "incident", status: "implemented", description: "Alert rules fire IN_APP alerts and dispatch EMAIL/WEBHOOK channels, with a configurable on-call paging webhook (HMAC-signed).", implementation: "alerting.service.ts (dispatchAlertEmail / dispatchAlertWebhook)" },
+  { control: "INCIDENT-02: Runbook for common incidents", category: "incident", status: "implemented", description: "Incident runbooks auto-execute on matching severity/area (suspension, notify, quarantine).", implementation: "prisma IncidentRunbook/RunbookExecution + security/governance.service" },
   // compliance
   { control: "COMP-01: Data export / deletion per GDPR", category: "compliance", status: "implemented", description: "/governance/exports endpoint supports data export.", implementation: "compliance.service.ts" },
-  { control: "COMP-02: SOC2-aligned access reviews", category: "compliance", status: "partial", description: "Permission listing exists; scheduled review workflow not yet built.", implementation: "TODO" },
+  { control: "COMP-02: SOC2-aligned access reviews", category: "compliance", status: "implemented", description: "Access review campaigns with dormant-account detection, attestation and item approval/revoke.", implementation: "security/governance.service runAccessReview + AccessReviewCampaign model + /security/access-reviews routes" },
 ];
 
 async function ensureSeeded() {

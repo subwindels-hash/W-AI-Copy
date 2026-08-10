@@ -47,6 +47,10 @@ function serializeKey(key: any): AkApiKeyRow {
     name: key.name,
     keyPrefix: key.keyPrefix,
     scopes: scopesOf(key.scopes),
+    granularScopes: Array.isArray(key.granularScopes) ? key.granularScopes : [],
+    appId: key.appId ?? null,
+    environment: key.environment ?? "production",
+    ipRestrictions: Array.isArray(key.ipRestrictions) ? key.ipRestrictions : [],
     lastUsedAt: iso(key.lastUsedAt),
     expiresAt: iso(key.expiresAt),
     revoked: Boolean(key.revokedAt),
@@ -91,6 +95,15 @@ export async function createApiKey(userId: string, input: z.infer<typeof CreateA
   const expiresAt = input.expiresInDays
     ? new Date(Date.now() + input.expiresInDays * 86_400_000)
     : null;
+  // If an application is requested, verify it belongs to the caller's org.
+  let appId: string | null = null;
+  if (input.appId) {
+    const app = await prisma.developerApp.findFirst({
+      where: { id: input.appId, organizationId: ctx.organizationId },
+    });
+    if (!app) throw AppError.notFound("Application not found");
+    appId = app.id;
+  }
   const key = await prisma.apiKey.create({
     data: {
       organizationId: ctx.organizationId,
@@ -99,12 +112,32 @@ export async function createApiKey(userId: string, input: z.infer<typeof CreateA
       keyPrefix: prefix,
       keyHash: hash,
       scopes: input.scopes as ApiKeyScope[],
+      granularScopes: input.granularScopes ?? [],
+      appId,
+      environment: input.environment ?? "production",
+      ipRestrictions: input.ipRestrictions ?? [],
       expiresAt,
     },
   });
-  await audit(ctx.organizationId, userId, "admin.apikey.created", key.id, { scopes: input.scopes, expiresAt: iso(expiresAt) });
+  await audit(ctx.organizationId, userId, "admin.apikey.created", key.id, {
+    scopes: input.scopes,
+    granularScopes: input.granularScopes ?? [],
+    appId,
+    environment: input.environment ?? "production",
+    expiresAt: iso(expiresAt),
+  });
   // Plaintext is deliberately returned once and is never persisted.
-  return { id: key.id, name: key.name, key: plain, keyPrefix: prefix, scopes: scopesOf(key.scopes), expiresAt: iso(key.expiresAt), createdAt: iso(key.createdAt)! };
+  return {
+    id: key.id,
+    name: key.name,
+    key: plain,
+    keyPrefix: prefix,
+    scopes: scopesOf(key.scopes),
+    granularScopes: key.granularScopes ?? [],
+    environment: key.environment ?? "production",
+    expiresAt: iso(key.expiresAt),
+    createdAt: iso(key.createdAt)!,
+  };
 }
 
 export async function updateApiKey(userId: string, id: string, input: z.infer<typeof UpdateApiKeySchema>): Promise<AkApiKeyMutation> {
@@ -119,11 +152,22 @@ export async function updateApiKey(userId: string, id: string, input: z.infer<ty
     input.expiresInDays !== undefined
       ? new Date(Date.now() + input.expiresInDays * 86_400_000)
       : undefined;
+  // If the app binding changes, verify it belongs to the caller's org.
+  if (input.appId !== undefined && input.appId !== null) {
+    const app = await prisma.developerApp.findFirst({
+      where: { id: input.appId, organizationId: ctx.organizationId },
+    });
+    if (!app) throw AppError.notFound("Application not found");
+  }
   const key = await prisma.apiKey.update({
     where: { id },
     data: {
       ...(input.name !== undefined ? { name: input.name } : {}),
       ...(input.scopes !== undefined ? { scopes: input.scopes as ApiKeyScope[] } : {}),
+      ...(input.granularScopes !== undefined ? { granularScopes: input.granularScopes } : {}),
+      ...(input.appId !== undefined ? { appId: input.appId } : {}),
+      ...(input.environment !== undefined ? { environment: input.environment } : {}),
+      ...(input.ipRestrictions !== undefined ? { ipRestrictions: input.ipRestrictions } : {}),
       ...(input.revoked === true ? { revokedAt: new Date() } : {}),
       ...(expiresAt !== undefined ? { expiresAt } : {}),
     },
@@ -131,9 +175,20 @@ export async function updateApiKey(userId: string, id: string, input: z.infer<ty
   await audit(ctx.organizationId, userId, input.revoked === true ? "admin.apikey.revoked" : "admin.apikey.updated", id, {
     ...(input.name !== undefined ? { nameChanged: true } : {}),
     ...(input.scopes !== undefined ? { scopes: input.scopes } : {}),
+    ...(input.granularScopes !== undefined ? { granularScopes: input.granularScopes } : {}),
+    ...(input.environment !== undefined ? { environment: input.environment } : {}),
     ...(expiresAt !== undefined ? { expiresInDays: input.expiresInDays, expiresAt: iso(expiresAt) } : {}),
   });
-  return { id: key.id, name: key.name, scopes: scopesOf(key.scopes), revoked: Boolean(key.revokedAt), revokedAt: iso(key.revokedAt), expiresAt: iso(key.expiresAt) };
+  return {
+    id: key.id,
+    name: key.name,
+    scopes: scopesOf(key.scopes),
+    granularScopes: key.granularScopes ?? [],
+    environment: key.environment ?? "production",
+    revoked: Boolean(key.revokedAt),
+    revokedAt: iso(key.revokedAt),
+    expiresAt: iso(key.expiresAt),
+  };
 }
 
 /**
@@ -173,5 +228,17 @@ export async function verifyApiKey(token: string) {
   if (key.revokedAt) return null;
   if (key.expiresAt && key.expiresAt < new Date()) return null;
   await prisma.apiKey.update({ where: { id: key.id }, data: { lastUsedAt: new Date() } }).catch(() => {});
-  return { key, user: key.createdBy, organization: key.organization, scopes: scopesOf(key.scopes) };
+  // The granular scopes are authoritative when present; legacy READ/WRITE/ADMIN
+  // remain for backwards compatibility (a key with no granular scopes still
+  // works exactly as before).
+  return {
+    key,
+    user: key.createdBy,
+    organization: key.organization,
+    scopes: scopesOf(key.scopes),
+    granularScopes: Array.isArray((key as any).granularScopes) ? (key as any).granularScopes : [],
+    appId: (key as any).appId ?? null,
+    environment: (key as any).environment ?? "production",
+    ipRestrictions: Array.isArray((key as any).ipRestrictions) ? (key as any).ipRestrictions : [],
+  };
 }

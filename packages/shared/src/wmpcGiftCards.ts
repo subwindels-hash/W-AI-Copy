@@ -30,7 +30,7 @@ export interface WmpcGiftCard {
 export interface GcTransaction {
   id: string;
   cardId: string;
-  kind: "issue" | "activate" | "reload" | "redeem" | "expire" | "freeze";
+  kind: "issue" | "activate" | "reload" | "redeem" | "expire" | "freeze" | "unfreeze" | "refund";
   amount: number;
   currency: string;
   at: string;
@@ -44,6 +44,9 @@ export interface GcFraudFlag {
   severity: "low" | "medium" | "high";
   flaggedAt: string;
   resolved: boolean;
+  /** Set when the flag is resolved (via POST /gift-cards/fraud/:id/resolve). */
+  resolvedAt?: string;
+  resolvedBy?: string;
 }
 
 export interface GcLoyaltyProgram {

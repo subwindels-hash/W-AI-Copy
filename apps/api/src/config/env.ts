@@ -32,6 +32,51 @@ const EnvSchema = z.object({
   BOOTSTRAP_SUPERADMIN_EMAIL: z.string().email().default("admin@windels.ai"),
   BOOTSTRAP_SUPERADMIN_PASSWORD: z.string().min(8).default("ChangeMe!234"),
 
+  // ── Contact & Support Center email (Session: contact center) ────────────
+  // Support mailbox that contact requests are sent to. Never hardcoded.
+  WINDELS_SUPPORT_EMAIL: z.string().email().optional(),
+  // SMTP relay for outbound contact emails (system + user confirmation).
+  // Reuses the same env relay convention as the Email Intelligence outbox.
+  WINDELS_SMTP_HOST: z.string().optional(),
+  WINDELS_SMTP_PORT: z.coerce.number().int().min(1).max(65535).optional(),
+  WINDELS_SMTP_USER: z.string().optional(),
+  WINDELS_SMTP_PASS: z.string().optional(),
+  WINDELS_SMTP_SECURE: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+  WINDELS_MAIL_FROM: z.string().email().default("no-reply@windels.ai"),
+  WINDELS_MAIL_FROM_NAME: z.string().default("WINDELS AI OS"),
+
+  // ── Web search tool providers (optional; the tool returns an honest
+  // "not configured" result when none are set) ──────────────────────────
+  BRAVE_SEARCH_API_KEY: z.string().optional(),
+  SERPAPI_KEY: z.string().optional(),
+  TAVILY_API_KEY: z.string().optional(),
+
+  // ── Update package signing (optional) ────────────────────────────────
+  // base64 Ed25519 keys. Signer side uses the private key; verifier uses the
+  // public key. When neither is set, signature checks are skipped.
+  UPDATE_SIGNING_PRIVATE_KEY: z.string().optional(),
+  UPDATE_SIGNING_PUBLIC_KEY: z.string().optional(),
+
+  // ── Service-to-service mTLS (optional) ───────────────────────────────
+  // PEM of the trusted CA that issues service client certificates, and an
+  // optional expected subject CN to bind a specific service identity.
+  S2S_MTLS_CA_CERT: z.string().optional(),
+  S2S_MTLS_EXPECTED_CN: z.string().optional(),
+
+  // ── Alerting / on-call paging (optional) ─────────────────────────────
+  // Generic webhook (e.g. a PagerDuty/Opsgenie-compatible or self-hosted
+  // endpoint) that receives high/critical alerts for on-call escalation.
+  WINDELS_ALERT_WEBHOOK_URL: z.string().url().optional(),
+  // Optional HMAC shared secret used to sign outbound alert webhooks.
+  WINDELS_ALERT_WEBHOOK_SECRET: z.string().optional(),
+  // When a high/critical alert fires and no webhook is configured, fall back
+  // to emailing this address (best-effort via the SMTP relay).
+  WINDELS_ALERT_EMAIL: z.string().email().optional(),
+
+
   SESSION_COOKIE_NAME: z.string().default("windels_sid"),
   SESSION_COOKIE_SECURE: z
     .union([z.boolean(), z.enum(["true", "false"])])

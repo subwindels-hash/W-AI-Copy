@@ -52,6 +52,9 @@ export function registerGiftCardsRoutes(router: Router) {
   router.post("/cards/:id/freeze", validate({ body: freeze }), async (req, res, next) => {
     try { res.json({ ok: true, data: await GiftCardsService.freeze(req.params.id, req.body.reason) }); } catch (e) { next(e); }
   });
+  router.post("/cards/:id/unfreeze", async (req, res, next) => {
+    try { res.json({ ok: true, data: await GiftCardsService.unfreeze(req.params.id) }); } catch (e) { next(e); }
+  });
   router.post("/cards/:id/apply-invoice", validate({ body: z.object({ invoiceId: z.string().cuid(), pin: z.string().optional() }) }), async (req, res, next) => {
     try { res.json({ ok: true, data: await GiftCardsService.applyToInvoice(req.params.id, req.body.invoiceId, req.body.pin) }); } catch (e) { next(e); }
   });
@@ -62,6 +65,12 @@ export function registerGiftCardsRoutes(router: Router) {
     try {
       const resolved = req.query.resolved === "true" ? true : req.query.resolved === "false" ? false : undefined;
       res.json({ ok: true, data: await GiftCardsService.listFraud(resolved) });
+    } catch (e) { next(e); }
+  });
+  router.post("/fraud/:id/resolve", async (req, res, next) => {
+    try {
+      const resolvedBy = req.user?.id;
+      res.json({ ok: true, data: await GiftCardsService.resolveFraudFlag(req.params.id, resolvedBy) });
     } catch (e) { next(e); }
   });
   router.get("/loyalty", async (_req, res, next) => {

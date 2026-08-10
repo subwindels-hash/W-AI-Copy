@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../middleware/validate.js";
-import { registerUser, loginUser, completeMfaLogin, refreshAccessToken, logoutUser } from "../../services/auth.service.js";
+import { registerUser, loginUser, completeMfaLogin, refreshAccessToken, logoutUser, requestPasswordReset, resetPassword } from "../../services/auth.service.js";
 import type { ApiEnvelope } from "@windels/shared/api";
 import { rateLimit } from "../middleware/rateLimit.js";
 import { assessPassword } from "../../security/passwords.js";
@@ -43,7 +43,51 @@ const logoutSchema = {
   }),
 };
 
+const forgotSchema = {
+  body: z.object({
+    email: z.string().email(),
+  }),
+};
+
+const resetSchema = {
+  body: z.object({
+    token: z.string().min(20),
+    password: z.string().min(10).max(200).refine((pw) => assessPassword(pw).meetsPolicy, (pw) => ({ message: "Password does not meet policy: " + assessPassword(pw).issues.join(", ") })),
+  }),
+};
+
 export function registerAuthRoutes(router: Router) {
+  // Request a password reset email. Always returns a generic 200 (even when the
+  // email is unknown) to avoid account enumeration.
+  router.post("/auth/forgot", rateLimit("passwordReset"), validate(forgotSchema), async (req, res, next) => {
+    try {
+      const result = await requestPasswordReset(req.body.email);
+      const env: ApiEnvelope<typeof result> = {
+        ok: true,
+        data: result,
+        meta: { requestId: req.requestId, tookMs: Date.now() - req.startedAt },
+      };
+      res.json(env);
+    } catch (e) {
+      next(e);
+    }
+  });
+
+  // Reset the password with a one-time token.
+  router.post("/auth/reset", rateLimit("passwordReset"), validate(resetSchema), async (req, res, next) => {
+    try {
+      const result = await resetPassword(req.body.token, req.body.password);
+      const env: ApiEnvelope<typeof result> = {
+        ok: true,
+        data: result,
+        meta: { requestId: req.requestId, tookMs: Date.now() - req.startedAt },
+      };
+      res.json(env);
+    } catch (e) {
+      next(e);
+    }
+  });
+
   router.post("/auth/register", rateLimit("register"), validate(registerSchema), async (req, res, next) => {
     try {
       const result = await registerUser(req.body);

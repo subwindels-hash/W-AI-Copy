@@ -11,6 +11,8 @@ const AdminDashboard = lazy(() => import("./pages/dashboard/AdminDashboard").the
 const AdminPage = lazy(() => import("./pages/admin/AdminPage").then((m) => ({ default: m.AdminPage })));
 const SuperAdminDashboard = lazy(() => import("./pages/dashboard/SuperAdminDashboard").then((m) => ({ default: m.SuperAdminDashboard })));
 const ChatPage = lazy(() => import("./pages/chat/ChatPage").then((m) => ({ default: m.ChatPage })));
+const DeveloperPortalPage = lazy(() => import("./pages/developerPortal/DeveloperPortalPage"));
+const SharePage = lazy(() => import("./pages/share/SharePage").then((m) => ({ default: m.SharePage })));
 const AgentsPage = lazy(() => import("./pages/agents/AgentsPage"));
 const CanvasPage = lazy(() => import("./pages/canvas/CanvasPage"));
 const TalkPage = lazy(() => import("./pages/talk/TalkPage").then((m) => ({ default: m.default })));
@@ -49,6 +51,7 @@ const EnterprisePage = lazy(() => import("./pages/admin/EnterprisePage"));
 const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
+const AdminApiControlPage = lazy(() => import("./pages/admin/AdminApiControlPage"));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
 const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
 const EmailIntelPage = lazy(() => import("./pages/emailIntel/EmailIntelPage").then((m) => ({ default: m.EmailIntelPage })));
@@ -89,14 +92,20 @@ const DerivativesPage = lazy(() => import("./pages/derivatives/DerivativesPage")
 const AuditConsolePage = lazy(() => import("./pages/audit/AuditConsolePage").then((m) => ({ default: m.AuditConsolePage })));
 const GoogleIdentityPage = lazy(() => import("./pages/googleAuth/GoogleIdentityPage").then((m) => ({ default: m.GoogleIdentityPage })));
 const GoogleCallbackPage = lazy(() => import("./pages/auth/GoogleCallbackPage").then((m) => ({ default: m.GoogleCallbackPage })));
+const ForgotPasswordPage = lazy(() => import("./pages/auth/ForgotPasswordPage").then((m) => ({ default: m.ForgotPasswordPage })));
+const ResetPasswordPage = lazy(() => import("./pages/auth/ResetPasswordPage").then((m) => ({ default: m.ResetPasswordPage })));
 const MarketingLayout = lazy(() => import("./pages/marketing/Layout").then((m) => ({ default: m.MarketingLayout })));
 const LandingPage = lazy(() => import("./pages/marketing/LandingPage"));
 const MarketingPricing = lazy(() => import("./pages/marketing/PricingPage"));
 const MarketingEnterprise = lazy(() => import("./pages/marketing/EnterprisePage"));
 const MarketingDevelopers = lazy(() => import("./pages/marketing/DevelopersPage"));
+const MarketingApiPlatform = lazy(() => import("./pages/marketing/ApiPlatformPage"));
+const MarketingApiDocs = lazy(() => import("./pages/marketing/ApiDocsPage"));
 const MarketingDocs = lazy(() => import("./pages/marketing/DocsPage"));
 const MarketingBlog = lazy(() => import("./pages/marketing/BlogPage"));
-const MarketingSupport = lazy(() => import("./pages/marketing/SupportPage"));
+const ContactPage = lazy(() => import("./pages/contact/ContactPage").then((m) => ({ default: m.ContactPage })));
+const MySupportPage = lazy(() => import("./pages/support/MySupportPage").then((m) => ({ default: m.MySupportPage })));
+const ContactCenterPage = lazy(() => import("./pages/support/ContactCenterPage").then((m) => ({ default: m.ContactCenterPage })));
 const MarketingLegal = lazy(() => import("./pages/marketing/LegalPage"));
 
 // Mobile (Session 15)
@@ -179,19 +188,6 @@ function AppShell() {
   );
 }
 
-const Placeholder = ({ title, description }: { title: string; description: string }) => (
-  <div className="max-w-2xl">
-    <h1 className="text-2xl font-bold text-text-bright">{title}</h1>
-    <p className="text-text-muted mt-2">{description}</p>
-    <p className="text-xs text-text-muted mt-6">
-      This module ships in a later session per the roadmap.
-    </p>
-  </div>
-);
-const placeholder = (title: string, description: string) => (
-  <Placeholder title={title} description={description} />
-);
-
 export const router = createBrowserRouter([
   { path: "/", element: <HomeRedirect/> },
   // Marketing website (public, no auth)
@@ -205,10 +201,12 @@ export const router = createBrowserRouter([
   { path: "/pricing", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingPricing/>) }] },
   { path: "/enterprise", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingEnterprise/>) }] },
   { path: "/developers", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingDevelopers/>) }] },
+  { path: "/api", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingApiPlatform/>) }] },
   { path: "/docs", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingDocs/>) }] },
+  { path: "/docs/api", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingApiDocs/>) }] },
   { path: "/blog", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
   { path: "/blog/:slug", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
-  { path: "/support", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingSupport/>) }] },
+  { path: "/support", element: withSuspense(<ContactPage />) },
   { path: "/legal", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingLegal/>) }] },
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },
   { path: "/auth/login", element: withSuspense(<LoginPage />) },
@@ -216,7 +214,11 @@ export const router = createBrowserRouter([
   // Session 114 — the API has always redirected here after a Google sign-in;
   // until now the route did not exist and the token in the fragment was lost.
   { path: "/auth/callback", element: withSuspense(<GoogleCallbackPage />) },
-  { path: "/auth/forgot", element: placeholder("Password reset", "Password reset flow is implemented when auth is hardened in later slices.") },
+  { path: "/auth/forgot", element: withSuspense(<ForgotPasswordPage />) },
+  { path: "/auth/reset", element: withSuspense(<ResetPasswordPage />) },
+
+  // Public shared-conversation view (no auth required for anyone_with_link).
+  { path: "/share/:token", element: withSuspense(<SharePage />) },
 
   // Desktop App (/d/*) — Session 16
   {
@@ -308,12 +310,15 @@ export const router = createBrowserRouter([
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },
       { path: "developers", element: withSuspense(<DeveloperPage />) },
+      { path: "developer-portal", element: withSuspense(<DeveloperPortalPage />) },
       { path: "files", element: withSuspense(<FilesPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
+      { path: "my-support", element: withSuspense(<MySupportPage />) },
       { path: "enterprise", element: withSuspense(<EnterprisePage />) },
       { path: "governance", element: withSuspense(<GovernancePage />) },
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
+      { path: "contact-center", element: withSuspense(<ContactCenterPage />) },
       { path: "tenant-isolation", element: withSuspense(<TenantIsolationPage />) },
       { path: "crm", element: withSuspense(<CrmPage />) },
       { path: "email-intel", element: withSuspense(<EmailIntelPage />) },
@@ -367,6 +372,7 @@ export const router = createBrowserRouter([
       { path: "governance", element: withSuspense(<GovernancePage />) },
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
+      { path: "api-platform", element: withSuspense(<AdminApiControlPage />) },
     ],
   },
   {

@@ -15,6 +15,7 @@ export const CreateConversationSchema = z.object({
 export const UpdateConversationSchema = z.object({
   title: z.string().min(1).max(200).optional(),
   pinned: z.boolean().optional(),
+  isArchived: z.boolean().optional(),
   modelId: z.string().optional(),
 });
 
@@ -24,12 +25,14 @@ function userConversationAccess(userId: string) {
 
 export async function listConversations(
   userId: string,
-  query: PaginationQuery & { pinned?: string }
+  query: PaginationQuery & { pinned?: string; archived?: string }
 ) {
   const ctx = await resolveUserContext(userId);
   const where: any = {
     organizationId: ctx.organizationId,
     deletedAt: null,
+    // The active sidebar shows non-archived; the Archived view passes archived=true.
+    isArchived: query.archived === "true",
     OR: [{ createdById: userId }, { participants: { some: { userId } } }],
   };
   if (query.pinned === "true") where.pinned = true;
@@ -53,6 +56,11 @@ export async function listConversations(
       title: c.title,
       summary: c.summary,
       pinned: c.pinned,
+      pinnedAt: c.pinnedAt,
+      isArchived: c.isArchived,
+      archivedAt: c.archivedAt,
+      deletedAt: c.deletedAt,
+      createdAt: c.createdAt,
       modelId: c.modelId,
       lastMessageAt: c.lastMessageAt,
       messageCount: c._count.messages,
@@ -131,7 +139,16 @@ export async function updateConversation(
     where: { id, organizationId: ctx.organizationId, deletedAt: null, ...userConversationAccess(userId) },
   });
   if (!existing) throw AppError.notFound("Conversation not found");
-  return prisma.conversation.update({ where: { id }, data: input });
+  const data: any = { ...input };
+  // Keep the pin/archive timestamps consistent with their flags when toggled
+  // through the generic PATCH endpoint.
+  if (typeof input.pinned === "boolean") {
+    data.pinnedAt = input.pinned ? (existing.pinnedAt ?? new Date()) : null;
+  }
+  if (typeof input.isArchived === "boolean") {
+    data.archivedAt = input.isArchived ? (existing.archivedAt ?? new Date()) : null;
+  }
+  return prisma.conversation.update({ where: { id }, data });
 }
 
 export async function deleteConversation(userId: string, id: string) {

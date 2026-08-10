@@ -12,6 +12,7 @@ import { GovernanceService } from "../../enterprise/governance/governance.servic
 import { DiscoveryService } from "../../enterprise/discovery/discovery.service.js";
 import { EventBusService } from "../../enterprise/events/eventBus.service.js";
 import { ApiGovernanceService } from "../../enterprise/apiGovernance/apiGovernance.service.js";
+import { jsonToYaml } from "../../utils/jsonToYaml.js";
 
 export function registerEnterpriseRoutes(router: Router) {
   router.use(authenticate);
@@ -315,8 +316,8 @@ export function registerEnterpriseRoutes(router: Router) {
     res.json(ApiGovernanceService.getOpenApi());
   });
   router.get("/api-governance/openapi.yaml", (_req, res) => {
-    res.setHeader("Content-Type", "application/yaml");
+    res.setHeader("Content-Type", "application/yaml; charset=utf-8");
     const spec = ApiGovernanceService.getOpenApi();
-    res.send("# YAML OpenAPI export is a stub. Use /openapi.json for the canonical spec.\n" + JSON.stringify(spec, null, 2));
+    res.send(jsonToYaml(spec));
   });
 }

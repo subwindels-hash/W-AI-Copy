@@ -224,11 +224,13 @@ export const EtlService = {
           throw AppError.badRequest("No source content — upload the file or provide inline payload content.", { code: "SOURCE_EMPTY" });
         }
 
-        // Parse rows (real).
+        // Parse rows (real). CSV, TSV and JSON (array or JSON-lines) are
+        // supported; any other format is rejected as unsupported, never guessed.
         let rows: unknown[];
-        if (pipe.sourceFormat === "CSV") {
-          const table = parseCsv(content, pipe.sourceConfig.delimiter ?? ",");
-          if (table.length < 2) throw AppError.badRequest("CSV has no data rows (header only).", { code: "SOURCE_EMPTY" });
+        if (pipe.sourceFormat === "CSV" || pipe.sourceFormat === "TSV") {
+          const delimiter = pipe.sourceFormat === "TSV" ? "\t" : (pipe.sourceConfig.delimiter ?? ",");
+          const table = parseCsv(content, delimiter);
+          if (table.length < 2) throw AppError.badRequest(`${pipe.sourceFormat} has no data rows (header only).`, { code: "SOURCE_EMPTY" });
           const header = table[0]!.map((h) => h.trim());
           rows = table.slice(1).map((r) => {
             const o: Record<string, unknown> = {};
@@ -238,7 +240,7 @@ export const EtlService = {
         } else if (pipe.sourceFormat === "JSON") {
           rows = parseJson(content);
         } else {
-          throw AppError.badRequest(`${pipe.sourceFormat} parsing is not yet implemented — use CSV or JSON.`, { code: "UNSUPPORTED_FORMAT" });
+          throw AppError.badRequest(`Unsupported source format "${pipe.sourceFormat}" — supported formats: CSV, TSV, JSON.`, { code: "UNSUPPORTED_FORMAT" });
         }
 
         // Map rows with per-row error isolation → DLQ.
