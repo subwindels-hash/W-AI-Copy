@@ -111,6 +111,13 @@ describe("Phase 15 — Bitget private WS", () => {
     // Login ack ignored.
     expect((c as any).parsePrivateMessage(sess, JSON.stringify({ event: "login", code: "0" }))).toEqual([]);
 
+    // Fill de-duplication keys on `${orderId}:${cTime}`, so two updates for the
+    // same order MUST carry distinct cTime values or the second fill is
+    // silently discarded. Both frames previously used Date.now(), so this test
+    // failed whenever they landed in the same millisecond — a real flake on
+    // fast machines and loaded CI runners. Fixed offsets keep it deterministic.
+    const T0 = 1_760_000_000_000;
+
     // Order partial fill.
     const orderFrame = JSON.stringify({
       action: "update",
@@ -119,7 +126,7 @@ describe("Phase 15 — Bitget private WS", () => {
         instId: "BTCUSDT", orderId: "o-100", clientOid: "cl-1",
         side: "buy", orderType: "limit", price: "60000", size: "0.1",
         fillSize: "0.05", fillPrice: "60000", priceAvg: "60000",
-        status: "partially_filled", cTime: Date.now() - 1000, uTime: Date.now(),
+        status: "partially_filled", cTime: T0 - 1000, uTime: T0,
         fee: "0.0001", feeCcy: "USDT",
       }],
     });
@@ -141,7 +148,7 @@ describe("Phase 15 — Bitget private WS", () => {
         instId: "BTCUSDT", orderId: "o-100", clientOid: "cl-1",
         side: "buy", orderType: "limit", price: "60000", size: "0.1",
         fillSize: "0.1", fillPrice: "60000", priceAvg: "60000",
-        status: "filled", cTime: Date.now() - 1000, uTime: Date.now(),
+        status: "filled", cTime: T0 + 1000, uTime: T0 + 2000,
         fee: "0.0002", feeCcy: "USDT",
       }],
     });
@@ -157,7 +164,7 @@ describe("Phase 15 — Bitget private WS", () => {
       data: [{
         instId: "BTCUSDT", holdSide: "long", total: "0.1", openPriceAvg: "60000",
         markPrice: "60500", unrealizedPL: "50", leverage: "10", marginMode: "cross",
-        cTime: Date.now(), uTime: Date.now(),
+        cTime: T0 + 3000, uTime: T0 + 3000,
       }],
     });
     const pe = (c as any).parsePrivateMessage(sess, posFrame);
@@ -169,7 +176,7 @@ describe("Phase 15 — Bitget private WS", () => {
     const posZero = JSON.stringify({
       action: "update",
       arg: { instType: "USDT-FUTURES", channel: "positions" },
-      data: [{ instId: "BTCUSDT", holdSide: "long", total: "0", uTime: Date.now() }],
+      data: [{ instId: "BTCUSDT", holdSide: "long", total: "0", uTime: T0 + 4000 }],
     });
     (c as any).parsePrivateMessage(sess, posZero);
     expect(sess.positions.has("BTC/USDT:USDT")).toBe(false);

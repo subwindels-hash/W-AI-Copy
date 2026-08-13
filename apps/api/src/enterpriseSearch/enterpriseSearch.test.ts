@@ -205,7 +205,29 @@ describe("ES — rollup (deterministic, honest)", () => {
 
   it("returns an honest empty rollup for a fresh org", async () => {
     const r = await EnterpriseSearchService.rollup(ORG_B);
-    expect(Object.values(r.indexedCounts).reduce((s, n) => s + n, 0)).toBe(0);
+
+    // Every TENANT-SCOPED entity type must be zero for an org that has never
+    // stored anything. This is the assertion that actually guards isolation.
+    //
+    // `religion`, `politics` and `life_principle` are deliberately excluded:
+    // they are curated global catalogs (static arrays exported by their
+    // services, identical for every org), not tenant data, so they are
+    // non-zero for a fresh org by design. The previous version of this test
+    // summed ALL counts and expected 0, which could never pass once those
+    // catalogs shipped — it was asserting the wrong invariant, not catching a
+    // leak.
+    const GLOBAL_CATALOGS = new Set(["religion", "politics", "life_principle"]);
+    const tenantScoped = Object.entries(r.indexedCounts).filter(([k]) => !GLOBAL_CATALOGS.has(k));
+    expect(tenantScoped.reduce((s, [, n]) => s + n, 0)).toBe(0);
+
+    // And the global catalogs must be identical across orgs — a per-org
+    // difference would mean tenant data had leaked into them.
+    const a = await EnterpriseSearchService.rollup(ORG_A);
+    for (const k of GLOBAL_CATALOGS) {
+      expect(r.indexedCounts[k as keyof typeof r.indexedCounts])
+        .toBe(a.indexedCounts[k as keyof typeof a.indexedCounts]);
+    }
+
     expect(r.recentSearches).toEqual([]);
     expect(r.lastUpdatedAt).toBeNull();
   });

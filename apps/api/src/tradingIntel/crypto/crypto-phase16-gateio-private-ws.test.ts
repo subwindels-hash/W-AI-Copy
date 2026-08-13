@@ -113,16 +113,24 @@ describe("Phase 16 — Gate.io v4 private WS", () => {
     // Error ignored.
     expect((c as any).parsePrivateMessage(sess, JSON.stringify({ error: { code: 1, message: "bad" } }))).toEqual([]);
 
+    // Fill de-duplication keys on `${orderId}:${update_time_ms}`, so two
+    // updates for the same order MUST carry distinct update_time_ms or the
+    // second fill is silently discarded. Using Date.now() for both made this
+    // test fail whenever the two messages landed in the same millisecond —
+    // which is exactly what happens on a fast machine or under a loaded CI
+    // runner. Fixed offsets from a frozen base keep it deterministic.
+    const T0 = 1_760_000_000_000;
+
     // Spot partial fill.
     const spotPartial = JSON.stringify({
-      time: Date.now(),
+      time: T0,
       channel: "spot.orders",
       event: "update",
       result: [{
         id: "s-1", currency_pair: "BTC_USDT", side: "buy", type: "limit",
         amount: "0.1", price: "60000", filled_amount: "0.03",
         avg_deal_price: "60000", status: "open", fee: "0",
-        create_time_ms: Date.now() - 1000, update_time_ms: Date.now(),
+        create_time_ms: T0 - 1000, update_time_ms: T0,
       }],
     });
     let evts = (c as any).parsePrivateMessage(sess, spotPartial);
@@ -134,14 +142,14 @@ describe("Phase 16 — Gate.io v4 private WS", () => {
 
     // Spot full fill evicts.
     const spotFill = JSON.stringify({
-      time: Date.now(),
+      time: T0 + 1000,
       channel: "spot.orders",
       event: "update",
       result: [{
         id: "s-1", currency_pair: "BTC_USDT", side: "buy", type: "limit",
         amount: "0.1", price: "60000", filled_amount: "0.1",
         avg_deal_price: "60000", status: "filled", fee: "0.0001", fee_currency: "USDT",
-        update_time_ms: Date.now(),
+        update_time_ms: T0 + 1000,
       }],
     });
     (c as any).parsePrivateMessage(sess, spotFill);
@@ -151,13 +159,13 @@ describe("Phase 16 — Gate.io v4 private WS", () => {
 
     // Futures order partial fill.
     const futPartial = JSON.stringify({
-      time: Date.now(),
+      time: T0 + 2000,
       channel: "futures.orders",
       event: "update",
       result: [{
         id: "f-1", contract: "BTC_USDT", size: "1", price: "60000",
         fill_size: "0.5", fill_price: "60000", status: "open",
-        create_time_ms: Date.now() - 1000, update_time_ms: Date.now(),
+        create_time_ms: T0 + 1000, update_time_ms: T0 + 2000,
       }],
     });
     evts = (c as any).parsePrivateMessage(sess, futPartial);
@@ -168,13 +176,13 @@ describe("Phase 16 — Gate.io v4 private WS", () => {
 
     // Futures position snapshot inserts.
     const posSnap = JSON.stringify({
-      time: Date.now(),
+      time: T0 + 3000,
       channel: "futures.positions",
       event: "update",
       result: [{
         contract: "BTC_USDT", size: "1", entry_price: "60000", mark_price: "60500",
         unrealised_pnl: "500", leverage: "10", mode: "cross",
-        update_time_ms: Date.now(),
+        update_time_ms: T0 + 3000,
       }],
     });
     evts = (c as any).parsePrivateMessage(sess, posSnap);
@@ -185,15 +193,15 @@ describe("Phase 16 — Gate.io v4 private WS", () => {
 
     // Zero-size position deletes.
     const posZero = JSON.stringify({
-      time: Date.now(), channel: "futures.positions", event: "update",
-      result: [{ contract: "BTC_USDT", size: "0", update_time_ms: Date.now() }],
+      time: T0 + 4000, channel: "futures.positions", event: "update",
+      result: [{ contract: "BTC_USDT", size: "0", update_time_ms: T0 + 4000 }],
     });
     (c as any).parsePrivateMessage(sess, posZero);
     expect(sess.positions.has("BTC/USDT:USDT")).toBe(false);
 
     // Spot balance update.
     const bal = JSON.stringify({
-      time: Date.now(), channel: "spot.balances", event: "update",
+      time: T0 + 5000, channel: "spot.balances", event: "update",
       result: [{ currency: "USDT", available: "1000", locked: "50" }],
     });
     evts = (c as any).parsePrivateMessage(sess, bal);
