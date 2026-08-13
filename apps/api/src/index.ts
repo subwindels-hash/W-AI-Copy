@@ -470,6 +470,15 @@ async function main() {
         } catch (e) { logger.warn("video-engine bootstrap failed", { err: e }); }
       }, 18200);
 
+      // AI Video Transformation Studio (Switch X / node-based compositing)
+      setTimeout(async () => {
+        try {
+          const { VtQueue } = await import("./videoTransform/transform.service.js");
+          setInterval(() => { VtQueue.tickAll().catch((err) => logger.warn("vt worker tick failed", { err })); }, 2000).unref();
+          logger.info("[video-transform] worker started");
+        } catch (e) { logger.warn("video-transform bootstrap failed", { err: e }); }
+      }, 18500);
+
       // Session 43 — Hybrid AI Execution & Model/Compute Management
       setTimeout(async () => {
         try {

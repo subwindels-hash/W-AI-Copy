@@ -2114,3 +2114,54 @@ enum WhatsAppEventStatus {
   DUPLICATE
   IGNORED
 }
+
+// ── AI Video Transformation Studio (Switch X) ──────────────────────
+model VideoTransformJob {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  workflowId      String?
+  kind            String
+  stage           String   @default("QUEUED")
+  status          String   @default("queued")
+  percent         Int      @default(0)
+  message         String?
+  input           Json
+  resultAssetIds  String[] @default([])
+  versions        Json     @default("[]")
+  error           String?
+  errorCode       String?
+  retriable       Boolean  @default(false)
+  modelId         String?
+  providerId      String?
+  creditsUsed     Int      @default(0)
+  estimatedCredits Int     @default(0)
+  estimatedSeconds Int     @default(0)
+  durationSec     Float?
+  resolution      String?
+  qualityReport   Json?
+  createdAt       DateTime @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@map("video_transform_jobs")
+}
+
+model VideoTransformWorkflow {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  name            String
+  description     String?
+  nodes           Json     @default("[]")
+  connections     Json     @default("[]")
+  version         Int      @default(1)
+  isTemplate      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, updatedAt])
+  @@map("video_transform_workflows")
+}
