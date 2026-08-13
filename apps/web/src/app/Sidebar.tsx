@@ -58,6 +58,7 @@ import {
   SquarePen,
   Leaf,
   Workflow,
+  Wand2,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -89,7 +90,8 @@ const navItems = [
   { to: "/app/music-video", icon: Clapperboard, label: "Music Video" },
   { to: "/app/video-studio", icon: Clapperboard, label: "AI Video Studio" },
   { to: "/app/video-transform", icon: Clapperboard, label: "Switch X Studio" },
-  { to: "/app/cinematic-studio", icon: Clapperboard, label: "AI Video Studio" },
+  { to: "/app/cinematic-studio", icon: Clapperboard, label: "Cinematic Studio" },
+  { to: "/app/video-editor", icon: Wand2, label: "AI Video Editor" },
   { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
   { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
   { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },
