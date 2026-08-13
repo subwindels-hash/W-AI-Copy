@@ -1678,3 +1678,19 @@
   session create. `devicesSeen` is the lifetime count and is labelled.
 - **This is not a WebXR runtime.** The console says so. A session row is
   a register entry; ending it flips status. No headset stream is opened.
+
+### Session 157 — Quantum completion (`quantum`)
+
+- **A configured token is not a connected QPU.** `WINDELS_IBM_QUANTUM_TOKEN`
+  (and the Braket/Azure/Cirq/D-Wave peers) only move a connector from
+  `not_configured` to `configured_not_connected`. `connected` is reserved
+  for a live session this process does not open.
+- **`0` qubits available is a measurement.** Disconnected connectors
+  report `qubitsAvailable: null` and `queueDepth: null`, not 0.
+- **Jobs do not complete themselves.** `submitJob` used to pick 20–200
+  qubits and, historically, invent an objective. The job stays `queued`
+  with a note. Qubit count is operator-supplied or omitted.
+- **Empty inventory is `unassessed`, not `planning` at 0% migrated.**
+  `migrationPct` is null when nothing is recorded.
+- **Reads never seed.** Same rule as spatial. Demo inventory still exists
+  behind `WINDELS_DEMO_DATA` and is tagged `demo_seed`.

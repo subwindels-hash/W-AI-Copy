@@ -7594,7 +7594,7 @@ function QuantumTab() {
       <Stat label="Readiness" value={data.readiness} tone="azure"/>
       <Stat label="Crypto Systems" value={data.cryptoInventory} tone="violet"/>
       <Stat label="Vulnerable" value={data.vulnerableCount} tone="crimson"/>
-      <Stat label="Migrated" value={`${(data.migrationPct||0).toFixed(0)}%`} tone="emerald"/>
+      <Stat label="Migrated" value={data.migrationPct == null ? "—" : `${data.migrationPct}%`} tone="emerald"/>
       <Stat label="Hybrid Jobs" value={data.hybridJobs} tone="fuchsia"/>
       <Stat label="Completed 30d" value={data.completedJobs30d} tone="teal"/>
       <Stat label="PQ Algorithms" value={(data.pqAlgorithmsSupported||[]).length} tone="amber"/>

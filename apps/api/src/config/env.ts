@@ -227,6 +227,18 @@ const EnvSchema = z.object({
   // Commands stay local_state_only either way — we never claim a dispatch.
   WINDELS_ROBOTICS_MQTT_URL: z.string().optional(),
 
+  // ── Quantum vendor declarations (Session 157). Optional. Setting a token
+  // only marks the connector configured_not_connected — never "connected".
+  WINDELS_IBM_QUANTUM_TOKEN: z.string().optional(),
+  WINDELS_AWS_BRAKET_REGION: z.string().optional(),
+  WINDELS_AZURE_QUANTUM_RESOURCE: z.string().optional(),
+  WINDELS_GOOGLE_QUANTUM_PROJECT: z.string().optional(),
+  WINDELS_DWAVE_TOKEN: z.string().optional(),
+  WINDELS_QUANTUM_LOCAL_SIM: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+
   // ── Crypto Exchange connectors (Crypto vertical, Phase 1) ──
 
   /** Global kill-switch for crypto: when true, all crypto connectors refuse

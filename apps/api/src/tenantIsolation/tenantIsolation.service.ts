@@ -265,6 +265,15 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "spa:dev", scope: "org_scoped" },
   { prefix: "spa:devhb", scope: "org_scoped" },
   { prefix: "spa:twin", scope: "org_scoped" },
+  // Session 157 quantum inventory / jobs / connector stubs / notes.
+  // Bare `q` is never added (would read `inv` as an org id).
+  { prefix: "q:inv", scope: "org_scoped" },
+  { prefix: "q:invs", scope: "org_scoped" },
+  { prefix: "q:j", scope: "org_scoped" },
+  { prefix: "q:js", scope: "org_scoped" },
+  { prefix: "q:c", scope: "org_scoped" },
+  { prefix: "q:meta", scope: "org_scoped" },
+  { prefix: "qtm:notes", scope: "org_scoped" },
   // Session 144 politics update engine: org-scoped change requests
   // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
   // the segment after the index marker (usg:evt/pay:tx shape).
