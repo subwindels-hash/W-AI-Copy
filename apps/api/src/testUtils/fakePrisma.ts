@@ -102,7 +102,14 @@ export class FakePrisma {
   /** model name -> rows */
   tables = new Map<string, Row[]>();
 
-  private rows(model: string): Row[] {
+  /**
+   * Live (mutable) row list for a model, created on first access.
+   *
+   * Public because tests legitimately need to inspect and mutate stored rows
+   * directly — e.g. ageing a timestamp to trigger a timeout path that no
+   * public service method can reach.
+   */
+  rows(model: string): Row[] {
     if (!this.tables.has(model)) this.tables.set(model, []);
     return this.tables.get(model)!;
   }
@@ -175,6 +182,19 @@ export class FakePrisma {
       // Meeting.participants -> MeetingParticipant (not the shared
       // ConversationParticipant that `participant` otherwise maps to).
       Meeting: { participant: "MeetingParticipant" },
+      // The WhatsApp channel models namespace every relation target, so
+      // `contact` on a WhatsAppConversation is a WhatsAppContact — not the
+      // generic "Contact" the singular would otherwise produce.
+      WhatsAppConversation: {
+        contact: "WhatsAppContact", channel: "WhatsAppChannel",
+        message: "WhatsAppMessage", media: "WhatsAppMedia",
+        job: "WhatsAppJob", session: "WhatsAppSession",
+      },
+      WhatsAppMessage: { conversation: "WhatsAppConversation", contact: "WhatsAppContact", media: "WhatsAppMedia" },
+      WhatsAppChannel: { contact: "WhatsAppContact", conversation: "WhatsAppConversation", message: "WhatsAppMessage" },
+      WhatsAppJob: { conversation: "WhatsAppConversation" },
+      WhatsAppSession: { conversation: "WhatsAppConversation" },
+      WhatsAppMedia: { conversation: "WhatsAppConversation", message: "WhatsAppMessage" },
     };
     if (parentModel && prefixed[parentModel]?.[singular]) {
       return prefixed[parentModel]![singular]!;
@@ -190,7 +210,7 @@ export class FakePrisma {
     // not `talkChannelId`. Try the model-derived key first, then the same name
     // with a known prefix stripped, so both conventions resolve.
     const candidates = [`${model.charAt(0).toLowerCase()}${model.slice(1)}Id`];
-    for (const prefix of ["Talk", "Canvas", "Agent", "Project"]) {
+    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp"]) {
       if (model.startsWith(prefix) && model.length > prefix.length) {
         const bare = model.slice(prefix.length);
         candidates.push(`${bare.charAt(0).toLowerCase()}${bare.slice(1)}Id`);
@@ -204,7 +224,17 @@ export class FakePrisma {
 
   private hydrate(model: string, row: Row, opts: Row = {}): Row {
     const out: Row = { ...row };
-    const inc = opts.include ?? {};
+    // Prisma resolves relations through `select` too — `select: { contact:
+    // { select: { … } } }` is as valid as the `include` form. Treating only
+    // `include` as relational made nested selects silently return undefined,
+    // which reads in a test exactly like a genuinely missing row.
+    const selectRelations: Row = {};
+    if (opts.select) {
+      for (const [field, spec] of Object.entries(opts.select as Row)) {
+        if (spec && typeof spec === "object") selectRelations[field] = spec;
+      }
+    }
+    const inc = { ...selectRelations, ...(opts.include ?? {}) };
     for (const [field, spec] of Object.entries(inc)) {
       if (!spec) continue;
       if (field === "_count") {

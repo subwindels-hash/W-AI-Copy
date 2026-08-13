@@ -309,6 +309,258 @@ export function registerWhatsAppRoutes(router: Router): void {
     } catch (e) { next(e); }
   });
 
+  /* ── Status probe (§15) ────────────────────────────────────────────── */
+
+  /**
+   * Lightweight liveness view of the channel: is it connected, is the webhook
+   * verified, is the queue draining, and what is still unconfigured.
+   *
+   * Distinct from `GET /` — that returns a 30-day analytics dashboard. This is
+   * the cheap endpoint a monitor can poll.
+   */
+  r.get("/status", async (req, res, next) => {
+    try {
+      const organizationId = requireOrg(req);
+      const row = await WhatsAppChannelService.primary(organizationId);
+
+      if (!row) {
+        return res.json({
+          ok: true,
+          data: {
+            connected: false, enabled: false, status: "NOT_CONFIGURED",
+            webhookStatus: "UNVERIFIED", phoneNumberId: null, businessAccountId: null,
+            lastWebhookAt: null, lastError: null, queueDepth: 0, dlqDepth: 0,
+            pendingJobs: 0, runningJobs: 0, activeSessions: 0,
+            configurationRequired: ["No WhatsApp channel registered for this organization."],
+          },
+        });
+      }
+
+      const cfg = resolveConfig(row);
+      const db = prisma as any;
+      const [queueDepth, dlqDepth, pendingJobs, runningJobs, activeSessions] = await Promise.all([
+        WhatsAppQueue.depth().catch(() => 0),
+        WhatsAppQueue.dlqDepth().catch(() => 0),
+        db.whatsAppJob.count({ where: { organizationId, status: "QUEUED" } }).catch(() => 0),
+        db.whatsAppJob.count({ where: { organizationId, status: "RUNNING" } }).catch(() => 0),
+        db.whatsAppSession.count({ where: { organizationId, status: "ACTIVE" } }).catch(() => 0),
+      ]);
+
+      res.json({
+        ok: true,
+        data: {
+          // "Connected" means credentials resolve AND Meta has verified the
+          // webhook. Anything less is reported honestly as not connected.
+          connected: row.status === "CONNECTED" && cfg.missing.length === 0,
+          enabled: row.enabled,
+          status: row.status,
+          webhookStatus: row.webhookStatus,
+          phoneNumberId: row.phoneNumberId,
+          businessAccountId: row.businessAccountId,
+          displayPhoneNumber: row.displayPhoneNumber,
+          apiVersion: row.apiVersion,
+          lastWebhookAt: row.lastWebhookAt?.toISOString() ?? null,
+          lastError: row.lastError ?? null,
+          lastErrorAt: row.lastErrorAt?.toISOString() ?? null,
+          queueDepth, dlqDepth, pendingJobs, runningJobs, activeSessions,
+          configurationRequired: cfg.missing.length > 0 ? cfg.missing : null,
+        },
+      });
+    } catch (e) { next(e); }
+  });
+
+  /* ── Message history (§15) ─────────────────────────────────────────── */
+
+  r.get("/messages", async (req, res, next) => {
+    try {
+      const organizationId = requireOrg(req);
+      const isAdmin = req.user?.role === "admin" || req.user?.role === "super_admin";
+      const limit = Math.min(Number(req.query.limit ?? 50) || 50, 200);
+      const conversationId = typeof req.query.conversationId === "string" ? req.query.conversationId : undefined;
+      const direction = req.query.direction === "INBOUND" || req.query.direction === "OUTBOUND"
+        ? req.query.direction : undefined;
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+      const cursor = typeof req.query.cursor === "string" ? req.query.cursor : undefined;
+
+      // Tenant scope is applied server-side and is never client-supplied.
+      const where: Record<string, unknown> = { organizationId };
+      if (conversationId) where.conversationId = conversationId;
+      if (direction) where.direction = direction;
+      if (status) where.status = status;
+
+      const rows = await prisma.whatsAppMessage.findMany({
+        where: where as any,
+        orderBy: { createdAt: "desc" },
+        take: limit + 1,
+        ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
+        include: {
+          conversation: {
+            select: { id: true, contact: { select: { phoneNumber: true, displayName: true } } },
+          },
+        },
+      });
+
+      const hasMore = rows.length > limit;
+      const page = hasMore ? rows.slice(0, limit) : rows;
+
+      res.json({
+        ok: true,
+        data: page.map((m: any) => ({
+          id: m.id,
+          conversationId: m.conversationId,
+          whatsappMessageId: m.whatsappMessageId,
+          direction: m.direction,
+          messageType: m.messageType,
+          // Message bodies are personal data. Non-admins get metadata only.
+          text: isAdmin ? m.text : null,
+          status: m.status,
+          errorCode: m.errorCode ?? null,
+          errorMessage: isAdmin ? (m.errorMessage ?? null) : null,
+          windelsMessageId: m.windelsMessageId ?? null,
+          createdAt: m.createdAt.toISOString(),
+          deliveredAt: m.deliveredAt?.toISOString() ?? null,
+          readAt: m.readAt?.toISOString() ?? null,
+          contact: {
+            displayName: m.conversation?.contact?.displayName ?? null,
+            phoneNumber: m.conversation?.contact
+              ? (isAdmin ? m.conversation.contact.phoneNumber : maskPhone(m.conversation.contact.phoneNumber))
+              : null,
+          },
+        })),
+        meta: { hasMore, nextCursor: hasMore ? page[page.length - 1].id : null },
+      });
+    } catch (e) { next(e); }
+  });
+
+  /* ── Background jobs (§7 visibility) ───────────────────────────────── */
+
+  r.get("/jobs", async (req, res, next) => {
+    try {
+      const organizationId = requireOrg(req);
+      const limit = Math.min(Number(req.query.limit ?? 25) || 25, 100);
+      const status = typeof req.query.status === "string" ? req.query.status : undefined;
+
+      const rows = await (prisma as any).whatsAppJob.findMany({
+        where: { organizationId, ...(status ? { status } : {}) },
+        orderBy: { createdAt: "desc" },
+        take: limit,
+      });
+
+      res.json({
+        ok: true,
+        data: rows.map((j: any) => ({
+          id: j.id,
+          kind: j.kind,
+          status: j.status,
+          conversationId: j.conversationId,
+          requestText: j.requestText,
+          resultText: j.resultText ?? null,
+          errorCode: j.errorCode ?? null,
+          errorMessage: j.errorMessage ?? null,
+          workflowId: j.workflowId ?? null,
+          workflowRunId: j.workflowRunId ?? null,
+          attempts: j.attempts,
+          createdAt: j.createdAt.toISOString(),
+          startedAt: j.startedAt?.toISOString() ?? null,
+          completedAt: j.completedAt?.toISOString() ?? null,
+        })),
+      });
+    } catch (e) { next(e); }
+  });
+
+  /* ── Connectivity test (§15) ───────────────────────────────────────── */
+
+  /**
+   * Verifies the stored credentials against the REAL Graph API by reading the
+   * phone number back from Meta. Nothing is simulated: a failure here is a
+   * genuine configuration or token problem.
+   *
+   * Optionally sends a real message when `to` is supplied, so an operator can
+   * prove end-to-end delivery from the dashboard.
+   */
+  r.post("/test", requireAdmin, async (req, res, next) => {
+    try {
+      const organizationId = requireOrg(req);
+      const row = await WhatsAppChannelService.primary(organizationId);
+      if (!row) throw AppError.notFound("No WhatsApp channel registered for this organization");
+
+      const cfg = resolveConfig(row);
+      if (cfg.missing.length > 0) {
+        return res.status(400).json({
+          ok: false,
+          error: {
+            code: "WHATSAPP_CONFIGURATION_REQUIRED",
+            message: `Channel is not fully configured: ${cfg.missing.join("; ")}`,
+          },
+        });
+      }
+
+      const checks: Array<{ name: string; ok: boolean; detail: string }> = [];
+
+      // 1. Credentials + Graph reachability.
+      let profile: any = null;
+      try {
+        profile = await WhatsAppClient.checkConnection(toCredentials(row));
+        checks.push({
+          name: "graph_api",
+          ok: true,
+          detail: `Authenticated as ${profile?.displayPhoneNumber ?? row.phoneNumberId}`,
+        });
+      } catch (e: any) {
+        checks.push({
+          name: "graph_api",
+          ok: false,
+          detail: e?.message ?? "Could not reach the WhatsApp Cloud API",
+        });
+      }
+
+      // 2. Webhook verification state — Meta drives this, we only report it.
+      checks.push({
+        name: "webhook",
+        ok: row.webhookStatus === "VERIFIED",
+        detail: row.webhookStatus === "VERIFIED"
+          ? `Verified${row.lastWebhookAt ? `; last event ${row.lastWebhookAt.toISOString()}` : "; no events received yet"}`
+          : "Meta has not verified this webhook URL yet. Configure the callback URL and verify token in the Meta app dashboard.",
+      });
+
+      // 3. Optional live send.
+      let sent: any = null;
+      if (typeof req.body?.to === "string" && req.body.to.trim().length >= 5) {
+        const text = typeof req.body.text === "string" && req.body.text.trim()
+          ? req.body.text.trim()
+          : "WINDELS AI OS test message — your WhatsApp channel is connected.";
+        const outcome = await WhatsAppMessageService.sendText(row, req.body.to.trim(), text, {});
+        sent = {
+          ok: outcome.ok,
+          messageId: outcome.messageId ?? null,
+          error: outcome.ok ? null : (outcome.error?.message ?? "Send failed"),
+        };
+        checks.push({
+          name: "outbound_send",
+          ok: outcome.ok,
+          detail: outcome.ok
+            ? `Delivered to Meta with id ${outcome.messageId}`
+            : (outcome.error?.message ?? "Send failed"),
+        });
+      }
+
+      const allOk = checks.every((c) => c.ok);
+      logger.info("whatsapp channel test run", { organizationId, channelId: row.id, ok: allOk });
+
+      res.json({
+        ok: true,
+        data: {
+          passed: allOk,
+          checks,
+          sent,
+          phoneNumber: profile?.displayPhoneNumber ?? row.displayPhoneNumber ?? null,
+          verifiedName: profile?.verifiedName ?? null,
+          qualityRating: profile?.qualityRating ?? null,
+        },
+      });
+    } catch (e) { next(e); }
+  });
+
   /* ── Identity linking (§8) ─────────────────────────────────────────── */
 
   r.post("/link/start", validate({ body: StartWhatsAppLinkSchema }), async (req, res, next) => {

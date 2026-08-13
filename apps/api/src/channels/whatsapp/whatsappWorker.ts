@@ -12,9 +12,15 @@ import { WhatsAppQueue, type QueuedJob } from "./whatsappQueue.js";
 import { WhatsAppPipeline } from "./whatsappPipeline.js";
 import { WhatsAppMessageService } from "./whatsappMessage.service.js";
 import { emitKernelEvent } from "./whatsappKernel.js";
+import { WhatsAppJobService } from "./whatsappJob.service.js";
+import { expireStaleSessions } from "./whatsappSession.service.js";
 
 /** Upper bound on events handled per tick so one tick can't monopolise the loop. */
 const MAX_PER_TICK = 10;
+
+/** Idle sessions are swept at most this often, not on every 2s tick. */
+const SESSION_SWEEP_MS = 5 * 60 * 1000;
+let lastSessionSweep = 0;
 
 async function markEvent(
   eventRowId: string,
@@ -122,6 +128,31 @@ export async function runWhatsAppWorkerTick(): Promise<{ handled: number; failed
       logger.error("whatsapp worker tick error", { eventRowId: job.eventRowId, err: e?.message });
       await WhatsAppQueue.retryOrPark(job).catch(() => { /* best effort */ });
       failed++;
+    }
+  }
+
+  // ── Phase 2 §7: long-running command jobs ──────────────────────────
+  // Deliberately the SAME tick as the inbound queue rather than a second
+  // scheduler: one timer, one place to reason about concurrency, and jobs
+  // can never starve the webhook drain because inbound is processed first.
+  try {
+    const jobs = await WhatsAppJobService.runTick();
+    handled += jobs.handled;
+    failed += jobs.failed;
+  } catch (e: any) {
+    logger.warn("whatsapp job tick failed", { err: e?.message });
+  }
+
+  // ── Phase 2 §8: retire idle sessions ───────────────────────────────
+  // Cheap and bounded. Expiry only closes the session window; conversation
+  // history is never touched, so a returning user keeps their context.
+  if (Date.now() - lastSessionSweep > SESSION_SWEEP_MS) {
+    lastSessionSweep = Date.now();
+    try {
+      const expired = await expireStaleSessions();
+      if (expired > 0) logger.info("whatsapp sessions expired", { count: expired });
+    } catch (e: any) {
+      logger.warn("whatsapp session sweep failed", { err: e?.message });
     }
   }
 

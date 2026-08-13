@@ -271,6 +271,102 @@ export const WhatsAppClient = {
   },
 
   /**
+   * Downloads the actual bytes of a media object.
+   *
+   * Meta's media URLs are short-lived AND require the same bearer token as the
+   * Graph API, so they cannot be handed to a browser or to an AI provider —
+   * the server must fetch them itself. `maxBytes` is enforced while streaming
+   * so a hostile or malformed Content-Length cannot exhaust memory.
+   */
+  async downloadMedia(
+    creds: WhatsAppCredentials,
+    url: string,
+    opts: { maxBytes: number; timeoutMs?: number },
+  ): Promise<{ buffer: Buffer; mimeType: string | null }> {
+    if (!/^https:\/\//i.test(url)) {
+      throw new WhatsAppApiError({
+        message: "Refusing to download media over a non-HTTPS URL",
+        code: "WHATSAPP_MEDIA_INSECURE_URL",
+        retryable: false,
+      });
+    }
+    const ctrl = new AbortController();
+    const timer = setTimeout(() => ctrl.abort(), opts.timeoutMs ?? 30_000);
+    try {
+      const res = await fetch(url, {
+        headers: { Authorization: `Bearer ${creds.accessToken}` },
+        signal: ctrl.signal,
+      });
+      if (!res.ok) {
+        const status = res.status;
+        throw new WhatsAppApiError({
+          message: `Media download failed with HTTP ${status}`,
+          code: status === 404 ? "WHATSAPP_MEDIA_EXPIRED" : "WHATSAPP_MEDIA_DOWNLOAD_FAILED",
+          httpStatus: status,
+          retryable: status === 429 || status >= 500,
+        });
+      }
+
+      const declared = Number(res.headers.get("content-length") ?? "0");
+      if (declared > opts.maxBytes) {
+        throw new WhatsAppApiError({
+          message: `Media is ${declared} bytes, over the ${opts.maxBytes} byte limit`,
+          code: "WHATSAPP_MEDIA_TOO_LARGE",
+          retryable: false,
+        });
+      }
+
+      // Stream so an understated Content-Length still cannot overrun the cap.
+      const chunks: Buffer[] = [];
+      let total = 0;
+      const body = res.body;
+      if (body) {
+        const reader = (body as ReadableStream<Uint8Array>).getReader();
+        for (;;) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          if (!value) continue;
+          total += value.byteLength;
+          if (total > opts.maxBytes) {
+            await reader.cancel().catch(() => { /* best effort */ });
+            throw new WhatsAppApiError({
+              message: `Media exceeded the ${opts.maxBytes} byte limit while downloading`,
+              code: "WHATSAPP_MEDIA_TOO_LARGE",
+              retryable: false,
+            });
+          }
+          chunks.push(Buffer.from(value));
+        }
+      } else {
+        const ab = await res.arrayBuffer();
+        if (ab.byteLength > opts.maxBytes) {
+          throw new WhatsAppApiError({
+            message: `Media exceeded the ${opts.maxBytes} byte limit`,
+            code: "WHATSAPP_MEDIA_TOO_LARGE",
+            retryable: false,
+          });
+        }
+        chunks.push(Buffer.from(ab));
+      }
+
+      return {
+        buffer: Buffer.concat(chunks),
+        mimeType: res.headers.get("content-type")?.split(";")[0]?.trim() ?? null,
+      };
+    } catch (error) {
+      if (error instanceof WhatsAppApiError) throw error;
+      const aborted = (error as Error)?.name === "AbortError";
+      throw new WhatsAppApiError({
+        message: aborted ? "Media download timed out" : `Media download failed: ${(error as Error)?.message}`,
+        code: aborted ? "WHATSAPP_MEDIA_TIMEOUT" : "WHATSAPP_MEDIA_DOWNLOAD_FAILED",
+        retryable: true,
+      });
+    } finally {
+      clearTimeout(timer);
+    }
+  },
+
+  /**
    * Live connectivity probe against the configured phone number. Used by the
    * admin UI so "connected" reflects a real API call, never an assumption.
    */

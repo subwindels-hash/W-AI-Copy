@@ -25,6 +25,20 @@ function mapRole(r: ChatMessage["role"]): "user" | "model" {
   return "user";
 }
 
+/**
+ * Maps a universal ChatMessage to Gemini's {role, parts[]} format, appending
+ * inline_data parts for any images on the turn.
+ */
+function toGeminiMessage(m: ChatMessage) {
+  const parts: Array<Record<string, unknown>> = [];
+  if (m.content) parts.push({ text: m.content });
+  for (const img of m.images ?? []) {
+    parts.push({ inline_data: { mime_type: img.mimeType, data: img.dataBase64 } });
+  }
+  if (parts.length === 0) parts.push({ text: "" });
+  return { role: mapRole(m.role), parts };
+}
+
 export class GeminiProvider implements AIProvider {
   readonly id = "gemini";
   readonly displayName = "Google Gemini";
@@ -64,9 +78,7 @@ export class GeminiProvider implements AIProvider {
     const systemInstruction = req.system ?? sysMsg?.content
       ? { role: "user", parts: [{ text: req.system ?? sysMsg!.content }] }
       : undefined;
-    const messages = req.messages.filter((m) => m.role !== "system").map((m: ChatMessage) => ({
-      role: mapRole(m.role), parts: [{ text: m.content }],
-    }));
+    const messages = req.messages.filter((m) => m.role !== "system").map(toGeminiMessage);
     const model = req.model && req.model.startsWith("gemini-") ? req.model : this.defaultModel;
 
     const ctrl = new AbortController();

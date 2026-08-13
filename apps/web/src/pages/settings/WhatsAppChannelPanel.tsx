@@ -19,6 +19,7 @@ import * as wa from "@/lib/whatsapp";
 import { cn } from "@/lib/cn";
 import { toast } from "@/lib/toast";
 import { useAuthStore } from "@/store/auth";
+import WhatsAppOperationsPanel from "./WhatsAppOperationsPanel";
 
 const ADMIN_ROLES = ["owner", "admin", "superadmin"];
 
@@ -267,6 +268,9 @@ export default function WhatsAppChannelPanel() {
           </CardContent>
         </Card>
       )}
+
+      {/* ── Operations: conversations, messages, jobs, test (§16) ──── */}
+      {channel && <WhatsAppOperationsPanel isAdmin={isAdmin} />}
 
       {/* ── Errors ─────────────────────────────────────────────────── */}
       {channel && data && data.recentErrors.length > 0 && (

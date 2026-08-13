@@ -1,9 +1,27 @@
+/**
+ * An inline image attached to a chat turn. Base64 rather than a URL because
+ * provider-hosted media (e.g. WhatsApp) sits behind short-lived, credentialed
+ * download links that an AI provider cannot fetch.
+ */
+export interface ChatImage {
+  /** e.g. "image/jpeg", "image/png", "image/webp" */
+  mimeType: string;
+  /** Raw base64 (no data: prefix). */
+  dataBase64: string;
+}
+
 export interface ChatMessage {
   role: "system" | "user" | "assistant" | "tool";
   content: string;
   name?: string;
   /** Optional tool/function call result identifier */
   toolCallId?: string;
+  /**
+   * Optional inline images for multimodal turns. Providers that advertise the
+   * "vision" capability map these to their native content blocks; providers
+   * that do not simply ignore them and see `content` alone.
+   */
+  images?: ChatImage[];
 }
 
 export interface ModelInfo {

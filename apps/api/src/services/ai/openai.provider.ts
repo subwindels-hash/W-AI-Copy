@@ -32,6 +32,25 @@ function costFor(model: string, tokensIn: number, tokensOut: number): number {
   return Math.round(((tokensIn / 1000) * prompt + (tokensOut / 1000) * completion) * 1e8);
 }
 
+/**
+ * Maps a universal ChatMessage to the OpenAI wire format, promoting a turn that
+ * carries images into the multimodal content-parts array. Text-only turns keep
+ * the plain-string form so nothing about existing behaviour changes.
+ */
+function toOpenAIMessage(m: ChatMessage) {
+  if (!m.images?.length) return { role: m.role, content: m.content };
+  return {
+    role: m.role,
+    content: [
+      ...(m.content ? [{ type: "text" as const, text: m.content }] : []),
+      ...m.images.map((img) => ({
+        type: "image_url" as const,
+        image_url: { url: `data:${img.mimeType};base64,${img.dataBase64}` },
+      })),
+    ],
+  };
+}
+
 export class OpenAIProvider implements AIProvider {
   readonly id = "openai";
   readonly displayName = "OpenAI";
@@ -85,7 +104,7 @@ export class OpenAIProvider implements AIProvider {
           model,
           messages: [
             ...(req.system ? [{ role: "system" as const, content: req.system }] : []),
-            ...req.messages.map((m: ChatMessage) => ({ role: m.role, content: m.content })),
+            ...req.messages.map(toOpenAIMessage),
           ],
           temperature: req.temperature ?? 0.7,
           max_tokens: req.maxTokens ?? 1024,
@@ -181,7 +200,7 @@ export class OpenAIProvider implements AIProvider {
           model,
           messages: [
             ...(req.system ? [{ role: "system" as const, content: req.system }] : []),
-            ...req.messages.map((m) => ({ role: m.role, content: m.content })),
+            ...req.messages.map(toOpenAIMessage),
           ],
           temperature: req.temperature ?? 0.7,
           max_tokens: req.maxTokens ?? 1024,

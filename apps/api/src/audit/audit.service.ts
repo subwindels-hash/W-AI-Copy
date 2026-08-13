@@ -80,7 +80,16 @@ export type AuditAction =
   | "ai.agent_task_complete"
   | "ai.agent_task_fail"
   | "ai.workflow_execute"
-  | "ai.prompt_evaluated";
+  | "ai.prompt_evaluated"
+  // Channels (WhatsApp and future messaging bridges)
+  | "channel.job_created"
+  | "channel.job_completed"
+  | "channel.job_failed"
+  | "channel.command_denied"
+  | "channel.stepup_requested"
+  | "channel.stepup_confirmed"
+  | "channel.stepup_cancelled"
+  | "channel.handoff_requested";
 
 export type AuditResourceType =
   | "user"
@@ -98,6 +107,8 @@ export type AuditResourceType =
   | "incident"
   | "policy"
   | "integration"
+  | "channel_job"
+  | "channel_conversation"
   | "custom";
 
 export interface AuditLogCreateInput {

@@ -30,6 +30,10 @@ vi.mock("../../services/ai/registry.js", () => ({ aiRegistry: { complete } }));
 vi.mock("./whatsappMessage.service.js", () => ({
   WhatsAppMessageService: { sendText, applyStatusUpdate, sendMedia: vi.fn(), markRead: vi.fn() },
 }));
+// The Graph media download + extraction edge. Phase 2 turns attachments into
+// prompt content, so the pipeline test stubs the network boundary only.
+const ingest = vi.fn();
+vi.mock("./whatsappMedia.service.js", () => ({ WhatsAppMediaService: { ingest } }));
 
 const { WhatsAppPipeline } = await import("./whatsappPipeline.js");
 const { classifyDomain, selectAgent } = await import("./whatsappAgentRouter.js");
@@ -115,6 +119,7 @@ beforeEach(() => {
   redis.reset();
   complete.mockReset();
   sendText.mockReset();
+  ingest.mockReset();
   complete.mockResolvedValue({
     content: "Hi Ada, how can I help?",
     usage: { tokensIn: 12, tokensOut: 8, costMicros: 40, model: "gpt-4o-mini" },
@@ -491,15 +496,63 @@ describe("channel settings", () => {
     expect(rows("WhatsAppMessage")[0].messageType).toBe("IMAGE");
   });
 
-  it("describes accepted media to the model rather than dropping the turn", async () => {
+  it("puts a transcribed voice note in front of the model as real content", async () => {
     seedOwner(); seedChannel({ mediaEnabled: true }); seedAgent();
+    ingest.mockResolvedValueOnce({
+      mediaRecordId: "med-1", status: "COMPLETED", kind: "audio",
+      text: "[Voice note transcript]\nplease reconcile the March invoices",
+      image: null, failureMessage: null, failureCode: null, configurationRequired: false,
+    });
 
     await WhatsAppPipeline.processInboundMessage(
       inbound({ messageType: "audio", text: null, mediaId: "media-2" }),
     );
 
+    expect(ingest).toHaveBeenCalledTimes(1);
     const [{ messages }] = complete.mock.calls[0];
-    expect(messages[messages.length - 1].content).toMatch(/voice note/i);
+    // The model receives the transcript itself, not a placeholder describing
+    // that a voice note arrived.
+    expect(messages[messages.length - 1].content).toMatch(/reconcile the March invoices/i);
+  });
+
+  it("sends an image to the model as vision content, not as a text stand-in", async () => {
+    seedOwner(); seedChannel({ mediaEnabled: true }); seedAgent();
+    ingest.mockResolvedValueOnce({
+      mediaRecordId: "med-2", status: "COMPLETED", kind: "image",
+      text: "[Image] a bar chart of quarterly revenue",
+      image: { mimeType: "image/jpeg", dataBase64: "AAAA" },
+      failureMessage: null, failureCode: null, configurationRequired: false,
+    });
+
+    await WhatsAppPipeline.processInboundMessage(
+      inbound({ messageType: "image", text: "what does this show?", mediaId: "media-3" }),
+    );
+
+    const [request] = complete.mock.calls[0];
+    const lastTurn = request.messages[request.messages.length - 1];
+    expect(lastTurn.images).toEqual([{ mimeType: "image/jpeg", dataBase64: "AAAA" }]);
+    // A vision turn must not be pinned to the agent's configured text model.
+    expect(request.model).toBe("");
+    expect(request.requiredCapabilities).toEqual(["vision"]);
+  });
+
+  it("tells the truth when an attachment cannot be read instead of guessing", async () => {
+    seedOwner(); seedChannel({ mediaEnabled: true }); seedAgent();
+    ingest.mockResolvedValueOnce({
+      mediaRecordId: "med-3", status: "FAILED", kind: "document",
+      text: null, image: null,
+      failureMessage: "I couldn't read that PDF — it looks to be a scan without text.",
+      failureCode: "PDF_NO_TEXT_LAYER", configurationRequired: false,
+    });
+
+    const result = await WhatsAppPipeline.processInboundMessage(
+      inbound({ messageType: "document", text: null, mediaId: "media-4" }),
+    );
+
+    // No AI call at all: we do not invent an answer about a file we could not open.
+    expect(complete).not.toHaveBeenCalled();
+    expect(result.replySent).toBe(true);
+    expect(sendText.mock.calls[0][2]).toMatch(/couldn't read that PDF/i);
   });
 
   it("rate limits a contact that exceeds its hourly quota", async () => {

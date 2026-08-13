@@ -21,6 +21,37 @@ function costFor(model: string, tokensIn: number, tokensOut: number): number {
   return Math.round(((tokensIn / 1000) * prompt + (tokensOut / 1000) * completion) * 1e8);
 }
 
+/** Character count for a content field that may be a string or block array. */
+function approxLength(content: unknown): number {
+  if (typeof content === "string") return content.length;
+  if (!Array.isArray(content)) return 0;
+  return content.reduce((acc: number, block: any) => {
+    if (typeof block?.text === "string") return acc + block.text.length;
+    // Base64 image payloads: ~750 tokens for a typical image, expressed in chars.
+    if (block?.type === "image") return acc + 3000;
+    return acc;
+  }, 0);
+}
+
+/**
+ * Maps a universal ChatMessage to Anthropic's wire format. Turns carrying
+ * images become a content-block array with base64 image sources; text-only
+ * turns keep the plain-string form.
+ */
+function toAnthropicMessage(m: ChatMessage) {
+  if (!m.images?.length) return { role: m.role, content: m.content };
+  return {
+    role: m.role,
+    content: [
+      ...m.images.map((img) => ({
+        type: "image" as const,
+        source: { type: "base64" as const, media_type: img.mimeType, data: img.dataBase64 },
+      })),
+      ...(m.content ? [{ type: "text" as const, text: m.content }] : []),
+    ],
+  };
+}
+
 export class AnthropicProvider implements AIProvider {
   readonly id = "anthropic";
   readonly displayName = "Anthropic";
@@ -68,7 +99,7 @@ export class AnthropicProvider implements AIProvider {
     // Anthropic uses a flat "system" string, not a system message.
     const sysMsg = req.messages.find((m) => m.role === "system");
     const system = req.system ?? sysMsg?.content ?? undefined;
-    const messages = req.messages.filter((m) => m.role !== "system").map((m: ChatMessage) => ({ role: m.role, content: m.content }));
+    const messages = req.messages.filter((m) => m.role !== "system").map(toAnthropicMessage);
     const model = req.model && req.model.startsWith("claude-") ? req.model : this.defaultModel;
 
     const ctrl = new AbortController();
@@ -139,7 +170,7 @@ export class AnthropicProvider implements AIProvider {
                 tokensOut = j.usage?.output_tokens ?? tokensOut;
               } catch { /* noop */ }
             } else if (eventName === "message_stop") {
-              const realIn = tokensIn || Math.ceil((req.system?.length ?? 0) / 4) + Math.ceil(messages.reduce((a, m) => a + m.content.length, 0) / 4);
+              const realIn = tokensIn || Math.ceil((req.system?.length ?? 0) / 4) + Math.ceil(messages.reduce((a, m) => a + approxLength(m.content), 0) / 4);
               const realOut = tokensOut || 0;
               yield {
                 type: "done",
@@ -151,7 +182,7 @@ export class AnthropicProvider implements AIProvider {
           }
         }
         // If stream ended without message_stop
-        const realIn = tokensIn || Math.ceil((req.system?.length ?? 0) / 4) + Math.ceil(messages.reduce((a, m) => a + m.content.length, 0) / 4);
+        const realIn = tokensIn || Math.ceil((req.system?.length ?? 0) / 4) + Math.ceil(messages.reduce((a, m) => a + approxLength(m.content), 0) / 4);
         yield {
           type: "done",
           usage: { tokensIn: realIn, tokensOut, costMicros: costFor(model, realIn, tokensOut), model },
