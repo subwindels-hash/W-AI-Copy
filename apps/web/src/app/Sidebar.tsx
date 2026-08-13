@@ -61,6 +61,7 @@ import {
   Wand2,
   Puzzle,
   Bot,
+  Box,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -133,6 +134,7 @@ const navItems = [
   { to: "/app/cyber-cloud-academy", icon: ShieldCheck, label: "Cyber & Cloud Academy" },
   { to: "/app/university", icon: GraduationCap, label: "University Education" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },
+  { to: "/app/spatial", icon: Box, label: "Spatial" },
   { to: "/app/education-engine", icon: BookOpen, label: "Higher Education Engine" },
   { to: "/app/geo-billing", icon: Globe2, label: "Geo-Billing Engine" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },

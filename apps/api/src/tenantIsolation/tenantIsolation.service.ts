@@ -250,6 +250,21 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "rob:pa", scope: "org_scoped" },
   { prefix: "rob:pas", scope: "org_scoped" },
   { prefix: "rob:tel", scope: "org_scoped" },
+  // Session 156 spatial sessions / maps / waypoints / holo / remote / devices.
+  // Keys are `spa:<entity>:<org>:…`. Bare `spa` is never added.
+  { prefix: "spa:s", scope: "org_scoped" },
+  { prefix: "spa:ss", scope: "org_scoped" },
+  { prefix: "spa:hd", scope: "org_scoped" },
+  { prefix: "spa:hds", scope: "org_scoped" },
+  { prefix: "spa:mp", scope: "org_scoped" },
+  { prefix: "spa:mps", scope: "org_scoped" },
+  { prefix: "spa:wp", scope: "org_scoped" },
+  { prefix: "spa:wps", scope: "org_scoped" },
+  { prefix: "spa:rx", scope: "org_scoped" },
+  { prefix: "spa:rxs", scope: "org_scoped" },
+  { prefix: "spa:dev", scope: "org_scoped" },
+  { prefix: "spa:devhb", scope: "org_scoped" },
+  { prefix: "spa:twin", scope: "org_scoped" },
   // Session 144 politics update engine: org-scoped change requests
   // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
   // the segment after the index marker (usg:evt/pay:tx shape).

@@ -67,6 +67,7 @@ export interface RemoteExpertSession {
 export interface SpatialDashboard {
   activeSessions: number;
   totalSessions: number;
+  /** Fingerprints that heartbeated inside the online window. */
   devicesOnline: number;
   holoDashboards: number;
   indoorMaps: number;
@@ -76,4 +77,11 @@ export interface SpatialDashboard {
   byMode: Array<{ mode: SpatialMode; count: number }>;
   recent: SpatialSession[];
   waypointsRecent: SpatialWaypoint[];
+  /** Fingerprints ever recorded. Optional — added Session 156. */
+  devicesSeen?: number;
+  provenance?: {
+    devicesOnline: string;
+    devicesSeen: string;
+    twinsVisualized: string;
+  };
 }

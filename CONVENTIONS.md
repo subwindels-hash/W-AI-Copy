@@ -1665,3 +1665,16 @@
 - **Dedicated console, PlatformPage kept.** `/app/robotics` is the
   completion surface; the buried tab stays and is null-aware. Additive-only
   held: the original six endpoints keep their paths and envelopes.
+
+### Session 156 — Spatial completion (`spatial`)
+
+- **A read path must never be a seeder.** Spatial's dashboard and four
+  list methods called `ensureBootstrapped()` on first access, and that
+  bootstrap was not gated. A GET invented a campus. The rule: gate the
+  seed, and never invoke it from a read.
+- **`devicesOnline` is a heartbeat window, not a lifetime set.** Counting
+  every fingerprint ever seen (including seeds) made a dark building look
+  occupied. Online = last seen ≤ 120s via `POST /devices/heartbeat` or
+  session create. `devicesSeen` is the lifetime count and is labelled.
+- **This is not a WebXR runtime.** The console says so. A session row is
+  a register entry; ending it flips status. No headset stream is opened.

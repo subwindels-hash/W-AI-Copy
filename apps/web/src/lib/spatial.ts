@@ -18,4 +18,8 @@ export const spatialApi = {
   listWaypoints: () => api<SpatialWaypoint[]>("/spatial/waypoints"),
   listHoloDashboards: () => api<HolographicDashboard[]>("/spatial/holo-dashboards"),
   listRemoteExpertSessions: () => api<RemoteExpertSession[]>("/spatial/remote-expert-sessions"),
+  heartbeat: (input: { fingerprint: string; deviceTarget?: SpatialSession["deviceTarget"] }) =>
+    api<{ fingerprint: string; lastSeenAt: string; organizationId: string; deviceTarget?: SpatialSession["deviceTarget"] }>(
+      "/spatial/devices/heartbeat", { method: "POST", json: input },
+    ),
 };
