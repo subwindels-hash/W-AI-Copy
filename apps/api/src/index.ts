@@ -174,6 +174,10 @@ async function main() {
           const { bootstrapExtensions } = await import("./extensions/bootstrap.js");
           await bootstrapExtensions();
         } catch (e) { logger.warn("extension platform bootstrap failed", { err: e }); }
+        try {
+          const { bootstrapPluginOs } = await import("./pluginOs/bootstrap.js");
+          await bootstrapPluginOs();
+        } catch (e) { logger.warn("plugin os bootstrap failed", { err: e }); }
       }, 7000);
 
       // Session 29 — Enterprise Platform Services (config, feature flags, runtime config, policies, multi-tenant, licensing, billing, capabilities, ontology, blueprints)
@@ -461,6 +465,24 @@ async function main() {
         } catch (e) { logger.warn("media-gen bootstrap failed", { err: e }); }
       }, 17500);
 
+      // AI Video Generation & Production Engine (incremental module addition)
+      setTimeout(async () => {
+        try {
+          const { bootstrapVideoEngine, startVideoWorker } = await import("./videoEngine/bootstrap.js");
+          await bootstrapVideoEngine(logger);
+          startVideoWorker(2000);
+        } catch (e) { logger.warn("video-engine bootstrap failed", { err: e }); }
+      }, 18200);
+
+      // AI Video Transformation Studio (Switch X / node-based compositing)
+      setTimeout(async () => {
+        try {
+          const { VtQueue } = await import("./videoTransform/transform.service.js");
+          setInterval(() => { VtQueue.tickAll().catch((err) => logger.warn("vt worker tick failed", { err })); }, 2000).unref();
+          logger.info("[video-transform] worker started");
+        } catch (e) { logger.warn("video-transform bootstrap failed", { err: e }); }
+      }, 18500);
+
       // Session 43 — Hybrid AI Execution & Model/Compute Management
       setTimeout(async () => {
         try {
@@ -476,6 +498,15 @@ async function main() {
           await bootstrapVoiceOwnership(logger);
         } catch (e) { logger.warn("voice-ownership bootstrap failed", { err: e }); }
       }, 18500);
+
+      // AI Video Studio (cinematic generation) worker
+      setTimeout(async () => {
+        try {
+          const { CinematicQueue } = await import("./cinematic/cinematic.service.js");
+          setInterval(() => { CinematicQueue.tickAll().catch((err) => logger.warn("cinematic worker failed", { err })); }, 2000).unref();
+          logger.info("[cinematic] worker started");
+        } catch (e) { logger.warn("cinematic bootstrap failed", { err: e }); }
+      }, 18700);
 
       // Session 45 — Core Enterprise Integration Checkpoint
       setTimeout(async () => {
@@ -646,6 +677,14 @@ async function main() {
         })
         .catch((e) => logger.warn("whatsapp worker failed to start", { err: e }));
     }
+
+    // Telegram channel worker — drains the inbound bot webhook queue out-of-band.
+    // Enabled when a Telegram channel is configured; safe to start always.
+    import("./channels/telegram/telegramWorker.js")
+      .then(({ TelegramWorker }) => {
+        TelegramWorker.start(2000);
+      })
+      .catch((e) => logger.warn("telegram worker failed to start", { err: e }));
   });
 
   const shutdown = async (signal: string) => {

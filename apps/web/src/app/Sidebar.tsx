@@ -58,6 +58,8 @@ import {
   SquarePen,
   Leaf,
   Workflow,
+  Wand2,
+  Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -87,6 +89,10 @@ const navItems = [
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },
   { to: "/app/music-video", icon: Clapperboard, label: "Music Video" },
+  { to: "/app/video-studio", icon: Clapperboard, label: "AI Video Studio" },
+  { to: "/app/video-transform", icon: Clapperboard, label: "Switch X Studio" },
+  { to: "/app/cinematic-studio", icon: Clapperboard, label: "Cinematic Studio" },
+  { to: "/app/video-editor", icon: Wand2, label: "AI Video Editor" },
   { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
   { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
   { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },
@@ -141,6 +147,7 @@ const navItems = [
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/app/files", icon: Folder, label: "Files" },
+  { to: "/app/extensions", icon: Puzzle, label: "Extensions" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },
 ];

@@ -44,6 +44,11 @@ const FilesPage = lazy(() => import("./pages/files/FilesPage").then((m) => ({ de
 const AdsPage = lazy(() => import("./pages/advertising/AdsPage").then((m) => ({ default: m.AdsPage })));
 const MusicStudioPage = lazy(() => import("./pages/music/MusicStudioPage").then((m) => ({ default: m.MusicStudioPage })));
 const MusicVideoPage = lazy(() => import("./pages/media/MusicVideoPage").then((m) => ({ default: m.MusicVideoPage })));
+const VideoStudioPage = lazy(() => import("./pages/video/VideoStudioPage").then((m) => ({ default: m.VideoStudioPage })));
+const VideoTransformStudioPage = lazy(() => import("./pages/videoTransform/VideoTransformStudioPage"));
+const CinematicStudioPage = lazy(() => import("./pages/cinematic/CinematicStudioPage"));
+const VideoTransformerPage = lazy(() => import("./pages/videoTransformer/VideoTransformerPage"));
+const ExtensionsPage = lazy(() => import("./pages/plugins/ExtensionsPage"));
 const BrokerCommandCenterPage = lazy(() => import("./pages/trading/BrokerCommandCenterPage").then((m) => ({ default: m.BrokerCommandCenterPage })));
 const TradingDashboardPage = lazy(() => import("./pages/trading/TradingDashboardPage").then((m) => ({ default: m.TradingDashboardPage })));
 const MarketingDashboardPage = lazy(() => import("./pages/marketing/MarketingDashboardPage").then((m) => ({ default: m.MarketingDashboardPage })));
@@ -309,6 +314,11 @@ export const router = createBrowserRouter([
       { path: "ads", element: withSuspense(<AdsPage />) },
       { path: "music", element: withSuspense(<MusicStudioPage />) },
       { path: "music-video", element: withSuspense(<MusicVideoPage />) },
+      { path: "video-studio", element: withSuspense(<VideoStudioPage />) },
+      { path: "video-transform", element: withSuspense(<VideoTransformStudioPage />) },
+      { path: "cinematic-studio", element: withSuspense(<CinematicStudioPage />) },
+      { path: "video-editor", element: withSuspense(<VideoTransformerPage />) },
+      { path: "extensions", element: withSuspense(<ExtensionsPage />) },
       { path: "developers", element: withSuspense(<DeveloperPage />) },
       { path: "developer-portal", element: withSuspense(<DeveloperPortalPage />) },
       { path: "files", element: withSuspense(<FilesPage />) },

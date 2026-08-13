@@ -20,6 +20,8 @@ import { registerMeRoutes } from "./routes/me.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
 import { registerWhatsAppRoutes } from "../channels/whatsapp/whatsapp.routes.js";
 import { registerWhatsAppWebhookRoutes } from "../channels/whatsapp/whatsappWebhook.routes.js";
+import { registerTelegramRoutes } from "../channels/telegram/telegram.routes.js";
+import { registerTelegramWebhookRoutes } from "../channels/telegram/telegramWebhook.routes.js";
 import { registerApiKeyRoutes } from "./routes/apikey.js";
 import { registerProfileRoutes } from "./routes/profile.js";
 import { registerWorkspaceRoutes } from "./routes/workspace.js";
@@ -90,6 +92,15 @@ import { registerGiftCardsRoutes } from "./routes/giftCards.js";
 import { registerGlobalCurrencyRoutes } from "./routes/globalCurrency.js";
 import { registerV76ValidationRoutes } from "./routes/v76validation.js";
 import { registerMediaGenRoutes } from "./routes/mediaGen.js";
+import { registerVideoRoutes } from "./routes/video.js";
+import { registerVideoAssetRoutes } from "./routes/videoAssets.js";
+import { registerVideoTransformRoutes } from "./routes/videoTransform.js";
+import { registerVideoTransformAssetRoutes } from "./routes/videoTransformAssets.js";
+import { registerVideoTransformerRoutes } from "./routes/videoTransformer.js";
+import { registerVideoTransformerAssetRoutes } from "./routes/videoTransformerAssets.js";
+import { registerCinematicRoutes } from "./routes/cinematic.js";
+import { registerPluginOsRoutes } from "./routes/pluginOs.js";
+import { registerCinematicAssetRoutes } from "./routes/cinematicAssets.js";
 import { registerHybridExecRoutes } from "./routes/hybridExec.js";
 import { registerVoiceOwnershipRoutes } from "./routes/voiceOwnership.js";
 import { registerCoreIntegrationRoutes } from "./routes/coreIntegration.js";
@@ -765,6 +776,12 @@ export function createApp() {
   registerWhatsAppWebhookRoutes(waWebhookRouter);
   registerWhatsAppRoutes(v1);
 
+  // /channels/telegram/webhook — PUBLIC bot updates (secret-token verified).
+  const tgWebhookRouter = express.Router();
+  v1.use("/channels/telegram/webhook", tgWebhookRouter);
+  registerTelegramWebhookRoutes(tgWebhookRouter);
+  registerTelegramRoutes(v1);
+
   // /media-factory/publishing/webhooks — PUBLIC platform callbacks (HMAC-verified,
   // no JWT). MUST mount before the authenticated media-factory router so platform
   // hubs are never rejected by the JWT middleware.
@@ -902,6 +919,45 @@ export function createApp() {
     } catch (e) { next(e); }
   });
   registerMediaGenRoutes(mgRouter);
+
+  // /video — AI Video Generation & Production Engine (incremental module).
+  // Public asset serving is mounted before authenticate so render URLs stream;
+  // the JSON project/job API requires auth.
+  const videoAssetRouter = express.Router();
+  v1.use("/video/assets", videoAssetRouter);
+  registerVideoAssetRoutes(videoAssetRouter);
+  const videoRouter = express.Router();
+  v1.use("/video", videoRouter);
+  registerVideoRoutes(videoRouter);
+
+  // /video-transform — AI Video Transformation Studio (node-based Switch X)
+  const vtAssetRouter = express.Router();
+  v1.use("/video-transform/assets", vtAssetRouter);
+  registerVideoTransformAssetRoutes(vtAssetRouter);
+  const vtRouter = express.Router();
+  v1.use("/video-transform", vtRouter);
+  registerVideoTransformRoutes(vtRouter);
+
+  // /cinematic — AI Video Studio (cinematic generation, characters, multi-shot).
+  const cinAssetRouter = express.Router();
+  v1.use("/cinematic/assets", cinAssetRouter);
+  registerCinematicAssetRoutes(cinAssetRouter);
+  const cinRouter = express.Router();
+  v1.use("/cinematic", cinRouter);
+  registerCinematicRoutes(cinRouter);
+
+  // /video-editor — AI VIDEO TRANSFORMER (natural-language selective editing).
+  const vtxAssetRouter = express.Router();
+  v1.use("/video-editor/assets", vtxAssetRouter);
+  registerVideoTransformerAssetRoutes(vtxAssetRouter);
+  const vtxRouter = express.Router();
+  v1.use("/video-editor", vtxRouter);
+  registerVideoTransformerRoutes(vtxRouter);
+
+  // /plugins — WINDELS PLUGIN OS (marketplace, install, connections, capabilities).
+  const pluginOsRouter = express.Router();
+  v1.use("/plugins", pluginOsRouter);
+  registerPluginOsRoutes(pluginOsRouter);
 
   // /hybrid-execution — Session 43: Hybrid AI Execution & Model/Compute Management
   const hxRouter = express.Router();

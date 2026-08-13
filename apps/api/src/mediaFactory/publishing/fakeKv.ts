@@ -289,6 +289,15 @@ export class FakeKv {
     return l.length;
   }
 
+  /** LPOP — remove and return the first element of a list. */
+  async lpop(key: string): Promise<string | null> {
+    const l = this.lists.get(key);
+    if (!l || l.length === 0) return null;
+    const v = l.shift()!;
+    if (l.length === 0) this.lists.delete(key);
+    return v;
+  }
+
   /**
    * LREM — remove elements equal to `value`, matching ioredis semantics:
    * count > 0 removes that many from the head, count < 0 from the tail, and

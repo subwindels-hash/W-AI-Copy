@@ -65,3 +65,6 @@ project-intake/
 media-cache/
 music-cache/
 music-video-cache/
+video-cache/
+video-transform-cache/
+cinematic-cache/
