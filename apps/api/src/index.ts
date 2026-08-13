@@ -673,6 +673,14 @@ async function main() {
         })
         .catch((e) => logger.warn("whatsapp worker failed to start", { err: e }));
     }
+
+    // Telegram channel worker — drains the inbound bot webhook queue out-of-band.
+    // Enabled when a Telegram channel is configured; safe to start always.
+    import("./channels/telegram/telegramWorker.js")
+      .then(({ TelegramWorker }) => {
+        TelegramWorker.start(2000);
+      })
+      .catch((e) => logger.warn("telegram worker failed to start", { err: e }));
   });
 
   const shutdown = async (signal: string) => {

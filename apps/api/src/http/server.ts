@@ -20,6 +20,8 @@ import { registerMeRoutes } from "./routes/me.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
 import { registerWhatsAppRoutes } from "../channels/whatsapp/whatsapp.routes.js";
 import { registerWhatsAppWebhookRoutes } from "../channels/whatsapp/whatsappWebhook.routes.js";
+import { registerTelegramRoutes } from "../channels/telegram/telegram.routes.js";
+import { registerTelegramWebhookRoutes } from "../channels/telegram/telegramWebhook.routes.js";
 import { registerApiKeyRoutes } from "./routes/apikey.js";
 import { registerProfileRoutes } from "./routes/profile.js";
 import { registerWorkspaceRoutes } from "./routes/workspace.js";
@@ -770,6 +772,12 @@ export function createApp() {
   v1.use("/channels/whatsapp/webhook", waWebhookRouter);
   registerWhatsAppWebhookRoutes(waWebhookRouter);
   registerWhatsAppRoutes(v1);
+
+  // /channels/telegram/webhook — PUBLIC bot updates (secret-token verified).
+  const tgWebhookRouter = express.Router();
+  v1.use("/channels/telegram/webhook", tgWebhookRouter);
+  registerTelegramWebhookRoutes(tgWebhookRouter);
+  registerTelegramRoutes(v1);
 
   // /media-factory/publishing/webhooks — PUBLIC platform callbacks (HMAC-verified,
   // no JWT). MUST mount before the authenticated media-factory router so platform

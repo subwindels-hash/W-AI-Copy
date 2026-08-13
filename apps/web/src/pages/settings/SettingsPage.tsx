@@ -5,6 +5,7 @@ import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import WhatsAppChannelPanel from "./WhatsAppChannelPanel";
+import TelegramChannelPanel from "./TelegramChannelPanel";
 import * as billing from "@/lib/billing";
 import { cn } from "@/lib/cn";
 import { toast } from "@/lib/toast";
@@ -129,7 +130,10 @@ export default function SettingsPage() {
         </TabsContent>
 
         <TabsContent value="channels">
-          <WhatsAppChannelPanel />
+          <div className="grid gap-4">
+            <WhatsAppChannelPanel />
+            <TelegramChannelPanel />
+          </div>
         </TabsContent>
 
         <TabsContent value="insights">

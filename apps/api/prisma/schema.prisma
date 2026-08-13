@@ -264,6 +264,7 @@ model User {
   whatsappContacts          WhatsAppContact[]     @relation("whatsapp_linked_contacts")
   whatsappJobs              WhatsAppJob[]         @relation("whatsapp_jobs_requested")
   whatsappSessions          WhatsAppSession[]     @relation("whatsapp_sessions_user")
+  telegramConnections       TelegramConnection[]  @relation("telegram_linked_users")
 
   @@index([role])
   @@index([createdAt])
@@ -328,6 +329,8 @@ model Organization {
   apiUsage          ApiUsageRecord[]
   // ── WhatsApp Channel ──
   whatsappChannels  WhatsAppChannel[]
+  // ── Telegram Channel ──
+  telegramChannels  TelegramChannel[]
 }
 
 model Workspace {
@@ -545,6 +548,7 @@ model Conversation {
   attachments    MessageAttachment[]
   shares         ConversationShare[]
   whatsappThreads WhatsAppConversation[] @relation("whatsapp_conversations")
+  telegramChats   TelegramChat[]         @relation("telegram_conversations")
 
   @@index([organizationId, lastMessageAt])
   @@index([workspaceId])
@@ -2251,4 +2255,173 @@ model CinematicCharacter {
 
   @@index([organizationId])
   @@map("cinematic_characters")
+}
+
+// ── Telegram Bot Channel ───────────────────────────────────────────
+model TelegramChannel {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String   @default("WINDELS AI")
+  botUsername     String?
+  /// Telegram-assigned numeric bot user id (from getMe). Immutable.
+  telegramBotId   BigInt?  @unique
+  status          TelegramChannelStatus @default(DISCONNECTED)
+  webhookStatus   TelegramWebhookStatus @default(UNVERIFIED)
+  enabled         Boolean  @default(false)
+  apiBaseUrl      String   @default("https://api.telegram.org")
+  /// AES-256-GCM encrypted bot token. Never returned to clients.
+  botTokenEnc     Json?
+  /// Webhook secret token used in X-Telegram-Bot-Api-Secret-Token header.
+  webhookSecretEnc Json?
+  allowedUserIds  BigInt[] @default([])
+  settings        Json     @default("{}")
+  lastWebhookAt   DateTime?
+  lastErrorAt     DateTime?
+  lastError       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  connections     TelegramConnection[]
+  chats           TelegramChat[]
+  messages        TelegramMessage[]
+  webhookEvents   TelegramWebhookEvent[]
+
+  @@index([organizationId, enabled])
+  @@map("telegram_channels")
+}
+
+model TelegramConnection {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  /// The immutable Telegram user id — never the mutable username.
+  telegramUserId    BigInt
+  telegramUsername  String?
+  displayName       String?
+  linkedUserId      String?
+  linkedUser        User?    @relation("telegram_linked_users", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  status            TelegramConnectionStatus @default(LINKED)
+  linkedAt          DateTime?
+  firstSeenAt       DateTime @default(now())
+  lastActivityAt    DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  chats             TelegramChat[]
+
+  @@unique([channelId, telegramUserId])
+  @@index([organizationId])
+  @@index([linkedUserId])
+  @@map("telegram_connections")
+}
+
+model TelegramChat {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  connectionId      String?
+  connection        TelegramConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  telegramChatId    BigInt
+  chatType          String
+  title             String?
+  windelsConversationId String?
+  windelsConversation Conversation? @relation("telegram_conversations", fields: [windelsConversationId], references: [id], onDelete: SetNull)
+  status            String   @default("OPEN")
+  lastMessageAt     DateTime @default(now())
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  messages          TelegramMessage[]
+
+  @@unique([channelId, telegramChatId])
+  @@index([organizationId, lastMessageAt])
+  @@map("telegram_chats")
+}
+
+model TelegramMessage {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  chatId            String
+  chat              TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  telegramUpdateId  BigInt   @unique
+  telegramMessageId BigInt?
+  direction         TelegramDirection
+  messageType       String   @default("TEXT")
+  text              String?
+  mediaId           String?
+  mimeType          String?
+  fileSize          Int?
+  metadata          Json     @default("{}")
+  windelsMessageId  String?
+  status            String   @default("DELIVERED")
+  deliveredAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([chatId, createdAt])
+  @@map("telegram_messages")
+}
+
+model TelegramWebhookEvent {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  updateId          BigInt   @unique
+  eventType         String
+  /// Hash of the raw update — never the raw payload.
+  payloadHash       String
+  processingStatus  String   @default("RECEIVED")
+  error             String?
+  receivedAt        DateTime @default(now())
+  processedAt       DateTime?
+
+  @@index([organizationId, receivedAt])
+  @@map("telegram_webhook_events")
+}
+
+model TelegramLinkToken {
+  tokenHash         String   @id
+  userId            String
+  organizationId    String
+  channelId         String?
+  status            String   @default("PENDING")
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([userId, status])
+  @@map("telegram_link_tokens")
+}
+
+enum TelegramChannelStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+  DISABLED
+}
+
+enum TelegramWebhookStatus {
+  UNVERIFIED
+  WEBHOOK_SET
+  VERIFIED
+  FAILED
+}
+
+enum TelegramConnectionStatus {
+  LINKED
+  UNLINKED
+  BLOCKED
+}
+
+enum TelegramDirection {
+  INBOUND
+  OUTBOUND
 }
