@@ -92,6 +92,7 @@ export * from "./mediaMetering.js";
 export * from "./advertising.js";
 export * from "./musicGen.js";
 export * from "./musicVideo.js";
+export * from "./video.js";
 export * from "./brokerIntegration.js";
 export * from "./ea.js";
 export * from "./crypto.js";

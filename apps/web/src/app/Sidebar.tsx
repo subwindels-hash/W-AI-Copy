@@ -87,6 +87,7 @@ const navItems = [
   { to: "/app/ads", icon: Megaphone, label: "Advertising" },
   { to: "/app/music", icon: Music, label: "Music Studio" },
   { to: "/app/music-video", icon: Clapperboard, label: "Music Video" },
+  { to: "/app/video-studio", icon: Clapperboard, label: "AI Video Studio" },
   { to: "/app/workforce", icon: Users, label: "Workforce Hub" },
   { to: "/app/canvas", icon: SquareDashedMousePointer, label: "Canvas" },
   { to: "/app/chat", icon: MessagesSquare, label: "AI Chat" },

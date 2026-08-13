@@ -461,6 +461,15 @@ async function main() {
         } catch (e) { logger.warn("media-gen bootstrap failed", { err: e }); }
       }, 17500);
 
+      // AI Video Generation & Production Engine (incremental module addition)
+      setTimeout(async () => {
+        try {
+          const { bootstrapVideoEngine, startVideoWorker } = await import("./videoEngine/bootstrap.js");
+          await bootstrapVideoEngine(logger);
+          startVideoWorker(2000);
+        } catch (e) { logger.warn("video-engine bootstrap failed", { err: e }); }
+      }, 18200);
+
       // Session 43 — Hybrid AI Execution & Model/Compute Management
       setTimeout(async () => {
         try {

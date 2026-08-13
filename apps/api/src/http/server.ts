@@ -90,6 +90,8 @@ import { registerGiftCardsRoutes } from "./routes/giftCards.js";
 import { registerGlobalCurrencyRoutes } from "./routes/globalCurrency.js";
 import { registerV76ValidationRoutes } from "./routes/v76validation.js";
 import { registerMediaGenRoutes } from "./routes/mediaGen.js";
+import { registerVideoRoutes } from "./routes/video.js";
+import { registerVideoAssetRoutes } from "./routes/videoAssets.js";
 import { registerHybridExecRoutes } from "./routes/hybridExec.js";
 import { registerVoiceOwnershipRoutes } from "./routes/voiceOwnership.js";
 import { registerCoreIntegrationRoutes } from "./routes/coreIntegration.js";
@@ -902,6 +904,16 @@ export function createApp() {
     } catch (e) { next(e); }
   });
   registerMediaGenRoutes(mgRouter);
+
+  // /video — AI Video Generation & Production Engine (incremental module).
+  // Public asset serving is mounted before authenticate so render URLs stream;
+  // the JSON project/job API requires auth.
+  const videoAssetRouter = express.Router();
+  v1.use("/video/assets", videoAssetRouter);
+  registerVideoAssetRoutes(videoAssetRouter);
+  const videoRouter = express.Router();
+  v1.use("/video", videoRouter);
+  registerVideoRoutes(videoRouter);
 
   // /hybrid-execution — Session 43: Hybrid AI Execution & Model/Compute Management
   const hxRouter = express.Router();
