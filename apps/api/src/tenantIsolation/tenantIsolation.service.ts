@@ -239,6 +239,17 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // knowledge by design — there is no organization segment at all.
   { prefix: "rel:sub", scope: "org_scoped" },
   { prefix: "rel:ext", scope: "shared" },
+  // Session 155 robotics fleet / telemetry / alerts / maintenance.
+  // Keys are `rob:<entity>:<org>:…` — org sits in the segment after the
+  // two-segment prefix (same derivation as cam:feed). A bare `rob` entry
+  // is deliberately never added: it would read the literal `r` as an org id.
+  { prefix: "rob:r", scope: "org_scoped" },
+  { prefix: "rob:rs", scope: "org_scoped" },
+  { prefix: "rob:mw", scope: "org_scoped" },
+  { prefix: "rob:mws", scope: "org_scoped" },
+  { prefix: "rob:pa", scope: "org_scoped" },
+  { prefix: "rob:pas", scope: "org_scoped" },
+  { prefix: "rob:tel", scope: "org_scoped" },
   // Session 144 politics update engine: org-scoped change requests
   // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
   // the segment after the index marker (usg:evt/pay:tx shape).

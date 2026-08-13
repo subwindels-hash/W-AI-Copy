@@ -165,11 +165,9 @@ describe("read paths do not seed on demand", () => {
   it("robotics dashboard reports an empty fleet without NaN", async () => {
     const d = await RoboticsService.dashboard(OID);
     expect(d.totalRobots).toBe(0);
-    // avgCpuPct divided by robots.length unconditionally; with the seed gone
-    // the empty fleet produced NaN, which serialises to null over JSON.
-    expect(d.avgCpuPct).toBe(0);
-    expect(Number.isNaN(d.avgCpuPct)).toBe(false);
-    expect(d.avgBatteryPct).toBe(0);
+    // Unmeasured averages are null, never 0-as-a-reading (Session 155).
+    expect(d.avgCpuPct).toBeNull();
+    expect(d.avgBatteryPct).toBeNull();
   });
 
   it("data marketplace dashboard reports no listings", async () => {

@@ -7210,8 +7210,8 @@ function RoboticsTab() {
       <Stat label="Offline" value={data.offline} tone="crimson"/>
       <Stat label="Sites" value={data.sites} tone="azure"/>
       <Stat label="Tasks Today" value={data.tasksCompletedToday} tone="teal"/>
-      <Stat label="Avg Battery" value={`${data.avgBatteryPct}%`} tone="emerald"/>
-      <Stat label="Avg CPU" value={`${data.avgCpuPct}%`} tone="amber"/>
+      <Stat label="Avg Battery" value={data.avgBatteryPct == null ? "—" : `${data.avgBatteryPct}%`} tone="emerald"/>
+      <Stat label="Avg CPU" value={data.avgCpuPct == null ? "—" : `${data.avgCpuPct}%`} tone="amber"/>
       <Stat label="Predictive Alerts" value={data.predictiveAlerts} tone={data.predictiveAlerts?"amber":"emerald"}/>
     </div>
     <div className="grid md:grid-cols-3 gap-3">

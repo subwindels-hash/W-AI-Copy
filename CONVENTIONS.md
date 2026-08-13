@@ -1634,3 +1634,34 @@
   broken. The real value of the completion pass: every module now has a
   console surface, e2e coverage and pinned semantics — and the scanner
   truthfully reports 0 unfinished modules.
+
+### Session 155 — Robotics completion (`robotics`)
+
+- **COMPLETE in the inventory is not the same as finished.** Robotics had
+  six routes and a PlatformPage tab, so the scanner said COMPLETE. It still
+  could not ingest a reading, reported `0` averages on an empty fleet, and
+  implied start/stop reached a machine. The unfinished-module track starts
+  with substance, not the scanner.
+- **HTTP ingest is the live connector; MQTT is a declaration.**
+  `POST /robots/:id/telemetry` stores a `device_reported` reading. Setting
+  `WINDELS_ROBOTICS_MQTT_URL` only moves MQTT from `not_configured` to
+  `configured_not_connected`. Status is never `connected` without a live
+  broker session, and this process does not open one.
+- **Averages are device-reported or null.** Operator-entered and demo_seed
+  robots keep their stored cpu/battery fields (the create/seed shape is
+  unchanged enough that existing UIs compile) but they do not enter
+  `avgCpuPct` / `avgBatteryPct`. An empty or paper fleet is `null`, never
+  `0`. The seed-gate assertion was updated to match.
+- **Commands that only write Redis are `local_state_only`.** The field
+  ships on the robot so a UI cannot present a local status flip as a
+  dispatched order.
+- **Predictive alerts cite a live reading or they do not fire.** Scanning
+  an operator-entered robot with a high stored CPU must not invent a
+  fault. Thresholds (temp ≥ 70 °C, battery ≤ 15 %, CPU ≥ 95 %) are pinned.
+- **Tenant-isolation two-segment rule, again.** Keys are `rob:<entity>:<org>:…`.
+  Catalog `rob:r`, `rob:rs`, `rob:mw`, `rob:mws`, `rob:pa`, `rob:pas`,
+  `rob:tel`. A bare `rob` entry would make the sweep read the literal `r`
+  as an organization id.
+- **Dedicated console, PlatformPage kept.** `/app/robotics` is the
+  completion surface; the buried tab stays and is null-aware. Additive-only
+  held: the original six endpoints keep their paths and envelopes.

@@ -221,6 +221,12 @@ const EnvSchema = z.object({
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
 
+  // ── Robotics MQTT broker (Session 155). Optional. When unset the HTTP
+  // ingest connector is the only live path and MQTT reports not_configured.
+  // When set, status is configured_not_connected until a broker session exists.
+  // Commands stay local_state_only either way — we never claim a dispatch.
+  WINDELS_ROBOTICS_MQTT_URL: z.string().optional(),
+
   // ── Crypto Exchange connectors (Crypto vertical, Phase 1) ──
 
   /** Global kill-switch for crypto: when true, all crypto connectors refuse
