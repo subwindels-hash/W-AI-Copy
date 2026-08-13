@@ -94,6 +94,7 @@ export * from "./musicGen.js";
 export * from "./musicVideo.js";
 export * from "./video.js";
 export * from "./videoTransform.js";
+export * from "./cinematic.js";
 export * from "./brokerIntegration.js";
 export * from "./ea.js";
 export * from "./crypto.js";

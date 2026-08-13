@@ -495,6 +495,15 @@ async function main() {
         } catch (e) { logger.warn("voice-ownership bootstrap failed", { err: e }); }
       }, 18500);
 
+      // AI Video Studio (cinematic generation) worker
+      setTimeout(async () => {
+        try {
+          const { CinematicQueue } = await import("./cinematic/cinematic.service.js");
+          setInterval(() => { CinematicQueue.tickAll().catch((err) => logger.warn("cinematic worker failed", { err })); }, 2000).unref();
+          logger.info("[cinematic] worker started");
+        } catch (e) { logger.warn("cinematic bootstrap failed", { err: e }); }
+      }, 18700);
+
       // Session 45 — Core Enterprise Integration Checkpoint
       setTimeout(async () => {
         try {

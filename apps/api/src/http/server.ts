@@ -94,6 +94,8 @@ import { registerVideoRoutes } from "./routes/video.js";
 import { registerVideoAssetRoutes } from "./routes/videoAssets.js";
 import { registerVideoTransformRoutes } from "./routes/videoTransform.js";
 import { registerVideoTransformAssetRoutes } from "./routes/videoTransformAssets.js";
+import { registerCinematicRoutes } from "./routes/cinematic.js";
+import { registerCinematicAssetRoutes } from "./routes/cinematicAssets.js";
 import { registerHybridExecRoutes } from "./routes/hybridExec.js";
 import { registerVoiceOwnershipRoutes } from "./routes/voiceOwnership.js";
 import { registerCoreIntegrationRoutes } from "./routes/coreIntegration.js";
@@ -924,6 +926,14 @@ export function createApp() {
   const vtRouter = express.Router();
   v1.use("/video-transform", vtRouter);
   registerVideoTransformRoutes(vtRouter);
+
+  // /cinematic — AI Video Studio (cinematic generation, characters, multi-shot).
+  const cinAssetRouter = express.Router();
+  v1.use("/cinematic/assets", cinAssetRouter);
+  registerCinematicAssetRoutes(cinAssetRouter);
+  const cinRouter = express.Router();
+  v1.use("/cinematic", cinRouter);
+  registerCinematicRoutes(cinRouter);
 
   // /hybrid-execution — Session 43: Hybrid AI Execution & Model/Compute Management
   const hxRouter = express.Router();

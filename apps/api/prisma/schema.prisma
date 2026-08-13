@@ -2165,3 +2165,90 @@ model VideoTransformWorkflow {
   @@index([organizationId, updatedAt])
   @@map("video_transform_workflows")
 }
+
+// ── AI Video Studio (Cinematic) ────────────────────────────────────
+model CinematicProject {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  title           String
+  prompt          String
+  enhancedPrompt  String?
+  negativePrompt  String?
+  mode            String
+  style           String
+  aspectRatio     String
+  resolution      String
+  fps             Int      @default(24)
+  durationSec     Float
+  quality         String   @default("standard")
+  audioEnabled    Boolean  @default(true)
+  dialogueEnabled Boolean  @default(false)
+  musicEnabled    Boolean  @default(true)
+  sfxEnabled      Boolean  @default(true)
+  lipSync         Boolean  @default(false)
+  seed            BigInt?
+  variation       Int      @default(1)
+  camera          Json
+  lighting        Json
+  references      Json     @default("[]")
+  characterIds    String[] @default([])
+  storyboard      Json?
+  audioTracks     Json     @default("[]")
+  generations     Json     @default("[]")
+  finalAssetId    String?
+  status          String   @default("draft")
+  version         Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, updatedAt])
+  @@map("cinematic_projects")
+}
+
+model CinematicJob {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  projectId       String
+  stage           String   @default("QUEUED")
+  percent         Int      @default(0)
+  message         String?
+  status          String   @default("queued")
+  currentShotId   String?
+  estimatedCredits Int     @default(0)
+  creditsUsed     Int      @default(0)
+  modelId         String?
+  providerId      String?
+  multiShot       Boolean  @default(false)
+  error           String?
+  errorCode       String?
+  retriable       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  @@index([organizationId, status])
+  @@index([projectId])
+  @@map("cinematic_jobs")
+}
+
+model CinematicCharacter {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  name            String
+  description     String?
+  ageRange        String?
+  voiceId         String?
+  style           String?
+  clothing        String?
+  attributes      Json     @default("{}")
+  references      Json     @default("[]")
+  identityKey     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("cinematic_characters")
+}
