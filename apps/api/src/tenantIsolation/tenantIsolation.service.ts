@@ -274,6 +274,17 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "q:c", scope: "org_scoped" },
   { prefix: "q:meta", scope: "org_scoped" },
   { prefix: "qtm:notes", scope: "org_scoped" },
+  // Session 158 legal matters / updates / contracts / research / checks.
+  { prefix: "leg:m", scope: "org_scoped" },
+  { prefix: "leg:ms", scope: "org_scoped" },
+  { prefix: "leg:u", scope: "org_scoped" },
+  { prefix: "leg:us", scope: "org_scoped" },
+  { prefix: "leg:c", scope: "org_scoped" },
+  { prefix: "leg:cs", scope: "org_scoped" },
+  { prefix: "leg:r", scope: "org_scoped" },
+  { prefix: "leg:rs", scope: "org_scoped" },
+  { prefix: "leg:chk", scope: "org_scoped" },
+  { prefix: "leg:chks", scope: "org_scoped" },
   // Session 144 politics update engine: org-scoped change requests
   // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
   // the segment after the index marker (usg:evt/pay:tx shape).

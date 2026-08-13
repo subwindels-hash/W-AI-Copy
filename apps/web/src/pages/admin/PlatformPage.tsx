@@ -7762,8 +7762,8 @@ function LegalTab() {
       <Stat label="Contracts" value={data.contractsActive} tone="violet"/>
       <Stat label="Expiring 90d" value={data.contractsExpiring90d} tone="amber"/>
       <Stat label="Reg Updates 7d" value={data.regulatoryUpdates7d} tone="fuchsia"/>
-      <Stat label="Compliance" value={`${(data.compliancePassRate*100||0).toFixed(0)}%`} tone="emerald"/>
-      <Stat label="Avg Risk" value={(data.riskAvg||0).toFixed(1)} tone={data.riskAvg>50?"crimson":"emerald"}/>
+      <Stat label="Compliance" value={data.compliancePassRate == null ? "—" : `${Math.round(data.compliancePassRate * 100)}%`} tone="emerald"/>
+      <Stat label="Avg Risk" value={data.riskAvg == null ? "—" : data.riskAvg} tone={data.riskAvg != null && data.riskAvg > 50 ? "crimson" : "emerald"}/>
       <Stat label="Open Research" value={data.openResearchTasks} tone="teal"/>
     </div>
     <div className="grid md:grid-cols-2 gap-3">

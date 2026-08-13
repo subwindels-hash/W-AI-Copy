@@ -1694,3 +1694,13 @@
   `migrationPct` is null when nothing is recorded.
 - **Reads never seed.** Same rule as spatial. Demo inventory still exists
   behind `WINDELS_DEMO_DATA` and is tagged `demo_seed`.
+
+### Session 158 — Legal completion (`legal`)
+
+- **100% compliant with no checks is a lie.** `compliancePassRate` is null
+  on an empty register. Same for `riskAvg` — 0 is a score, not a gap.
+- **Research logs the question.** It does not mint case identifiers. A
+  Westlaw/Lexis connector would be a later session; until then
+  `citations: []` and a disclosure string.
+- **Reads never seed.** The Acme/Globex campus stays behind
+  `WINDELS_DEMO_DATA`.

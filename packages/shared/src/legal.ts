@@ -73,12 +73,19 @@ export interface LegalDashboard {
   contractsExpiring90d: number;
   regulatoryUpdates7d: number;
   openResearchTasks: number;
-  compliancePassRate: number;
-  riskAvg: number;
+  /** Null when no checks are recorded — 100% is a measurement. */
+  compliancePassRate: number | null;
+  /** Null when no matters are recorded — 0 is a score. */
+  riskAvg: number | null;
   mattersByStatus: Record<string, number>;
   recentMatters: LegalMatter[];
   recentUpdates: RegulatoryUpdate[];
   recentContracts: Contract[];
   upcomingDeadlines: Array<{ id: string; title: string; dueDate: string; kind: string }>;
   topRisks: Array<{ topic: string; score: number }>;
+  provenance?: {
+    compliancePassRate: string;
+    riskAvg: string;
+    research: string;
+  };
 }

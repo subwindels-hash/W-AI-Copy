@@ -10,7 +10,7 @@ const UpdateIdParams = z.object({ id: z.string().min(3).max(64) });
 const MatterIdParams = z.object({ id: z.string().min(3).max(64) });
 const CreateMatterSchema = z.object({
   title: z.string().min(2).max(300),
-  kind: z.enum(["litigation", "contract", "regulatory", "employment", "advisory", "ip", "privacy"]),
+  kind: z.enum(["litigation", "contract", "regulatory", "employment", "advisory", "ip", "privacy", "compliance"]),
   riskScore: z.number().int().min(0).max(100),
   dueDate: z.string().datetime().optional(),
   summary: z.string().max(4000).optional(),
@@ -59,6 +59,60 @@ export function registerLegalRoutes(router: Router) {
     try {
       const org = orgOr403(req, res); if (!org) return;
       res.json({ ok: true, data: await LegalService.research(req.body.query, org, req.user!.id), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
+  router.get("/matters", async (req, res, next) => {
+    try {
+      const org = orgOr403(req, res); if (!org) return;
+      res.json({ ok: true, data: await LegalService.listMatters(org), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.get("/contracts", async (req, res, next) => {
+    try {
+      const org = orgOr403(req, res); if (!org) return;
+      res.json({ ok: true, data: await LegalService.listContracts(org), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.post("/contracts", validate({
+    body: z.object({
+      title: z.string().min(2).max(300),
+      counterparty: z.string().min(1).max(200),
+      type: z.enum(["nda", "msa", "sow", "employment", "vendor", "lease", "license", "other"]),
+      valueUsd: z.number().min(0).optional(),
+    }),
+  }), async (req, res, next) => {
+    try {
+      const org = orgOr403(req, res); if (!org) return;
+      const c = await LegalService.createContract(org, req.user!.id, req.body);
+      res.status(201).json({ ok: true, data: c, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.get("/updates", async (req, res, next) => {
+    try {
+      const org = orgOr403(req, res); if (!org) return;
+      res.json({ ok: true, data: await LegalService.listUpdates(org), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.post("/updates", validate({
+    body: z.object({
+      jurisdiction: z.string().min(1).max(80),
+      title: z.string().min(2).max(300),
+      topic: z.string().min(1).max(80),
+      impact: z.enum(["low", "medium", "high", "critical"]),
+      summary: z.string().max(4000).optional(),
+    }),
+  }), async (req, res, next) => {
+    try {
+      const org = orgOr403(req, res); if (!org) return;
+      const u = await LegalService.createUpdate(org, req.body);
+      res.status(201).json({ ok: true, data: u, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+  router.get("/research", async (req, res, next) => {
+    try {
+      const org = orgOr403(req, res); if (!org) return;
+      res.json({ ok: true, data: await LegalService.listResearch(org), meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
 
