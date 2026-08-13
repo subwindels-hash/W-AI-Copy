@@ -261,6 +261,7 @@ model User {
   conversationSharesCreated ConversationShare[] @relation("conversation_shares_created")
   ownedDeveloperApps        DeveloperApp[]        @relation("developer_app_owner")
   contactRequests           ContactRequest[]      @relation("contact_requests")
+  whatsappContacts          WhatsAppContact[]     @relation("whatsapp_linked_contacts")
 
   @@index([role])
   @@index([createdAt])
@@ -323,6 +324,8 @@ model Organization {
   apiSubscriptions  ApiSubscription[]
   apiProducts       ApiProduct[]
   apiUsage          ApiUsageRecord[]
+  // ── WhatsApp Channel ──
+  whatsappChannels  WhatsAppChannel[]
 }
 
 model Workspace {
@@ -539,6 +542,7 @@ model Conversation {
   participants   ConversationParticipant[]
   attachments    MessageAttachment[]
   shares         ConversationShare[]
+  whatsappThreads WhatsAppConversation[] @relation("whatsapp_conversations")
 
   @@index([organizationId, lastMessageAt])
   @@index([workspaceId])
@@ -1759,3 +1763,213 @@ model BillingLedgerEntry {
   @@index([giftCardId])
 }
 
+// ═══════════════════════════════════════════════════════════════════════════
+// WhatsApp Channel — a communication channel INTO the existing WINDELS AI OS.
+//
+// These tables hold channel-specific plumbing ONLY. The conversation itself,
+// its messages, the agents, the users and the billing all live in the
+// existing WINDELS models: WhatsAppConversation.conversationId points at the
+// real `Conversation`, and every AI turn is persisted as a real `Message`.
+// Credentials are stored AES-256-GCM encrypted (never plaintext).
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WhatsAppChannel {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  /// Meta phone number id — unique across the platform, used for inbound routing.
+  phoneNumberId      String   @unique
+  businessAccountId  String
+  displayPhoneNumber String?
+  status             WhatsAppChannelStatus @default(DISCONNECTED)
+  webhookStatus      WhatsAppWebhookStatus @default(UNVERIFIED)
+  enabled            Boolean  @default(false)
+  apiVersion         String   @default("v21.0")
+  /// AES-256-GCM encrypted blobs. Never returned to any client.
+  accessTokenEnc     Json?
+  appSecretEnc       Json?
+  verifyTokenEnc     Json?
+  appId              String?
+  webhookUrl         String?
+  settings           Json     @default("{}")
+  lastWebhookAt      DateTime?
+  lastErrorAt        DateTime?
+  lastError          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+
+  contacts       WhatsAppContact[]
+  conversations  WhatsAppConversation[]
+  webhookEvents  WhatsAppWebhookEvent[]
+
+  @@index([organizationId, enabled])
+  @@index([businessAccountId])
+}
+
+model WhatsAppContact {
+  id                String   @id @default(cuid())
+  organizationId    String
+  whatsappChannelId String
+  channel           WhatsAppChannel @relation(fields: [whatsappChannelId], references: [id], onDelete: Cascade)
+  /// The WhatsApp-assigned user id (wa_id).
+  whatsappUserId    String
+  phoneNumber       String
+  displayName       String?
+  /// Only set after a successful verification challenge — never on phone match alone.
+  linkedWindelsUserId String?
+  linkedUser        User?    @relation("whatsapp_linked_contacts", fields: [linkedWindelsUserId], references: [id], onDelete: SetNull)
+  linkedAt          DateTime?
+  status            WhatsAppContactStatus @default(ACTIVE)
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  conversations WhatsAppConversation[]
+
+  @@unique([whatsappChannelId, whatsappUserId])
+  @@index([organizationId])
+  @@index([linkedWindelsUserId])
+  @@index([phoneNumber])
+}
+
+model WhatsAppConversation {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  channelId             String
+  channel               WhatsAppChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  contactId             String
+  contact               WhatsAppContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  /// FK into the EXISTING WINDELS conversation system. This is the bridge.
+  windelsConversationId String?
+  windelsConversation   Conversation? @relation("whatsapp_conversations", fields: [windelsConversationId], references: [id], onDelete: SetNull)
+  status                WhatsAppConversationStatus @default(OPEN)
+  lastMessageAt         DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  messages WhatsAppMessage[]
+
+  @@unique([channelId, contactId])
+  @@index([organizationId, lastMessageAt])
+  @@index([windelsConversationId])
+}
+
+model WhatsAppMessage {
+  id                String   @id @default(cuid())
+  organizationId    String
+  conversationId    String
+  conversation      WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// Meta message id (wamid). Unique when present — the idempotency anchor.
+  whatsappMessageId String?  @unique
+  direction         WhatsAppDirection
+  messageType       WhatsAppMessageType @default(UNKNOWN)
+  text              String?
+  mediaId           String?
+  status            WhatsAppMessageStatus @default(PENDING)
+  errorCode         String?
+  errorMessage      String?
+  /// Non-sensitive envelope data only (timestamps, media mime/sha, reply refs).
+  metadata          Json     @default("{}")
+  /// Links the WhatsApp turn to the persisted WINDELS Message row.
+  windelsMessageId  String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([conversationId, createdAt])
+  @@index([organizationId, direction, status])
+  @@index([status])
+}
+
+model WhatsAppWebhookEvent {
+  id               String   @id @default(cuid())
+  organizationId   String?
+  channelId        String?
+  channel          WhatsAppChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  /// Meta's event identifier (wamid or status id) — deduplication key.
+  eventId          String   @unique
+  eventType        String
+  /// SHA-256 of the raw payload. We keep the hash, not the sensitive payload.
+  payloadHash      String
+  processingStatus WhatsAppEventStatus @default(RECEIVED)
+  attempts         Int      @default(0)
+  receivedAt       DateTime @default(now())
+  processedAt      DateTime?
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([processingStatus, receivedAt])
+  @@index([channelId, receivedAt])
+  @@index([payloadHash])
+}
+
+enum WhatsAppChannelStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+  DISABLED
+}
+
+enum WhatsAppWebhookStatus {
+  UNVERIFIED
+  VERIFIED
+  FAILING
+}
+
+enum WhatsAppContactStatus {
+  ACTIVE
+  BLOCKED
+  OPTED_OUT
+}
+
+enum WhatsAppConversationStatus {
+  OPEN
+  CLOSED
+  ESCALATED
+}
+
+enum WhatsAppDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum WhatsAppMessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  LOCATION
+  INTERACTIVE
+  BUTTON
+  REACTION
+  STICKER
+  CONTACTS
+  ORDER
+  SYSTEM
+  UNKNOWN
+}
+
+enum WhatsAppMessageStatus {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum WhatsAppEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  DUPLICATE
+  IGNORED
+}

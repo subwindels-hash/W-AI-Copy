@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
+import WhatsAppChannelPanel from "./WhatsAppChannelPanel";
 import * as billing from "@/lib/billing";
 import { cn } from "@/lib/cn";
 import { toast } from "@/lib/toast";
@@ -40,13 +41,14 @@ export default function SettingsPage() {
     <div className="max-w-5xl mx-auto p-6 space-y-6 h-[calc(100vh-56px)] overflow-y-auto">
       <div>
         <h1 className="text-2xl font-semibold text-text-bright">Settings</h1>
-        <p className="text-sm text-text-muted mt-1">Account, organization, billing.</p>
+        <p className="text-sm text-text-muted mt-1">Account, organization, billing, channels.</p>
       </div>
 
       <Tabs defaultValue="account">
         <TabsList>
           <TabsTrigger value="account">Account</TabsTrigger>
           <TabsTrigger value="billing">Billing & Plans</TabsTrigger>
+          <TabsTrigger value="channels">Channels</TabsTrigger>
           <TabsTrigger value="insights">Insights</TabsTrigger>
         </TabsList>
 
@@ -124,6 +126,10 @@ export default function SettingsPage() {
               </Card>
             </>
           )}
+        </TabsContent>
+
+        <TabsContent value="channels">
+          <WhatsAppChannelPanel />
         </TabsContent>
 
         <TabsContent value="insights">

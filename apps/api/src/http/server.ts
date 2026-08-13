@@ -18,6 +18,8 @@ import { registerDerivativesDeskRoutes } from "./routes/derivativesDesk.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
+import { registerWhatsAppRoutes } from "../channels/whatsapp/whatsapp.routes.js";
+import { registerWhatsAppWebhookRoutes } from "../channels/whatsapp/whatsappWebhook.routes.js";
 import { registerApiKeyRoutes } from "./routes/apikey.js";
 import { registerProfileRoutes } from "./routes/profile.js";
 import { registerWorkspaceRoutes } from "./routes/workspace.js";
@@ -751,6 +753,16 @@ export function createApp() {
     } catch (e) { next(e); }
   });
   registerExpertsPlatformRoutes(epRouter);
+
+  // ── WhatsApp channel ──────────────────────────────────────────────────
+  // The PUBLIC webhook mounts FIRST and without `authenticate`: Meta cannot
+  // present a WINDELS JWT. It is protected by the verify token (GET) and the
+  // HMAC app-secret signature over the raw body (POST). The authenticated
+  // admin router is mounted after it on a sibling path.
+  const waWebhookRouter = express.Router();
+  v1.use("/channels/whatsapp/webhook", waWebhookRouter);
+  registerWhatsAppWebhookRoutes(waWebhookRouter);
+  registerWhatsAppRoutes(v1);
 
   // /media-factory/publishing/webhooks — PUBLIC platform callbacks (HMAC-verified,
   // no JWT). MUST mount before the authenticated media-factory router so platform

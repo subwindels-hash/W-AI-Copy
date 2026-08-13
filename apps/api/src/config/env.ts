@@ -29,6 +29,24 @@ const EnvSchema = z.object({
   JWT_ACCESS_TTL: z.string().default("15m"),
   JWT_REFRESH_TTL: z.string().default("7d"),
 
+  // ── WhatsApp Channel (Cloud API) ────────────────────────────────────────
+  // WhatsApp is a channel INTO the existing WINDELS AI OS. Credentials are
+  // never hardcoded and never committed: they come from the environment or
+  // are stored AES-256-GCM encrypted on the channel row. The channel stays
+  // off until WHATSAPP_ENABLED is explicitly set to true.
+  WHATSAPP_ENABLED: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+  WHATSAPP_API_VERSION: z.string().regex(/^v\d+\.\d+$/).default("v21.0"),
+  WHATSAPP_PHONE_NUMBER_ID: z.string().optional(),
+  WHATSAPP_BUSINESS_ACCOUNT_ID: z.string().optional(),
+  WHATSAPP_ACCESS_TOKEN: z.string().optional(),
+  WHATSAPP_VERIFY_TOKEN: z.string().optional(),
+  WHATSAPP_APP_ID: z.string().optional(),
+  WHATSAPP_APP_SECRET: z.string().optional(),
+  WHATSAPP_WEBHOOK_URL: z.string().url().optional(),
+
   BOOTSTRAP_SUPERADMIN_EMAIL: z.string().email().default("admin@windels.ai"),
   BOOTSTRAP_SUPERADMIN_PASSWORD: z.string().min(8).default("ChangeMe!234"),
 

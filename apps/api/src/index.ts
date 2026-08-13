@@ -14,6 +14,7 @@ import { Metrics } from "./observability/metrics.js";
 let workflowTicker: NodeJS.Timeout | null = null;
 let retentionTicker: NodeJS.Timeout | null = null;
 let summarizationTicker: NodeJS.Timeout | null = null;
+let stopWhatsAppWorker: (() => void) | null = null;
 
 async function main() {
   // Wait for Redis — don't crash if temporarily down at boot (dev-friendly).
@@ -625,6 +626,18 @@ async function main() {
     }, 15 * 60_000);
     // Start alert engine (subscribes to EventBus).
     startAlertEngine();
+
+    // WhatsApp channel worker — drains the inbound webhook queue out-of-band so
+    // no AI work ever happens inside the webhook request. Only runs when the
+    // channel is enabled.
+    if (env.WHATSAPP_ENABLED) {
+      import("./channels/whatsapp/whatsappWorker.js")
+        .then(({ startWhatsAppWorker }) => {
+          stopWhatsAppWorker = startWhatsAppWorker(2000);
+          logger.info("whatsapp channel worker started");
+        })
+        .catch((e) => logger.warn("whatsapp worker failed to start", { err: e }));
+    }
   });
 
   const shutdown = async (signal: string) => {
@@ -633,6 +646,7 @@ async function main() {
     if (workflowTicker) clearInterval(workflowTicker);
     if (retentionTicker) clearInterval(retentionTicker);
     if (summarizationTicker) clearInterval(summarizationTicker);
+    if (stopWhatsAppWorker) stopWhatsAppWorker();
 
     // Stop accepting new connections and drain in-flight requests
     const closePromise = new Promise<void>((resolve) => server.close(() => resolve()));
