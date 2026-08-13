@@ -89,7 +89,17 @@ export type AuditAction =
   | "channel.stepup_requested"
   | "channel.stepup_confirmed"
   | "channel.stepup_cancelled"
-  | "channel.handoff_requested";
+  | "channel.handoff_requested"
+  // AI Commerce (WMPC-backed marketplace actions performed by agents)
+  | "commerce.access_denied"
+  | "commerce.search"
+  | "commerce.cart_modified"
+  | "commerce.checkout_created"
+  | "commerce.payment_observed"
+  | "commerce.order_viewed"
+  | "commerce.gift_card_applied"
+  | "commerce.webhook_received"
+  | "commerce.webhook_rejected";
 
 export type AuditResourceType =
   | "user"
@@ -109,6 +119,11 @@ export type AuditResourceType =
   | "integration"
   | "channel_job"
   | "channel_conversation"
+  | "commerce_cart"
+  | "commerce_checkout"
+  | "commerce_order"
+  | "commerce_payment"
+  | "commerce_product"
   | "custom";
 
 export interface AuditLogCreateInput {

@@ -155,6 +155,31 @@ const EnvSchema = z.object({
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
 
+  // ── WMPC Commerce Connector (AI Commerce Stage 1) ────────────────────────
+
+  /** Base URL of the WMPC commerce API. Required for the real HTTP adapter. */
+  WMPC_API_BASE_URL: z.string().url().optional(),
+  /** Bearer credential WINDELS presents to WMPC. Never logged. */
+  WMPC_API_KEY: z.string().min(16).optional(),
+  /** Shared secret used to verify inbound WMPC webhook signatures. */
+  WMPC_WEBHOOK_SECRET: z.string().min(16).optional(),
+  /** Per-request timeout for WMPC calls, in milliseconds. */
+  WMPC_TIMEOUT_MS: z.coerce.number().int().min(1000).max(120000).default(15000),
+  /**
+   * Opt-in mock WMPC adapter (dev/test only — AI Commerce Stage 1 §32).
+   *
+   * The connector *fails closed*: with no WMPC credentials configured, commerce
+   * operations return WMPC_UNAVAILABLE rather than inventing marketplace data.
+   * Setting this to true swaps in a fixture-backed adapter so the AI Commerce
+   * stack can be developed and tested before WMPC exists. It is rejected
+   * outright when NODE_ENV=production, so a mock marketplace can never serve
+   * real customers.
+   */
+  WINDELS_ALLOW_MOCK_WMPC: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+
   // Web Push (VAPID) — for mobile/browser push notifications (Session 15)
   VAPID_PUBLIC_KEY: z.string().min(60).default("BKwIHmBhWdeXUpnNQ_IGQOnQb0jry-q1Fw0jXO_vi9N4BChQmayUVu1ii4UeVaO4jjrV6CV7EyeFSbJWmxe46e4"),
   VAPID_PRIVATE_KEY: z.string().min(20).default("Tg9wSuR5xpNc8wspnQjuurMbNL0uRlnQLtcCzCoRVIo"),

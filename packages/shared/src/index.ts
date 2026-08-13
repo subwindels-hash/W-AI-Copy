@@ -146,3 +146,4 @@ export * from "./lifePrinciples.js";
 export * from "./geoBilling.js";
 export * from "./audit.js";
 export * from "./commerce.js";
+export * from "./aiCommerce.js";

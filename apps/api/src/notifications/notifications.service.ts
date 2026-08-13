@@ -58,7 +58,15 @@ export type NotificationCategory =
   | "ai.agent_task_complete"
   | "ai.agent_task_failed"
   | "ai.model_quota_warning"
-  | "ai.report_ready";
+  | "ai.report_ready"
+  // Commerce (WMPC marketplace events relayed to the user)
+  | "commerce.order_created"
+  | "commerce.order_shipped"
+  | "commerce.order_delivered"
+  | "commerce.order_cancelled"
+  | "commerce.payment_completed"
+  | "commerce.payment_failed"
+  | "commerce.refund_completed";
 
 export interface NotificationCreateInput {
   userId: string;

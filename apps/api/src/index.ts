@@ -144,6 +144,14 @@ async function main() {
         } catch (e) { logger.warn("program management bootstrap failed", { err: e }); }
       }, 5500);
 
+      // AI Commerce — tools, WMPC event handlers, feature flags, kernel registration
+      setTimeout(async () => {
+        try {
+          const { bootstrapAiCommerce } = await import("./aiCommerce/bootstrap.js");
+          await bootstrapAiCommerce();
+        } catch (e) { logger.warn("ai commerce bootstrap failed", { err: e }); }
+      }, 5800);
+
       // Session 26 — Engineering Observability (metrics, deployments, tech debt, pipelines, productivity)
       setTimeout(async () => {
         try {

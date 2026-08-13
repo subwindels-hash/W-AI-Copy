@@ -148,6 +148,7 @@ import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerPublishingRoutes } from "./routes/publishing.js";
 import { registerCommerceRoutes } from "./routes/commerce.js";
+import { registerAiCommerceRoutes } from "./routes/aiCommerce.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
@@ -1299,6 +1300,15 @@ export function createApp() {
   v1.use("/commerce", commerceRouter);
   commerceRouter.use(authenticate);
   registerCommerceRoutes(commerceRouter);
+
+  // /ai-commerce — AI Commerce over the WMPC marketplace. Distinct from
+  // /commerce above: this router owns NO catalog, cart, order or payment data;
+  // every call is proxied to WMPC through the commerce connector. The WMPC
+  // webhook lives inside this router and authenticates by HMAC, so the router
+  // must NOT have a blanket `authenticate` applied here.
+  const aiCommerceRouter = express.Router();
+  v1.use("/ai-commerce", aiCommerceRouter);
+  registerAiCommerceRoutes(aiCommerceRouter);
 
   // /tenant-isolation — Session 89: Tenant Isolation & Cross-Tenant Data
   // Governance (per-org isolation policies, namespace audit, cross-tenant

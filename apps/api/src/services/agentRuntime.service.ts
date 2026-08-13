@@ -10,6 +10,8 @@ import { pushEvent } from "../http/routes/events.js";
 import { renderNamedTemplate } from "./tools/promptRenderer.js";
 // Import built-in tools (auto-registers on import)
 import "./tools/builtin/index.js";
+// Import AI Commerce tools (auto-registers on import) — same registry, no second tool system
+import "../aiCommerce/tools/index.js";
 import type { TaskStatus } from "@prisma/client";
 
 /**
