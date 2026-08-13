@@ -162,6 +162,19 @@ async function setContext(orgId: string | null, bypass = false) {
   await c.query(`SELECT set_config('app.bypass_rls', $1, false)`, [bypass ? "true" : "false"]);
 }
 
+// Skipping is a convenience for laptops without PostgreSQL. In CI it would be
+// a silent hole: the job would go green having asserted nothing about tenant
+// isolation. RLS_TEST_REQUIRE_DB=true (set by the CI workflow, which provides a
+// postgres service container) turns an unreachable database into a hard
+// failure instead.
+const requireDb = process.env.RLS_TEST_REQUIRE_DB === "true";
+if (requireDb && !available) {
+  throw new Error(
+    `RLS_TEST_REQUIRE_DB=true but no PostgreSQL is reachable at ${adminUrl()}. ` +
+      `Refusing to skip: these tests are the only proof that tenant isolation is enforced.`,
+  );
+}
+
 const maybe = () => (available ? describe : describe.skip);
 
 maybe()("RLS tenant isolation (live PostgreSQL)", () => {

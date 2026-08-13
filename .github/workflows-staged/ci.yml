@@ -1,0 +1,186 @@
+name: CI
+
+# Layer 8 of the architecture review. The repository had no CI at all —
+# `.github/` was gitignored — which is why four defects reached main:
+#
+#   * a migration that referenced a table no earlier migration created
+#   * twenty models with no migration, so a from-zero replay produced 46 tables
+#     where the schema declares 66
+#   * row-level security that existed only in dead code
+#   * a logger that crashed the process on cyclic metadata, so the API could not
+#     survive its own boot
+#
+# Every one of those is caught by a job below. The migration-replay and
+# RLS-integration jobs are the important additions: a test suite running against
+# an already-migrated database cannot see schema drift, and policies in
+# pg_policies prove nothing about whether they actually isolate tenants.
+
+on:
+  push:
+    branches: [main, "arena/**"]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Placeholders only. Suites that touch Redis or Prisma substitute mocks; these
+  # exist to satisfy the Zod schema in src/config/env.ts, which calls
+  # process.exit(1) at import time when required variables are absent.
+  JWT_SECRET: ci-jwt-secret-not-a-real-secret-value
+  WINDELS_ENCRYPTION_KEY: "0000000000000000000000000000000000000000000000000000000000000001"
+  REDIS_URL: redis://127.0.0.1:6379
+  # Prisma's engine download host is not reachable from every runner, and the
+  # preflight script is deliberately non-blocking, so keep generation quiet.
+  PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING: "1"
+
+jobs:
+  build:
+    name: Lint, typecheck & build
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - name: Build shared contracts
+        run: pnpm --filter @windels/shared build
+
+      - name: Typecheck
+        run: pnpm --filter @windels/api typecheck
+
+      - name: Lint
+        run: pnpm lint
+
+      # Compiles the API to dist/ and produces the web bundle. Catches breakage
+      # that --noEmit typechecking does not, such as a failing Vite build.
+      - name: Build
+        run: pnpm build
+
+  test:
+    name: Unit & integration tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter @windels/shared build
+
+      - name: Run test suite
+        run: pnpm --filter @windels/api test
+
+  migrations:
+    name: Migration replay & RLS enforcement
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+
+    # A real PostgreSQL, because the two checks that matter here cannot be
+    # faked: replaying migrations from an empty database, and proving that RLS
+    # policies actually block cross-tenant access.
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_USER: windels
+          POSTGRES_PASSWORD: windels
+          POSTGRES_DB: postgres
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      - run: pnpm --filter @windels/shared build
+
+      # Catches DEFECT 1 (unrunnable migration) and DEFECT 2 (schema drift).
+      # Also asserts every org-scoped table has RLS ENABLED *and* FORCED — the
+      # latter matters because without FORCE the table owner, which the app
+      # connects as, bypasses RLS entirely.
+      - name: Replay every migration from zero and compare against schema.prisma
+        env:
+          DATABASE_URL: postgresql://windels:windels@127.0.0.1:5432/postgres
+        run: node scripts/validate-migrations.mjs
+
+      # Catches DEFECT 3. Proves cross-tenant SELECT/INSERT/UPDATE/DELETE are
+      # blocked by the database, using a NOSUPERUSER role — a superuser bypasses
+      # RLS unconditionally and would make these assertions vacuous.
+      - name: Prove tenant isolation against live PostgreSQL
+        working-directory: apps/api
+        env:
+          RLS_TEST_DATABASE_URL: postgresql://windels:windels@127.0.0.1:5432/postgres
+          # Without this the suite skips itself when the database is
+          # unreachable, and the job would report success having proved nothing.
+          RLS_TEST_REQUIRE_DB: "true"
+        run: npx vitest run src/services/rowLevelSecurity.rls.integration.test.ts --reporter=verbose
+
+  security:
+    name: Dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10.34.5
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - run: pnpm install --frozen-lockfile
+
+      # Advisory: reports known vulnerabilities without blocking the pipeline on
+      # transitive advisories that have no available fix. Tighten to a failing
+      # gate once the existing backlog is triaged.
+      - name: Audit dependencies
+        run: pnpm audit --audit-level high || true
+
+      # Non-advisory: a committed credential is always a build failure.
+      - name: Check for committed secrets
+        run: |
+          if git grep -nE '(BEGIN (RSA|OPENSSH|PRIVATE) KEY|sk-[A-Za-z0-9]{32,}|AKIA[0-9A-Z]{16})' \
+               -- ':!*.test.ts' ':!pnpm-lock.yaml' ':!.github/workflows/*'; then
+            echo "::error::Possible credential committed to the repository"
+            exit 1
+          fi
+          echo "No credential patterns found."
