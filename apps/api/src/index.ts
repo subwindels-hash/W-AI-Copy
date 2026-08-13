@@ -14,6 +14,7 @@ import { Metrics } from "./observability/metrics.js";
 let workflowTicker: NodeJS.Timeout | null = null;
 let retentionTicker: NodeJS.Timeout | null = null;
 let summarizationTicker: NodeJS.Timeout | null = null;
+let stopWhatsAppWorker: (() => void) | null = null;
 
 async function main() {
   // Wait for Redis — don't crash if temporarily down at boot (dev-friendly).
@@ -31,6 +32,28 @@ async function main() {
     Metrics.gauge("process.uptime_seconds", 0);
     // Seed RBAC baseline.
     await ensureRolePermissions().catch((e) => logger.warn("role permission seed failed", { err: e }));
+
+    // ── Row-Level Security enforceability check ──
+    // Tenant-isolation policies are silently inert when the application
+    // connects as a PostgreSQL SUPERUSER: the policies exist in pg_policies,
+    // an RLS audit reports "enabled", and cross-tenant queries still succeed.
+    // Surface that at boot rather than letting it pass as protection.
+    void (async () => {
+      try {
+        const { getRLSEnforcementStatus } = await import("./services/rowLevelSecurity.service.js");
+        const status = await getRLSEnforcementStatus();
+        if (status.enforced) {
+          logger.info("row-level security: policies are enforced", { role: status.role });
+        } else {
+          logger.error(
+            "row-level security: NOT ENFORCED — tenant isolation policies are inert",
+            { role: status.role, reason: status.reason },
+          );
+        }
+      } catch (e) {
+        logger.warn("row-level security enforcement check failed", { err: e });
+      }
+    })();
 
     // ── Session 18: Enterprise Engineering Framework bootstrap ──
     try {
@@ -120,6 +143,14 @@ async function main() {
           await bootstrapProgram();
         } catch (e) { logger.warn("program management bootstrap failed", { err: e }); }
       }, 5500);
+
+      // AI Commerce — tools, WMPC event handlers, feature flags, kernel registration
+      setTimeout(async () => {
+        try {
+          const { bootstrapAiCommerce } = await import("./aiCommerce/bootstrap.js");
+          await bootstrapAiCommerce();
+        } catch (e) { logger.warn("ai commerce bootstrap failed", { err: e }); }
+      }, 5800);
 
       // Session 26 — Engineering Observability (metrics, deployments, tech debt, pipelines, productivity)
       setTimeout(async () => {
@@ -603,6 +634,18 @@ async function main() {
     }, 15 * 60_000);
     // Start alert engine (subscribes to EventBus).
     startAlertEngine();
+
+    // WhatsApp channel worker — drains the inbound webhook queue out-of-band so
+    // no AI work ever happens inside the webhook request. Only runs when the
+    // channel is enabled.
+    if (env.WHATSAPP_ENABLED) {
+      import("./channels/whatsapp/whatsappWorker.js")
+        .then(({ startWhatsAppWorker }) => {
+          stopWhatsAppWorker = startWhatsAppWorker(2000);
+          logger.info("whatsapp channel worker started");
+        })
+        .catch((e) => logger.warn("whatsapp worker failed to start", { err: e }));
+    }
   });
 
   const shutdown = async (signal: string) => {
@@ -611,6 +654,7 @@ async function main() {
     if (workflowTicker) clearInterval(workflowTicker);
     if (retentionTicker) clearInterval(retentionTicker);
     if (summarizationTicker) clearInterval(summarizationTicker);
+    if (stopWhatsAppWorker) stopWhatsAppWorker();
 
     // Stop accepting new connections and drain in-flight requests
     const closePromise = new Promise<void>((resolve) => server.close(() => resolve()));

@@ -68,29 +68,27 @@ ALTER TABLE {table_name} FORCE ROW LEVEL SECURITY;
 export async function setTenantContext(context: TenantContext): Promise<void> {
   const { organizationId, userId, userRole, isSuperAdmin, bypassRLS } = context;
 
-  // Set session variables that RLS policies will use
+  // NOTE: `SET app.foo = $1` is a syntax error in PostgreSQL — SET does not
+  // accept bind parameters, so the previous tagged-template form threw
+  // "syntax error at or near $1" on every call. set_config() is the
+  // parameterisable equivalent and keeps the values bound (never interpolated),
+  // so a hostile organizationId cannot break out into SQL.
   await prisma.$executeRaw`
-    SET app.current_organization_id = ${organizationId}
+    SELECT set_config('app.current_organization_id', ${organizationId}, false)
   `;
 
   await prisma.$executeRaw`
-    SET app.current_user_id = ${userId}
+    SELECT set_config('app.current_user_id', ${userId}, false)
   `;
 
   await prisma.$executeRaw`
-    SET app.current_user_role = ${userRole}
+    SELECT set_config('app.current_user_role', ${userRole}, false)
   `;
 
   // Super-admins can bypass RLS
-  if (isSuperAdmin || bypassRLS) {
-    await prisma.$executeRaw`
-      SET app.bypass_rls = 'true'
-    `;
-  } else {
-    await prisma.$executeRaw`
-      SET app.bypass_rls = 'false'
-    `;
-  }
+  await prisma.$executeRaw`
+    SELECT set_config('app.bypass_rls', ${isSuperAdmin || bypassRLS ? "true" : "false"}, false)
+  `;
 
   logger.debug("Tenant context set", {
     organizationId,
@@ -104,26 +102,74 @@ export async function setTenantContext(context: TenantContext): Promise<void> {
  * Clear tenant context (call at end of request).
  */
 export async function clearTenantContext(): Promise<void> {
-  await prisma.$executeRaw`
-    RESET app.current_organization_id
-  `;
-
-  await prisma.$executeRaw`
-    RESET app.current_user_id
-  `;
-
-  await prisma.$executeRaw`
-    RESET app.current_user_role
-  `;
-
-  await prisma.$executeRaw`
-    RESET app.bypass_rls
-  `;
+  // RESET is valid for these custom GUCs (verified against PostgreSQL 17) and
+  // leaves current_setting(..., true) returning '' — which the tenant-isolation
+  // policies treat as "no context", the background-job escape hatch.
+  //
+  // Wrapped in a transaction so the clear is atomic. This runs on every
+  // request against a pooled connection, and a partial clear (organization
+  // reset but bypass_rls left as 'true') would hand the next request on that
+  // connection an unrestricted session. They cannot be combined into one
+  // multi-statement string: Prisma's $executeRaw uses the extended query
+  // protocol, which permits only a single statement per call.
+  await prisma.$transaction([
+    prisma.$executeRaw`RESET app.current_organization_id`,
+    prisma.$executeRaw`RESET app.current_user_id`,
+    prisma.$executeRaw`RESET app.current_user_role`,
+    prisma.$executeRaw`RESET app.bypass_rls`,
+  ]);
 }
 
 /**
  * Get current tenant context from session variables.
  */
+/**
+ * Report whether RLS can actually be enforced on this connection.
+ *
+ * PostgreSQL grants two unconditional exemptions from row-level security:
+ *
+ *   1. SUPERUSER      — always bypasses RLS. FORCE ROW LEVEL SECURITY does not
+ *                       help. Policies are parsed, stored, and then ignored.
+ *   2. The table OWNER — bypasses RLS unless the table is marked
+ *                        FORCE ROW LEVEL SECURITY.
+ *
+ * Case 2 is handled: the tenant-isolation migration sets FORCE on all 36
+ * org-scoped tables. Case 1 cannot be fixed in SQL — it is purely a function of
+ * which role the application authenticates as, i.e. of DATABASE_URL.
+ *
+ * This matters because the failure is *silent*. A deployment whose DATABASE_URL
+ * points at a superuser has 36 policies visible in pg_policies, an RLS audit
+ * that reports everything enabled, and zero actual tenant isolation. Callers
+ * should surface `enforced: false` loudly rather than assume policies imply
+ * protection.
+ */
+export async function getRLSEnforcementStatus(): Promise<{
+  enforced: boolean;
+  role: string;
+  isSuperuser: boolean;
+  reason: string;
+}> {
+  const rows = (await prisma.$queryRaw`
+    SELECT current_user::text AS role,
+           (SELECT usesuper FROM pg_user WHERE usename = current_user) AS is_superuser
+  `) as Array<{ role: string; is_superuser: boolean | null }>;
+
+  const role = rows[0]?.role ?? "unknown";
+  const isSuperuser = rows[0]?.is_superuser === true;
+
+  return {
+    enforced: !isSuperuser,
+    role,
+    isSuperuser,
+    reason: isSuperuser
+      ? `Database role "${role}" is a SUPERUSER, which bypasses row-level security ` +
+        `unconditionally. Every tenant-isolation policy is inert on this connection. ` +
+        `Point DATABASE_URL at a NOSUPERUSER role that has been granted ` +
+        `SELECT/INSERT/UPDATE/DELETE on the application tables.`
+      : `Database role "${role}" is not a superuser; row-level security policies are enforced.`,
+  };
+}
+
 export async function getTenantContext(): Promise<TenantContext | null> {
   try {
     const result = await prisma.$queryRaw`

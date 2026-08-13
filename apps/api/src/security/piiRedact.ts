@@ -32,30 +32,108 @@ export function redactString(input: string): string {
   return out;
 }
 
-export function redact<T>(value: T): T {
+const SENSITIVE_KEYS = new Set([
+  "password", "token", "accesstoken", "refreshtoken", "secret", "apikey",
+  "authorization", "auth", "cookie", "set-cookie", "pin", "ssn",
+  "creditcard", "cvv", "cardnumber", "medicalrecord", "phi", "email",
+  "phone", "mfasecret", "otp", "recoverycodes",
+]);
+
+/**
+ * Maximum nesting depth walked before we stop descending. Log metadata is
+ * never legitimately this deep; anything beyond it is a runaway structure
+ * (an ORM object graph, a socket, a parser AST) that we must not follow.
+ */
+const MAX_DEPTH = 12;
+
+/**
+ * Recursively redact PII from an arbitrary value.
+ *
+ * Safety: `logger.make()` calls this on EVERY log call with caller-supplied
+ * metadata, so it must never throw and never hang. Two guards enforce that:
+ *
+ *   1. Cycle detection — the set of ancestors on the current path is tracked,
+ *      so a self- or mutually-referencing object yields "[Circular]" instead
+ *      of recursing forever. Ancestors are removed on the way back up, so a
+ *      value legitimately repeated across sibling branches is still redacted
+ *      in full rather than being falsely reported as a cycle.
+ *   2. Depth cap — see MAX_DEPTH.
+ *
+ * Regression context: without these, logging any cyclic object (an Express
+ * req/res, an Error with a circular `cause`, a Prisma error) crashed the
+ * process with "RangeError: Maximum call stack size exceeded".
+ */
+function redactInner(value: unknown, ancestors: Set<object>, depth: number): unknown {
   if (value == null) return value;
-  if (typeof value === "string") return redactString(value) as unknown as T;
-  if (typeof value !== "object") return value;
-  if (Array.isArray(value)) return value.map(v => redact(v)) as unknown as T;
-  const out: Record<string, unknown> = {};
-  const SENSITIVE_KEYS = new Set([
-    "password", "token", "accessToken", "refreshToken", "secret", "apiKey",
-    "authorization", "auth", "cookie", "set-cookie", "pin", "ssn",
-    "creditCard", "cvv", "cardNumber", "medicalRecord", "phi", "email",
-    "phone", "mfaSecret", "otp", "recoveryCodes",
-  ]);
-  for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
-    if (SENSITIVE_KEYS.has(k.toLowerCase())) {
-      out[k] = "[REDACTED]";
-    } else if (typeof v === "string") {
-      out[k] = redactString(v);
-    } else if (typeof v === "object") {
-      out[k] = redact(v);
-    } else {
-      out[k] = v;
-    }
+  if (typeof value === "string") return redactString(value);
+  if (typeof value === "bigint") return `${value}`;
+  if (typeof value !== "object") {
+    // Functions carry no PII and are not serializable — elide them.
+    return typeof value === "function" ? "[Function]" : value;
   }
-  return out as unknown as T;
+
+  // Value types that must be passed through rather than walked key-by-key.
+  if (value instanceof Date) return value;
+  if (value instanceof RegExp) return value.toString();
+  if (typeof Buffer !== "undefined" && Buffer.isBuffer(value)) return `[Buffer ${value.length}b]`;
+
+  if (ancestors.has(value as object)) return "[Circular]";
+  if (depth >= MAX_DEPTH) return "[MaxDepth]";
+
+  ancestors.add(value as object);
+  try {
+    if (Array.isArray(value)) {
+      return value.map((v) => redactInner(v, ancestors, depth + 1));
+    }
+
+    if (value instanceof Map) {
+      const m: Record<string, unknown> = {};
+      for (const [k, v] of value.entries()) {
+        const key = String(k);
+        m[key] = SENSITIVE_KEYS.has(key.toLowerCase())
+          ? "[REDACTED]"
+          : redactInner(v, ancestors, depth + 1);
+      }
+      return m;
+    }
+
+    if (value instanceof Set) {
+      return [...value].map((v) => redactInner(v, ancestors, depth + 1));
+    }
+
+    // Errors have non-enumerable message/stack, so copy them explicitly —
+    // otherwise a logged error redacts down to an empty object.
+    if (value instanceof Error) {
+      const e: Record<string, unknown> = {
+        name: value.name,
+        message: redactString(value.message),
+      };
+      if (value.stack) e.stack = redactString(value.stack);
+      for (const [k, v] of Object.entries(value)) {
+        if (k === "name" || k === "message" || k === "stack") continue;
+        e[k] = SENSITIVE_KEYS.has(k.toLowerCase())
+          ? "[REDACTED]"
+          : redactInner(v, ancestors, depth + 1);
+      }
+      return e;
+    }
+
+    const out: Record<string, unknown> = {};
+    for (const [k, v] of Object.entries(value as Record<string, unknown>)) {
+      out[k] = SENSITIVE_KEYS.has(k.toLowerCase())
+        ? "[REDACTED]"
+        : redactInner(v, ancestors, depth + 1);
+    }
+    return out;
+  } finally {
+    // Pop the current node so sibling branches sharing a reference are not
+    // misclassified as cycles.
+    ancestors.delete(value as object);
+  }
+}
+
+export function redact<T>(value: T): T {
+  return redactInner(value, new Set<object>(), 0) as T;
 }
 
 /**

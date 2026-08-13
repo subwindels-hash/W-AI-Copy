@@ -41,4 +41,15 @@ export const Events = {
   PLUGIN_INSTALLED: "plugin.installed",
   INTEGRATION_CONNECTED: "integration.connected",
   USER_JOINED: "user.joined",
+  // AI Commerce — WMPC-originated marketplace events (§18)
+  COMMERCE_PAYMENT_COMPLETED: "commerce.payment.completed",
+  COMMERCE_PAYMENT_FAILED: "commerce.payment.failed",
+  COMMERCE_ORDER_CREATED: "commerce.order.created",
+  COMMERCE_ORDER_UPDATED: "commerce.order.updated",
+  COMMERCE_ORDER_SHIPPED: "commerce.order.shipped",
+  COMMERCE_ORDER_DELIVERED: "commerce.order.delivered",
+  COMMERCE_ORDER_CANCELLED: "commerce.order.cancelled",
+  COMMERCE_REFUND_COMPLETED: "commerce.refund.completed",
+  COMMERCE_GIFTCARD_APPLIED: "commerce.giftcard.applied",
+  COMMERCE_CHECKOUT_COMPLETED: "commerce.checkout.completed",
 } as const;

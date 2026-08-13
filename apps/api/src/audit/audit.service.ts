@@ -80,7 +80,26 @@ export type AuditAction =
   | "ai.agent_task_complete"
   | "ai.agent_task_fail"
   | "ai.workflow_execute"
-  | "ai.prompt_evaluated";
+  | "ai.prompt_evaluated"
+  // Channels (WhatsApp and future messaging bridges)
+  | "channel.job_created"
+  | "channel.job_completed"
+  | "channel.job_failed"
+  | "channel.command_denied"
+  | "channel.stepup_requested"
+  | "channel.stepup_confirmed"
+  | "channel.stepup_cancelled"
+  | "channel.handoff_requested"
+  // AI Commerce (WMPC-backed marketplace actions performed by agents)
+  | "commerce.access_denied"
+  | "commerce.search"
+  | "commerce.cart_modified"
+  | "commerce.checkout_created"
+  | "commerce.payment_observed"
+  | "commerce.order_viewed"
+  | "commerce.gift_card_applied"
+  | "commerce.webhook_received"
+  | "commerce.webhook_rejected";
 
 export type AuditResourceType =
   | "user"
@@ -98,6 +117,13 @@ export type AuditResourceType =
   | "incident"
   | "policy"
   | "integration"
+  | "channel_job"
+  | "channel_conversation"
+  | "commerce_cart"
+  | "commerce_checkout"
+  | "commerce_order"
+  | "commerce_payment"
+  | "commerce_product"
   | "custom";
 
 export interface AuditLogCreateInput {

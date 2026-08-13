@@ -18,6 +18,8 @@ import { registerDerivativesDeskRoutes } from "./routes/derivativesDesk.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
+import { registerWhatsAppRoutes } from "../channels/whatsapp/whatsapp.routes.js";
+import { registerWhatsAppWebhookRoutes } from "../channels/whatsapp/whatsappWebhook.routes.js";
 import { registerApiKeyRoutes } from "./routes/apikey.js";
 import { registerProfileRoutes } from "./routes/profile.js";
 import { registerWorkspaceRoutes } from "./routes/workspace.js";
@@ -146,6 +148,7 @@ import { registerMusicGenRoutes } from "./routes/musicGen.js";
 import { registerMusicVideoRoutes } from "./routes/musicVideo.js";
 import { registerPublishingRoutes } from "./routes/publishing.js";
 import { registerCommerceRoutes } from "./routes/commerce.js";
+import { registerAiCommerceRoutes } from "./routes/aiCommerce.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
@@ -752,6 +755,16 @@ export function createApp() {
   });
   registerExpertsPlatformRoutes(epRouter);
 
+  // ── WhatsApp channel ──────────────────────────────────────────────────
+  // The PUBLIC webhook mounts FIRST and without `authenticate`: Meta cannot
+  // present a WINDELS JWT. It is protected by the verify token (GET) and the
+  // HMAC app-secret signature over the raw body (POST). The authenticated
+  // admin router is mounted after it on a sibling path.
+  const waWebhookRouter = express.Router();
+  v1.use("/channels/whatsapp/webhook", waWebhookRouter);
+  registerWhatsAppWebhookRoutes(waWebhookRouter);
+  registerWhatsAppRoutes(v1);
+
   // /media-factory/publishing/webhooks — PUBLIC platform callbacks (HMAC-verified,
   // no JWT). MUST mount before the authenticated media-factory router so platform
   // hubs are never rejected by the JWT middleware.
@@ -1287,6 +1300,15 @@ export function createApp() {
   v1.use("/commerce", commerceRouter);
   commerceRouter.use(authenticate);
   registerCommerceRoutes(commerceRouter);
+
+  // /ai-commerce — AI Commerce over the WMPC marketplace. Distinct from
+  // /commerce above: this router owns NO catalog, cart, order or payment data;
+  // every call is proxied to WMPC through the commerce connector. The WMPC
+  // webhook lives inside this router and authenticates by HMAC, so the router
+  // must NOT have a blanket `authenticate` applied here.
+  const aiCommerceRouter = express.Router();
+  v1.use("/ai-commerce", aiCommerceRouter);
+  registerAiCommerceRoutes(aiCommerceRouter);
 
   // /tenant-isolation — Session 89: Tenant Isolation & Cross-Tenant Data
   // Governance (per-org isolation policies, namespace audit, cross-tenant
