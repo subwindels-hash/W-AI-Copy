@@ -174,6 +174,10 @@ async function main() {
           const { bootstrapExtensions } = await import("./extensions/bootstrap.js");
           await bootstrapExtensions();
         } catch (e) { logger.warn("extension platform bootstrap failed", { err: e }); }
+        try {
+          const { bootstrapPluginOs } = await import("./pluginOs/bootstrap.js");
+          await bootstrapPluginOs();
+        } catch (e) { logger.warn("plugin os bootstrap failed", { err: e }); }
       }, 7000);
 
       // Session 29 — Enterprise Platform Services (config, feature flags, runtime config, policies, multi-tenant, licensing, billing, capabilities, ontology, blueprints)

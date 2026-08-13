@@ -99,6 +99,7 @@ import { registerVideoTransformAssetRoutes } from "./routes/videoTransformAssets
 import { registerVideoTransformerRoutes } from "./routes/videoTransformer.js";
 import { registerVideoTransformerAssetRoutes } from "./routes/videoTransformerAssets.js";
 import { registerCinematicRoutes } from "./routes/cinematic.js";
+import { registerPluginOsRoutes } from "./routes/pluginOs.js";
 import { registerCinematicAssetRoutes } from "./routes/cinematicAssets.js";
 import { registerHybridExecRoutes } from "./routes/hybridExec.js";
 import { registerVoiceOwnershipRoutes } from "./routes/voiceOwnership.js";
@@ -952,6 +953,11 @@ export function createApp() {
   const vtxRouter = express.Router();
   v1.use("/video-editor", vtxRouter);
   registerVideoTransformerRoutes(vtxRouter);
+
+  // /plugins — WINDELS PLUGIN OS (marketplace, install, connections, capabilities).
+  const pluginOsRouter = express.Router();
+  v1.use("/plugins", pluginOsRouter);
+  registerPluginOsRoutes(pluginOsRouter);
 
   // /hybrid-execution — Session 43: Hybrid AI Execution & Model/Compute Management
   const hxRouter = express.Router();

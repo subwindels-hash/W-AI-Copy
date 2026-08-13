@@ -59,6 +59,7 @@ import {
   Leaf,
   Workflow,
   Wand2,
+  Puzzle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -146,6 +147,7 @@ const navItems = [
   { to: "/admin", icon: UserCog, label: "Admin Console" },
   { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/app/files", icon: Folder, label: "Files" },
+  { to: "/app/extensions", icon: Puzzle, label: "Extensions" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },
 ];
