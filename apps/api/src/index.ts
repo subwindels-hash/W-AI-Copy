@@ -32,6 +32,28 @@ async function main() {
     // Seed RBAC baseline.
     await ensureRolePermissions().catch((e) => logger.warn("role permission seed failed", { err: e }));
 
+    // ── Row-Level Security enforceability check ──
+    // Tenant-isolation policies are silently inert when the application
+    // connects as a PostgreSQL SUPERUSER: the policies exist in pg_policies,
+    // an RLS audit reports "enabled", and cross-tenant queries still succeed.
+    // Surface that at boot rather than letting it pass as protection.
+    void (async () => {
+      try {
+        const { getRLSEnforcementStatus } = await import("./services/rowLevelSecurity.service.js");
+        const status = await getRLSEnforcementStatus();
+        if (status.enforced) {
+          logger.info("row-level security: policies are enforced", { role: status.role });
+        } else {
+          logger.error(
+            "row-level security: NOT ENFORCED — tenant isolation policies are inert",
+            { role: status.role, reason: status.reason },
+          );
+        }
+      } catch (e) {
+        logger.warn("row-level security enforcement check failed", { err: e });
+      }
+    })();
+
     // ── Session 18: Enterprise Engineering Framework bootstrap ──
     try {
       const { discoverRoutes } = await import("./enterprise/apiGovernance/apiGovernance.service.js");
