@@ -285,6 +285,18 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "leg:rs", scope: "org_scoped" },
   { prefix: "leg:chk", scope: "org_scoped" },
   { prefix: "leg:chks", scope: "org_scoped" },
+  // Session 159 education catalog / paths / tutors / assessments / skills.
+  // Keys are `edu:<entity>:<org>:…`. Bare `edu` is never added.
+  { prefix: "edu:c", scope: "org_scoped" },
+  { prefix: "edu:cs", scope: "org_scoped" },
+  { prefix: "edu:p", scope: "org_scoped" },
+  { prefix: "edu:ps", scope: "org_scoped" },
+  { prefix: "edu:t", scope: "org_scoped" },
+  { prefix: "edu:ts", scope: "org_scoped" },
+  { prefix: "edu:a", scope: "org_scoped" },
+  { prefix: "edu:as", scope: "org_scoped" },
+  { prefix: "edu:sk", scope: "org_scoped" },
+  { prefix: "edu:sks", scope: "org_scoped" },
   // Session 144 politics update engine: org-scoped change requests
   // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
   // the segment after the index marker (usg:evt/pay:tx shape).

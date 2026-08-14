@@ -64,6 +64,7 @@ import {
   Box,
   Atom,
   Gavel,
+  School,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -75,6 +76,7 @@ const navItems = [
   { to: "/app/voice-console", icon: Mic, label: "Voice" },
   { to: "/app/media", icon: Film, label: "Media Factory" },
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
+  { to: "/app/education", icon: School, label: "Learning Platform" },
   { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },
   { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
   { to: "/app/lead-pipeline", icon: ClipboardList, label: "Lead Pipeline" },

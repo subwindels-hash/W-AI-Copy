@@ -170,6 +170,14 @@ describe("read paths do not seed on demand", () => {
     expect(d.avgBatteryPct).toBeNull();
   });
 
+  it("education dashboard reports null mastery rather than seeding", async () => {
+    const d = await EducationService.dashboard(OID);
+    expect(d.totalContent).toBe(0);
+    expect(d.avgMasteryPct).toBeNull();
+    expect(d.activeLearners).toBe(0);
+    expect(allKeys().filter((k) => k.startsWith("edu:"))).toEqual([]);
+  });
+
   it("data marketplace dashboard reports no listings", async () => {
     const d = await DataMarketplaceService.dashboard(OID);
     expect(allKeys().filter((k) => k.startsWith("dmp:a:"))).toEqual([]);

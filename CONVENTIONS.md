@@ -1704,3 +1704,21 @@
   `citations: []` and a disclosure string.
 - **Reads never seed.** The Acme/Globex campus stays behind
   `WINDELS_DEMO_DATA`.
+
+### Session 159 — Education completion (`education`)
+
+- **0% mastery with no skills is a lie.** `avgMasteryPct` is null on an
+  empty inventory. Same for catalog `rating` — 0 is a score, not a gap.
+- **`Math.max(1, …)` is a fabricated learner.** `activeLearners` is the
+  distinct userId set across assessments, tutor sessions and paths.
+- **Hours are recorded time, not catalog arithmetic.** `hoursLearned30d`
+  sums assessment `timeSpentSec`. `durationMin × completions` invented
+  study that nobody sat.
+- **A certificate is a passed assessment on `certification_prep` content.**
+  Inferring one from `completions > 10` is a fabricated credential.
+- **Reads never seed.** Demo titles stay behind `WINDELS_DEMO_DATA` and
+  write zeros / null ratings — no RNG enrollments, no fake quizzes.
+- **Lecturer AI is a different surface.** `/app/learn` tutors; `/app/education`
+  is the LMS register. Completing one does not replace the other.
+- **Tenant-isolation two-segment rule, again.** Catalog `edu:c/cs/p/ps/t/ts/a/as/sk/sks`.
+  A bare `edu` entry would make the sweep read the literal `c` as an org id.

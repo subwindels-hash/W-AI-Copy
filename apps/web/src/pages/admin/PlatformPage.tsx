@@ -7811,9 +7811,9 @@ function EducationTab() {
       <Stat label="Published" value={data.publishedContent} tone="emerald"/>
       <Stat label="Active Learners" value={data.activeLearners} tone="azure"/>
       <Stat label="Completions 30d" value={data.completions30d} tone="violet"/>
-      <Stat label="Mastery" value={`${(data.avgMasteryPct||0).toFixed(0)}%`} tone="emerald"/>
+      <Stat label="Mastery" value={data.avgMasteryPct == null ? "—" : `${data.avgMasteryPct.toFixed(0)}%`} tone="emerald"/>
       <Stat label="Certs Issued" value={data.certificationsIssued} tone="fuchsia"/>
-      <Stat label="Hours Learned" value={data.hoursLearned30d?.toFixed(0)||0} tone="teal"/>
+      <Stat label="Hours Learned" value={data.hoursLearned30d ?? 0} tone="teal"/>
       <Stat label="Active Tutors" value={data.activeTutorSessions} tone="crimson"/>
       <Stat label="Paths in Progress" value={data.pathsInProgress} tone="azure"/>
     </div>
@@ -7842,7 +7842,7 @@ function EducationTab() {
     <CardContent className="grid md:grid-cols-2 gap-2 text-xs">
       {(data.popularContent||[]).slice(0,8).map((c:any)=>(<div key={c.id} className="p-2 border border-white/5 rounded">
         <div className="font-semibold flex items-center gap-1"><BookOpen className="h-3 w-3 text-amber"/>{c.title}</div>
-        <div className="flex gap-2 text-text-muted"><Badge variant="slate">{c.kind}</Badge><span>★{(c.rating||0).toFixed(1)}</span><span>{c.enrollments||0} enrolled</span></div>
+        <div className="flex gap-2 text-text-muted"><Badge variant="slate">{c.kind}</Badge><span>{c.rating == null ? "unrated" : `★${c.rating.toFixed(1)}`}</span><span>{c.enrollments||0} enrolled</span></div>
       </div>))}
     </CardContent></Card>
   </div>);
