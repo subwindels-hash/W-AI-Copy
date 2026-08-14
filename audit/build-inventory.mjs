@@ -68,6 +68,17 @@ const ROUTE_OVERRIDES = {
   v76validation: "v76validation", voiceFoundry: "voiceFoundry",
   voiceOwnership: "voiceOwnership", voiceStudio: "voiceStudio",
   wakeIntel: "wakeIntel", workflows: "composer", workspace: "collaboration",
+  // Asset-serving sub-routers are part of their parent feature module, not
+  // standalone product modules. Route them so they aren't reported as STUBs.
+  cinematicAssets: "cinematic",
+  videoAssets: "videoEngine",
+  videoTransformAssets: "videoTransform",
+  videoTransformerAssets: "videoTransformer",
+  // videoEngine's routes are mounted at /video per server.ts; a bare "video"
+  // route file also exists. Map the engine directory to the video module.
+  video: "videoEngine",
+  // conversationManage is the conversations sub-router for management ops
+  conversationManage: "conversations",
 };
 
 // Human-friendly module titles and associated session numbers (from PROGRESS.md)
@@ -156,6 +167,11 @@ const MODULE_META = {
   collaboration:         { title: "Collaboration primitives",          sessions: [22],      tier: "core" },
   agentComm:             { title: "Agent Communication",               sessions: [],        tier: "core" },
   ai:                    { title: "AI base router",                    sessions: [],        tier: "core" },
+  channels:              { title: "Messaging Channels (WhatsApp/Telegram)", sessions: [],  tier: "feature" },
+  videoEngine:           { title: "Video Engine / AI Video Studio",    sessions: [42],      tier: "feature" },
+  aiCommerce:            { title: "AI Commerce (WMPC Shopping)",       sessions: [],        tier: "feature" },
+  developerGateway:      { title: "Developer Gateway",                 sessions: [],        tier: "platform" },
+  cinematic:             { title: "Cinematic AI Video Studio",         sessions: [42],      tier: "feature" },
 };
 
 function ls(dir) {
@@ -209,17 +225,57 @@ const serviceDirs = ls(API_SERVICES).filter(n => {
 // module "events.test" with 0 routes and no service, reported as MISSING.
 const routeFiles = ls(API_ROUTES).filter(n => n.endsWith(".ts") && !/\.(test|spec)\.ts$/.test(n));
 
+// Some modules (notably `channels`) co-locate their route files next to their
+// services inside the module directory rather than under http/routes. Pick up
+// *.routes.ts files from service subdirectories so they aren't missed.
+for (const svc of serviceDirs) {
+  const svcDir = path.join(API_SERVICES, svc);
+  const walk = (dir, prefix = "") => {
+    for (const entry of ls(dir)) {
+      if (/\.(test|spec)\.ts$/.test(entry)) continue;
+      const full = path.join(dir, entry);
+      let stat;
+      try { stat = fs.statSync(full); } catch { continue; }
+      if (stat.isDirectory()) { walk(full, prefix + entry + "/"); continue; }
+      if (entry.endsWith(".routes.ts")) {
+        // Synthesize an entry that tells routeByModule the file lives in-svc.
+        routeFiles.push(`__colocated__:${svc}/${prefix}${entry}`);
+      }
+    }
+  };
+  walk(svcDir);
+}
+
+// Resolve a route file (supports __colocated__: prefix for in-module route files).
+function routeFilePath(rf) {
+  if (rf.startsWith("__colocated__:")) {
+    return path.join(API_SERVICES, rf.slice("__colocated__:".length));
+  }
+  return path.join(API_ROUTES, rf);
+}
+
 // Map route file -> module key
 const routeByModule = new Map(); // moduleKey -> [{file, endpoints}]
 for (const rf of routeFiles) {
-  const base = rf.replace(/\.ts$/, "");
+  // Derive module key. For __colocated__ paths, the first path segment is the
+  // owning module (e.g. "channels/whatsapp/whatsapp.routes.ts" -> channels).
+  let base;
+  if (rf.startsWith("__colocated__:")) {
+    const rel = rf.slice("__colocated__:".length);
+    base = rel.split("/")[0];
+    // Translate the webhook variants too (e.g. whatsappWebhook.routes -> channels)
+  } else {
+    base = rf.replace(/\.ts$/, "");
+  }
   const mod = ROUTE_OVERRIDES[base] || base;
   if (!routeByModule.has(mod)) routeByModule.set(mod, []);
+  const resolved = routeFilePath(rf);
   routeByModule.get(mod).push({
     file: rf,
-    sloc: sloc(path.join(API_ROUTES, rf)),
-    count: countRoutes(path.join(API_ROUTES, rf)),
-    endpoints: listRoutePaths(path.join(API_ROUTES, rf)),
+    _abs: resolved,
+    sloc: sloc(resolved),
+    count: countRoutes(resolved),
+    endpoints: listRoutePaths(resolved),
   });
 }
 
@@ -431,6 +487,16 @@ function findWebClient(modKey) {
     // Session 123 — the usage module mounts at /usage-intel (not /usage) and
     // its client calls /usage-intel/dashboard/rollup.
     usage: ["usage-intel", "usage"],
+    // videoEngine service directory backs the /video router
+    videoEngine: ["video"],
+    // aiCommerce is mounted at /ai-commerce
+    aiCommerce: ["ai-commerce"],
+    // developerGateway is mounted at /api/rest/v1 (the extensions live under that)
+    developerGateway: ["rest/v1/ai/complete", "rest/v1/agents", "rest/v1/workflows", "rest/v1/knowledge", "rest/v1/trading", "rest/v1/media"],
+    // channels module mounts at /channels
+    channels: ["channels"],
+    // conversationManage is mounted at /conversations alongside conversations.ts
+    conversationManage: ["conversations", "conversation", "share"],
   };
   const prefixes = PREFIX_ALIASES[modKey] ?? [moduleRoutePrefix(modKey)];
 
@@ -626,7 +692,9 @@ function classifyStatus(mod) {
 const inventory = [];
 const allModules = new Set([
   ...serviceDirs,
-  ...routeFiles.map(f => ROUTE_OVERRIDES[f.replace(/\.ts$/,"")] || f.replace(/\.ts$/,"")),
+  ...routeFiles
+    .filter(f => !f.startsWith("__colocated__:")) // co-located routes owned by parent module
+    .map(f => ROUTE_OVERRIDES[f.replace(/\.ts$/,"")] || f.replace(/\.ts$/,"")),
   "auth","billing","mobile","talk","conversations","platform","release","qa","developers","publicApi","admin",
   // `canvas` is intentionally absent: its routes are canvases.ts / canvasCollab.ts,
   // both mapped to `collaboration` by ROUTE_OVERRIDES, so a bare `canvas` key
@@ -648,25 +716,26 @@ const allModules = new Set([
 function servicesFromRoutes(modKey) {
   const out = new Set();
   for (const entry of (routeByModule.get(modKey) || [])) {
-    // entry.file is the bare route filename (e.g. "agents.ts"), not a repo path.
-    const src = read(path.join(API_ROUTES, entry.file));
+    // Resolve route source (co-located route files live in-module, not http/routes/).
+    const routeAbs = entry._abs || routeFilePath(entry.file);
+    const src = read(routeAbs);
+    // Compute the directory of THIS route file so relative imports resolve correctly.
+    const routeDir = path.dirname(routeAbs);
     if (!src) continue;
-    for (const m of src.matchAll(/from\s+"((?:\.\.\/)+)([^"]+\.js)"/g)) {
+    for (const m of src.matchAll(/from\s+"((?:\.\.\/|\.\/)+)([^"]+\.js)"/g)) {
       const rel = m[2].replace(/\.js$/, ".ts");
-      // Only count real implementation modules, not middleware/db/util
-      // plumbing. The `.service.ts` suffix is a convention, not a rule:
-      // `derivatives` is backed entirely by tradingIntel/derivatives.ts
-      // (Black-Scholes, IV solver, bond analytics — ~190 SLOC), which this
-      // filter rejected, so the module reported 0 SLOC and "no service
-      // directory" and was classified STUB. Accept a plain module in a
-      // sibling feature directory too.
-      const isService = /\.service\.ts$|^services\//.test(rel);
-      const isFeatureModule = /^[A-Za-z0-9_]+\/[A-Za-z0-9_]+\.ts$/.test(rel)
-        && !/\.(test|spec)\.ts$/.test(rel);
-      if (!isService && !isFeatureModule) continue;
-      if (/^(db|utils|config|http|middleware|observability)\//.test(rel)) continue;
-      const abs = path.join(API_SERVICES, rel);
-      if (fexists(abs)) out.add(rel);
+      const abs = path.resolve(routeDir, m[1] + m[2].replace(/\.js$/, ".ts"));
+      // Express the resolved path relative to API_SERVICES so downstream SLOC
+      // bookkeeping keeps working.
+      const relFromServices = path.relative(API_SERVICES, abs).split(path.sep).join("/");
+      // Only count real implementation modules, not middleware/db/util plumbing.
+      const baseName = path.basename(rel);
+      if (/\.(test|spec)\.ts$/.test(baseName)) continue;
+      if (/^(db|utils|config|http|middleware|observability)\//.test(relFromServices)) continue;
+      const isService = /\.service\.ts$/.test(baseName);
+      const isInteresting = isService || /\.(ts)$/.test(baseName);
+      if (!isInteresting) continue;
+      if (fexists(abs)) out.add(relFromServices);
     }
   }
   return [...out];
@@ -718,7 +787,9 @@ for (const modKey of [...allModules].sort()) {
       bootstrapFile: bootstrapFile ? `apps/api/src/${modKey}/${bootstrapFile}` : null,
     },
     routes: routeEntries.map(r => ({
-      file: `apps/api/src/http/routes/${r.file}`,
+      file: r.file.startsWith("__colocated__:")
+        ? `apps/api/src/${r.file.slice("__colocated__:".length)}`
+        : `apps/api/src/http/routes/${r.file}`,
       sloc: r.sloc,
       counts: r.count,
       endpoints: r.endpoints,
@@ -732,7 +803,7 @@ for (const modKey of [...allModules].sort()) {
       prismaModels: prismaModels.filter(m => {
         const searchFor = new RegExp(`\\b${m}\\b`, "i");
         return svcFiles.some(f => searchFor.test(read(path.join(svcDir,f)))) ||
-               routeEntries.some(r => searchFor.test(read(path.join(API_ROUTES,r.file))));
+               routeEntries.some(r => searchFor.test(read(r._abs || routeFilePath(r.file))));
       }),
       migrations: [], // most data is in Redis; we'll note this
       storage: "Redis primary; Prisma/Postgres for auth/org/billing core",
@@ -744,7 +815,7 @@ for (const modKey of [...allModules].sort()) {
 
   // External integration detection (grep for API keys / SDKs)
   const allSvcSrc = svcFiles.map(f => read(path.join(svcDir,f))).join("\n") +
-                    routeEntries.map(r => read(path.join(API_ROUTES,r.file))).join("\n");
+                    routeEntries.map(r => read(r._abs || routeFilePath(r.file))).join("\n");
   const extPatterns = [
     ["openai","OpenAI"], ["anthropic","Anthropic"], ["stripe","Stripe"],
     ["sendgrid","SendGrid"], ["twilio","Twilio"], ["aws","AWS"],
