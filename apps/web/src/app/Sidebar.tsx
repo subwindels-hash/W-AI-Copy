@@ -154,6 +154,7 @@ const navItems = [
   { to: "/app/robotics", icon: Bot, label: "Robotics" },
   { to: "/app/spatial", icon: Box, label: "Spatial" },
   { to: "/app/digital-humans", icon: UserCircle, label: "Digital Humans" },
+  { to: "/app/industry", icon: Building2, label: "Industry Solutions" },
   { to: "/app/quantum", icon: Atom, label: "Quantum Readiness" },
   { to: "/app/legal", icon: Gavel, label: "Legal Intelligence" },
   { to: "/app/scientific", icon: FlaskConical, label: "Scientific Research" },

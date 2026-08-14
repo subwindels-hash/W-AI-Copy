@@ -467,6 +467,11 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "mob:pushlog", scope: "shared" },
   // Google OAuth CSRF state is issued before any user — and therefore any
   // organization — is known, so it is shared by design and short-lived (10 min).
+  // Session 74 / 169 Industry Solutions & Adoption ledger
+  { prefix: "ind:meta", scope: "org_scoped" },
+  { prefix: "ind:adopt:idx", scope: "org_scoped" },
+  { prefix: "ind:adopt:i", scope: "org_scoped" },
+  { prefix: "ext:industry", scope: "shared" },
   { prefix: "google:state", scope: "shared" },
 ];
 

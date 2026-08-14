@@ -22,7 +22,7 @@ export const TI_PII_REDACTION_LEVELS = ["none", "basic", "strict"] as const;
 export type TiPiiRedactionLevel = (typeof TI_PII_REDACTION_LEVELS)[number];
 
 /** How a Redis namespace is classified for the isolation audit. */
-export const TI_NAMESPACE_SCOPES = ["org_scoped", "shared", "infra"] as const;
+export const TI_NAMESPACE_SCOPES = ["org_scoped", "shared", "infra", "platform_global", "user_scoped"] as const;
 export type TiNamespaceScope = (typeof TI_NAMESPACE_SCOPES)[number];
 
 export const TI_COMPLIANCE_STATUSES = ["compliant", "review_required", "failed"] as const;

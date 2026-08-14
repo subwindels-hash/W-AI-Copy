@@ -1420,6 +1420,7 @@
       "googleAuth.spec.ts",
       "governance.spec.ts",
       "identityKnowledge.spec.ts",
+      "industry.spec.ts",
       "infrastructure.spec.ts",
       "knowledge.spec.ts",
       "leadPipeline.spec.ts",
@@ -6598,15 +6599,16 @@
     "backend": {
       "serviceDir": "apps/api/src/industry",
       "serviceFile": {
-        "file": "industry.service.ts",
-        "path": "/home/user/WIN/apps/api/src/industry/industry.service.ts",
-        "sloc": 74,
+        "file": "industry.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/industry/industry.service.test.ts",
+        "sloc": 248,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 151,
+      "serviceTotalSloc": 719,
       "serviceFiles": [
         "bootstrap.ts",
+        "industry.service.test.ts",
         "industry.service.ts",
         "industry/industry.service.ts"
       ],
@@ -6618,10 +6620,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/industry.ts",
-        "sloc": 81,
+        "sloc": 120,
         "counts": {
-          "total": 5,
-          "GET": 2,
+          "total": 7,
+          "GET": 4,
           "POST": 1,
           "PUT": 0,
           "PATCH": 1,
@@ -6629,21 +6631,24 @@
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "GET /suites",
           "GET /adoptions",
+          "GET /adoptions/:id",
           "POST /adoptions",
           "PATCH /adoptions/:id",
           "DELETE /adoptions/:id"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/industry.ts (40 LOC)",
+    "sharedTypes": "packages/shared/src/industry.ts (149 LOC)",
     "web": {
-      "client": "apps/web/src/lib/industry.ts (8 LOC)",
+      "client": "apps/web/src/lib/industry.ts (33 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Message",
         "Workflow"
       ],
@@ -6652,7 +6657,9 @@
     },
     "tests": [
       "extensions.spec.ts",
-      "sessions73-75.spec.ts"
+      "industry.spec.ts",
+      "sessions73-75.spec.ts",
+      "industry/industry.service.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -10954,11 +10961,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 721,
+        "sloc": 726,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1618,
+      "serviceTotalSloc": 1628,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
