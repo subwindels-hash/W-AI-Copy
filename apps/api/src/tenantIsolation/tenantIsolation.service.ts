@@ -250,6 +250,98 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "rob:pa", scope: "org_scoped" },
   { prefix: "rob:pas", scope: "org_scoped" },
   { prefix: "rob:tel", scope: "org_scoped" },
+  // Session 162 voice studio — cloned voices, presets, TTS jobs, latency and
+  // consent-violation counters. These stores were entirely GLOBAL before S162:
+  // a cloned voice is biometric data gated by a consent record, and every
+  // tenant could read every other tenant's voices, presets and job history.
+  // Keys are `vs:<entity>:<org>:…`. Bare `vs` is deliberately never added —
+  // it would read the literal `cv` as an organization id.
+  { prefix: "vs:cv", scope: "org_scoped" },
+  { prefix: "vs:custom", scope: "org_scoped" },
+  { prefix: "vs:preset", scope: "org_scoped" },
+  { prefix: "vs:presets", scope: "org_scoped" },
+  { prefix: "vs:job", scope: "org_scoped" },
+  { prefix: "vs:jobs", scope: "org_scoped" },
+  { prefix: "vs:lats", scope: "org_scoped" },
+  { prefix: "vs:cviol", scope: "org_scoped" },
+  { prefix: "vs:notes", scope: "org_scoped" },
+  // Session 163 constitution studio — policies, constitutions, violations.
+  // The keys were already `cst:<entity>:<org>:…`, but every route called the
+  // service with no organization argument, so all seven fell through to a
+  // `"org-windels"` default: each tenant read and published org-windels'
+  // governance. Catalogued here so the isolation sweep covers the namespace.
+  // Bare `cst` is deliberately never added — it would read the literal
+  // `active` as an organization id.
+  { prefix: "cst:active", scope: "org_scoped" },
+  { prefix: "cst:policy", scope: "org_scoped" },
+  { prefix: "cst:policies", scope: "org_scoped" },
+  { prefix: "cst:c", scope: "org_scoped" },
+  { prefix: "cst:cs", scope: "org_scoped" },
+  { prefix: "cst:v", scope: "org_scoped" },
+  { prefix: "cst:m", scope: "org_scoped" },
+  // Session 164 licensing & monetization — licensed assets, grants, the
+  // royalty ledger and payout balances. Keys were already `lic:<entity>:<org>:…`
+  // but all six routes called the service with no organization, so everything
+  // defaulted to org-windels: one tenant's metered usage credited another
+  // tenant's revenue and pending-payout balance. Bare `lic` is deliberately
+  // never added — it would read the literal `a` as an organization id.
+  { prefix: "lic:a", scope: "org_scoped" },
+  { prefix: "lic:as", scope: "org_scoped" },
+  { prefix: "lic:g", scope: "org_scoped" },
+  { prefix: "lic:gs", scope: "org_scoped" },
+  { prefix: "lic:ag", scope: "org_scoped" },
+  { prefix: "lic:r", scope: "org_scoped" },
+  { prefix: "lic:rs", scope: "org_scoped" },
+  { prefix: "lic:m", scope: "org_scoped" },
+  // Session 165 deployment platform — registered targets and their validation
+  // runs. Keys were already `dep:<entity>:<org>:…` but the six target routes
+  // called the service with no organization, so every tenant listed, created,
+  // validated and DELETED org-windels' targets. `dep:notes` was already
+  // org-aware. Bare `dep` is never added — it would read `t` as an org id.
+  { prefix: "dep:t", scope: "org_scoped" },
+  { prefix: "dep:ts", scope: "org_scoped" },
+  { prefix: "dep:v", scope: "org_scoped" },
+  { prefix: "dep:notes", scope: "org_scoped" },
+  // Session 167 global currency. FX rates, the supported-currency list and
+  // fraud events are deliberately PLATFORM-GLOBAL: an exchange rate is a
+  // property of the market, not of a tenant, and duplicating it per org would
+  // let two tenants see different prices for the same instant. That is a
+  // decision, so it is recorded here rather than left uncatalogued.
+  { prefix: "gcu:rates", scope: "platform_global" },
+  { prefix: "gcu:currencies", scope: "platform_global" },
+  { prefix: "gcu:fraud", scope: "platform_global" },
+  { prefix: "gcu:m", scope: "platform_global" },
+  { prefix: "gcu:agents", scope: "platform_global" },
+  // Currency preferences are per USER, not per organization.
+  { prefix: "gcu:prefs", scope: "user_scoped" },
+  { prefix: "gc:notes", scope: "org_scoped" },
+  // Session 166 composer — workflows, run ledger and run counters. Keys were
+  // already `cmp:<entity>:<org>[:<id>]` but ten of the fourteen routes called
+  // the service with no organization, so every tenant read and OVERWROTE
+  // org-windels' workflow definitions. Bare `cmp` is never added: it would
+  // read the literal `wf` as an organization id.
+  { prefix: "cmp:wf", scope: "org_scoped" },
+  { prefix: "cmp:wfs", scope: "org_scoped" },
+  { prefix: "cmp:runs", scope: "org_scoped" },
+  { prefix: "cmp:m", scope: "org_scoped" },
+  { prefix: "cmp:notes", scope: "org_scoped" },
+  // Session 161 cyber academy — labs, findings, certifications, ranges.
+  // Keys are `csec:<entity>:<org>:…`. Bare `csec` is deliberately never added:
+  // it would read the literal `lab` as an organization id. `cy:notes` is the
+  // pre-existing notes ledger and uses a different prefix from the service.
+  { prefix: "csec:meta", scope: "org_scoped" },
+  { prefix: "csec:lab", scope: "org_scoped" },
+  { prefix: "csec:labs", scope: "org_scoped" },
+  { prefix: "csec:progress", scope: "org_scoped" },
+  { prefix: "csec:activity", scope: "org_scoped" },
+  { prefix: "csec:find", scope: "org_scoped" },
+  { prefix: "csec:finds", scope: "org_scoped" },
+  { prefix: "csec:cert", scope: "org_scoped" },
+  { prefix: "csec:certs", scope: "org_scoped" },
+  { prefix: "csec:rng", scope: "org_scoped" },
+  { prefix: "csec:rngs", scope: "org_scoped" },
+  { prefix: "csec:learners", scope: "org_scoped" },
+  { prefix: "cy:notes", scope: "org_scoped" },
   // Session 156 spatial sessions / maps / waypoints / holo / remote / devices.
   // Keys are `spa:<entity>:<org>:…`. Bare `spa` is never added.
   { prefix: "spa:s", scope: "org_scoped" },
@@ -265,6 +357,31 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "spa:dev", scope: "org_scoped" },
   { prefix: "spa:devhb", scope: "org_scoped" },
   { prefix: "spa:twin", scope: "org_scoped" },
+  // ── Session 168 — Tier 3 partials ────────────────────────────────────────
+  // These four modules were org-scoped in their key shapes but entirely absent
+  // from this catalogue, so nothing verified the scoping they claimed.
+  //
+  // sustainability: `esg:<org>:<entity>` puts the ORG FIRST, unlike almost
+  // every other module here, so the bare `esg` prefix is correct and safe —
+  // the segment after it really is the organization id.
+  { prefix: "esg", scope: "org_scoped" },
+  // dataMarketplace: `dmp:<entity>:<org>[:<id>]`. Bare `dmp` is never added —
+  // it would read `a`/`as`/`i` as an organization id.
+  { prefix: "dmp:a", scope: "org_scoped" },
+  { prefix: "dmp:as", scope: "org_scoped" },
+  { prefix: "dmp:i", scope: "org_scoped" },
+  { prefix: "dmp:is", scope: "org_scoped" },
+  { prefix: "dmp:rev", scope: "org_scoped" },
+  // Session 168 — the new review ledger.
+  { prefix: "dmp:rv", scope: "org_scoped" },
+  { prefix: "dmp:rvs", scope: "org_scoped" },
+  { prefix: "dm:notes", scope: "org_scoped" },
+  // digitalHumans: `dh:<entity>:<org>[:<id>]`. Bare `dh` is never added.
+  { prefix: "dh:h", scope: "org_scoped" },
+  { prefix: "dh:hs", scope: "org_scoped" },
+  { prefix: "dh:s", scope: "org_scoped" },
+  { prefix: "dh:ss", scope: "org_scoped" },
+  { prefix: "dh:notes", scope: "org_scoped" },
   // Session 157 quantum inventory / jobs / connector stubs / notes.
   // Bare `q` is never added (would read `inv` as an org id).
   { prefix: "q:inv", scope: "org_scoped" },

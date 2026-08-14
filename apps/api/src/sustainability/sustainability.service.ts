@@ -138,7 +138,7 @@ async function ensureAdopted(oid: string): Promise<void> {
 }
 
 export const SustainabilityService = {
-  async ensureBootstrapped(logger?: any, oid = "org-windels") {
+  async ensureBootstrapped(logger: any | undefined, oid: string) {
     if (await redis.exists(K.meta(oid))) return;
     // Synthetic baseline records are gated by WINDELS_DEMO_DATA (default off).
     // When disabled a fresh org starts empty and fills from real records only,
@@ -173,7 +173,10 @@ export const SustainabilityService = {
   },
 
   async record(oid: string, input: Omit<EsgRecordRow, "id" | "tCO2e" | "recordedAt">) {
-    await this.ensureBootstrapped(undefined, oid);
+    // Session 168: this called ensureBootstrapped() unconditionally. Writing a
+    // real measurement must never inject seven synthetic baseline records
+    // first — the user's first honest reading would arrive pre-contaminated.
+    // bootstrap.ts owns seeding.
     await ensureAdopted(oid);
     const record: EsgRecordRow = {
       ...input,
@@ -208,8 +211,8 @@ export const SustainabilityService = {
     return { id, deleted: true };
   },
 
-  async dashboard(oid = "org-windels", now: Date = new Date()): Promise<SustainabilityDashboard> {
-    await this.ensureBootstrapped(undefined, oid);
+  async dashboard(oid: string, now: Date = new Date()): Promise<SustainabilityDashboard> {
+    // Session 168: a read does not seed. (See record() above.)
     await ensureAdopted(oid);
     const records = await allRecords(oid);
 
@@ -273,9 +276,11 @@ export const SustainabilityService = {
     const energySeries: EnergyMetric[] = months.map((period) => ({
       period,
       kwh: Math.round(kwhByMonth.get(period) ?? 0),
-      // Renewable share and cost require a utility feed we do not have.
-      renewablePct: 0,
-      costUsd: 0,
+      // Session 168: renewable share and cost require a utility feed we do not
+      // have. They were 0 — a measured claim of "0% renewable, $0 spent" on
+      // every one of the twelve months. Unmeasured is null.
+      renewablePct: null,
+      costUsd: null,
     }));
 
     const computeRecords = records.filter((r) => r.category === "compute");
@@ -322,12 +327,12 @@ export const SustainabilityService = {
         { field: "energySeries.kwh", basis: "measured", detail: "sum of recorded kWh readings per month" },
         { field: "greenAi", basis: "measured", detail: "derived from compute-category records only" },
         { field: "scores", basis: "not_assessed", detail: "no attested ESG assessment exists; all score fields are null" },
-        { field: "energyRenewablePct", basis: "structural_zero", detail: "no utility/renewables feed is connected" },
-        { field: "energySeries.renewablePct / costUsd", basis: "structural_zero", detail: "no utility feed is connected" },
-        { field: "waterMl", basis: "structural_zero", detail: "no water metering is recorded" },
-        { field: "wasteRecycledPct", basis: "structural_zero", detail: "no waste tracking is recorded" },
-        { field: "offsetsPurchasedT", basis: "structural_zero", detail: "no offset purchases are recorded" },
-        { field: "netZeroTargetYear", basis: "structural_zero", detail: "no net-zero commitment is declared" },
+        { field: "energyRenewablePct", basis: "structural_zero", detail: "no utility/renewables feed is connected; reported as null, not 0" },
+        { field: "energySeries.renewablePct / costUsd", basis: "structural_zero", detail: "no utility feed is connected; reported as null, not 0" },
+        { field: "waterMl", basis: "structural_zero", detail: "no water metering is recorded; reported as null, not 0" },
+        { field: "wasteRecycledPct", basis: "structural_zero", detail: "no waste tracking is recorded; reported as null, not 0" },
+        { field: "offsetsPurchasedT", basis: "structural_zero", detail: "no offset purchases are recorded; reported as null, not 0" },
+        { field: "netZeroTargetYear", basis: "structural_zero", detail: "no net-zero commitment is declared; reported as null, not year 0" },
         { field: "greenAi.gpuHours / optimizedPct", basis: "structural_zero", detail: "no GPU-hour metering or optimisation reporting is recorded" },
         { field: "resources / suppliers / reportingFrameworks", basis: "structural_zero", detail: "no attested data exists for these sections" },
       ],
@@ -338,14 +343,18 @@ export const SustainabilityService = {
       scores,
       emissionsTotalTCO2e: total,
       emissionsYtdChangePct,
-      // Renewables share, water, waste, offsets and a net-zero target all require
-      // attested measurements or a declared commitment; none are recorded, so all
-      // report 0 rather than a plausible default (named by `provenance`).
-      energyRenewablePct: 0,
-      waterMl: 0,
-      wasteRecycledPct: 0,
-      offsetsPurchasedT: 0,
-      netZeroTargetYear: 0,
+      // Session 168: renewables share, water, waste, offsets and a net-zero
+      // target all require attested measurements or a declared commitment;
+      // none are recorded. Session 121 set them to 0 "rather than a plausible
+      // default" and named them structural_zero in `provenance` — but 0 is
+      // itself a claim, and a worse one: a dashboard renders `0` as a measured
+      // 0% recycling rate, and `netZeroTargetYear: 0` asserts a target of the
+      // year 0. Unmeasured is null. The provenance block below still names why.
+      energyRenewablePct: null,
+      waterMl: null,
+      wasteRecycledPct: null,
+      offsetsPurchasedT: null,
+      netZeroTargetYear: null,
       emissionsBySource,
       energySeries,
       resources: [],

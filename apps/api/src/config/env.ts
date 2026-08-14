@@ -142,6 +142,25 @@ const EnvSchema = z.object({
     .default(false),
 
   /**
+   * Opt-in permissive constitution checking (S163).
+   *
+   * `ConstitutionService.checkRequest` is the platform's "may this proceed?"
+   * gate. When an organization has published no constitution there is nothing
+   * to check against, and the safe answer is to refuse: the gate fails
+   * **closed**, returning `allowed: false` with `posture: "unconfigured"` so a
+   * caller can tell "reviewed and clean" apart from "not reviewed at all".
+   *
+   * Set WINDELS_CONSTITUTION_FAIL_OPEN=true to restore the pre-S163 behaviour
+   * of allowing unchecked requests through. The check result then carries
+   * `posture: "fail_open"`, so a permissive deployment stays visible in the
+   * response rather than being inferred from silence.
+   */
+  WINDELS_CONSTITUTION_FAIL_OPEN: z
+    .union([z.boolean(), z.enum(["true", "false"])])
+    .transform((v) => (typeof v === "boolean" ? v : v === "true"))
+    .default(false),
+
+  /**
    * Opt-in in-memory database fallback (dev/test only).
    *
    * When the real Postgres connection cannot be initialised, the API *fails

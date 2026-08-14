@@ -24,32 +24,67 @@ const PublishSchema = z.object({
 });
 const ReviewSchema = z.object({ rating: z.number().int().min(1).max(5), comment: z.string().optional() });
 
+/**
+ * Session 168 — every tenant-scoped route needs an organization context.
+ *
+ * These routes previously read `(req.user as any).organizationId` inline with
+ * no null check, and every service method defaults its `oid` parameter to
+ * "org-windels". A token carrying a null organization therefore resolved to
+ * `undefined`, the default engaged, and the request silently read and WROTE
+ * the house organization's data. The module's own /notes sub-router already
+ * guarded this way; the real routes did not.
+ */
+function orgOf(req: any, res: any): string | null {
+  const oid = req.user?.organizationId;
+  if (!oid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+    return null;
+  }
+  return oid;
+}
+
 export function registerDataMarketplaceRoutes(router: Router) {
-  router.get("/dashboard/rollup", async (req, res, next) => { try { res.json({ok:true,data:await DataMarketplaceService.dashboard((req.user as any).organizationId)}); } catch(e){next(e);} });
+  router.get("/dashboard/rollup", async (req, res, next) => { try {
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DataMarketplaceService.dashboard(oid)});
+  } catch(e){next(e);} });
   router.get("/assets", async (req, res, next) => { try {
+    const oid = orgOf(req, res); if (!oid) return;
     const kind = (req.query.kind as any) || undefined;
-    res.json({ok:true,data:await DataMarketplaceService.list((req.user as any).organizationId, kind)});
+    res.json({ok:true,data:await DataMarketplaceService.list(oid, kind)});
   } catch(e){next(e);} });
   router.get("/assets/:id", async (req, res, next) => { try {
-    const a = await DataMarketplaceService.get(req.params.id, (req.user as any).organizationId);
+    const oid = orgOf(req, res); if (!oid) return;
+    const a = await DataMarketplaceService.get(req.params.id, oid);
     if (!a) return res.status(404).json({ok:false,error:{code:"NOT_FOUND",message:"asset not found"}});
     res.json({ok:true,data:a});
   } catch(e){next(e);} });
   
   // Shared access control and licensing verification route
   router.get("/assets/:id/access", async (req, res, next) => { try {
-    const access = await DataMarketplaceService.checkAccess(req.params.id, (req.user as any).organizationId);
+    const oid = orgOf(req, res); if (!oid) return;
+    const access = await DataMarketplaceService.checkAccess(req.params.id, oid);
     res.json({ok:true,data:access});
   } catch(e){next(e);} });
 
   router.post("/assets", validate({body:PublishSchema}), async (req,res,next) => { try {
-    res.json({ok:true,data:await DataMarketplaceService.publish({...req.body, organizationId:(req.user as any).organizationId, createdBy:(req.user as any).id})});
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DataMarketplaceService.publish({...req.body, organizationId:oid, createdBy:(req.user as any).id})});
   } catch(e){next(e);} });
   router.post("/assets/:id/install", async (req,res,next) => { try {
-    res.json({ok:true,data:await DataMarketplaceService.install(req.params.id, (req.user as any).id, (req.user as any).organizationId)});
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DataMarketplaceService.install(req.params.id, (req.user as any).id, oid)});
   } catch(e){next(e);} });
   router.post("/assets/:id/review", validate({body:ReviewSchema}), async (req,res,next) => { try {
-    res.json({ok:true,data:await DataMarketplaceService.review(req.params.id, (req.user as any).id, req.body.rating, req.body.comment, (req.user as any).organizationId)});
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DataMarketplaceService.review(req.params.id, (req.user as any).id, req.body.rating, req.body.comment, oid)});
+  } catch(e){next(e);} });
+
+  // Session 168 — the review ledger is now readable; before this the comment
+  // body was accepted, validated and discarded, so there was nothing to read.
+  router.get("/assets/:id/reviews", async (req,res,next) => { try {
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DataMarketplaceService.listReviews(req.params.id, oid)});
   } catch(e){next(e);} });
 
 

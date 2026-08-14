@@ -59,6 +59,64 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "adminApiControl",
+    "title": "adminApiControl",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/adminApiControl",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "adminApiControl.service.ts",
+        "path": "/home/user/WIN/apps/api/src/devportal/adminApiControl.service.ts",
+        "sloc": 185,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 185,
+      "serviceFiles": [
+        "devportal/adminApiControl.service.ts"
+      ],
+      "importedServiceFiles": [
+        "devportal/adminApiControl.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/adminApiControl.ts",
+        "sloc": 69,
+        "counts": {
+          "total": 7,
+          "GET": 3,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 4,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/developerPlatform.ts (222 LOC, imported)",
+    "web": {
+      "client": "apps/web/src/lib/adminApiControl.ts (55 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "devportal/adminApiControl.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "advertising",
     "title": "advertising",
     "sessions": [],
@@ -414,6 +472,120 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "aiCommerce",
+    "title": "aiCommerce",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/aiCommerce",
+    "backend": {
+      "serviceDir": "apps/api/src/aiCommerce",
+      "serviceFile": {
+        "file": "commerceAgent.service.ts",
+        "path": "/home/user/WIN/apps/api/src/aiCommerce/commerceAgent.service.ts",
+        "sloc": 156,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 3799,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "commerceAgent.service.ts",
+        "commerceAnalytics.service.ts",
+        "commerceDiscovery.service.ts",
+        "commerceErrors.ts",
+        "commerceFlags.ts",
+        "commerceGuard.service.ts",
+        "commerceImageShopping.service.ts",
+        "commerceIntent.service.ts",
+        "commerceSession.service.ts",
+        "commerceVoice.service.ts",
+        "aiCommerce/commerceIntent.service.ts",
+        "aiCommerce/commerceSession.service.ts",
+        "aiCommerce/events/wmpcEventConsumer.service.ts",
+        "aiCommerce/commerceFlags.ts",
+        "aiCommerce/commerceAnalytics.service.ts",
+        "aiCommerce/commerceAgent.service.ts",
+        "aiCommerce/commerceErrors.ts",
+        "services/tools/toolRegistry.ts"
+      ],
+      "importedServiceFiles": [
+        "aiCommerce/commerceIntent.service.ts",
+        "aiCommerce/commerceSession.service.ts",
+        "aiCommerce/events/wmpcEventConsumer.service.ts",
+        "aiCommerce/commerceFlags.ts",
+        "aiCommerce/commerceAnalytics.service.ts",
+        "aiCommerce/commerceAgent.service.ts",
+        "aiCommerce/commerceErrors.ts",
+        "services/tools/toolRegistry.ts"
+      ],
+      "bootstrapFile": "apps/api/src/aiCommerce/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/aiCommerce.ts",
+        "sloc": 265,
+        "counts": {
+          "total": 23,
+          "GET": 10,
+          "POST": 10,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "POST /webhooks/wmpc",
+          "POST /interpret",
+          "POST /search",
+          "GET /products/:id",
+          "POST /compare",
+          "GET /cart",
+          "POST /cart/items",
+          "PATCH /cart/items",
+          "DELETE /cart/items/:itemId",
+          "DELETE /cart",
+          "POST /checkout",
+          "GET /checkout/:id",
+          "GET /payment-methods",
+          "GET /payments/:id",
+          "GET /orders",
+          "GET /orders/:id",
+          "GET /orders/:id/tracking",
+          "POST /gift-cards/validate",
+          "POST /gift-cards/apply",
+          "GET /session/:sessionId",
+          "GET /admin/status",
+          "POST /admin/flags/provision",
+          "POST /admin/agent/provision"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/aiCommerce.ts (623 LOC)",
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Agent",
+        "Conversation",
+        "Message",
+        "ApiKey"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "aiCommerce/__tests__/aiCommerce.e2e.test.ts",
+      "aiCommerce/__tests__/commerceTruthfulness.test.ts",
+      "aiCommerce/__tests__/wmpcConnector.contract.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "PARTIAL"
+  },
+  {
     "moduleKey": "aiEconomy",
     "title": "AI Economy / GPU Cloud (S71)",
     "sessions": [
@@ -741,11 +913,11 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 178,
+        "sloc": 245,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 617,
+      "serviceTotalSloc": 684,
       "serviceFiles": [
         "publicApi/publicApi.service.ts",
         "publicApi/publicApiUsage.service.ts",
@@ -773,7 +945,7 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (66 LOC, imported)",
+    "sharedTypes": "packages/shared/src/apiKeys.ts (82 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/apikey.ts (3 LOC)",
       "pages": []
@@ -792,6 +964,7 @@
       "publicApi.spec.ts",
       "publicApi/publicApi.completion.test.ts",
       "publicApi/publicApi.test.ts",
+      "services/alerting.test.ts",
       "services/workflow.engine.test.ts",
       "services/workspace.service.test.ts"
     ],
@@ -905,25 +1078,29 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 214,
+      "serviceTotalSloc": 467,
       "serviceFiles": [
         "architecture.service.ts",
         "bootstrap.ts",
+        "esiAggregation.service.ts",
+        "esiAggregation.test.ts",
         "notes.service.ts",
-        "architecture/architecture.service.ts"
+        "architecture/architecture.service.ts",
+        "architecture/esiAggregation.service.ts"
       ],
       "importedServiceFiles": [
-        "architecture/architecture.service.ts"
+        "architecture/architecture.service.ts",
+        "architecture/esiAggregation.service.ts"
       ],
       "bootstrapFile": "apps/api/src/architecture/bootstrap.ts"
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/architecture.ts",
-        "sloc": 83,
+        "sloc": 88,
         "counts": {
-          "total": 9,
-          "GET": 5,
+          "total": 10,
+          "GET": 6,
           "POST": 2,
           "PUT": 0,
           "PATCH": 1,
@@ -935,6 +1112,7 @@
           "GET /modules",
           "GET /esi",
           "POST /esi/signals",
+          "GET /esi/report",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -942,7 +1120,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/architecture.ts (40 LOC)",
+    "sharedTypes": "packages/shared/src/architecture.ts (67 LOC)",
     "web": {
       "client": "apps/web/src/lib/architecture.ts (17 LOC)",
       "pages": []
@@ -951,13 +1129,15 @@
       "prismaModels": [
         "User",
         "Organization",
+        "Agent",
         "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions37-40.spec.ts"
+      "sessions37-40.spec.ts",
+      "architecture/esiAggregation.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -1045,11 +1225,11 @@
       "serviceFile": {
         "file": "audit.service.ts",
         "path": "/home/user/WIN/apps/api/src/audit/audit.service.ts",
-        "sloc": 434,
+        "sloc": 460,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1015,
+      "serviceTotalSloc": 1067,
       "serviceFiles": [
         "audit.service.ts",
         "audit.test.ts",
@@ -1128,11 +1308,11 @@
       "serviceFile": {
         "file": "auth.service.ts",
         "path": "/home/user/WIN/apps/api/src/services/auth.service.ts",
-        "sloc": 436,
+        "sloc": 556,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 486,
+      "serviceTotalSloc": 606,
       "serviceFiles": [
         "services/auth.service.ts",
         "security/passwords.ts"
@@ -1146,16 +1326,18 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/auth.ts",
-        "sloc": 153,
+        "sloc": 197,
         "counts": {
-          "total": 6,
+          "total": 8,
           "GET": 1,
-          "POST": 5,
+          "POST": 7,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
         },
         "endpoints": [
+          "POST /auth/forgot",
+          "POST /auth/reset",
           "POST /auth/register",
           "POST /auth/login",
           "POST /auth/mfa/complete",
@@ -1216,23 +1398,33 @@
       "auth.spec.ts",
       "collaboration.spec.ts",
       "commerce.spec.ts",
+      "composer.spec.ts",
+      "constitution.spec.ts",
       "conversations.spec.ts",
+      "cyber.spec.ts",
       "cyberCloudAcademy.spec.ts",
+      "dataMarketplace.spec.ts",
       "dataPlatform.spec.ts",
+      "deployment.spec.ts",
       "derivatives.spec.ts",
       "devPortal.spec.ts",
+      "digitalHumans.spec.ts",
+      "education.spec.ts",
       "engineering.spec.ts",
       "enterprise.spec.ts",
       "enterpriseFoundation.spec.ts",
       "events-webhook.spec.ts",
       "extensions.spec.ts",
       "geoBilling.spec.ts",
+      "globalCurrency.spec.ts",
       "googleAuth.spec.ts",
       "governance.spec.ts",
       "identityKnowledge.spec.ts",
       "infrastructure.spec.ts",
       "knowledge.spec.ts",
       "leadPipeline.spec.ts",
+      "legal.spec.ts",
+      "licensing.spec.ts",
       "lifePrinciples.spec.ts",
       "marketplace.spec.ts",
       "mediaPublishing.spec.ts",
@@ -1249,8 +1441,11 @@
       "promptTemplates.spec.ts",
       "publicApi.spec.ts",
       "qa.spec.ts",
+      "quantum.spec.ts",
       "release.spec.ts",
       "religions.spec.ts",
+      "robotics.spec.ts",
+      "scientific.spec.ts",
       "sessions37-40.spec.ts",
       "sessions41-76-80.spec.ts",
       "sessions42-47.spec.ts",
@@ -1258,12 +1453,14 @@
       "sessions61-72-82.spec.ts",
       "sessions73-75.spec.ts",
       "smoke.spec.ts",
+      "spatial.spec.ts",
       "sustainability.spec.ts",
       "talk.spec.ts",
       "tenantIsolation.spec.ts",
       "university.spec.ts",
       "universityEngine.spec.ts",
       "usage.spec.ts",
+      "voiceStudio.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
     ],
@@ -1926,6 +2123,190 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "channels",
+    "title": "channels",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/channels",
+    "backend": {
+      "serviceDir": "apps/api/src/channels",
+      "serviceFile": null,
+      "serviceTotalSloc": 0,
+      "serviceFiles": [],
+      "importedServiceFiles": [],
+      "bootstrapFile": null
+    },
+    "routes": [],
+    "sharedTypes": null,
+    "web": {
+      "client": "apps/web/src/lib/telegram.ts (41 LOC, serves /channels)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "publicApi.spec.ts",
+      "talk.spec.ts",
+      "channels/telegram/telegram.test.ts",
+      "channels/whatsapp/whatsappCommands.test.ts",
+      "channels/whatsapp/whatsappJob.test.ts",
+      "channels/whatsapp/whatsappMessage.service.test.ts",
+      "channels/whatsapp/whatsappPayload.test.ts",
+      "channels/whatsapp/whatsappPersistence.test.ts",
+      "channels/whatsapp/whatsappPipeline.test.ts",
+      "channels/whatsapp/whatsappQueue.test.ts",
+      "channels/whatsapp/whatsappSecurity.test.ts",
+      "channels/whatsapp/whatsappSession.test.ts",
+      "channels/whatsapp/whatsappWebhook.routes.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "MISSING"
+  },
+  {
+    "moduleKey": "cinematic",
+    "title": "cinematic",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/cinematic",
+    "backend": {
+      "serviceDir": "apps/api/src/cinematic",
+      "serviceFile": {
+        "file": "cinematic.service.ts",
+        "path": "/home/user/WIN/apps/api/src/cinematic/cinematic.service.ts",
+        "sloc": 395,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1734,
+      "serviceFiles": [
+        "audio.ts",
+        "cinematic.service.ts",
+        "cinematic.test.ts",
+        "consistency.ts",
+        "director.ts",
+        "engines.ts",
+        "modelRegistry.ts",
+        "cinematic/cinematic.service.ts"
+      ],
+      "importedServiceFiles": [
+        "cinematic/cinematic.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/cinematic.ts",
+        "sloc": 128,
+        "counts": {
+          "total": 19,
+          "GET": 10,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /dashboard",
+          "GET /models",
+          "GET /activity",
+          "POST /projects",
+          "GET /projects",
+          "GET /projects/:id",
+          "PATCH /projects/:id",
+          "DELETE /projects/:id",
+          "POST /projects/:id/estimate",
+          "POST /projects/:id/generate",
+          "POST /projects/:id/shots/:shotId/regenerate",
+          "GET /jobs",
+          "GET /jobs/:id",
+          "POST /jobs/:id/cancel",
+          "GET /jobs/:id/events",
+          "POST /characters",
+          "GET /characters",
+          "GET /characters/:id",
+          "DELETE /characters/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/cinematic.ts (330 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/cinematic.ts (58 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Agent",
+        "Activity",
+        "Message",
+        "Workflow",
+        "ModelRegistry",
+        "CinematicProject",
+        "CinematicJob"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "cinematic/cinematic.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "FFmpeg"
+    ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "cinematicAssets",
+    "title": "cinematicAssets",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/cinematicAssets",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": null,
+      "serviceTotalSloc": 0,
+      "serviceFiles": [],
+      "importedServiceFiles": [],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/cinematicAssets.ts",
+        "sloc": 36,
+        "counts": {
+          "total": 1,
+          "GET": 1,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /*"
+        ]
+      }
+    ],
+    "sharedTypes": null,
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "STUB"
+  },
+  {
     "moduleKey": "cognitive",
     "title": "Cognitive / World Model (S69)",
     "sessions": [
@@ -2194,6 +2575,7 @@
     "tests": [
       "collaboration.spec.ts",
       "collaboration/canvasCollab.test.ts",
+      "services/alerting.test.ts",
       "services/canvas.service.test.ts",
       "services/workflow.engine.test.ts",
       "services/workspace.service.test.ts"
@@ -2307,6 +2689,7 @@
     },
     "tests": [
       "aiEngineering.spec.ts",
+      "robotics.spec.ts",
       "sessions54-60.spec.ts",
       "sessions61-72-82.spec.ts",
       "command/operations.test.ts"
@@ -2407,15 +2790,16 @@
     "backend": {
       "serviceDir": "apps/api/src/composer",
       "serviceFile": {
-        "file": "composer.service.ts",
-        "path": "/home/user/WIN/apps/api/src/composer/composer.service.ts",
-        "sloc": 284,
+        "file": "composer.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/composer/composer.service.test.ts",
+        "sloc": 445,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1446,
+      "serviceTotalSloc": 2262,
       "serviceFiles": [
         "bootstrap.ts",
+        "composer.service.test.ts",
         "composer.service.ts",
         "composer.test.ts",
         "composer/composer.service.ts",
@@ -2430,11 +2814,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/composer.ts",
-        "sloc": 100,
+        "sloc": 155,
         "counts": {
-          "total": 14,
+          "total": 16,
           "GET": 7,
-          "POST": 5,
+          "POST": 7,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
@@ -2446,6 +2830,8 @@
           "POST /workflows",
           "GET /workflows/:id/validate",
           "POST /workflows/:id/deploy",
+          "POST /workflows/:id/pause",
+          "POST /workflows/:id/resume",
           "POST /workflows/:id/run",
           "POST /runs/:runId/outcome",
           "GET /runs",
@@ -2482,9 +2868,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/composer.ts (147 LOC)",
+    "sharedTypes": "packages/shared/src/composer.ts (204 LOC)",
     "web": {
-      "client": "apps/web/src/lib/composer.ts (17 LOC)",
+      "client": "apps/web/src/lib/composer.ts (24 LOC)",
       "pages": []
     },
     "db": {
@@ -2500,6 +2886,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "composer.spec.ts",
+      "composer/composer.service.test.ts",
       "composer/composer.test.ts",
       "services/workflow.engine.test.ts",
       "config/moduleGates.test.ts"
@@ -2519,15 +2907,16 @@
     "backend": {
       "serviceDir": "apps/api/src/constitution",
       "serviceFile": {
-        "file": "constitution.service.ts",
-        "path": "/home/user/WIN/apps/api/src/constitution/constitution.service.ts",
-        "sloc": 198,
+        "file": "constitution.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/constitution/constitution.service.test.ts",
+        "sloc": 363,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 401,
+      "serviceTotalSloc": 1222,
       "serviceFiles": [
         "bootstrap.ts",
+        "constitution.service.test.ts",
         "constitution.service.ts",
         "constitution/constitution.service.ts"
       ],
@@ -2539,7 +2928,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/constitution.ts",
-        "sloc": 27,
+        "sloc": 92,
         "counts": {
           "total": 7,
           "GET": 4,
@@ -2559,24 +2948,164 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/constitution.ts (112 LOC)",
+    "sharedTypes": "packages/shared/src/constitution.ts (194 LOC)",
     "web": {
-      "client": "apps/web/src/lib/constitution.ts (17 LOC)",
+      "client": "apps/web/src/lib/constitution.ts (22 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Organization",
+        "Agent",
+        "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "constitution.spec.ts",
+      "constitution/constitution.service.test.ts",
       "config/moduleGates.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
     "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "contact",
+    "title": "contact",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/contact",
+    "backend": {
+      "serviceDir": "apps/api/src/contact",
+      "serviceFile": {
+        "file": "contact.service.ts",
+        "path": "/home/user/WIN/apps/api/src/contact/contact.service.ts",
+        "sloc": 422,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1439,
+      "serviceFiles": [
+        "aiAssistant.ts",
+        "contact.service.ts",
+        "contact.test.ts",
+        "mailer.ts",
+        "contact/contact.service.ts",
+        "contact/aiAssistant.ts"
+      ],
+      "importedServiceFiles": [
+        "contact/contact.service.ts",
+        "contact/aiAssistant.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/contact.ts",
+        "sloc": 133,
+        "counts": {
+          "total": 12,
+          "GET": 6,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/contactCenter.ts (230 LOC, imported)",
+    "web": {
+      "client": "apps/web/src/lib/contact.ts (46 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Membership",
+        "Conversation",
+        "Message",
+        "AgentKnowledge",
+        "Invoice",
+        "Integration",
+        "ContactRequest",
+        "ContactMessage",
+        "ContactStatusHistory"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "contact/contact.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "conversationManage",
+    "title": "conversationManage",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/conversationManage",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "conversationManage.service.ts",
+        "path": "/home/user/WIN/apps/api/src/conversations/conversationManage.service.ts",
+        "sloc": 538,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 538,
+      "serviceFiles": [
+        "conversations/conversationManage.service.ts"
+      ],
+      "importedServiceFiles": [
+        "conversations/conversationManage.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/conversationManage.ts",
+        "sloc": 161,
+        "counts": {
+          "total": 14,
+          "GET": 3,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 3
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/conversations.ts (451 LOC, imported)",
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Agent",
+        "Conversation"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "conversations/conversationManage.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "PARTIAL"
   },
   {
     "moduleKey": "conversations",
@@ -2591,14 +3120,16 @@
     "backend": {
       "serviceDir": "apps/api/src/conversations",
       "serviceFile": {
-        "file": "conversationOps.service.ts",
-        "path": "/home/user/WIN/apps/api/src/conversations/conversationOps.service.ts",
-        "sloc": 869,
+        "file": "conversationManage.service.ts",
+        "path": "/home/user/WIN/apps/api/src/conversations/conversationManage.service.ts",
+        "sloc": 538,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2794,
+      "serviceTotalSloc": 3596,
       "serviceFiles": [
+        "conversationManage.service.ts",
+        "conversationManage.test.ts",
         "conversationOps.service.ts",
         "conversationOps.test.ts",
         "conversations.service.ts",
@@ -2658,7 +3189,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/conversations.ts (348 LOC)",
+    "sharedTypes": "packages/shared/src/conversations.ts (451 LOC)",
     "web": {
       "client": "apps/web/src/lib/conversations.ts (94 LOC)",
       "pages": []
@@ -2673,7 +3204,10 @@
         "Agent",
         "Conversation",
         "Message",
-        "ConversationParticipant"
+        "ConversationParticipant",
+        "AgentMemory",
+        "ConversationShare",
+        "ConversationShareAccess"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -2681,6 +3215,7 @@
     "tests": [
       "conversations.spec.ts",
       "mobileSync.spec.ts",
+      "conversations/conversationManage.test.ts",
       "conversations/conversationOps.test.ts",
       "conversations/conversations.test.ts",
       "services/message.service.test.ts"
@@ -2702,14 +3237,15 @@
       "serviceFile": {
         "file": "coreIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/coreIntegration/coreIntegration.service.ts",
-        "sloc": 77,
+        "sloc": 118,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 162,
+      "serviceTotalSloc": 333,
       "serviceFiles": [
         "bootstrap.ts",
         "coreIntegration.service.ts",
+        "coreIntegration.test.ts",
         "coreIntegration/coreIntegration.service.ts"
       ],
       "importedServiceFiles": [
@@ -2747,7 +3283,6 @@
       "prismaModels": [
         "User",
         "Organization",
-        "Agent",
         "Message",
         "Integration"
       ],
@@ -2755,10 +3290,14 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions42-47.spec.ts"
+      "deployment.spec.ts",
+      "sessions42-47.spec.ts",
+      "coreIntegration/coreIntegration.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
     "status": "COMPLETE"
   },
   {
@@ -2950,14 +3489,15 @@
       "serviceFile": {
         "file": "cyber.service.ts",
         "path": "/home/user/WIN/apps/api/src/cyber/cyber.service.ts",
-        "sloc": 172,
+        "sloc": 479,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 347,
+      "serviceTotalSloc": 1220,
       "serviceFiles": [
         "bootstrap.ts",
         "cyber.service.ts",
+        "cyber.test.ts",
         "cyber/cyber.service.ts"
       ],
       "importedServiceFiles": [
@@ -2968,18 +3508,33 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/cyber.ts",
-        "sloc": 67,
+        "sloc": 221,
         "counts": {
-          "total": 6,
-          "GET": 2,
-          "POST": 2,
+          "total": 21,
+          "GET": 11,
+          "POST": 6,
           "PUT": 0,
-          "PATCH": 1,
+          "PATCH": 3,
           "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
           "POST /labs",
+          "GET /courses",
+          "GET /challenges",
+          "GET /certification-tracks",
+          "GET /connectors",
+          "GET /health",
+          "GET /labs",
+          "POST /labs/:id/stop",
+          "GET /findings",
+          "POST /findings",
+          "PATCH /findings/:id",
+          "GET /certifications",
+          "POST /certifications",
+          "GET /ranges",
+          "POST /ranges",
+          "PATCH /ranges/:id",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -2987,9 +3542,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/cyber.ts (110 LOC)",
+    "sharedTypes": "packages/shared/src/cyber.ts (279 LOC)",
     "web": {
-      "client": "apps/web/src/lib/cyber.ts (9 LOC)",
+      "client": "apps/web/src/lib/cyber.ts (65 LOC)",
       "pages": []
     },
     "db": {
@@ -2997,14 +3552,17 @@
         "User",
         "Organization",
         "Activity",
-        "Message"
+        "Message",
+        "Integration"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "cyber.spec.ts",
       "cyberCloudAcademy.spec.ts",
-      "sessions61-72-82.spec.ts"
+      "sessions61-72-82.spec.ts",
+      "cyber/cyber.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -3090,15 +3648,16 @@
     "backend": {
       "serviceDir": "apps/api/src/dataMarketplace",
       "serviceFile": {
-        "file": "dataMarketplace.service.ts",
-        "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.ts",
-        "sloc": 189,
+        "file": "dataMarketplace.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.test.ts",
+        "sloc": 174,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1282,
+      "serviceTotalSloc": 1620,
       "serviceFiles": [
         "bootstrap.ts",
+        "dataMarketplace.service.test.ts",
         "dataMarketplace.service.ts",
         "dataMarketplace/dataMarketplace.service.ts",
         "enterprise/dataArchitecture/schemaGovernance.service.ts",
@@ -3118,10 +3677,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/dataMarketplace.ts",
-        "sloc": 105,
+        "sloc": 140,
         "counts": {
-          "total": 11,
-          "GET": 5,
+          "total": 12,
+          "GET": 6,
           "POST": 4,
           "PUT": 0,
           "PATCH": 1,
@@ -3135,6 +3694,7 @@
           "POST /assets",
           "POST /assets/:id/install",
           "POST /assets/:id/review",
+          "GET /assets/:id/reviews",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -3183,7 +3743,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/dataMarketplace.ts (83 LOC)",
+    "sharedTypes": "packages/shared/src/dataMarketplace.ts (132 LOC)",
     "web": {
       "client": "apps/web/src/lib/dataMarketplace.ts (18 LOC)",
       "pages": []
@@ -3204,7 +3764,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "dataMarketplace.spec.ts",
       "sessions61-72-82.spec.ts",
+      "dataMarketplace/dataMarketplace.service.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -3222,15 +3784,16 @@
     "backend": {
       "serviceDir": "apps/api/src/deployment",
       "serviceFile": {
-        "file": "deployment.service.ts",
-        "path": "/home/user/WIN/apps/api/src/deployment/deployment.service.ts",
-        "sloc": 201,
-        "mathRandom": false,
+        "file": "deployment.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/deployment/deployment.service.test.ts",
+        "sloc": 268,
+        "mathRandom": true,
         "externalFetch": false
       },
-      "serviceTotalSloc": 539,
+      "serviceTotalSloc": 961,
       "serviceFiles": [
         "bootstrap.ts",
+        "deployment.service.test.ts",
         "deployment.service.ts",
         "verdicts.test.ts",
         "deployment/deployment.service.ts"
@@ -3243,11 +3806,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/deployment.ts",
-        "sloc": 76,
+        "sloc": 139,
         "counts": {
-          "total": 10,
+          "total": 11,
           "GET": 4,
-          "POST": 3,
+          "POST": 4,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 2
@@ -3258,6 +3821,7 @@
           "POST /targets",
           "POST /targets/:id/validate",
           "GET /targets/:id/validation",
+          "POST /targets/:id/report",
           "DELETE /targets/:id",
           "GET /notes",
           "POST /notes",
@@ -3266,9 +3830,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/deployment.ts (98 LOC)",
+    "sharedTypes": "packages/shared/src/deployment.ts (165 LOC)",
     "web": {
-      "client": "apps/web/src/lib/deployment.ts (14 LOC)",
+      "client": "apps/web/src/lib/deployment.ts (22 LOC)",
       "pages": []
     },
     "db": {
@@ -3281,7 +3845,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "deployment.spec.ts",
       "mlOps.spec.ts",
+      "deployment/deployment.service.test.ts",
       "deployment/verdicts.test.ts"
     ],
     "syntheticData": [],
@@ -3380,6 +3946,157 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "developerGateway",
+    "title": "developerGateway",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/developerGateway",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "registry.ts",
+        "path": "/home/user/WIN/apps/api/src/services/ai/registry.ts",
+        "sloc": 606,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2010,
+      "serviceFiles": [
+        "services/ai/registry.ts",
+        "services/workflow.service.ts",
+        "tradingIntel/analysis.ts",
+        "mediaGen/mediaGen.service.ts"
+      ],
+      "importedServiceFiles": [
+        "services/ai/registry.ts",
+        "services/workflow.service.ts",
+        "tradingIntel/analysis.ts",
+        "mediaGen/mediaGen.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/developerGateway.ts",
+        "sloc": 233,
+        "counts": {
+          "total": 9,
+          "GET": 4,
+          "POST": 5,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "POST /ai/complete",
+          "GET /agents",
+          "POST /agents/:id/execute",
+          "POST /workflows/:id/execute",
+          "GET /workflows/:id/runs",
+          "POST /workflows/:id/runs/:runId/cancel",
+          "GET /knowledge/search",
+          "GET /trading/analysis",
+          "POST /media/generate"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/developerPlatform.ts (222 LOC, imported)",
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Agent",
+        "Message",
+        "AgentKnowledge",
+        "Workflow",
+        "WorkflowRun",
+        "ApiUsageRecord"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "services/ai/registry.test.ts",
+      "services/workflow.engine.test.ts",
+      "tradingIntel/ea.test.ts",
+      "tradingIntel/marketData.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "PARTIAL"
+  },
+  {
+    "moduleKey": "developerPlatform",
+    "title": "developerPlatform",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/developerPlatform",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "developerApp.service.ts",
+        "path": "/home/user/WIN/apps/api/src/devportal/developerApp.service.ts",
+        "sloc": 262,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 698,
+      "serviceFiles": [
+        "devportal/developerApp.service.ts",
+        "publicApi/apiUsage.service.ts",
+        "services/workspace.service.ts"
+      ],
+      "importedServiceFiles": [
+        "devportal/developerApp.service.ts",
+        "publicApi/apiUsage.service.ts",
+        "services/workspace.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/developerPlatform.ts",
+        "sloc": 85,
+        "counts": {
+          "total": 11,
+          "GET": 6,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/developerPlatform.ts (222 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/developerPlatform.ts (91 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "DeveloperApp"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "devportal/developerPlatform.test.ts",
+      "services/alerting.test.ts",
+      "services/workflow.engine.test.ts",
+      "services/workspace.service.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "developers",
     "title": "Developers Public Pages",
     "sessions": [],
@@ -3390,11 +4107,11 @@
       "serviceFile": {
         "file": "publicApi.service.ts",
         "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 178,
+        "sloc": 245,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 351,
+      "serviceTotalSloc": 451,
       "serviceFiles": [
         "publicApi/publicApi.service.ts",
         "services/webhook.service.ts"
@@ -3430,7 +4147,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/apiKeys.ts (66 LOC, imported)",
+    "sharedTypes": "packages/shared/src/apiKeys.ts (82 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/developers.ts (71 LOC)",
       "pages": []
@@ -3462,16 +4179,20 @@
     "backend": {
       "serviceDir": "apps/api/src/devportal",
       "serviceFile": {
-        "file": "cli.service.ts",
-        "path": "/home/user/WIN/apps/api/src/devportal/cli.service.ts",
-        "sloc": 73,
+        "file": "adminApiControl.service.ts",
+        "path": "/home/user/WIN/apps/api/src/devportal/adminApiControl.service.ts",
+        "sloc": 185,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1072,
+      "serviceTotalSloc": 1741,
       "serviceFiles": [
+        "adminApiControl.service.ts",
+        "adminApiControl.test.ts",
         "bootstrap.ts",
         "cli.service.ts",
+        "developerApp.service.ts",
+        "developerPlatform.test.ts",
         "devportal.test.ts",
         "environment.service.ts",
         "sdkRegistry.service.ts",
@@ -3518,23 +4239,35 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/devPortal.ts (115 LOC, supplies CLICommand/CLICommandGroup)",
+    "sharedTypes": "packages/shared/src/developerPlatform.ts (222 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/devPortal.ts (34 LOC, serves /dev-portal)",
       "pages": []
     },
     "db": {
       "prismaModels": [
+        "User",
+        "UserProfile",
         "Organization",
+        "Workspace",
+        "Membership",
         "Agent",
         "Workflow",
+        "ApiKey",
+        "Invoice",
         "Plugin",
-        "Integration"
+        "Integration",
+        "DeveloperApp",
+        "ApiProduct",
+        "ApiSubscription",
+        "ApiUsageRecord"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "devportal/adminApiControl.test.ts",
+      "devportal/developerPlatform.test.ts",
       "devportal/devportal.test.ts"
     ],
     "syntheticData": [],
@@ -3552,15 +4285,16 @@
     "backend": {
       "serviceDir": "apps/api/src/digitalHumans",
       "serviceFile": {
-        "file": "digitalHumans.service.ts",
-        "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.ts",
-        "sloc": 158,
+        "file": "digitalHumans.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.test.ts",
+        "sloc": 246,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 326,
+      "serviceTotalSloc": 788,
       "serviceFiles": [
         "bootstrap.ts",
+        "digitalHumans.service.test.ts",
         "digitalHumans.service.ts",
         "digitalHumans/digitalHumans.service.ts"
       ],
@@ -3572,11 +4306,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/digitalHumans.ts",
-        "sloc": 98,
+        "sloc": 149,
         "counts": {
-          "total": 10,
+          "total": 12,
           "GET": 4,
-          "POST": 4,
+          "POST": 6,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
@@ -3590,14 +4324,16 @@
           "GET /",
           "GET /:id",
           "POST /",
+          "POST /:id/ready",
           "POST /:id/sessions",
+          "POST /sessions/:id/turn",
           "POST /sessions/:id/end"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/digitalHumans.ts (83 LOC)",
+    "sharedTypes": "packages/shared/src/digitalHumans.ts (129 LOC)",
     "web": {
-      "client": "apps/web/src/lib/digitalHumans.ts (17 LOC)",
+      "client": "apps/web/src/lib/digitalHumans.ts (23 LOC)",
       "pages": []
     },
     "db": {
@@ -3605,13 +4341,16 @@
         "User",
         "Organization",
         "Activity",
+        "Conversation",
         "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "digitalHumans.spec.ts",
       "sessions61-72-82.spec.ts",
+      "digitalHumans/digitalHumans.service.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -3780,12 +4519,13 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2184,
+      "serviceTotalSloc": 2561,
       "serviceFiles": [
         "bootstrap.ts",
         "cyberCloudAcademy.service.ts",
         "cyberCloudAcademy.test.ts",
         "education.service.ts",
+        "education.test.ts",
         "lecturer.service.ts",
         "lecturer.test.ts",
         "university.service.ts",
@@ -3804,11 +4544,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/education.ts",
-        "sloc": 53,
+        "sloc": 96,
         "counts": {
-          "total": 10,
-          "GET": 4,
-          "POST": 6,
+          "total": 17,
+          "GET": 9,
+          "POST": 8,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -3818,6 +4558,13 @@
           "POST /tutor/start",
           "POST /paths",
           "POST /assessments",
+          "GET /content",
+          "POST /content",
+          "GET /paths",
+          "GET /assessments",
+          "GET /skills",
+          "POST /skills",
+          "GET /tutor",
           "POST /lecturer/start",
           "POST /lecturer/:id/answer",
           "POST /lecturer/:id/ask",
@@ -3827,9 +4574,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/education.ts (90 LOC)",
+    "sharedTypes": "packages/shared/src/education.ts (106 LOC)",
     "web": {
-      "client": "apps/web/src/lib/education.ts (14 LOC)",
+      "client": "apps/web/src/lib/education.ts (29 LOC)",
       "pages": []
     },
     "db": {
@@ -3844,10 +4591,12 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "education.spec.ts",
       "religions.spec.ts",
       "sessions61-72-82.spec.ts",
       "universityEngine.spec.ts",
       "education/cyberCloudAcademy.test.ts",
+      "education/education.test.ts",
       "education/lecturer.test.ts",
       "education/university.test.ts",
       "education/universityEngine.test.ts",
@@ -4083,7 +4832,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/enterprise.ts",
-        "sloc": 323,
+        "sloc": 324,
         "counts": {
           "total": 51,
           "GET": 23,
@@ -4405,7 +5154,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1173,
+      "serviceTotalSloc": 1195,
       "serviceFiles": [
         "bootstrap.ts",
         "enterpriseSearch.service.ts",
@@ -4569,11 +5318,11 @@
       "serviceFile": {
         "file": "etl.service.ts",
         "path": "/home/user/WIN/apps/api/src/etl/etl.service.ts",
-        "sloc": 311,
+        "sloc": 313,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 803,
+      "serviceTotalSloc": 835,
       "serviceFiles": [
         "etl.service.ts",
         "etl.test.ts",
@@ -4607,7 +5356,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/etl.ts (119 LOC)",
+    "sharedTypes": "packages/shared/src/etl.ts (120 LOC)",
     "web": {
       "client": "apps/web/src/lib/etl.ts (33 LOC)",
       "pages": []
@@ -4643,7 +5392,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 694,
+      "serviceTotalSloc": 705,
       "serviceFiles": [
         "events.service.ts",
         "events.test.ts",
@@ -4708,6 +5457,7 @@
       "opexAssurance.spec.ts",
       "usage.spec.ts",
       "events/events.test.ts",
+      "services/alerting.test.ts",
       "services/workflow.engine.test.ts"
     ],
     "syntheticData": [],
@@ -5056,6 +5806,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "globalCurrency.spec.ts",
       "geoBilling/geoBilling.test.ts"
     ],
     "syntheticData": [],
@@ -5077,14 +5828,15 @@
       "serviceFile": {
         "file": "giftCards.service.ts",
         "path": "/home/user/WIN/apps/api/src/giftCards/giftCards.service.ts",
-        "sloc": 375,
+        "sloc": 458,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 758,
+      "serviceTotalSloc": 1085,
       "serviceFiles": [
         "bootstrap.ts",
         "giftCards.service.ts",
+        "giftCards.test.ts",
         "giftCards/giftCards.service.ts"
       ],
       "importedServiceFiles": [
@@ -5095,11 +5847,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/giftCards.ts",
-        "sloc": 74,
+        "sloc": 86,
         "counts": {
-          "total": 14,
+          "total": 17,
           "GET": 8,
-          "POST": 6,
+          "POST": 9,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -5114,30 +5866,36 @@
           "POST /cards/:id/redeem",
           "POST /cards/:id/expire",
           "POST /cards/:id/freeze",
+          "POST /cards/:id/unfreeze",
+          "POST /cards/:id/apply-invoice",
           "GET /transactions",
           "GET /fraud",
+          "POST /fraud/:id/resolve",
           "GET /loyalty",
           "GET /agents",
           "GET /payment-method"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/wmpcGiftCards.ts (67 LOC, supplies WmpcGiftCard/GcTransaction/GcFraudFlag)",
+    "sharedTypes": "packages/shared/src/wmpcGiftCards.ts (70 LOC, supplies WmpcGiftCard/GcTransaction/GcFraudFlag)",
     "web": {
-      "client": "apps/web/src/lib/giftCards.ts (26 LOC)",
+      "client": "apps/web/src/lib/giftCards.ts (28 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
         "Agent",
-        "Message"
+        "Message",
+        "Invoice",
+        "BillingLedgerEntry"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions41-76-80.spec.ts"
+      "sessions41-76-80.spec.ts",
+      "giftCards/giftCards.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -5156,15 +5914,16 @@
     "backend": {
       "serviceDir": "apps/api/src/globalCurrency",
       "serviceFile": {
-        "file": "globalCurrency.service.ts",
-        "path": "/home/user/WIN/apps/api/src/globalCurrency/globalCurrency.service.ts",
-        "sloc": 227,
+        "file": "globalCurrency.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/globalCurrency/globalCurrency.service.test.ts",
+        "sloc": 453,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 513,
+      "serviceTotalSloc": 1644,
       "serviceFiles": [
         "bootstrap.ts",
+        "globalCurrency.service.test.ts",
         "globalCurrency.service.ts",
         "refreshRates.ts",
         "globalCurrency/globalCurrency.service.ts"
@@ -5177,14 +5936,14 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/globalCurrency.ts",
-        "sloc": 122,
+        "sloc": 135,
         "counts": {
-          "total": 18,
-          "GET": 8,
+          "total": 20,
+          "GET": 9,
           "POST": 7,
           "PUT": 1,
           "PATCH": 1,
-          "DELETE": 1
+          "DELETE": 2
         },
         "endpoints": [
           "GET /dashboard/rollup",
@@ -5194,6 +5953,8 @@
           "POST /detect",
           "GET /rates/:from/:to",
           "POST /rates/:from/:to/override",
+          "GET /rates/:from/:to/override",
+          "DELETE /rates/:from/:to/override",
           "POST /localize-price",
           "POST /regional-price",
           "POST /report",
@@ -5208,9 +5969,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/globalCurrency.ts (49 LOC)",
+    "sharedTypes": "packages/shared/src/globalCurrency.ts (195 LOC)",
     "web": {
-      "client": "apps/web/src/lib/globalCurrency.ts (39 LOC)",
+      "client": "apps/web/src/lib/globalCurrency.ts (54 LOC)",
       "pages": []
     },
     "db": {
@@ -5224,7 +5985,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions41-76-80.spec.ts"
+      "globalCurrency.spec.ts",
+      "sessions41-76-80.spec.ts",
+      "globalCurrency/globalCurrency.service.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -5355,7 +6118,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1893,
+      "serviceTotalSloc": 1994,
       "serviceFiles": [
         "adr.service.ts",
         "bootstrap.ts",
@@ -5442,7 +6205,10 @@
         "Workflow",
         "Integration",
         "AlertRule",
-        "Alert"
+        "Alert",
+        "AccessReviewCampaign",
+        "IncidentRunbook",
+        "RunbookExecution"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -5451,6 +6217,7 @@
       "enterprise.spec.ts",
       "sessions42-47.spec.ts",
       "governance/governance.test.ts",
+      "services/alerting.test.ts",
       "services/permissions.test.ts",
       "config/moduleGates.test.ts"
     ],
@@ -5902,11 +6669,11 @@
       "serviceFile": {
         "file": "cluster.service.ts",
         "path": "/home/user/WIN/apps/api/src/platform/cluster.service.ts",
-        "sloc": 238,
+        "sloc": 400,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
-      "serviceTotalSloc": 1064,
+      "serviceTotalSloc": 1226,
       "serviceFiles": [
         "platform/cluster.service.ts",
         "platform/iac.service.ts",
@@ -6009,7 +6776,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1115,
+      "serviceTotalSloc": 1133,
       "serviceFiles": [
         "bootstrap.ts",
         "kernel.service.ts",
@@ -6318,14 +7085,15 @@
       "serviceFile": {
         "file": "legal.service.ts",
         "path": "/home/user/WIN/apps/api/src/legal/legal.service.ts",
-        "sloc": 235,
+        "sloc": 309,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 476,
+      "serviceTotalSloc": 709,
       "serviceFiles": [
         "bootstrap.ts",
         "legal.service.ts",
+        "legal.test.ts",
         "legal/legal.service.ts"
       ],
       "importedServiceFiles": [
@@ -6336,11 +7104,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/legal.ts",
-        "sloc": 74,
+        "sloc": 128,
         "counts": {
-          "total": 5,
-          "GET": 1,
-          "POST": 3,
+          "total": 11,
+          "GET": 5,
+          "POST": 5,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 0
@@ -6350,13 +7118,19 @@
           "POST /matters",
           "PATCH /matters/:id/status",
           "POST /research",
+          "GET /matters",
+          "GET /contracts",
+          "POST /contracts",
+          "GET /updates",
+          "POST /updates",
+          "GET /research",
           "POST /updates/:id/acknowledge"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/legal.ts (85 LOC)",
+    "sharedTypes": "packages/shared/src/legal.ts (92 LOC)",
     "web": {
-      "client": "apps/web/src/lib/legal.ts (40 LOC)",
+      "client": "apps/web/src/lib/legal.ts (56 LOC)",
       "pages": []
     },
     "db": {
@@ -6369,8 +7143,10 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "legal.spec.ts",
       "sessions61-72-82.spec.ts",
-      "smoke.spec.ts"
+      "smoke.spec.ts",
+      "legal/legal.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -6387,15 +7163,16 @@
     "backend": {
       "serviceDir": "apps/api/src/licensing",
       "serviceFile": {
-        "file": "licensing.service.ts",
-        "path": "/home/user/WIN/apps/api/src/licensing/licensing.service.ts",
-        "sloc": 139,
+        "file": "licensing.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/licensing/licensing.service.test.ts",
+        "sloc": 288,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 283,
+      "serviceTotalSloc": 899,
       "serviceFiles": [
         "bootstrap.ts",
+        "licensing.service.test.ts",
         "licensing.service.ts",
         "licensing/licensing.service.ts"
       ],
@@ -6407,11 +7184,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/licensing.ts",
-        "sloc": 30,
+        "sloc": 114,
         "counts": {
-          "total": 6,
-          "GET": 3,
-          "POST": 3,
+          "total": 9,
+          "GET": 4,
+          "POST": 5,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -6420,21 +7197,26 @@
           "GET /dashboard/rollup",
           "GET /assets",
           "GET /grants",
+          "GET /royalties",
           "POST /assets",
           "POST /grants",
-          "POST /usage"
+          "POST /grants/cancel",
+          "POST /usage",
+          "POST /payouts/settle"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/licensing.ts (112 LOC)",
+    "sharedTypes": "packages/shared/src/licensing.ts (161 LOC)",
     "web": {
-      "client": "apps/web/src/lib/licensing.ts (16 LOC)",
+      "client": "apps/web/src/lib/licensing.ts (24 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
+        "Message",
         "Invoice",
         "Plugin"
       ],
@@ -6442,6 +7224,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "licensing.spec.ts",
+      "licensing/licensing.service.test.ts",
       "config/moduleGates.test.ts"
     ],
     "syntheticData": [],
@@ -6641,12 +7425,13 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1517,
+      "serviceTotalSloc": 1565,
       "serviceFiles": [
         "appStore.service.ts",
         "bootstrap.ts",
         "digitalTwins.service.ts",
         "simulation.service.ts",
+        "simulation.test.ts",
         "skills.service.ts",
         "marketplace/skills.service.ts",
         "marketplace/digitalTwins.service.ts",
@@ -6725,7 +7510,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "marketplace.spec.ts"
+      "marketplace.spec.ts",
+      "marketplace/simulation.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -6854,6 +7640,7 @@
       "mediaFactory/publishing/tokens.test.ts",
       "mediaFactory/publishing/uploads.test.ts",
       "mediaFactory/publishing/webhooks.test.ts",
+      "services/alerting.test.ts",
       "services/workflow.engine.test.ts",
       "services/workspace.service.test.ts",
       "config/liveFabrication.test.ts",
@@ -7619,11 +8406,11 @@
       "serviceFile": {
         "file": "notifications.service.ts",
         "path": "/home/user/WIN/apps/api/src/notifications/notifications.service.ts",
-        "sloc": 444,
+        "sloc": 452,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 972,
+      "serviceTotalSloc": 988,
       "serviceFiles": [
         "notifications.service.ts",
         "notifications.test.ts",
@@ -7894,11 +8681,11 @@
       "serviceFile": {
         "file": "permissions.module.ts",
         "path": "/home/user/WIN/apps/api/src/permissions/permissions.module.ts",
-        "sloc": 161,
+        "sloc": 145,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 281,
+      "serviceTotalSloc": 265,
       "serviceFiles": [
         "permissions.module.ts",
         "permissions.test.ts",
@@ -7967,11 +8754,11 @@
       "serviceFile": {
         "file": "cluster.service.ts",
         "path": "/home/user/WIN/apps/api/src/platform/cluster.service.ts",
-        "sloc": 238,
+        "sloc": 400,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
-      "serviceTotalSloc": 1753,
+      "serviceTotalSloc": 1915,
       "serviceFiles": [
         "cluster.service.ts",
         "cluster.test.ts",
@@ -8032,6 +8819,7 @@
     "db": {
       "prismaModels": [
         "User",
+        "Agent",
         "Message",
         "Invoice",
         "Alert"
@@ -8202,6 +8990,86 @@
     "externalIntegrations": [
       "Stripe",
       "Azure"
+    ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "pluginOs",
+    "title": "pluginOs",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/pluginOs",
+    "backend": {
+      "serviceDir": "apps/api/src/pluginOs",
+      "serviceFile": {
+        "file": "bootstrap.ts",
+        "path": "/home/user/WIN/apps/api/src/pluginOs/bootstrap.ts",
+        "sloc": 78,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1599,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "capabilityRegistry.ts",
+        "connections.ts",
+        "intent.ts",
+        "pluginOs.test.ts",
+        "pluginRegistry.ts",
+        "pluginOs/pluginRegistry.ts",
+        "pluginOs/connections.ts",
+        "pluginOs/capabilityRegistry.ts",
+        "pluginOs/intent.ts"
+      ],
+      "importedServiceFiles": [
+        "pluginOs/pluginRegistry.ts",
+        "pluginOs/connections.ts",
+        "pluginOs/capabilityRegistry.ts",
+        "pluginOs/intent.ts"
+      ],
+      "bootstrapFile": "apps/api/src/pluginOs/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/pluginOs.ts",
+        "sloc": 134,
+        "counts": {
+          "total": 20,
+          "GET": 6,
+          "POST": 12,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 2
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/pluginOs.ts (187 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/pluginOs.ts (36 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Agent",
+        "Message",
+        "Meeting",
+        "Workflow",
+        "ApiKey",
+        "Invoice",
+        "Plugin"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "pluginOs/pluginOs.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "Google"
     ],
     "status": "COMPLETE"
   },
@@ -8576,14 +9444,15 @@
     "backend": {
       "serviceDir": "apps/api/src/publicApi",
       "serviceFile": {
-        "file": "publicApi.service.ts",
-        "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
-        "sloc": 178,
+        "file": "apiUsage.service.ts",
+        "path": "/home/user/WIN/apps/api/src/publicApi/apiUsage.service.ts",
+        "sloc": 219,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2166,
+      "serviceTotalSloc": 2485,
       "serviceFiles": [
+        "apiUsage.service.ts",
         "publicApi.completion.test.ts",
         "publicApi.service.ts",
         "publicApi.test.ts",
@@ -8642,7 +9511,9 @@
         "TalkMessage",
         "Workflow",
         "WorkflowRun",
-        "ApiKey"
+        "ApiKey",
+        "DeveloperApp",
+        "ApiUsageRecord"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -8757,7 +9628,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1611,
+      "serviceTotalSloc": 1634,
       "serviceFiles": [
         "aiValidation.service.ts",
         "apiTest.service.ts",
@@ -8816,8 +9687,7 @@
         "User",
         "Agent",
         "Message",
-        "Workflow",
-        "Integration"
+        "Workflow"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -8843,14 +9713,15 @@
       "serviceFile": {
         "file": "quantum.service.ts",
         "path": "/home/user/WIN/apps/api/src/quantum/quantum.service.ts",
-        "sloc": 139,
+        "sloc": 253,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 284,
+      "serviceTotalSloc": 638,
       "serviceFiles": [
         "bootstrap.ts",
         "quantum.service.ts",
+        "quantum.test.ts",
         "quantum/quantum.service.ts"
       ],
       "importedServiceFiles": [
@@ -8861,18 +9732,22 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/quantum.ts",
-        "sloc": 75,
+        "sloc": 101,
         "counts": {
-          "total": 9,
-          "GET": 5,
-          "POST": 2,
+          "total": 13,
+          "GET": 6,
+          "POST": 3,
           "PUT": 0,
-          "PATCH": 1,
-          "DELETE": 1
+          "PATCH": 2,
+          "DELETE": 2
         },
         "endpoints": [
           "GET /dashboard/rollup",
           "GET /inventory",
+          "GET /inventory/:id",
+          "POST /inventory",
+          "PATCH /inventory/:id",
+          "DELETE /inventory/:id",
           "GET /connectors",
           "GET /jobs",
           "POST /jobs",
@@ -8883,22 +9758,25 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/quantum.ts (61 LOC)",
+    "sharedTypes": "packages/shared/src/quantum.ts (125 LOC)",
     "web": {
-      "client": "apps/web/src/lib/quantum.ts (14 LOC)",
+      "client": "apps/web/src/lib/quantum.ts (29 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
         "Organization",
+        "Workspace",
         "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "quantum.spec.ts",
       "sessions61-72-82.spec.ts",
+      "quantum/quantum.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -9229,14 +10107,15 @@
       "serviceFile": {
         "file": "robotics.service.ts",
         "path": "/home/user/WIN/apps/api/src/robotics/robotics.service.ts",
-        "sloc": 206,
+        "sloc": 382,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 422,
+      "serviceTotalSloc": 964,
       "serviceFiles": [
         "bootstrap.ts",
         "robotics.service.ts",
+        "robotics.test.ts",
         "robotics/robotics.service.ts"
       ],
       "importedServiceFiles": [
@@ -9247,34 +10126,43 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/robotics.ts",
-        "sloc": 33,
+        "sloc": 111,
         "counts": {
-          "total": 6,
-          "GET": 3,
-          "POST": 3,
+          "total": 16,
+          "GET": 8,
+          "POST": 6,
           "PUT": 0,
-          "PATCH": 0,
-          "DELETE": 0
+          "PATCH": 1,
+          "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
+          "GET /connectors",
+          "GET /health",
+          "GET /alerts",
+          "POST /alerts/:id/ack",
+          "GET /maintenance",
+          "POST /maintenance",
           "GET /robots",
           "GET /robots/:id",
           "POST /robots",
+          "PATCH /robots/:id",
+          "DELETE /robots/:id",
           "POST /robots/:id/command",
+          "POST /robots/:id/telemetry",
+          "GET /robots/:id/telemetry",
           "POST /predictive/scan"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/robotics.ts (86 LOC)",
+    "sharedTypes": "packages/shared/src/robotics.ts (188 LOC)",
     "web": {
-      "client": "apps/web/src/lib/robotics.ts (16 LOC)",
+      "client": "apps/web/src/lib/robotics.ts (38 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
-        "Organization",
         "Message",
         "Alert"
       ],
@@ -9282,7 +10170,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "robotics.spec.ts",
       "sessions54-60.spec.ts",
+      "robotics/robotics.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -9304,14 +10194,15 @@
       "serviceFile": {
         "file": "scientific.service.ts",
         "path": "/home/user/WIN/apps/api/src/scientific/scientific.service.ts",
-        "sloc": 135,
+        "sloc": 233,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 275,
+      "serviceTotalSloc": 599,
       "serviceFiles": [
         "bootstrap.ts",
         "scientific.service.ts",
+        "scientific.test.ts",
         "scientific/scientific.service.ts"
       ],
       "importedServiceFiles": [
@@ -9322,18 +10213,24 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/scientific.ts",
-        "sloc": 68,
+        "sloc": 123,
         "counts": {
-          "total": 6,
-          "GET": 3,
-          "POST": 1,
+          "total": 12,
+          "GET": 5,
+          "POST": 4,
           "PUT": 0,
-          "PATCH": 1,
+          "PATCH": 2,
           "DELETE": 1
         },
         "endpoints": [
           "GET /dashboard/rollup",
           "GET /papers",
+          "GET /experiments",
+          "POST /experiments",
+          "PATCH /experiments/:id/status",
+          "POST /papers",
+          "GET /hypotheses",
+          "POST /hypotheses",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -9341,9 +10238,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/scientific.ts (74 LOC)",
+    "sharedTypes": "packages/shared/src/scientific.ts (98 LOC)",
     "web": {
-      "client": "apps/web/src/lib/scientific.ts (9 LOC)",
+      "client": "apps/web/src/lib/scientific.ts (28 LOC)",
       "pages": []
     },
     "db": {
@@ -9357,7 +10254,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "scientific.spec.ts",
       "sessions61-72-82.spec.ts",
+      "scientific/scientific.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -9455,16 +10354,17 @@
       "serviceFile": {
         "file": "governance.service.ts",
         "path": "/home/user/WIN/apps/api/src/security/governance.service.ts",
-        "sloc": 111,
+        "sloc": 210,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2001,
+      "serviceTotalSloc": 2373,
       "serviceFiles": [
         "csrf.ts",
         "encryption.ts",
         "governance.service.ts",
         "passwords.ts",
+        "piiRedact.test.ts",
         "piiRedact.ts",
         "promptGuard.test.ts",
         "promptGuard.ts",
@@ -9498,11 +10398,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/security.ts",
-        "sloc": 155,
+        "sloc": 172,
         "counts": {
-          "total": 14,
-          "GET": 8,
-          "POST": 5,
+          "total": 17,
+          "GET": 9,
+          "POST": 7,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 0
@@ -9521,7 +10421,10 @@
           "GET /incidents",
           "PATCH /incidents/:id",
           "POST /access-reviews/run",
-          "GET /access-reviews/latest"
+          "GET /access-reviews/latest",
+          "POST /access-reviews/attest",
+          "GET /runbooks",
+          "POST /runbooks"
         ]
       }
     ],
@@ -9533,17 +10436,24 @@
     "db": {
       "prismaModels": [
         "User",
+        "UserSession",
         "Conversation",
         "Message",
         "WorkflowRun",
         "ApiKey",
         "Integration",
-        "Alert"
+        "Alert",
+        "Notification",
+        "AccessReviewCampaign",
+        "AccessReviewItem",
+        "IncidentRunbook",
+        "RunbookExecution"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "security/piiRedact.test.ts",
       "security/promptGuard.test.ts",
       "security/securityContract.test.ts",
       "security/serviceToken.test.ts",
@@ -9795,14 +10705,16 @@
       "serviceFile": {
         "file": "spatial.service.ts",
         "path": "/home/user/WIN/apps/api/src/spatial/spatial.service.ts",
-        "sloc": 441,
+        "sloc": 483,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 892,
+      "serviceTotalSloc": 1162,
       "serviceFiles": [
         "bootstrap.ts",
+        "spatial.demoSeed.test.ts",
         "spatial.service.ts",
+        "spatial.test.ts",
         "spatial/spatial.service.ts"
       ],
       "importedServiceFiles": [
@@ -9813,11 +10725,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/spatial.ts",
-        "sloc": 31,
+        "sloc": 87,
         "counts": {
-          "total": 8,
+          "total": 9,
           "GET": 6,
-          "POST": 2,
+          "POST": 3,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -9830,18 +10742,20 @@
           "GET /maps",
           "GET /waypoints",
           "GET /holo-dashboards",
-          "GET /remote-expert-sessions"
+          "GET /remote-expert-sessions",
+          "POST /devices/heartbeat"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/spatial.ts (80 LOC)",
+    "sharedTypes": "packages/shared/src/spatial.ts (88 LOC)",
     "web": {
-      "client": "apps/web/src/lib/spatial.ts (22 LOC)",
+      "client": "apps/web/src/lib/spatial.ts (26 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
         "Message",
         "Workflow",
@@ -9852,7 +10766,10 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "spatial.spec.ts",
+      "spatial/spatial.demoSeed.test.ts",
+      "spatial/spatial.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -9871,11 +10788,11 @@
       "serviceFile": {
         "file": "sustainability.service.ts",
         "path": "/home/user/WIN/apps/api/src/sustainability/sustainability.service.ts",
-        "sloc": 363,
+        "sloc": 372,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1115,
+      "serviceTotalSloc": 1148,
       "serviceFiles": [
         "bootstrap.ts",
         "sustainability.completion.test.ts",
@@ -9908,7 +10825,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/sustainability.ts (170 LOC)",
+    "sharedTypes": "packages/shared/src/sustainability.ts (176 LOC)",
     "web": {
       "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
       "pages": []
@@ -10037,11 +10954,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 535,
+        "sloc": 721,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1246,
+      "serviceTotalSloc": 1618,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -10089,6 +11006,7 @@
         "Activity",
         "Message",
         "Canvas",
+        "Workflow",
         "Alert"
       ],
       "migrations": [],
@@ -10504,15 +11422,17 @@
     "backend": {
       "serviceDir": "apps/api/src/updates",
       "serviceFile": {
-        "file": "updates.service.ts",
-        "path": "/home/user/WIN/apps/api/src/updates/updates.service.ts",
-        "sloc": 229,
+        "file": "updateSigning.service.ts",
+        "path": "/home/user/WIN/apps/api/src/updates/updateSigning.service.ts",
+        "sloc": 83,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 471,
+      "serviceTotalSloc": 644,
       "serviceFiles": [
         "bootstrap.ts",
+        "updateSigning.service.ts",
+        "updateSigning.test.ts",
         "updates.service.ts",
         "updates/updates.service.ts"
       ],
@@ -10561,8 +11481,10 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "legal.spec.ts",
       "politics.spec.ts",
-      "sessions54-60.spec.ts"
+      "sessions54-60.spec.ts",
+      "updates/updateSigning.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -10644,6 +11566,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "licensing.spec.ts",
       "publicApi.spec.ts",
       "sessions54-60.spec.ts",
       "usage.spec.ts",
@@ -10812,6 +11735,475 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "video",
+    "title": "video",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/video",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "video.service.ts",
+        "path": "/home/user/WIN/apps/api/src/videoEngine/video.service.ts",
+        "sloc": 640,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 640,
+      "serviceFiles": [
+        "videoEngine/video.service.ts"
+      ],
+      "importedServiceFiles": [
+        "videoEngine/video.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/video.ts",
+        "sloc": 289,
+        "counts": {
+          "total": 20,
+          "GET": 8,
+          "POST": 10,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /capabilities",
+          "GET /providers",
+          "GET /dashboard",
+          "POST /projects",
+          "GET /projects",
+          "GET /projects/:id",
+          "PATCH /projects/:id",
+          "DELETE /projects/:id",
+          "POST /projects/:id/plan",
+          "POST /projects/:id/generate",
+          "POST /projects/:id/render",
+          "POST /projects/:id/produce",
+          "POST /projects/:id/modify",
+          "POST /projects/:id/versions",
+          "POST /projects/:id/marketplace/:productId",
+          "POST /projects/:id/publish",
+          "GET /projects/:id/assets/:assetId",
+          "GET /jobs",
+          "GET /jobs/:id",
+          "POST /jobs/:id/cancel"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/video.ts (400 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/video.ts (85 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "videoEngine/video.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "videoAssets",
+    "title": "videoAssets",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/videoAssets",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "storage.ts",
+        "path": "/home/user/WIN/apps/api/src/videoEngine/storage.ts",
+        "sloc": 70,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 70,
+      "serviceFiles": [
+        "videoEngine/storage.ts"
+      ],
+      "importedServiceFiles": [
+        "videoEngine/storage.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/videoAssets.ts",
+        "sloc": 56,
+        "counts": {
+          "total": 1,
+          "GET": 1,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /*"
+        ]
+      }
+    ],
+    "sharedTypes": null,
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "STUB"
+  },
+  {
+    "moduleKey": "videoEngine",
+    "title": "videoEngine",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/videoEngine",
+    "backend": {
+      "serviceDir": "apps/api/src/videoEngine",
+      "serviceFile": {
+        "file": "video.service.ts",
+        "path": "/home/user/WIN/apps/api/src/videoEngine/video.service.ts",
+        "sloc": 640,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2029,
+      "serviceFiles": [
+        "audio.ts",
+        "bootstrap.ts",
+        "director.ts",
+        "jobQueue.ts",
+        "providerGateway.ts",
+        "quality.ts",
+        "renderer.ts",
+        "storage.ts",
+        "video.service.ts",
+        "video.test.ts"
+      ],
+      "importedServiceFiles": [],
+      "bootstrapFile": "apps/api/src/videoEngine/bootstrap.ts"
+    },
+    "routes": [],
+    "sharedTypes": "packages/shared/src/video.ts (400 LOC, supplies VideoMusicTrack/VideoProject/VideoVoiceTrack)",
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Agent",
+        "Message",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "videoEngine/video.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "FFmpeg"
+    ],
+    "status": "STUB"
+  },
+  {
+    "moduleKey": "videoTransform",
+    "title": "videoTransform",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/videoTransform",
+    "backend": {
+      "serviceDir": "apps/api/src/videoTransform",
+      "serviceFile": {
+        "file": "transform.service.ts",
+        "path": "/home/user/WIN/apps/api/src/videoTransform/transform.service.ts",
+        "sloc": 585,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2278,
+      "serviceFiles": [
+        "ffmpegOps.ts",
+        "nodes.ts",
+        "providers.ts",
+        "storage.ts",
+        "transform.service.ts",
+        "videoTransform.test.ts",
+        "videoTransform/transform.service.ts",
+        "videoTransform/nodes.ts"
+      ],
+      "importedServiceFiles": [
+        "videoTransform/transform.service.ts",
+        "videoTransform/nodes.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/videoTransform.ts",
+        "sloc": 223,
+        "counts": {
+          "total": 18,
+          "GET": 9,
+          "POST": 8,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /nodes",
+          "GET /providers",
+          "GET /dashboard",
+          "GET /activity",
+          "POST /sources",
+          "POST /jobs",
+          "GET /jobs",
+          "GET /jobs/:id",
+          "POST /jobs/:id/cancel",
+          "POST /estimate",
+          "GET /jobs/:id/events",
+          "POST /workflows",
+          "GET /workflows",
+          "GET /workflows/:id",
+          "DELETE /workflows/:id",
+          "POST /workflows/:id/nodes",
+          "POST /workflows/:id/connect",
+          "POST /workflows/:id/run"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/videoTransform.ts (267 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/videoTransform.ts (62 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Activity",
+        "Message",
+        "Canvas",
+        "Workflow",
+        "Integration"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "videoTransform/videoTransform.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "FFmpeg"
+    ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "videoTransformAssets",
+    "title": "videoTransformAssets",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/videoTransformAssets",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "storage.ts",
+        "path": "/home/user/WIN/apps/api/src/videoTransform/storage.ts",
+        "sloc": 98,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 98,
+      "serviceFiles": [
+        "videoTransform/storage.ts"
+      ],
+      "importedServiceFiles": [
+        "videoTransform/storage.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/videoTransformAssets.ts",
+        "sloc": 42,
+        "counts": {
+          "total": 1,
+          "GET": 1,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /*"
+        ]
+      }
+    ],
+    "sharedTypes": null,
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "STUB"
+  },
+  {
+    "moduleKey": "videoTransformer",
+    "title": "videoTransformer",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/videoTransformer",
+    "backend": {
+      "serviceDir": "apps/api/src/videoTransformer",
+      "serviceFile": {
+        "file": "transform.service.ts",
+        "path": "/home/user/WIN/apps/api/src/videoTransformer/transform.service.ts",
+        "sloc": 250,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 1220,
+      "serviceFiles": [
+        "editParser.ts",
+        "providerGateway.ts",
+        "storage.ts",
+        "transform.service.ts",
+        "understanding.ts",
+        "videoTransformer.test.ts",
+        "videoTransformer/transform.service.ts"
+      ],
+      "importedServiceFiles": [
+        "videoTransformer/transform.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/videoTransformer.ts",
+        "sloc": 108,
+        "counts": {
+          "total": 15,
+          "GET": 9,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/videoTransformer.ts (254 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/videoTransformer.ts (33 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Conversation",
+        "Message",
+        "Workflow",
+        "Notification"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "videoTransformer/videoTransformer.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "FFmpeg"
+    ],
+    "status": "COMPLETE"
+  },
+  {
+    "moduleKey": "videoTransformerAssets",
+    "title": "videoTransformerAssets",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/videoTransformerAssets",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "storage.ts",
+        "path": "/home/user/WIN/apps/api/src/videoTransformer/storage.ts",
+        "sloc": 59,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 59,
+      "serviceFiles": [
+        "videoTransformer/storage.ts"
+      ],
+      "importedServiceFiles": [
+        "videoTransformer/storage.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/videoTransformerAssets.ts",
+        "sloc": 31,
+        "counts": {
+          "total": 1,
+          "GET": 1,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /*"
+        ]
+      }
+    ],
+    "sharedTypes": null,
+    "web": {
+      "client": null,
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "STUB"
+  },
+  {
     "moduleKey": "voice",
     "title": "voice",
     "sessions": [],
@@ -10822,11 +12214,11 @@
       "serviceFile": {
         "file": "voice.module.ts",
         "path": "/home/user/WIN/apps/api/src/voice/voice.module.ts",
-        "sloc": 450,
+        "sloc": 448,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 450,
+      "serviceTotalSloc": 448,
       "serviceFiles": [
         "voice.module.ts"
       ],
@@ -10882,7 +12274,8 @@
       "aiEcosystem.spec.ts",
       "sessions37-40.spec.ts",
       "sessions41-76-80.spec.ts",
-      "sessions42-47.spec.ts"
+      "sessions42-47.spec.ts",
+      "voiceStudio.spec.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -11064,11 +12457,12 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 934,
+      "serviceTotalSloc": 1535,
       "serviceFiles": [
         "bootstrap.ts",
         "voice.service.ts",
         "voiceStudio.service.ts",
+        "voiceStudio.test.ts",
         "voiceStudio/voiceStudio.service.ts",
         "voiceStudio/voice.service.ts"
       ],
@@ -11081,7 +12475,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/voiceStudio.ts",
-        "sloc": 162,
+        "sloc": 198,
         "counts": {
           "total": 15,
           "GET": 8,
@@ -11109,9 +12503,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/voiceStudio.ts (59 LOC)",
+    "sharedTypes": "packages/shared/src/voiceStudio.ts (110 LOC)",
     "web": {
-      "client": "apps/web/src/lib/voiceStudio.ts (27 LOC)",
+      "client": "apps/web/src/lib/voiceStudio.ts (31 LOC)",
       "pages": []
     },
     "db": {
@@ -11124,7 +12518,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions37-40.spec.ts"
+      "sessions37-40.spec.ts",
+      "voiceStudio.spec.ts",
+      "voiceStudio/voiceStudio.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [

@@ -44,10 +44,10 @@ export interface EmissionsSource {
 export interface EnergyMetric {
   period: string;     // YYYY-MM
   kwh: number;
-  /** Structural zero — a utility feed is not connected; see provenance. */
-  renewablePct: number;
-  /** Structural zero — cost requires a utility feed; see provenance. */
-  costUsd: number;
+  /** Session 168 — `null`, not 0: a utility feed is not connected. */
+  renewablePct: number | null;
+  /** Session 168 — `null`, not 0: cost requires a utility feed. */
+  costUsd: number | null;
   pue?: number;
 }
 
@@ -82,11 +82,17 @@ export interface SustainabilityDashboard {
   emissionsTotalTCO2e: number;
   /** Same-period YTD change; `null` without a prior-period baseline. */
   emissionsYtdChangePct: number | null;
-  energyRenewablePct: number;
-  waterMl: number;
-  wasteRecycledPct: number;
-  offsetsPurchasedT: number;
-  netZeroTargetYear: number;
+  /** Session 168 — `null`, not 0: no utility/renewables feed is connected.
+   *  A 0 here rendered as "0% renewable", which is a measurement claim. */
+  energyRenewablePct: number | null;
+  /** Session 168 — `null`, not 0: no water metering is recorded. */
+  waterMl: number | null;
+  /** Session 168 — `null`, not 0: no waste tracking is recorded. */
+  wasteRecycledPct: number | null;
+  /** Session 168 — `null`, not 0: no offset purchases are recorded. */
+  offsetsPurchasedT: number | null;
+  /** Session 168 — `null`, not 0: 0 was a claim that the target year is 0 CE. */
+  netZeroTargetYear: number | null;
   emissionsBySource: EmissionsSource[];
   energySeries: EnergyMetric[]; // last 12 months
   resources: ResourceMetric[];

@@ -11,6 +11,9 @@ export default defineConfig({
   server: {
     port: 5173,
     host: true,
+    // Sandboxed/remote dev previews are served through a proxied hostname.
+    // Vite 5.4 rejects unknown Hosts by default, which breaks those previews.
+    allowedHosts: true,
     proxy: {
       "/api": {
         target: process.env.VITE_API_PROXY_TARGET ?? "http://localhost:4000",

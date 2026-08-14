@@ -1740,3 +1740,451 @@
 - **Tenant-isolation two-segment rule, again.** Catalog
   `sci:exp/exps/pap/paps/hyp/hyps/meta` + `sci:notes`. A bare `sci` entry
   would make the sweep read the literal `exp` as an org id.
+
+### Session 161 — Cyber completion (`cyber`)
+
+- **A catalogue may be served; a posture must be earned.** This is the
+  governing distinction the module was missing. Courses, challenge
+  definitions and vendor exams are curriculum — static configuration, now
+  labelled `kind: "catalog"`. Cloud findings, held certifications, ranges
+  and labs describe what an organization *did*, and are registers that
+  start empty. Serving the second as if it were the first is how ten
+  fabricated findings ended up on every tenant.
+- **A fabricated security finding is worse than a fabricated metric.** The
+  module told every organization — including ones with no cloud account
+  connected — that it had a public S3 bucket ACL, root account access keys
+  and a GCP default service account with editor role. An operator could
+  act on that, or be falsely reassured by `cloudFindingsRemediated30d: 4`.
+  Honesty rules are not cosmetic in a security module.
+- **An empty register is not a clean bill of health, and the UI must say
+  so.** The Cloud Posture tab states that WINDELS scans no cloud account,
+  so an empty findings list means nothing was reported — not that the
+  estate is secure. Silence and safety are different claims.
+- **A certification track is not a certification.** The six vendor exams
+  stay, but as `certificationTracks` with no `passed`/`scorePct`.
+  `certificationsHeld` counts recorded passes only. Same rule S159 applied
+  to `education`: inferring a credential from activity fabricates it.
+- **`i % n` is fabricated metadata.** Challenge domain, points and
+  difficulty came from the index into a title array, so a challenge's
+  subject depended on its position. They are authored on the definition
+  now. Finding status came from `i % 3` / `i % 5` — "remediated" was
+  positional, not recorded.
+- **A 30-day window needs a timestamp, not a status tally.**
+  `cloudFindingsRemediated30d` counts findings whose `remediatedAt` falls
+  in the window; the stamp is written on the transition into
+  `remediated` and cleared when the status moves back.
+- **`rating: 0` and `rank: 0` are claims.** Uncollected statistics
+  (`enrolled`, `rating`, `solvedBy`, `preparationProgressPct`) are `null`.
+  There is no leaderboard at all, so `leaderboardRank` is `null` — rank 0
+  is not a rank.
+- **A declared-but-unused type is an unfinished feature.**
+  `RANGE_KINDS` was defined and never referenced; `ranges` was hardcoded
+  `[]` while the dashboard reported `upcomingRanges`/`activeRanges`.
+  Ranges are now a real register with a lifecycle.
+- **A lab that never expires lies twice.** Expiry is computed from
+  `expiresAt` on read, so a two-hour lab does not sit "running" forever,
+  and `provisioning: "local_state_only"` stops a UI presenting a register
+  row as a provisioned range (the S155 rule).
+- **The buried tab needed the same fix as the new console.** PlatformPage
+  divided learners by 1000 (`"0.0K"`) and rendered `"#" + leaderboardRank`
+  (`"#null"`). Same class of defect as S160's `1e6` divide — when a
+  contract goes null-aware, every existing consumer must too.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `csec:meta/lab/labs/progress/activity/find/finds/cert/certs/rng/rngs/learners`.
+  A bare `csec` entry would make the sweep read the literal `lab` as an
+  organization id. `cy:notes` — the notes ledger, which uses a *different*
+  prefix from the rest of the module — was uncatalogued entirely and is
+  now covered.
+
+### Session 162 — Voice Studio completion (`voiceStudio`)
+
+- **The audit found a latency constant; the module had a cross-tenant leak.**
+  The queue entry for `voiceStudio` was "hardcoded 180 ms fallback". Opening
+  the file showed `grep -c organizationId` = **0**: every store in the module
+  was global. The lesson is that the defect signature that gets a module onto
+  the list is rarely the worst thing in it — always read the whole file.
+- **A cloned voice is biometric data.** `vs:cv:<id>` with no org segment meant
+  any tenant could enumerate every other tenant's cloned voices, and
+  `listPresets()` / `listJobs()` took no scope argument at all — TTS history
+  including `voiceId` and `audioUrl` was fully shared. Honesty rules protect
+  users from false numbers; isolation rules protect them from each other, and
+  a consent-gated store needs both.
+- **An optional scope argument is not access control.**
+  `listCustom(ownerId?)` filtered only when the caller supplied an id, and the
+  route passed `req.user?.id`. Optional chaining turned a missing user into
+  "return everything". A tenant scope must be a required parameter that throws,
+  which is why `requireOrg()` exists rather than a default.
+- **Check tenancy before ownership.** The old `updateSettings` compared
+  `cv.ownerId !== ownerId` only. Owner ids are not globally unique across
+  tenants, so an ownership check alone is not an isolation boundary.
+- **The counter that detects misuse must not itself be shared.**
+  `vs:consent-viol` was one global integer, so one tenant's rejected clone
+  attempts appeared on every other tenant's compliance dashboard.
+- **Migrate, do not strand.** Pre-S162 global records are adopted into the
+  default org once, flagged `migratedFrom: "global"`, keeping their original
+  `createdAt` — never inventing a timestamp for a record that lacked one. The
+  legacy keys are left in place so the change is reversible.
+- **A constant added to a measurement is a fabricated measurement.**
+  `languages: 19 + langs.size` inflated every deployment by 19 and
+  double-counted any custom voice whose language a built-in already covered.
+  An empty deployment claimed 19 languages. The honest figure is the size of
+  the distinct set.
+- **A counter named `24h` that never resets is a lifetime total.**
+  `vs:jobs24` was `incr`-ed on every synthesis and never expired or windowed.
+  The window is now computed from the ledger's timestamps, and the lifetime
+  figure ships separately as `ttsJobsTotal` rather than being disguised.
+- **`trainedEpochs: method === "hf-clone" ? 12 : 3`** invented a training
+  result for a process that trains no model. It is `null` unless a real run
+  reports one.
+- **A missing state in a shared contract lets a placeholder pass as a
+  result.** `VoiceService` already returned `status: "demo"` (no provider
+  configured, no audio produced) but the shared `TtsJob` type omitted it, so
+  the value was only surviving through an untyped object literal. Adding
+  `demo` to the union makes "nothing was rendered" a state a UI must handle.
+- **Two sidebar entries were both called "Voice Studio".** `/app/voice` is a
+  browser-TTS playback surface; the new `/app/voice-studio` is the org-scoped
+  register. Shipping a console means checking the nav for a name collision,
+  not just adding a row.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `vs:cv/custom/preset/presets/job/jobs/lats/cviol` plus the pre-existing
+  `vs:notes`. A bare `vs` entry would make the sweep read the literal `cv` as
+  an organization id.
+
+### Session 163 — Constitution completion (`constitution`)
+
+- **A safety gate must fail closed, and an unconfigured gate must say so.**
+  `checkRequest` returned `allowed: true` with `constitutionVersion: 0` for any
+  organization that had published no constitution. Nothing distinguished that
+  from a clean check, so a caller integrating the gate would have believed
+  every request had been reviewed. The rule this establishes: **when a check
+  cannot be performed, the answer is "no", not "yes"** — and the response
+  carries the reason (`posture: "unconfigured"`, `requiresConfiguration: true`)
+  so the caller can tell refusal-by-policy from refusal-by-misconfiguration.
+- **A permissive mode must be opt-in and self-declaring.** Some deployments
+  genuinely need the old behaviour, so `WINDELS_CONSTITUTION_FAIL_OPEN=true`
+  restores it — but the result then reports `posture: "fail_open"`. A
+  deployment that is not enforcing says so in the payload rather than looking
+  identical to one that is.
+- **Prose is not enforcement.** Eleven policies described precise, checkable
+  conditions ("over $10,000 USD must be reviewed by a human") and *none* was
+  evaluated; a keyword list did all the work, and a policy only supplied the
+  verb for a match that had already happened. Eight of eleven domains were
+  therefore incapable of producing a violation. Policies now carry a structured
+  `rule`, and a policy without one is counted in `unenforceablePolicies` — a
+  documented intention is allowed to exist, but it is not allowed to *look*
+  like a control.
+- **Org-scoped keys do not mean org-scoped access.** This is the counterexample
+  to S162's detection heuristic: `grep -c organizationId` on the *service*
+  looked fine because every key was already `cst:<entity>:<org>:…`. The leak
+  was in the routes, which passed nothing and let a default parameter
+  (`oid = "org-windels"`) silently substitute one tenant for another. **Check
+  the call sites, not just the key shapes** — and prefer a required parameter
+  over a defaulted one for anything tenant-scoped, so the type system catches
+  the omission instead of a string literal papering over it.
+- **Gating a seed is only safe if the empty state is safe.** The S162 move —
+  hide the seed behind `WINDELS_DEMO_DATA` — would have been *actively
+  harmful* here on its own: removing the seed empties `getActive()`, and an
+  empty constitution made `checkRequest` permissive. The seed could only be
+  gated once the gate failed closed. Ask what the module does with nothing
+  before you give it nothing.
+- **`approvedBy: "system"` on a governance artifact is a forged signature.**
+  Eleven policies and a constitution shipped pre-`approved` with an approver
+  that is not a person. The demo seed now signs itself `demo_seed`, and the
+  console labels those rows "review and re-approve before relying on it".
+- **A metric written once at bootstrap and never again is not a measurement.**
+  `cst:m:<org>.workforces` was set to `"0"` in `ensureBootstrapped` and nothing
+  in the platform ever incremented it, so `coveredWorkforces: 0` was structural,
+  not observed. It is `null`, and the field is no longer seeded.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `cst:active/policy/policies/c/cs/v/m`. A bare `cst` entry would make the
+  sweep read the literal `active` as an organization id.
+
+### Session 164 — Licensing completion (`licensing`)
+
+- **A counter is not a window — and on a financial figure that is a
+  misstatement, not a rounding error.** `revenueCents30d` was incremented on
+  every usage event and never decayed, so it reported lifetime revenue under a
+  30-day label. The giveaway was structural: it was *always exactly equal* to
+  `revenueCentsAllTime`. Two fields that can never diverge are one field with
+  two names. Revenue is now summed from the royalty ledger, which makes the
+  window real and the two figures independent.
+- **A liability you cannot discharge is not a liability, it is a growing
+  number.** `payoutsPendingCents` only ever increased: no code path could mark
+  a royalty paid, and `RoyaltyEntry.paid` was written `false` and never
+  updated. Any accrual field needs a settlement path shipped alongside it, or
+  the dashboard is quoting a debt that can only grow.
+- **Write-only data is a design smell that hides missing features.** Every
+  usage event wrote `lic:r:<oid>:<id>` and a `lic:rs` zset entry, and nothing
+  ever read either. The ledger — the actual record of who is owed what — was
+  invisible to the API. If a store has no reader, either delete it or expose
+  it; leaving it is a feature that looks implemented from the inside.
+- **Never fabricate a rate to keep a transaction alive.** `recordUsage` fell
+  back to `{ revenueSharePct: 10 }` when the grant's asset was missing and
+  recorded the charge regardless. A billing event against a nonexistent asset
+  is an error. Likewise `revenueSharePct ?? 10` invented a split for assets
+  that declared none — it is now `0`, and the applied rate is recorded on the
+  entry so a payout can be audited without reading the source.
+- **A fee that appears in no type and no response cannot be audited.** A bare
+  `usageCents * 0.2` took a fifth of every transaction. `PLATFORM_FEE_PCT`
+  now lives in the shared contract and is echoed on every `RoyaltyEntry`.
+- **A status value the code never assigns is a promise the type makes and the
+  service breaks.** `LicenseGrant.status` included `"expired"` and `grant()`
+  accepted `expiresAt`, but nothing ever compared them — so an expired grant
+  stayed active, counted as a live licence and kept billing. When a union has
+  a terminal state, something must be able to reach it.
+- **Two services can share a class name.** `platformServices/licensing.service.ts`
+  (S251, signed licence keys, well tested) and `licensing/licensing.service.ts`
+  (S52, monetization, zero tests) both export `LicensingService`. The existing
+  "licence verification" tests in `moduleGates.test.ts` cover the *former*, so
+  the latter looked tested and was not. Check which import a test actually
+  resolves before crediting a module with coverage.
+- **Say when money is notional.** No payment processor is wired: settling marks
+  the ledger and moves nothing. Rather than let a dollar figure imply a
+  transfer, `payoutsSettleable: false` ships in the contract and both the new
+  console and the PlatformPage tab carry a "ledger only" banner.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `lic:a/as/g/gs/ag/r/rs/m`. A bare `lic` entry would make the sweep read the
+  literal `a` as an organization id.
+
+### Session 165 — Deployment completion (`deployment`)
+
+- **A probe must never write the evidence it reports.** `coreIntegration`'s
+  `deployments` check called `ensureBootstrapped()` and then counted the rows
+  the seeder had just created. Its `missing` branch was unreachable on a first
+  run, so the platform's integration checkpoint asserted a working deployment
+  fleet on an installation with no deployments. Any health check that mutates
+  state can only ever confirm itself. Probes read; they do not seed.
+- **A test that accepts every outcome is not a test.** The guard here was
+  `expect(["wired","missing"]).toContain(dep.status)` — it could not fail, and
+  it sat directly on top of the defect while appearing to cover it. When
+  writing an assertion over a union, at least one member must be excluded.
+- **Registration is not verification.** The module already had a `routesPresent`
+  helper that returns `stub` with the note "route registration is not
+  integration verification" — and then the deployments probe reported `wired`
+  for the mere existence of a registry row. Reuse the standard the codebase
+  already set for itself: `stub` for declared, `wired` for demonstrated.
+- **A composite score built from invented per-state constants is not a
+  measurement.** `avgHealthScore` mapped healthy→100, degraded→60, failed→20
+  and *everything else*→50, then averaged. The `else` branch is the tell: a
+  target nobody had ever checked contributed a confident mid-range number.
+  Compute a score only over subjects that have a real result, and return null
+  when that set is empty.
+- **A derived metric whose inputs are all assigned is structurally constant.**
+  `outdatedTargets` counted `version !== LATEST_VERSION` while `create()` set
+  `version = LATEST_VERSION`, so it was always 0. When a comparison can only
+  produce one answer, the field is decorative — either observe the value from
+  outside (here, a `reportedVersion` an environment supplies) or drop it.
+- **Say which host a check actually probed.** `validate()` runs genuine probes
+  — Redis PING, `SELECT 1`, a real file write — but all against the *local API
+  process*, then wrote `healthy` onto a target in `us-east-1`. The two checks
+  that would have exercised the target are the two that get skipped. Checks now
+  carry `scope`, and a run that proves nothing about the target yields
+  `validated_locally` rather than `healthy`.
+- **Method names are claims.** `destroy()` on a deployment target asserts that
+  a cloud environment was torn down; what happened was `srem`. Renamed to
+  `deregister()`, returning `infrastructureModified: false`. Likewise the UI's
+  "Provision Target" became "Register Target".
+- **Respect prior remediation.** Unlike the previous four modules, this one had
+  already been partly fixed: `validate()`'s `Math.random() > 0.05` verdict and
+  the born-healthy targets were removed earlier, with `verdicts.test.ts`
+  guarding both. That work was left untouched and is not re-litigated —
+  checking for existing fixes before rewriting saved undoing them.
+- **Tenant-isolation two-segment rule, again.** Catalog `dep:t/ts/v` plus the
+  pre-existing `dep:notes`. A bare `dep` entry would read the literal `t` as an
+  organization id.
+
+### Session 166 — Composer completion (`composer`)
+
+- **A bootstrap may create. It must never delete.** `ensureBootstrapped` treated
+  "no stored row parses" as licence to `DEL` every workflow key in the
+  organization and reseed a demo example. It was written as error recovery, but
+  a recovery path that discards the data it cannot read is indistinguishable
+  from data loss — and this one ran automatically at boot. If a bootstrap
+  cannot read something, it must leave it alone and say so; here that became
+  `unreadableWorkflows` on the dashboard.
+- **Verify the audit's claim before implementing against it.** The backlog said
+  composer "re-seeds on read". It does not — `ensureBootstrapped` has exactly
+  one call site, a boot timer. The row had been inferred from the shape of the
+  `needsSeed` branch without tracing callers. Grepping call sites first cost two
+  minutes and turned a mischaracterised defect into the real, worse one. The
+  audit row was corrected rather than quietly satisfied.
+- **An id in the request body is not an identity.** `POST /workflows` accepted
+  `{ id }` and the route supplied no organization, so `upsert` defaulted to
+  `org-windels` and wrote over whatever lived at that id. Ownership must come
+  from the authenticated caller; a body field can only ever be a request.
+- **`0` and `null` are different claims, and so are `0` and "unknown".** The
+  service returned `1` for an unmeasured success rate — a perfect score for
+  zero work — and the console then wrote `(d.successRate || 1)`, which also
+  converted a true 0% into 100%. The worst possible reading rendered as the
+  best. A JavaScript `||` on a numeric metric is nearly always this bug.
+- **Do not denominate an invented number in dollars.** `estimatedCostPerRun`
+  was `capabilityCount * 0.002` with no pricing table in the module, charging a
+  video generation the same as an analytics event, and it was displayed to four
+  decimal places — precision implying measurement. Null plus
+  `costModelConfigured: false` is the honest form.
+- **Check the direction of a reversed range.** `zrange(key, -limit, -1, "REV")`
+  reads naturally as "the last N, newest first" and means the opposite: REV
+  already reverses, so the negative window selects the oldest. The panel titled
+  "Recent Runs" had been showing the least recent since it was written. Redis
+  range bugs are silent — the data is real, only the window is wrong.
+- **A colour is an assertion too.** The runs list rendered anything not
+  `succeeded` as crimson, so a `queued` run — which has no outcome at all —
+  was displayed as a failure. Adding a status to a union means auditing every
+  ternary that switches on it.
+- **A UI guard is not an authorization rule.** The Run button was disabled for
+  non-deployed workflows; the endpoint accepted them. Anything enforced only in
+  the client is not enforced.
+- **Preserve prior art exactly, adapt only what the contract forces.** 13
+  existing tests pinned the earlier fake-verdict fix, and the repo's
+  `noFakeVerdict.guard.test.ts` names `composer.run()` as a reference pattern.
+  Only call signatures and the two `successRate === 0` expectations changed
+  (0 → null); no assertion was weakened or removed.
+- **Prove the new tests can fail.** Three defects were restored one at a time
+  and the suite re-run: the destructive bootstrap failed 2 tests, the fabricated
+  success rate failed 3, the reversed range failed 1. A test written after the
+  fix that has never seen the bug is not yet evidence.
+
+### Session 167 — Global currency completion (`globalCurrency`)
+
+- **A provenance label is load-bearing; do not lie in it for convenience.** The
+  bootstrap wrote hardcoded constants with `source: "cache"` because that was
+  the closest existing enum value. But `getRate` branched on exactly that
+  field — "cache under an hour old is fresh" — so the convenient label made
+  compiled-in numbers indistinguishable from live quotes, and made the honest
+  `offline-fallback` branch dead code. When no existing label is true, add one.
+- **A timestamp that resets on restart is not a timestamp.** Seeding constants
+  with `updatedAt: new Date()` meant they never aged out: every restart made
+  them fresh again. Data with no real vintage must carry `null`, and consumers
+  must treat null as "unknown", not "now".
+- **Never store a computed reciprocal.** Rounding `1/rate` to 4dp is fine for
+  EUR (0.00% error) and catastrophic for NGN (**6.40%**, $42 per ₦1,000,000).
+  Compute inverses at read time at full precision and flag them `derived` —
+  and remember a reciprocal is not a quote at all, since real FX has a spread
+  and `1/rate` is neither the bid nor the ask.
+- **A financial value must carry its age.** Serving an arbitrarily old rate
+  with the comment "stale cache still better than fallback" is a decision the
+  *caller* should be making. Every rate now reports `ageMs`, `staleness` and
+  `usableForBilling`, so a display path and a billing path can diverge.
+- **An option nobody passes is a feature nobody has.** `getRate(from, to,
+  { useOverride })` — grep found the parameter defined and never supplied. The
+  enterprise override was therefore write-only: stored, acknowledged with a
+  200, and ignored by every conversion in the platform. Default to the
+  behaviour that matters and let callers opt *out*.
+- **A guard whose baseline is a stale constant is an alarm on the wrong door.**
+  The manipulation check compared observed rates against the same hardcoded
+  table the module was serving. It failed open for every pair missing from that
+  table, and as reality drifted from the constants it began flagging *correct*
+  rates. Baseline on observed reality, and when there is none, say
+  `baselineAvailable: false` — never `safe: true`.
+- **A default locale is a claim about the user.** `?? COUNTRY_DEFAULTS["NG"]`
+  in three places meant an unrecognised country was told its currency was NGN,
+  its timezone Africa/Lagos, and — via `regionalPrice` — was quoted a price in
+  Naira. A fully populated wrong answer is worse than an empty right one.
+- **Check whether the docstring matches the function.** "Regional pricing
+  engine: returns price with PPP + tax adjustment" performs no PPP adjustment
+  and adds no tax while reporting `included: true`. Both claims lived only in
+  the comment and the return shape, and both were false for the whole life of
+  the module.
+- **Count the things, not the code paths that reach them.** `rateProviders: 4`
+  was the number of cache layers (live/cache/override/offline). There are two
+  providers. Similarly `offlineFallbackHealthy` was
+  `Object.keys(CONSTANT).length > 0` — a compile-time truth dressed as a health
+  check.
+- **Grep for the template-literal-in-single-quotes bug.**
+  `AppError.badRequest('`...${from}...`')` shipped `${from}` to users verbatim.
+
+### Session 168 — Tier 3 partials (spatial, sustainability, dataMarketplace, digitalHumans)
+
+1. **A defect inventory built from one grep pattern describes the pattern, not
+   the module.** This tier was filed as "cheap — finish the partial fixes"
+   because it was assembled by grepping for `ensureBootstrapped` on read paths.
+   Exactly one of the four modules (`spatial`) matched that description. The
+   other three hid a live-path RNG fabrication, a double count, and a rating
+   average with the wrong denominator. Read the service before estimating it.
+
+2. **A demo gate is not a fabrication audit.** "Seeding is gated behind
+   `demoDataEnabled()`" says nothing about code outside the seed block.
+   `digitalHumans.endSession` invented a transcript length on every real
+   session end, ungated, and the module still passed every "no fake data"
+   sweep the track had run. Grep for `rand`/`randInt` **call sites**, not for
+   the gate.
+
+3. **Determinism is not honesty — and it is excellent camouflage.** The
+   fabricated `transcriptLength` was preceded by `_rng.reseed(\`endSession:${sid}\`)`,
+   so the same session always produced the same fake number. Stable, reproducible,
+   test-friendly, and completely made up. Deterministic *looked* intentional,
+   which is why it survived. A reseed on a live path is a red flag, not a
+   reassurance.
+
+4. **Check what a test asserts, not whether it passes.**
+   `sustainability.completion.test.ts` contained
+   `expect(d.energyRenewablePct).toBe(0)` under the title "keeps the structural
+   zeros for contract compatibility". It was green, and it was pinning a defect
+   in place. When a fix requires editing an existing assertion, that assertion
+   was part of the bug.
+
+5. **A test suite that mocks the risky config off cannot find bugs in it.**
+   `spatial.test.ts` sets `demoDataEnabled: () => false` in every case, so the
+   read-path seed returned early and looked harmless for two sessions. If a
+   defect only manifests under a configuration, a test must run under that
+   configuration. Added `spatial.demoSeed.test.ts` with the gate open.
+
+6. **`Math.max(1, n)` in a denominator converts "unknown" into "zero".**
+   `avgSatisfactionPct` divided by `Math.max(1, humans.length)`, so an empty org
+   reported 0.0% satisfaction — a real-looking score for a product nobody had
+   used. If the denominator can be zero, the answer is `null`, not a clamp.
+
+7. **Check the denominator against the thing being averaged.** A *rating*
+   averaged over the *install* count (0.15/5 after three five-star reviews). A
+   *duration* averaged over sessions *started* rather than completed. Both
+   compile, both look like a rolling average, both are wrong. Name the
+   denominator field after what it counts (`reviewCount`, `completedSessions`,
+   `ratedSessions`) and the mismatch becomes visible.
+
+8. **If a value has no ledger, its average is a guess.** `review()` maintained a
+   running mean with no stored reviews to recompute from — the comment was
+   validated and thrown away. A derived aggregate needs the rows it derives
+   from, or it cannot be corrected, audited, or re-reviewed.
+
+9. **`0` and `null` remain different claims — and the UI must agree.** After
+   nulling the unmeasured ESG fields, `PlatformPage` still rendered
+   `(data.energyRenewablePct||0).toFixed(0)`, converting the honest null
+   straight back into "0%". **`||0` on a nullable metric is the UI re-telling
+   the lie the service just stopped telling.** Fixing a service contract is
+   half the job; grep the consumers for `||0`, `??0` and `|| 1`.
+
+10. **A timer is not a state machine.** `create()` used
+    `setTimeout(..., 1500)` to flip an avatar to `ready` — no model trained,
+    nothing rendered. It also died with the process, stranding avatars in
+    `training` forever, and its Redis write was unawaited. A status must be
+    earned by an event, so readiness is now an explicit `markReady()` call.
+    (S161's "a posture must be earned", applied to lifecycle state.)
+
+11. **A parameter default is an authorization decision.** `oid = "org-windels"`
+    on 26 service methods, combined with 34 routes reading
+    `(req.user as any).organizationId` with no null guard, meant a null-org
+    token silently read *and wrote* the house organization. Both halves are
+    required: guard at the route with `orgOf`, and make the service parameter
+    mandatory so the next unguarded caller fails to compile rather than
+    defaulting. Note each module's `/notes` sub-router already guarded — the
+    pattern was known and simply not applied to the real routes.
+
+12. **TypeScript will silently merge two interfaces with the same name in the
+    same file.** A dead `MarketplaceReview { ..., at: string }` — never
+    persisted, never imported — declaration-merged with the new one, producing
+    a type requiring both `at` and `createdAt`. The error surfaced at the
+    construction site, not the declaration. Grep for the type name before
+    adding it.
+
+13. **Reseeding from an object stringifies it.** Both marketplace modules opened
+    with ``_rng.reseed(`ensureBootstrapped:${logger}`)`` — seeding from the
+    literal string `"ensureBootstrapped:[object Object]"`, or
+    `"ensureBootstrapped:undefined"` when called from a read. Two call sites,
+    two streams, one "deterministic" claim. It also ran *before* the demo gate,
+    so a production deployment mutated RNG state on every read.
+
+14. **A dashboard field and its own provenance block can disagree.**
+    `sustainability` shipped a provenance entry labelling five fields
+    `structural_zero` while the fields returned `0`. The documentation of the
+    defect was written and committed; the defect was not fixed. When a module
+    explains why a number is meaningless, make the number `null`.

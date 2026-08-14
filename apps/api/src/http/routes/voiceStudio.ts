@@ -49,19 +49,42 @@ const synthBody = z.object({
   clientSide: z.boolean().optional(),
 });
 
+/**
+ * S162 — every tenant-scoped read/write needs an organization context. Cloned
+ * voices are biometric data; before S162 these stores were global.
+ */
+function orgOf(req: any, res: any): string | null {
+  const oid = req.user?.organizationId;
+  if (!oid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+    return null;
+  }
+  return oid;
+}
+
 export function registerVoiceStudioRoutes(router: Router) {
-  router.get("/dashboard/rollup", async (_req, res, next) => {
-    try { res.json({ ok: true, data: await VoiceStudioService.summary() }); } catch (e) { next(e); }
+  router.get("/dashboard/rollup", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await VoiceStudioService.summary(oid) });
+    } catch (e) { next(e); }
   });
   router.get("/voices/builtin", async (_req, res, next) => {
     try { res.json({ ok: true, data: await VoiceStudioService.listBuiltIn() }); } catch (e) { next(e); }
   });
   router.get("/voices/custom", async (req, res, next) => {
-    try { res.json({ ok: true, data: await VoiceStudioService.listCustom(req.user?.id) }); } catch (e) { next(e); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      // `mine=1` narrows to the caller's own voices; default is the org's set.
+      const ownerId = req.query.mine ? (req.user as any)?.id : undefined;
+      res.json({ ok: true, data: await VoiceStudioService.listCustom(oid, ownerId) });
+    } catch (e) { next(e); }
   });
   router.post("/voices/clone", validate({ body: cloneBody }), async (req, res, next) => {
     try {
+      const oid = orgOf(req, res); if (!oid) return;
       const cv = await VoiceStudioService.cloneVoice({
+        organizationId: oid,
         ownerId: req.user!.id,
         name: req.body.name, gender: req.body.gender, age: req.body.age, language: req.body.language,
         method: req.body.method, consentGranted: req.body.consentGranted,
@@ -78,22 +101,35 @@ export function registerVoiceStudioRoutes(router: Router) {
   });
   router.patch("/voices/:id/settings", validate({ body: settingsBody }), async (req, res, next) => {
     try {
-      const cv = await VoiceStudioService.updateSettings(req.params.id, req.body, req.user!.id);
+      const oid = orgOf(req, res); if (!oid) return;
+      const cv = await VoiceStudioService.updateSettings(oid, req.params.id, req.body, req.user!.id);
       if (!cv) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "voice not found" } });
       res.json({ ok: true, data: cv });
     } catch (e) { next(e); }
   });
-  router.get("/presets", async (_req, res, next) => {
-    try { res.json({ ok: true, data: await VoiceStudioService.listPresets() }); } catch (e) { next(e); }
+  router.get("/presets", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await VoiceStudioService.listPresets(oid) });
+    } catch (e) { next(e); }
   });
   router.post("/presets", validate({ body: presetBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await VoiceStudioService.createPreset(req.body) }); } catch (e) { next(e); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await VoiceStudioService.createPreset(oid, req.body) });
+    } catch (e) { next(e); }
   });
   router.post("/synthesize", validate({ body: synthBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await VoiceStudioService.synthesize(req.body) }); } catch (e) { next(e); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await VoiceStudioService.synthesize(oid, req.body) });
+    } catch (e) { next(e); }
   });
-  router.get("/jobs", async (_req, res, next) => {
-    try { res.json({ ok: true, data: await VoiceStudioService.listJobs() }); } catch (e) { next(e); }
+  router.get("/jobs", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await VoiceStudioService.listJobs(oid) });
+    } catch (e) { next(e); }
   });
   router.get("/voices/registry", (_req, res) => {
     res.json({ ok: true, data: { voices: VoiceService.listVoices(), providers: VoiceService.configuredProviders() } });

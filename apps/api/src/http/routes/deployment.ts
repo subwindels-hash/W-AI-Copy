@@ -7,6 +7,23 @@ import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
 import { z as z_notes } from "zod";
 
+const report = z.object({ version: z.string().min(1).max(64) });
+
+/**
+ * S165 — deployment targets are per-organization records, and DELETE against a
+ * shared namespace is a cross-tenant destructive operation. Only the notes
+ * routes below resolved an org before this session; the six target routes all
+ * fell through to the service's "org-windels" default.
+ */
+function orgOf(req: any, res: any): string | null {
+  const oid = req.user?.organizationId;
+  if (!oid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+    return null;
+  }
+  return oid;
+}
+
 const create = z.object({
   name: z.string().min(2).max(120),
   environment: z.enum(["windows","linux","macos","docker","kubernetes","aws","azure","gcp","oracle","alibaba","private_cloud","on_prem","air_gapped","edge"]),
@@ -16,12 +33,58 @@ const create = z.object({
 });
 
 export function registerDeploymentRoutes(router: Router) {
-  router.get("/dashboard/rollup", async (_req, res, next) => { try { res.json({ ok: true, data: await DeploymentService.dashboard() }); } catch (e) { next(e); } });
-  router.get("/targets", async (_req, res, next) => { try { res.json({ ok: true, data: await DeploymentService.list() }); } catch (e) { next(e); } });
-  router.post("/targets", validate({ body: create }), async (req, res, next) => { try { res.json({ ok: true, data: await DeploymentService.create(req.body) }); } catch (e) { next(e); } });
-  router.post("/targets/:id/validate", async (req, res, next) => { try { res.json({ ok: true, data: await DeploymentService.validate(req.params.id) }); } catch (e) { next(e); } });
-  router.get("/targets/:id/validation", async (req, res, next) => { try { res.json({ ok: true, data: await DeploymentService.getLatestValidation(req.params.id) }); } catch (e) { next(e); } });
-  router.delete("/targets/:id", async (req, res, next) => { try { await DeploymentService.destroy(req.params.id); res.json({ ok: true }); } catch (e) { next(e); } });
+  router.get("/dashboard/rollup", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await DeploymentService.dashboard(oid) });
+    } catch (e) { next(e); }
+  });
+
+  router.get("/targets", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await DeploymentService.list(oid) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/targets", validate({ body: create }), async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await DeploymentService.create({ ...req.body, organizationId: oid }) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/targets/:id/validate", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await DeploymentService.validate(req.params.id, oid) });
+    } catch (e) { next(e); }
+  });
+
+  router.get("/targets/:id/validation", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await DeploymentService.getLatestValidation(req.params.id, oid) });
+    } catch (e) { next(e); }
+  });
+
+  // S165 — an environment reports the version it is actually running. Without
+  // this, `outdatedTargets` was computed from the version assigned at creation
+  // and was therefore always 0.
+  router.post("/targets/:id/report", validate({ body: report }), async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await DeploymentService.reportVersion({ targetId: req.params.id, version: req.body.version, organizationId: oid }) });
+    } catch (e) { next(e); }
+  });
+
+  // S165 — de-registration, not teardown: no infrastructure is modified.
+  router.delete("/targets/:id", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await DeploymentService.deregister(req.params.id, oid) });
+    } catch (e) { next(e); }
+  });
 
 
   // Real tenant-scoped notes ledger for deployment — user-authored annotations

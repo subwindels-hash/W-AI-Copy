@@ -30,23 +30,78 @@ const runOutcome = z.object({
   reportedBy: z.string().min(1).max(200),
 });
 
+/**
+ * S166 — every workflow route used to call the service with no organization, so
+ * the service default (`org-windels`) applied to all of them. Ten routes were
+ * affected: every tenant listed, read, created, overwrote, validated, deployed
+ * and ran org-windels' workflows. `POST /workflows` accepts a caller-supplied
+ * `id`, so one tenant could overwrite another tenant's workflow definition by
+ * guessing an id. Only the four `/notes` routes below were org-aware.
+ */
+function orgOf(req: any, res: any): string | null {
+  const oid = req.user?.organizationId;
+  if (!oid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+    return null;
+  }
+  return oid;
+}
+
 export function registerComposerRoutes(router: Router) {
-  router.get("/dashboard/rollup", async (_req, res, next) => { try { res.json({ ok: true, data: await ComposerService.dashboard() }); } catch (e) { next(e); } });
-  router.get("/workflows", async (_req, res, next) => { try { res.json({ ok: true, data: await ComposerService.list() }); } catch (e) { next(e); } });
-  router.get("/workflows/:id", async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.get(req.params.id) }); } catch (e) { next(e); } });
-  router.post("/workflows", validate({ body: upsert }), async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.upsert({ ...req.body, createdBy: req.user!.id }) }); } catch (e) { next(e); } });
-  router.get("/workflows/:id/validate", async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.validate(req.params.id) }); } catch (e) { next(e); } });
-  router.post("/workflows/:id/deploy", async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.deploy(req.params.id) }); } catch (e) { next(e); } });
-  router.post("/workflows/:id/run", validate({ body: run }), async (req, res, next) => { try { res.json({ ok: true, data: await ComposerService.run(req.params.id, req.user!.id) }); } catch (e) { next(e); } });
+  router.get("/dashboard/rollup", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.dashboard(oid) }); } catch (e) { next(e); }
+  });
+  router.get("/workflows", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.list(oid) }); } catch (e) { next(e); }
+  });
+  router.get("/workflows/:id", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      const wf = await ComposerService.get(req.params.id, oid);
+      if (!wf) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND" } });
+      res.json({ ok: true, data: wf }); } catch (e) { next(e); }
+  });
+  router.post("/workflows", validate({ body: upsert }), async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      // organizationId is taken from the authenticated caller, never the body.
+      res.json({ ok: true, data: await ComposerService.upsert({ ...req.body, organizationId: oid, createdBy: req.user!.id }) }); } catch (e) { next(e); }
+  });
+  router.get("/workflows/:id/validate", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.validate(req.params.id, oid) }); } catch (e) { next(e); }
+  });
+  router.post("/workflows/:id/deploy", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.deploy(req.params.id, oid) }); } catch (e) { next(e); }
+  });
+  // S166 — pausing was a declared status nothing could assign.
+  router.post("/workflows/:id/pause", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.pause(req.params.id, oid) }); } catch (e) { next(e); }
+  });
+  router.post("/workflows/:id/resume", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.resume(req.params.id, oid) }); } catch (e) { next(e); }
+  });
+  router.post("/workflows/:id/run", validate({ body: run }), async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.run(req.params.id, req.user!.id, oid, req.body?.input) }); } catch (e) { next(e); }
+  });
   // An executor reports what actually happened. This is the only path that may
   // mark a run succeeded or failed — triggering a run records it as `queued`,
   // never as a success it has not earned.
   router.post("/runs/:runId/outcome", validate({ body: runOutcome }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await ComposerService.reportRunOutcome(req.params.runId, req.body) }); } catch (e) { next(e); }
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.reportRunOutcome(req.params.runId, req.body, oid) }); } catch (e) { next(e); }
   });
-  router.get("/runs", async (_req, res, next) => { try { res.json({ ok: true, data: await ComposerService.getRuns() }); } catch (e) { next(e); } });
+  router.get("/runs", async (req, res, next) => {
+    try { const oid = orgOf(req, res); if (!oid) return;
+      res.json({ ok: true, data: await ComposerService.getRuns(oid) }); } catch (e) { next(e); }
+  });
+  // The capability library is a static catalogue of primitives, identical for
+  // every tenant — a catalogue may be served (S161). It carries no org state.
   router.get("/library", async (_req, res) => res.json({ ok: true, data: (await import("../../composer/composer.service.js")).LIBRARY }));
-
 
   // Real tenant-scoped notes ledger for composer — user-authored annotations
   // persisted in Redis. Every write is a real Redis write; every read reflects

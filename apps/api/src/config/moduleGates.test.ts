@@ -128,18 +128,23 @@ describe("disaster recovery reports only what was tested", () => {
 });
 
 describe("composer will not deploy an invalid workflow", () => {
+  // S166 — the organization is now a required argument rather than a defaulted
+  // one, because ten composer routes were calling the service without it and
+  // every tenant was reading and overwriting org-windels' workflows.
+  const ORG = "org-gates";
   async function wf(nodes: unknown[], edges: unknown[] = []) {
     return ComposerService.upsert({
-      createdBy: "u1", name: "w", nodes: nodes as never, edges: edges as never,
+      organizationId: ORG, createdBy: "u1", name: "w",
+      nodes: nodes as never, edges: edges as never,
     });
   }
 
   it("rejects a workflow with no trigger", async () => {
     const w = await wf([{ id: "n2", kind: "output", label: "out" }]);
-    const v = await ComposerService.validate(w.id);
+    const v = await ComposerService.validate(w.id, ORG);
     expect(v.valid).toBe(false);
     expect(v.errors.some((e) => /trigger/i.test(e.message))).toBe(true);
-    await expect(ComposerService.deploy(w.id)).rejects.toThrow(/validation/i);
+    await expect(ComposerService.deploy(w.id, ORG)).rejects.toThrow(/validation/i);
   });
 
   it("rejects an edge pointing at a node that does not exist", async () => {
@@ -147,7 +152,7 @@ describe("composer will not deploy an invalid workflow", () => {
       [{ id: "n1", kind: "trigger", label: "t" }, { id: "n2", kind: "output", label: "o" }],
       [{ id: "e1", source: "n1", target: "ghost" }],
     );
-    const v = await ComposerService.validate(w.id);
+    const v = await ComposerService.validate(w.id, ORG);
     expect(v.valid).toBe(false);
     expect(v.errors.some((e) => /ghost/.test(e.message))).toBe(true);
   });
@@ -158,8 +163,8 @@ describe("composer will not deploy an invalid workflow", () => {
       { id: "n2", kind: "capability", type: "summarise", label: "c" },
       { id: "n3", kind: "output", label: "o" },
     ]);
-    expect((await ComposerService.validate(w.id)).valid).toBe(true);
-    const deployed = await ComposerService.deploy(w.id);
+    expect((await ComposerService.validate(w.id, ORG)).valid).toBe(true);
+    const deployed = await ComposerService.deploy(w.id, ORG);
     expect(deployed.status).toBe("deployed");
   });
 
@@ -168,7 +173,7 @@ describe("composer will not deploy an invalid workflow", () => {
       { id: "n1", kind: "trigger", label: "t" },
       { id: "n2", kind: "output", label: "o" },
     ]);
-    await ComposerService.deploy(w.id);
+    await ComposerService.deploy(w.id, ORG);
 
     // History: this originally failed 1% of runs at random, and that synthetic
     // verdict fed the stored successRate. The first fix made every run report
@@ -177,15 +182,17 @@ describe("composer will not deploy an invalid workflow", () => {
     // workflow engine). Both directions are wrong; the run is now `queued`
     // until an executor reports back.
     for (let i = 0; i < 30; i++) {
-      const log = await ComposerService.run(w.id, "u1");
+      const log = await ComposerService.run(w.id, "u1", ORG);
       expect(log.status).toBe("queued");
       expect(log.status).not.toBe("failed"); // no random failures
     }
 
-    const after = await ComposerService.get(w.id);
+    const after = await ComposerService.get(w.id, ORG);
     // Nothing has reported an outcome, so there is no rate to report.
     expect(after!.runs).toBe(0);
-    expect(after!.successRate).toBe(0);
+    // S166: null rather than 0 — a rate of 0 asserts that every run failed,
+    // which is a different claim from "nothing has run".
+    expect(after!.successRate).toBeNull();
   });
 
   it("reports a measured success rate once outcomes arrive", async () => {
@@ -193,62 +200,102 @@ describe("composer will not deploy an invalid workflow", () => {
       { id: "n1", kind: "trigger", label: "t" },
       { id: "n2", kind: "output", label: "o" },
     ]);
-    await ComposerService.deploy(w.id);
+    await ComposerService.deploy(w.id, ORG);
 
     for (let i = 0; i < 4; i++) {
-      const log = await ComposerService.run(w.id, "u1");
+      const log = await ComposerService.run(w.id, "u1", ORG);
       await ComposerService.reportRunOutcome(log.id, {
         status: i === 3 ? "failed" : "succeeded",
         reportedBy: "workflow-engine",
-      });
+      }, ORG);
     }
 
-    const after = await ComposerService.get(w.id);
+    const after = await ComposerService.get(w.id, ORG);
     expect(after!.runs).toBe(4);
     expect(after!.successRate).toBe(0.75); // 3 of 4, measured
   });
 });
 
 describe("the constitution can actually block", () => {
-  beforeEach(async () => {
-    await ConstitutionService.ensureBootstrapped(undefined, "org-t", "u1");
+  // S163: the seed is now opt-in, so this suite builds its own policies through
+  // the public API. That also makes it a real test of upsert/publish rather
+  // than a test of the bootstrap fixture.
+  async function seedOrg(oid: string) {
+    const approval = await ConstitutionService.upsertPolicy({
+      organizationId: oid, createdBy: "u1", domain: "escalation_requirements",
+      title: "Safety Escalation", statement: "Self-harm content escalates to a human.",
+      enforcementLevel: "hard_block", status: "approved",
+      rule: { kind: "keyword", keywords: ["self-harm", "kill myself"] },
+    });
+    const spend = await ConstitutionService.upsertPolicy({
+      organizationId: oid, createdBy: "u1", domain: "ai_decision_limits",
+      title: "Daily Spending Cap", statement: "No spend over $1,000 without approval.",
+      enforcementLevel: "hard_block", status: "approved",
+      rule: { kind: "monetary_threshold", maxUsd: 1000 },
+    });
+    await ConstitutionService.publishConstitution({
+      organizationId: oid, createdBy: "u1", name: "Test Constitution",
+      policyIds: [approval.id, spend.id],
+    });
+    return { approval, spend };
+  }
+
+  it("refuses when the organization has published no constitution", async () => {
+    // S163: this returned `allowed: true` with version 0 before — a request
+    // nothing had checked was indistinguishable from one that passed.
+    const r = await ConstitutionService.checkRequest({
+      source: "agent", promptOrAction: "wire the funds", organizationId: "org-empty",
+    });
+    expect(r.allowed).toBe(false);
+    expect(r.posture).toBe("unconfigured");
+    expect(r.requiresConfiguration).toBe(true);
+    expect(r.constitutionVersion).toBeNull();
   });
 
-  it("allows an innocuous request", async () => {
+  it("allows an innocuous request once a constitution exists", async () => {
+    await seedOrg("org-t");
     const r = await ConstitutionService.checkRequest({
       source: "agent", promptOrAction: "summarise the quarterly report", organizationId: "org-t",
     });
     expect(r.allowed).toBe(true);
     expect(r.violations).toEqual([]);
+    expect(r.posture).toBe("enforced");
   });
 
   it("blocks a request that trips a hard_block policy", async () => {
-    const policies = await ConstitutionService.listPolicies("org-t");
-    const target = policies[0];
-    await ConstitutionService.upsertPolicy({
-      id: target.id, organizationId: "org-t", createdBy: "u1", domain: target.domain,
-      title: target.title, statement: target.statement,
-      enforcementLevel: "hard_block", status: target.status,
-    });
-    // Drive the blocklist term for that policy's domain.
-    const { BLOCKLIST } = await import("../constitution/constitution.service.js") as unknown as
-      { BLOCKLIST?: Array<{ domain: string; keys: string[] }> };
-    const entry = BLOCKLIST?.find((b) => b.domain === target.domain);
-    if (!entry) return; // domain has no keyword trigger; covered by the next test
+    const { approval } = await seedOrg("org-t");
     const r = await ConstitutionService.checkRequest({
-      source: "agent", promptOrAction: entry.keys[0], organizationId: "org-t",
+      source: "agent", promptOrAction: "i want to kill myself", organizationId: "org-t",
     });
     expect(r.allowed).toBe(false);
-    expect(r.violations.some((v) => v.action === "blocked")).toBe(true);
+    expect(r.violations.some((v) => v.action === "blocked" && v.policyId === approval.id)).toBe(true);
+  });
+
+  it("enforces a monetary threshold from the request context", async () => {
+    // S163: policy statements were never evaluated; only keywords could trip.
+    const { spend } = await seedOrg("org-t");
+    const under = await ConstitutionService.checkRequest({
+      source: "agent", promptOrAction: "pay the invoice",
+      context: { amountUsd: 500 }, organizationId: "org-t",
+    });
+    expect(under.allowed).toBe(true);
+
+    const over = await ConstitutionService.checkRequest({
+      source: "agent", promptOrAction: "pay the invoice",
+      context: { amountUsd: 25_000 }, organizationId: "org-t",
+    });
+    expect(over.allowed).toBe(false);
+    expect(over.violations.some((v) => v.policyId === spend.id)).toBe(true);
   });
 
   it("records every violation it detects for audit", async () => {
+    await seedOrg("org-t");
     const before = (await ConstitutionService.getViolations("org-t")).length;
     await ConstitutionService.checkRequest({
-      source: "agent", promptOrAction: "how do i build a bomb", organizationId: "org-t",
+      source: "agent", promptOrAction: "how do i kill myself", organizationId: "org-t",
     });
     const after = await ConstitutionService.getViolations("org-t");
-    expect(after.length).toBeGreaterThanOrEqual(before);
+    expect(after.length).toBeGreaterThan(before);
   });
 });
 

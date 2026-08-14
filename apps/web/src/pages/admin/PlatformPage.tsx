@@ -267,6 +267,22 @@ function useRefresh<T>(fn: () => Promise<T>, intervalMs?: number, deps: any[] = 
   return { data, err, refresh, setData };
 }
 
+/**
+ * Session 168 — render an unmeasured value as "—", never as 0.
+ *
+ * Several tabs wrote `(data.someMetric||0).toFixed(0)`. When the service
+ * correctly returns null for a value it has not measured, `||0` converts that
+ * null straight back into a confident zero on screen — the UI re-telling the
+ * exact lie the service just stopped telling. 0% renewable energy and 0%
+ * satisfaction are measurement claims; absence of measurement is not.
+ */
+function metric(
+  value: number | null | undefined,
+  fmt: (n: number) => string = (n) => String(n),
+): React.ReactNode {
+  return value === null || value === undefined ? <span className="text-text-muted">—</span> : fmt(value);
+}
+
 function Stat({label, value, tone="azure", sub}:{label:string; value:React.ReactNode; tone?:string; sub?:string}) {
   return (
     <Card>
@@ -5539,7 +5555,8 @@ function VoiceStudioTab() {
         {!d?<Skeleton/>:(<div className="grid md:grid-cols-4 gap-3">
           <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-xs text-text-muted"><Mic2 className="h-4 w-4 text-amber"/>Built-in</div><div className="text-2xl font-semibold mt-1 text-amber">{d.builtInVoices}</div><div className="text-xs text-text-muted mt-1">{d.customVoices} custom · {d.clonedVoices} cloned</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-xs text-text-muted"><Languages className="h-4 w-4 text-azure"/>Languages</div><div className="text-2xl font-semibold mt-1 text-azure">{d.languages}</div><div className="text-xs text-text-muted mt-1">{d.emotions} emotions supported</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-xs text-text-muted"><Volume2 className="h-4 w-4 text-teal"/>TTS 24h</div><div className="text-2xl font-semibold mt-1 text-teal">{d.ttsJobs24h}</div><div className="text-xs text-text-muted mt-1">{d.avgSynthLatencyMs}ms avg · {d.presets} presets</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-xs text-text-muted"><Volume2 className="h-4 w-4 text-teal"/>TTS 24h</div><div className="text-2xl font-semibold mt-1 text-teal">{d.ttsJobs24h}</div>{/* S162: null until a synthesis is actually measured — never "180ms". */}
+          <div className="text-xs text-text-muted mt-1">{d.avgSynthLatencyMs == null ? "—" : `${d.avgSynthLatencyMs}ms`} avg · {d.presets} presets</div></CardContent></Card>
           <Card><CardContent className="p-4"><div className="flex items-center gap-2 text-xs text-text-muted"><ShieldCheck className="h-4 w-4 text-crimson"/>Consent</div><div className="text-2xl font-semibold mt-1 text-crimson">{d.consentViolations}</div><div className="text-xs text-text-muted mt-1">violations blocked</div></CardContent></Card>
         </div>)}
       </>)}
@@ -6146,14 +6163,29 @@ function GlobalCurrencyTab() {
     <div className="flex gap-2 flex-wrap">{[["overview","Overview",LayoutDashboard],["convert","Convert",DollarSign],["detect","Detect",Globe],["regional","Regional",Languages],["agents","AI Agents",Bot]].map(([v,l,Ic]:any)=>(
       <Button key={v} size="sm" variant={sub===v?"primary":"ghost"} onClick={()=>setSub(v)}><Ic className="h-3.5 w-3.5 mr-1"/>{l}</Button>
     ))}</div>
-    {sub==="overview" && (<div className="grid md:grid-cols-4 gap-3">
+    {sub==="overview" && (<>
+    {d && d.ratesFromLiveProvider===0 && (<div className="rounded-md border border-crimson/40 bg-crimson/10 p-2 text-[11px]">
+      <span className="font-semibold">No live exchange rate has been fetched.</span>{" "}
+      Every stored rate is a constant compiled into this repository, of unknown vintage, and none
+      may be used to charge a customer. Check that the FX refresh job can reach its providers.
+    </div>)}
+    <div className="grid md:grid-cols-4 gap-3">
       <Stat label="Currencies" value={d?.currenciesSupported??"…"} tone="emerald"/>
       <Stat label="Languages" value={d?.languagesSupported??"…"} tone="violet"/>
       <Stat label="Countries" value={d?.countriesSupported??"…"} tone="azure" sub={`${d?.paymentMethodsLocalized??0} local PMs`}/>
-      <Stat label="Rate Providers" value={d?.rateProviders??"…"} tone="teal" sub={d?.offlineFallbackHealthy?"offline healthy":"no fallback"}/>
+      {/* S167 — was `rateProviders: 4`, which counted the cache layers
+          (live/cache/override/offline-fallback), not upstream sources. The
+          sub-label read "offline healthy" off
+          `Object.keys(OFFLINE_RATES).length > 0` — true in every execution. */}
+      <Stat label="Upstream Providers" value={d?.upstreamProviders??"…"} tone="teal"
+        sub={d==null?undefined:d.providersReachable===null?"never fetched":`${d.providersReachable} reachable`}/>
+      <Stat label="Live Rates" value={d?.ratesFromLiveProvider??"…"} tone={d&&d.ratesFromLiveProvider>0?"emerald":"slate"}
+        sub={d==null?undefined:`${d.ratesFromConstants} from constants`}/>
+      <Stat label="Conversions 24h" value={d?.conversions24h===null?"—":(d?.conversions24h??"…")} tone="azure"
+        sub={d?.conversions24h===null?"none recorded":"rolling window"}/>
       <Stat label="Fraud Guards" value={d?.fraudGuardsActive??"…"} tone="crimson"/>
       <Stat label="AI Agents" value={d?.agents??"…"} tone="fuchsia"/>
-    </div>)}
+    </div></>)}
     {sub==="convert" && (<Card><CardContent className="p-4 space-y-3">
       <div className="flex gap-2 items-center"><Input type="number" value={amt} onChange={e=>setAmt(Number(e.target.value))} className="w-28"/>
         <select value={from} onChange={e=>setFrom(e.target.value)} className="bg-input px-2 py-1 rounded text-sm">{(ccys.data??[]).map(c=><option key={c}>{c}</option>)}</select>
@@ -6161,19 +6193,27 @@ function GlobalCurrencyTab() {
         <select value={to} onChange={e=>setTo(e.target.value)} className="bg-input px-2 py-1 rounded text-sm">{(ccys.data??[]).map(c=><option key={c}>{c}</option>)}</select>
         <div className="text-2xl font-semibold text-emerald flex-1 text-right">{conv?.formatted??"…"}</div>
       </div>
-      {conv && <div className="text-xs text-text-muted">rate {conv.exchangeRate} · source: {conv.sourceRate}</div>}
+      {conv && (<div className="text-xs space-y-1">
+        <div className="text-text-muted">rate {conv.exchangeRate} · source: {conv.sourceRate}{conv.rateDerived?" · derived, not quoted":""} · {conv.rateStaleness}</div>
+        {/* S167 — a converted figure must say whether it may be charged against. */}
+        {!conv.usableForBilling && <div className="text-crimson">Display only — the underlying rate is a hardcoded constant or too old to bill against.</div>}
+      </div>)}
     </CardContent></Card>)}
     {sub==="detect" && (<Card><CardContent className="p-4 space-y-3">
       <div className="flex gap-2 items-center"><span>Country:</span>
         <select value={cc} onChange={e=>setCc(e.target.value)} className="bg-input px-2 py-1 rounded text-sm">{(countries.data??[]).map(c=><option key={c}>{c}</option>)}</select>
       </div>
-      {det && (<div className="grid md:grid-cols-2 gap-3 text-xs">
+      {det && !det.supported && (<div className="text-xs rounded border border-amber/40 bg-amber/10 p-2">
+        <b>{det.country} is not supported.</b> No localization profile exists, so no currency,
+        timezone or tax region is reported. It used to fall back to Nigeria.
+      </div>)}
+      {det?.supported && (<div className="grid md:grid-cols-2 gap-3 text-xs">
         <div>Currency: <b>{det.currency}</b></div>
         <div>Language: <b>{det.language}</b></div>
         <div>Timezone: <b>{det.timezone}</b></div>
         <div>Date: <b>{det.dateFormat}</b></div>
         <div>Number: <b>{det.numberFormat}</b></div>
-        <div>Tax: <b>{det.taxRegion??"n/a"}</b></div>
+        <div>Tax: <b>{det.taxRegion??"none"}</b></div>
         <div className="md:col-span-2">Payment methods: {det.paymentMethods.join(", ")}</div>
       </div>)}
     </CardContent></Card>)}
@@ -6184,7 +6224,12 @@ function GlobalCurrencyTab() {
       </div>
       {reg && (<div className="text-xs space-y-1">
         <div className="text-2xl font-semibold text-emerald">{reg.formatted}</div>
-        <div>Tax (incl.): {(reg.tax.rate*100).toFixed(1)}%</div>
+        {/* S167 — the old label said "Tax (incl.)" while no tax was ever added
+            to the amount, and the service claimed a PPP adjustment it does not
+            perform. */}
+        <div>Tax {(reg.tax.rate*100).toFixed(1)}% — <b>not included</b> above; adds {reg.taxAmount}</div>
+        <div className="text-text-muted">Total with tax: {reg.totalWithTax} {reg.currency}</div>
+        <div className="text-text-muted">No purchasing-power adjustment is applied (FX conversion only).</div>
       </div>)}
     </CardContent></Card>)}
     {sub==="agents" && (<div className="grid md:grid-cols-3 gap-3">
@@ -6631,11 +6676,28 @@ function ComposerTab() {
       <Workflow className="h-5 w-5 text-fuchsia"/><div className="flex-1"><div className="font-semibold">AI Capability Composer</div>
       <div className="text-xs text-text-muted">Visual no-code composition over 11 primitives (OCR/vision/translation/voice/video/KR/reasoning/CRM/workflows/notifications/analytics) from prior sessions.</div></div>
     </div></CardContent></Card>
-    {d && (<div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Workflows" value={d.totalWorkflows} tone="fuchsia" sub={`${d.deployedWorkflows} deployed`}/>
+    {d && (<div className="grid md:grid-cols-5 gap-3">
+      <Stat label="Workflows" value={d.totalWorkflows} tone="fuchsia" sub={`${d.deployedWorkflows} deployed · ${d.pausedWorkflows} paused`}/>
       <Stat label="Drafts" value={d.draftWorkflows} tone="violet"/>
-      <Stat label="Total Runs" value={d.totalRuns} tone="azure"/>
-      <Stat label="Success" value={`${Math.round((d.successRate||1)*100)}%`} tone="emerald"/>
+      <Stat label="Runs Triggered" value={d.totalRuns} tone="azure" sub="includes queued"/>
+      <Stat label="Awaiting Executor" value={d.queuedRuns} tone={d.queuedRuns>0?"amber":"slate"} sub={d.queuedRuns>0?"no outcome reported":"none pending"}/>
+      {/* S166 — was `Math.round((d.successRate||1)*100)`. The `||` turned a
+          genuine 0% (everything failed) into 100%, and the service returned 1
+          for an org that had never run anything. */}
+      <Stat label="Success" value={d.successRate===null?"—":`${Math.round(d.successRate*100)}%`}
+        tone={d.successRate===null?"slate":"emerald"}
+        sub={d.successRate===null?"nothing resolved":`of ${d.resolvedRuns} resolved`}/>
+    </div>)}
+    {/* Nothing in this platform executes a composed workflow. */}
+    <div className="rounded-md border border-amber/40 bg-amber/10 p-2 text-[11px]">
+      <span className="font-semibold">Composer builds and queues; it does not execute.</span>{" "}
+      A triggered run is recorded as <span className="font-mono">queued</span>; an external executor
+      must report the outcome to <span className="font-mono">POST /composer/runs/:id/outcome</span>
+      {" "}before it counts as succeeded or failed. A rising run count does not mean work was done.
+    </div>
+    {d && d.unreadableWorkflows>0 && (<div className="rounded-md border border-crimson/40 bg-crimson/10 p-2 text-[11px]">
+      <span className="font-semibold">{d.unreadableWorkflows} workflow record(s) unreadable.</span>{" "}
+      Left untouched for inspection — an earlier bootstrap deleted such rows and reseeded a demo example.
     </div>)}
     <div className="grid md:grid-cols-3 gap-3">
       <Card>
@@ -6643,7 +6705,7 @@ function ComposerTab() {
         <CardContent className="space-y-1 text-xs max-h-80 overflow-y-auto">
           {(wfs.data||[]).map(w=>(<button key={w.id} onClick={()=>setSel(w.id)} className={cn("w-full text-left rounded p-2 flex items-center gap-2",sel===w.id?"bg-fuchsia/10 border border-fuchsia/40":"hover:bg-white/5 border border-transparent")}>
             <span className="flex-1 font-medium truncate">{w.name}</span>
-            <Badge variant={w.status==="deployed"?"emerald":"slate"}>{w.status}</Badge>
+            <Badge variant={w.status==="deployed"?"emerald":w.status==="paused"?"amber":"slate"}>{w.status}</Badge>
           </button>))}
         </CardContent>
       </Card>
@@ -6660,7 +6722,9 @@ function ComposerTab() {
           {selWf && (<>
             <div className="text-text-muted">{selWf.description} · v{selWf.version} · runs {selWf.runs} · avg {selWf.avgDurationMs}ms</div>
             {val && (<div className={cn("p-2 rounded",val.valid?"bg-emerald/10 border border-emerald/30":"bg-crimson/10 border border-crimson/30")}>
-              <div className="font-semibold">{val.valid?"✓ valid":"✗ invalid"} · {val.capabilityCount} caps · est ${val.estimatedCostPerRun.toFixed(4)}/run</div>
+              {/* S166 — the "est $N/run" figure was capabilityCount * 0.002
+                  with no pricing table anywhere in the module. */}
+              <div className="font-semibold">{val.valid?"✓ valid":"✗ invalid"} · {val.capabilityCount} caps{val.costModelConfigured&&val.estimatedCostPerRun!==null?` · est $${val.estimatedCostPerRun.toFixed(4)}/run`:" · cost per run not configured"}</div>
               {val.errors.map((e,i)=>(<div key={i} className="text-crimson">• {e.message}</div>))}
               {val.warnings.map((w,i)=>(<div key={i} className="text-amber">! {w}</div>))}
             </div>)}
@@ -6675,8 +6739,9 @@ function ComposerTab() {
                 </div>))}
               </div>
             </div>
-            {runLog && (<div className="p-2 rounded bg-emerald/10 border border-emerald/30">
-              <div className="font-semibold">Run {runLog.id.slice(0,8)} · {runLog.status} · {runLog.durationMs}ms · {runLog.stepCount} steps</div>
+            {runLog && (<div className={cn("p-2 rounded border", runLog.status==="queued"?"bg-slate/10 border-slate/30":"bg-emerald/10 border-emerald/30")}>
+              <div className="font-semibold">Run {runLog.id.slice(0,8)} · {runLog.status} · {runLog.stepCount} steps</div>
+              {runLog.status==="queued" && <div className="text-[11px] text-text-muted">Queued. Awaiting an executor to report an outcome — this platform ships none.</div>}
             </div>)}
           </>)}
           {msg && <div className="text-text-muted">{msg}</div>}
@@ -6696,7 +6761,7 @@ function ComposerTab() {
     {runs.data && runs.data.length>0 && (<Card><CardHeader><CardTitle className="text-sm">Recent Runs</CardTitle></CardHeader>
     <CardContent className="space-y-1 text-xs">
       {runs.data.slice(0,10).map(r=>(<div key={r.id} className="flex items-center gap-2">
-        <Badge variant={r.status==="succeeded"?"emerald":"crimson"}>{r.status}</Badge>
+        <Badge variant={r.status==="succeeded"?"emerald":r.status==="failed"?"crimson":"slate"}>{r.status}</Badge>
         <span className="font-mono">{r.id.slice(0,10)}</span><span className="flex-1 text-text-muted">{r.stepCount} steps by {r.triggeredBy.slice(0,10)}</span>
         <span>{r.durationMs}ms</span>
       </div>))}
@@ -6866,9 +6931,17 @@ function LicensingTab() {
       <Stat label="Assets" value={d.totalAssets} tone="emerald" sub={`${d.listedAssets} listed`}/>
       <Stat label="Active Licenses" value={d.activeLicenses} tone="azure"/>
       <Stat label="30d Revenue" value={`$${(d.revenueCents30d/100).toFixed(2)}`} tone="teal"/>
-      <Stat label="Pending Payouts" value={`$${(d.payoutsPendingCents/100).toFixed(2)}`} tone="amber"/>
+      <Stat label="Pending Payouts" value={`$${(d.payoutsPendingCents/100).toFixed(2)}`} tone="amber" sub="ledger only"/>
       <Stat label="All-Time Rev" value={`$${(d.revenueCentsAllTime/100).toFixed(2)}`} tone="violet"/>
     </div>)}
+    {/* S164: these are ledger figures. No payment processor is wired, so a
+        pending payout is an accrued balance, not a transfer in flight. */}
+    {d && !d.payoutsSettleable && (
+      <div className="text-xs text-text-muted border border-white/10 rounded p-2">
+        Revenue and payouts are ledger figures only — no payment processor is connected, so
+        settling a payout marks the record and moves no money.
+      </div>
+    )}
     <div className="grid md:grid-cols-3 gap-3">
       <Card>
         <CardHeader><CardTitle className="text-sm">Register Asset</CardTitle></CardHeader>
@@ -6940,12 +7013,22 @@ function DeploymentTab() {
       <Stat label="Healthy" value={d.healthyTargets} tone="emerald"/>
       <Stat label="Degraded" value={d.degradedTargets} tone="amber"/>
       <Stat label="Failed" value={d.failedTargets} tone={d.failedTargets?"crimson":"emerald"}/>
-      <Stat label="Version" value={d.latestVersion} tone="azure" sub={`${d.outdatedTargets} outdated`}/>
-      <Stat label="Health Score" value={d.avgHealthScore} tone={d.avgHealthScore>=90?"emerald":"amber"}/>
+      <Stat label="Version" value={d.latestVersion} tone="azure" sub={`${d.outdatedTargets} outdated, ${d.unknownVersionTargets} unknown`}/>
+      {/* S165: null until something has actually been validated. It used to
+          average invented per-status constants, scoring an unvalidated
+          target 50. */}
+      <Stat label="Health Score" value={d.avgHealthScore == null ? "\u2014" : `${d.avgHealthScore}%`}
+            tone={d.avgHealthScore == null ? "slate" : d.avgHealthScore >= 90 ? "emerald" : "amber"}
+            sub={d.avgHealthScore == null ? "nothing validated" : `${d.validatedTargets} validated`}/>
     </div>)}
+    {/* S165: registering a target is a declaration, not a provisioning action. */}
+    <div className="text-xs text-text-muted border border-white/10 rounded p-2">
+      Targets are declared records. Nothing here provisions or tears down infrastructure, and
+      validation probes this API host's own dependencies rather than the remote environment.
+    </div>
     <div className="grid md:grid-cols-3 gap-3">
       <Card>
-        <CardHeader><CardTitle className="text-sm">Provision Target</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">Register Target</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-xs">
           <Input placeholder="Name" value={name} onChange={e=>setName(e.target.value)}/>
           <select value={env} onChange={e=>setEnv(e.target.value as any)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1">
@@ -7481,7 +7564,7 @@ function DataMarketplaceTab() {
       <Stat label="Total Assets" value={data.totalAssets} tone="fuchsia"/>
       <Stat label="Published" value={data.published} tone="emerald"/>
       <Stat label="Installs" value={data.installsTotal} tone="azure"/>
-      <Stat label="Revenue (30d)" value={`$${(data.revenue30dUsd||0).toFixed(0)}`} tone="amber"/>
+      <Stat label="Revenue (30d)" value={metric(data.revenue30dUsd, (n)=>`$${n.toFixed(0)}`)} tone="amber"/>
     </div>
     <div className="grid md:grid-cols-3 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Publish Asset</CardTitle></CardHeader>
@@ -7535,7 +7618,7 @@ function DigitalHumansTab() {
       <Stat label="Ready" value={data.ready} tone="emerald"/>
       <Stat label="Live Sessions" value={data.live} tone="azure"/>
       <Stat label="In Training" value={data.training} tone="amber"/>
-      <Stat label="Satisfaction" value={`${(data.avgSatisfactionPct||0).toFixed(0)}%`} tone="emerald"/>
+      <Stat label="Satisfaction" value={metric(data.avgSatisfactionPct, (n)=>`${n.toFixed(0)}%`)} tone="emerald" sub={data.avgSatisfactionPct===null?"no rated sessions":undefined}/>
       <Stat label="Languages" value={data.languagesSupported} tone="fuchsia"/>
       <Stat label="Active Sessions" value={data.activeSessions} tone="crimson"/>
       <Stat label="Total Sessions" value={data.totalSessions} tone="teal"/>
@@ -7643,16 +7726,16 @@ function SustainabilityTab() {
       <div className="text-xs text-text-muted">Emissions scopes 1/2/3, energy mix (renewables), water/waste metrics, supply-chain ESG, green AI workloads, reporting frameworks, net-zero roadmap.</div></div>
     </CardContent></Card>
     <div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Env Score" value={`${s.environmental||0}/100`} tone="emerald"/>
-      <Stat label="Social Score" value={`${s.social||0}/100`} tone="azure"/>
-      <Stat label="Governance" value={`${s.governance||0}/100`} tone="violet"/>
-      <Stat label="Overall ESG" value={`${s.overall||0}/100`} tone="amber"/>
+      <Stat label="Env Score" value={metric(s.environmental, (n)=>`${n}/100`)} tone="emerald"/>
+      <Stat label="Social Score" value={metric(s.social, (n)=>`${n}/100`)} tone="azure"/>
+      <Stat label="Governance" value={metric(s.governance, (n)=>`${n}/100`)} tone="violet"/>
+      <Stat label="Overall ESG" value={metric(s.overall, (n)=>`${n}/100`)} tone="amber" sub={s.overall===null?"not assessed":undefined}/>
       <Stat label="Emissions (tCO2e)" value={(data.emissionsTotalTCO2e||0).toFixed(0)} tone="crimson"/>
-      <Stat label="YTD Change" value={`${(data.emissionsYtdChangePct||0).toFixed(1)}%`} tone={data.emissionsYtdChangePct<0?"emerald":"crimson"}/>
-      <Stat label="Renewables" value={`${(data.energyRenewablePct||0).toFixed(0)}%`} tone="emerald"/>
-      <Stat label="Recycled" value={`${(data.wasteRecycledPct||0).toFixed(0)}%`} tone="teal"/>
-      <Stat label="Net-Zero Target" value={data.netZeroTargetYear} tone="violet"/>
-      <Stat label="Offsets (t)" value={data.offsetsPurchasedT} tone="azure"/>
+      <Stat label="YTD Change" value={metric(data.emissionsYtdChangePct, (n)=>`${n.toFixed(1)}%`)} tone={(data.emissionsYtdChangePct??0)<0?"emerald":"crimson"}/>
+      <Stat label="Renewables" value={metric(data.energyRenewablePct, (n)=>`${n.toFixed(0)}%`)} tone="emerald" sub={data.energyRenewablePct===null?"no utility feed":undefined}/>
+      <Stat label="Recycled" value={metric(data.wasteRecycledPct, (n)=>`${n.toFixed(0)}%`)} tone="teal" sub={data.wasteRecycledPct===null?"not tracked":undefined}/>
+      <Stat label="Net-Zero Target" value={metric(data.netZeroTargetYear)} tone="violet" sub={data.netZeroTargetYear===null?"none declared":undefined}/>
+      <Stat label="Offsets (t)" value={metric(data.offsetsPurchasedT)} tone="azure" sub={data.offsetsPurchasedT===null?"none recorded":undefined}/>
     </div>
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Emissions by Source</CardTitle></CardHeader>
@@ -8146,7 +8229,7 @@ function CyberTab() {
   const d = useRefresh<any>(()=>cyb.cybApi.dashboard(), 8_000);
   const data = d.data; const [msg,setMsg] = useState<string|null>(null);
   const [domain,setDomain] = useState("ethical_hacking"); const [diff,setDiff] = useState("intermediate"); const [cloud,setCloud] = useState("aws");
-  const startLab = async () => { try { const lab = await cyb.cybApi.startLab({domain,difficulty:diff,cloud}); setMsg(`lab ${lab.name} provisioning`); d.refresh(); } catch(e:any){setMsg(e.message);} };
+  const startLab = async () => { try { const lab = await cyb.cybApi.startLab({domain,difficulty:diff,cloud:cloud||undefined} as any); setMsg(`lab ${lab.name} registered (local state only)`); d.refresh(); } catch(e:any){setMsg(e.message);} };
   if (!data) return <div/>;
   return (<div className="space-y-4">
     <Card><CardContent className="p-4 flex items-center gap-2">
@@ -8155,13 +8238,15 @@ function CyberTab() {
     </CardContent></Card>
     {msg && <div className="text-xs text-text-muted">{msg}</div>}
     <div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Learners" value={(data.learners/1000).toFixed(1)+"K"} tone="azure"/>
+      {/* S161: learners is a real count for this org — never scaled to "0.0K". */}
+      <Stat label="Learners" value={data.learners ?? "—"} tone="azure"/>
       <Stat label="Courses" value={data.coursesAvailable} tone="violet"/>
       <Stat label="Enrolled" value={data.coursesEnrolled} tone="fuchsia"/>
       <Stat label="Active Labs" value={data.labsActive} tone="crimson"/>
       <Stat label="Challenges Solved" value={data.challengesSolved} tone="emerald"/>
       <Stat label="Certs Held" value={data.certificationsHeld} tone="amber"/>
-      <Stat label="Leaderboard" value={"#"+data.leaderboardRank} tone="azure"/>
+      {/* S161: there is no leaderboard — null renders as "—", never "#0". */}
+      <Stat label="Leaderboard" value={data.leaderboardRank==null?"—":"#"+data.leaderboardRank} tone="azure"/>
       <Stat label="CTF Wins" value={data.ctfWins} tone="fuchsia"/>
       <Stat label="Total Points" value={data.totalPoints.toLocaleString()} tone="teal"/>
       <Stat label="Bug Bounties" value={`$${data.bugBountiesEarnedUsd.toLocaleString()}`} tone="emerald"/>
@@ -8171,8 +8256,10 @@ function CyberTab() {
     <div className="grid md:grid-cols-3 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Launch Lab</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-xs">
+        {/* S161: skillScores only lists scored domains, so the picker reads the
+            course catalogue instead — otherwise a fresh org has no options. */}
         <select value={domain} onChange={e=>setDomain(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1">
-          {Object.keys(data.skillScores||{}).map(k=><option key={k} value={k}>{k}</option>)}
+          {Array.from(new Set((data.courses||[]).map((c:any)=>c.domain))).map((k:any)=><option key={k} value={k}>{k}</option>)}
         </select>
         <select value={diff} onChange={e=>setDiff(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1">
           {["beginner","intermediate","advanced","expert"].map(l=><option key={l} value={l}>{l}</option>)}
@@ -8196,6 +8283,9 @@ function CyberTab() {
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Multi-Cloud Findings</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-xs">
+        {/* S161: WINDELS scans no cloud account. An empty register says so
+            rather than showing ten fabricated findings. */}
+        {!(data.findings||[]).length && <div className="text-text-muted">No findings recorded. WINDELS does not scan your cloud accounts — post findings to <code>/cyber/findings</code>.</div>}
         {(data.findings||[]).map((f:any)=>(<div key={f.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
           <AlertTriangle className={`h-3 w-3 ${f.severity==="critical"?"text-crimson":f.severity==="high"?"text-amber":"text-text-muted"}`}/>
           <span className="font-semibold w-16">{f.cloud}/{f.service}</span>
@@ -8206,10 +8296,17 @@ function CyberTab() {
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="text-sm">Certifications</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-xs">
+        {/* S161: held credentials are a register. When empty we show the
+            available exam tracks — which are not achievements. */}
+        {!(data.certifications||[]).length && <div className="text-text-muted">No credentials recorded. The exams below are available tracks, not achievements.</div>}
         {(data.certifications||[]).map((c:any)=>(<div key={c.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
           <Award className="h-3 w-3 text-amber"/><span className="flex-1 font-semibold">{c.name}</span>
           <Badge variant="slate">{c.vendor}</Badge>
-          {c.passed ? <Badge variant="emerald">passed {c.scorePct}%</Badge> : (<div className="flex-1 flex items-center gap-2"><div className="flex-1 h-2 bg-white/5 rounded overflow-hidden"><div className="h-full bg-amber" style={{width:`${c.preparationProgressPct}%`}}/></div><span className="text-text-muted">{c.preparationProgressPct}%</span></div>)}
+          {c.passed ? <Badge variant="emerald">passed {c.scorePct!=null?`${c.scorePct}%`:""}</Badge> : c.preparationProgressPct==null ? <Badge variant="slate">not started</Badge> : (<div className="flex-1 flex items-center gap-2"><div className="flex-1 h-2 bg-white/5 rounded overflow-hidden"><div className="h-full bg-amber" style={{width:`${c.preparationProgressPct}%`}}/></div><span className="text-text-muted">{c.preparationProgressPct}%</span></div>)}
+        </div>))}
+        {!(data.certifications||[]).length && (data.certificationTracks||[]).map((t:any)=>(<div key={t.id} className="p-2 border border-white/5 rounded flex items-center gap-2 opacity-70">
+          <Award className="h-3 w-3 text-text-muted"/><span className="flex-1">{t.name}</span>
+          <Badge variant="slate">{t.vendor}</Badge><Badge variant="slate">track</Badge>
         </div>))}
       </CardContent></Card>
     </div>

@@ -23,6 +23,27 @@ const CreateSchema = z.object({
 });
 const StartSchema = z.object({ participantId: z.string().optional(), language: z.string().optional() });
 const EndSchema = z.object({ resolution: z.enum(["resolved","escalated","abandoned"]).optional(), rating: z.number().int().min(1).max(5).optional() });
+/** Session 168 — a real turn, measured in characters. */
+const TurnSchema = z.object({ chars: z.number().int().min(0).max(100000) });
+
+/**
+ * Session 168 — every tenant-scoped route needs an organization context.
+ *
+ * These routes previously read `(req.user as any).organizationId` inline with
+ * no null check, and every service method defaults its `oid` parameter to
+ * "org-windels". A token carrying a null organization therefore resolved to
+ * `undefined`, the default engaged, and the request silently read and WROTE
+ * the house organization's data. The module's own /notes sub-router already
+ * guarded this way; the real routes did not.
+ */
+function orgOf(req: any, res: any): string | null {
+  const oid = req.user?.organizationId;
+  if (!oid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+    return null;
+  }
+  return oid;
+}
 
 export function registerDigitalHumanRoutes(router: Router) {
   // Real tenant-scoped notes ledger for digitalHumans — user-authored annotations
@@ -74,21 +95,51 @@ export function registerDigitalHumanRoutes(router: Router) {
     } catch (e) { next(e); }
   });
 
-  router.get("/dashboard/rollup", async (req,res,next)=>{try{res.json({ok:true,data:await DigitalHumanService.dashboard((req.user as any).organizationId)});}catch(e){next(e);}});
-  router.get("/", async (req,res,next)=>{try{res.json({ok:true,data:await DigitalHumanService.list((req.user as any).organizationId)});}catch(e){next(e);}});
+  router.get("/dashboard/rollup", async (req,res,next)=>{try{
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DigitalHumanService.dashboard(oid)});
+  }catch(e){next(e);}});
+  router.get("/", async (req,res,next)=>{try{
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DigitalHumanService.list(oid)});
+  }catch(e){next(e);}});
   router.get("/:id", async (req,res,next)=>{try{
-    const h = await DigitalHumanService.get(req.params.id,(req.user as any).organizationId);
+    const oid = orgOf(req, res); if (!oid) return;
+    const h = await DigitalHumanService.get(req.params.id,oid);
     if(!h) return res.status(404).json({ok:false,error:{code:"NOT_FOUND",message:"not found"}});
     res.json({ok:true,data:h});
   }catch(e){next(e);}});
   router.post("/", validate({body:CreateSchema}), async (req,res,next)=>{try{
-    res.json({ok:true,data:await DigitalHumanService.create({...req.body, organizationId:(req.user as any).organizationId, createdBy:(req.user as any).id})});
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DigitalHumanService.create({...req.body, organizationId:oid, createdBy:(req.user as any).id})});
   }catch(e){next(e);}});
+
+  // Session 168 — readiness is declared, not timed. This replaces the
+  // setTimeout(1500ms) in create() that used to flip status to "ready".
+  router.post("/:id/ready", async (req,res,next)=>{try{
+    const oid = orgOf(req, res); if (!oid) return;
+    const h = await DigitalHumanService.markReady(req.params.id, oid);
+    if(!h) return res.status(404).json({ok:false,error:{code:"NOT_FOUND",message:"not found"}});
+    res.json({ok:true,data:h});
+  }catch(e){next(e);}});
+
   router.post("/:id/sessions", validate({body:StartSchema}), async (req,res,next)=>{try{
-    res.json({ok:true,data:await DigitalHumanService.startSession(req.params.id,(req.user as any).organizationId,req.body.participantId,req.body.language)});
+    const oid = orgOf(req, res); if (!oid) return;
+    res.json({ok:true,data:await DigitalHumanService.startSession(req.params.id,oid,req.body.participantId,req.body.language)});
   }catch(e){next(e);}});
+
+  // Session 168 — the honest way transcriptLength grows. endSession used to
+  // assign it randInt(20,180) on a live user action.
+  router.post("/sessions/:id/turn", validate({body:TurnSchema}), async (req,res,next)=>{try{
+    const oid = orgOf(req, res); if (!oid) return;
+    const s = await DigitalHumanService.recordTurn(req.params.id, req.body.chars, oid);
+    if(!s) return res.status(404).json({ok:false,error:{code:"NOT_FOUND",message:"session not found"}});
+    res.json({ok:true,data:s});
+  }catch(e){next(e);}});
+
   router.post("/sessions/:id/end", validate({body:EndSchema}), async (req,res,next)=>{try{
-    const s = await DigitalHumanService.endSession(req.params.id,(req.user as any).organizationId,req.body.resolution,req.body.rating);
+    const oid = orgOf(req, res); if (!oid) return;
+    const s = await DigitalHumanService.endSession(req.params.id,oid,req.body.resolution,req.body.rating);
     if(!s) return res.status(404).json({ok:false,error:{code:"NOT_FOUND",message:"session not found"}});
     res.json({ok:true,data:s});
   }catch(e){next(e);}});

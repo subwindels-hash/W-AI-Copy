@@ -88,7 +88,7 @@ function seededRng(seed: string) {
 }
 
 export const SpatialService = {
-  async ensureBootstrapped(logger?: { info?: (...a: unknown[]) => void }, oid = "org-windels", uid0 = "user-admin") {
+  async ensureBootstrapped(logger: { info?: (...a: unknown[]) => void } | undefined, oid: string, uid0 = "user-admin") {
     if (await redis.exists(K.ss(oid))) return;
     if (!demoDataEnabled()) return skipDemoSeed("spatial", logger);
     const now = new Date().toISOString();
@@ -152,7 +152,11 @@ export const SpatialService = {
 
   /** Device reports it is still present. This is the live spatial connector. */
   async heartbeat(input: { fingerprint: string; deviceTarget?: SpatialSession["deviceTarget"]; organizationId?: string }) {
-    const oid = input.organizationId || "org-windels";
+    // Session 168: was `input.organizationId || "org-windels"`, which silently
+    // wrote a caller's record into the house organization whenever the org was
+    // missing. A missing tenant is an error, not a default.
+    const oid = input.organizationId;
+    if (!oid) throw Object.assign(new Error("organizationId is required"), { status: 400 });
     const at = new Date().toISOString();
     await this.touchDevice(oid, input.fingerprint, at);
     return { fingerprint: input.fingerprint, lastSeenAt: at, organizationId: oid, deviceTarget: input.deviceTarget };
@@ -174,7 +178,7 @@ export const SpatialService = {
     await redis.sadd(K.twin(oid), twinId);
   },
 
-  async dashboard(oid = "org-windels"): Promise<SpatialDashboard> {
+  async dashboard(oid: string): Promise<SpatialDashboard> {
     const [sids, mids, hids, wids, rxids, deviceCount, twinCount, online] = await Promise.all([
       redis.smembers(K.ss(oid)), redis.smembers(K.mps(oid)), redis.smembers(K.hds(oid)),
       redis.smembers(K.wps(oid)), redis.smembers(K.rxs(oid)),
@@ -219,7 +223,7 @@ export const SpatialService = {
     };
   },
 
-  async listSessions(oid = "org-windels"): Promise<SpatialSession[]> {
+  async listSessions(oid: string): Promise<SpatialSession[]> {
     const ids = await redis.smembers(K.ss(oid));
     const out: SpatialSession[] = [];
     for (const id of ids) {
@@ -229,7 +233,7 @@ export const SpatialService = {
     return out.sort((a, b) => (b.startedAt || b.createdAt).localeCompare(a.startedAt || a.createdAt));
   },
 
-  async listMaps(oid = "org-windels"): Promise<IndoorMap[]> {
+  async listMaps(oid: string): Promise<IndoorMap[]> {
     const ids = await redis.smembers(K.mps(oid));
     const out: IndoorMap[] = [];
     for (const id of ids) {
@@ -239,7 +243,7 @@ export const SpatialService = {
     return out;
   },
 
-  async listWaypoints(oid = "org-windels"): Promise<SpatialWaypoint[]> {
+  async listWaypoints(oid: string): Promise<SpatialWaypoint[]> {
     const ids = await redis.smembers(K.wps(oid));
     const out: SpatialWaypoint[] = [];
     for (const id of ids) {
@@ -249,8 +253,13 @@ export const SpatialService = {
     return out;
   },
 
-  async listHoloDashboards(oid = "org-windels"): Promise<HolographicDashboard[]> {
-    if (!(await redis.exists(K.hds(oid)))) await this.ensureBootstrapped(undefined, oid);
+  async listHoloDashboards(oid: string): Promise<HolographicDashboard[]> {
+    // Session 168: this method used to call ensureBootstrapped() when the
+    // holo-dashboard set was empty. Listing is a read; a read must not seed.
+    // With demo data on it seeded the ENTIRE module — sessions, maps,
+    // waypoints, remote-expert sessions — as a side effect of one GET, so an
+    // org that had never used spatial computing acquired a populated history
+    // the moment someone opened the holograms tab. bootstrap.ts owns seeding.
     const ids = await redis.smembers(K.hds(oid));
     const out: HolographicDashboard[] = [];
     for (const id of ids) {
@@ -260,7 +269,7 @@ export const SpatialService = {
     return out;
   },
 
-  async listRemoteExpertSessions(oid = "org-windels"): Promise<RemoteExpertSession[]> {
+  async listRemoteExpertSessions(oid: string): Promise<RemoteExpertSession[]> {
     const ids = await redis.smembers(K.rxs(oid));
     const out: RemoteExpertSession[] = [];
     for (const id of ids) {
@@ -278,7 +287,11 @@ export const SpatialService = {
     twinId?: string;
     organizationId?: string;
   }): Promise<SpatialSession> {
-    const oid = input.organizationId || "org-windels";
+    // Session 168: was `input.organizationId || "org-windels"`, which silently
+    // wrote a caller's record into the house organization whenever the org was
+    // missing. A missing tenant is an error, not a default.
+    const oid = input.organizationId;
+    if (!oid) throw Object.assign(new Error("organizationId is required"), { status: 400 });
     const id = uid("sps-");
     const now = new Date().toISOString();
     const s: SpatialSession = {
@@ -388,7 +401,7 @@ export const SpatialService = {
     return s;
   },
 
-  async endSession(id: string, oid = "org-windels"): Promise<SpatialSession | null> {
+  async endSession(id: string, oid: string): Promise<SpatialSession | null> {
     const r = await redis.hgetall(K.s(oid, id));
     if (!r._doc) return null;
     const s: SpatialSession = JSON.parse(r._doc);

@@ -39,6 +39,17 @@ export interface ComposerEdge {
   condition?: string;
 }
 
+/**
+ * S166 — `validated` was removed because nothing could ever assign it: validity
+ * is computed from the graph on demand by `validate()` and never stored, so the
+ * value was unreachable. `paused` was equally unassignable but names a real
+ * operational need, so S166 implemented it rather than deleting it.
+ */
+export type ComposedWorkflowStatus = "draft" | "deployed" | "paused";
+
+/** How a workflow came to exist. S166 — seeded examples must be identifiable. */
+export type ComposerWorkflowSource = "operator_created" | "demo_seed";
+
 export interface ComposedWorkflow {
   id: string;
   organizationId: string;
@@ -46,15 +57,32 @@ export interface ComposedWorkflow {
   description: string;
   nodes: ComposerNode[];
   edges: ComposerEdge[];
-  status: "draft" | "validated" | "deployed" | "paused";
+  status: ComposedWorkflowStatus;
   version: number;
   createdBy: string;
   createdAt: string;
   updatedAt: string;
   lastDeployedAt?: string;
+  /** Runs that reached a real outcome. Queued runs are counted separately. */
   runs: number;
-  avgDurationMs: number;
-  successRate: number;
+  /**
+   * S166 — null until at least one run has been resolved by an executor.
+   * Previously 0, which renders as "0ms average" — a measurement, not an
+   * absence of one.
+   */
+  avgDurationMs: number | null;
+  /**
+   * S166 — null until at least one run has been resolved.
+   *
+   * This was a plain number seeded at 1, so a workflow that had never run
+   * advertised a perfect record. The seed was later corrected to 0, which is
+   * just as wrong in the other direction: 0 means "every run failed", not
+   * "nothing has run".
+   */
+  successRate: number | null;
+  /** Triggered but not yet resolved by an executor. */
+  queuedRuns: number;
+  source: ComposerWorkflowSource;
 }
 
 export interface ComposerLibraryEntry {
@@ -71,8 +99,29 @@ export interface ComposerDashboard {
   totalWorkflows: number;
   deployedWorkflows: number;
   draftWorkflows: number;
+  pausedWorkflows: number;
+  /** Every run ever triggered, resolved or not. */
   totalRuns: number;
-  successRate: number;
+  /** Runs an executor has reported an outcome for. */
+  resolvedRuns: number;
+  /** Triggered and still awaiting an outcome. Nothing in this repo executes
+   *  composer workflows, so on most installations this is the whole total. */
+  queuedRuns: number;
+  failedRuns: number;
+  /** Workflows with at least one resolved run — the denominator of successRate. */
+  workflowsWithRuns: number;
+  /**
+   * S166 — null when no run has ever been resolved.
+   *
+   * Was `totalRuns ? succ/totalRuns : 1`, so an organization that had never run
+   * anything reported a 100% success rate. The UI compounded it with
+   * `(d.successRate||1)`, which also turned a real 0% — everything failed —
+   * into 100%.
+   */
+  successRate: number | null;
+  /** Workflow rows whose stored document could not be parsed. Surfaced rather
+   *  than deleted: S166 removed a bootstrap branch that wiped them. */
+  unreadableWorkflows: number;
   popularCapabilities: Array<{ type: ComposerCapabilityType; uses: number }>;
   library: ComposerLibraryEntry[];
 }
@@ -82,7 +131,15 @@ export interface ComposerValidationResult {
   errors: Array<{ nodeId?: string; edgeId?: string; message: string }>;
   warnings: string[];
   capabilityCount: number;
-  estimatedCostPerRun: number;
+  /**
+   * S166 — null. This was `capabilityCount * 0.002` and rendered in the console
+   * as "est $0.0000/run". No pricing table exists anywhere in the module, and
+   * the formula charged a video-generation node the same as an analytics event.
+   * A fabricated number denominated in dollars is worse than no number.
+   */
+  estimatedCostPerRun: number | null;
+  /** False until per-capability rates exist somewhere real. */
+  costModelConfigured: boolean;
 }
 
 /**

@@ -9,12 +9,14 @@ import { redisCmd as redis } from "../db/redis.js";
 import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import {
   MarketplaceAsset, MktAssetKind, MktAssetStatus, MktLicenseModel,
-  MarketplaceInstall, DmDashboard, MKT_ASSET_KINDS, MKT_LICENSE_MODELS,
+  MarketplaceInstall, MarketplaceReview, DmDashboard, DmProvenance,
+  MKT_ASSET_KINDS, MKT_LICENSE_MODELS, DM_PROVENANCE_NOTE,
 } from "@windels/shared";
 import { makeRng } from "../utils/detRng.js";
 
-// Deterministic demo RNG — stable per (module, seed) so dashboard
-// reads return the same numbers within a running process.
+// Deterministic demo RNG. Session 168: used ONLY inside the demo-gated seed
+// block below. It is never touched on a read path, and it is never reseeded
+// from a logger object (see ensureBootstrapped).
 const _rng = makeRng('dataMarketplace');
 function rand(min: number, max: number) { return _rng.rand(min, max); }
 function randInt(min: number, max: number) { return _rng.randInt(min, max); }
@@ -25,6 +27,11 @@ const K = {
   i: (oid:string,id:string)=>`dmp:i:${oid}:${id}`,
   is: (oid:string)=>`dmp:is:${oid}`,
   rev: (oid:string)=>`dmp:rev:${oid}`,
+  // Session 168 — persisted reviews. Before this the `comment` field was
+  // validated by zod on the route and then thrown away, and the rating was
+  // folded into a running average with the install count as denominator.
+  rv: (oid:string,id:string)=>`dmp:rv:${oid}:${id}`,
+  rvs: (oid:string,assetId:string)=>`dmp:rvs:${oid}:${assetId}`,
 };
 const s2 = (o:any)=>JSON.stringify(o);
 const uid = (p:string)=>p+randomUUID().slice(0,8);
@@ -43,8 +50,15 @@ const SEED: Array<{name:string;kind:MktAssetKind;publisher:string;desc:string;li
 ];
 
 export const DataMarketplaceService = {
-  async ensureBootstrapped(logger?:any, oid="org-windels", uid0="user-admin"){
-    _rng.reseed(`ensureBootstrapped:${logger}`);
+  async ensureBootstrapped(logger: any | undefined, oid: string, uid0="user-admin"){
+    // Session 168: this opened with `_rng.reseed(`ensureBootstrapped:${logger}`)`,
+    // which interpolated a LOGGER OBJECT into the seed key — producing the
+    // literal string "ensureBootstrapped:[object Object]" from bootstrap.ts and
+    // "ensureBootstrapped:undefined" from the three read paths. Two call sites,
+    // two different streams, one "deterministic" claim. It also ran before the
+    // exists check and before the demo gate, so a deployment with demo data OFF
+    // still mutated RNG state on every read. Removed; the seed loop below is
+    // the only consumer of _rng and runs at most once per org.
     if (await redis.exists(K.as(oid))) return;
     // Synthetic seeding is gated by WINDELS_DEMO_DATA (default off) so a fresh
     // org starts empty and fills from real activity only.
@@ -59,7 +73,7 @@ export const DataMarketplaceService = {
         priceUsd: s.license==="free"?undefined:s.price,
         royaltyPct: s.license==="royalty"?0.08:undefined,
         subscriptionMonthlyUsd: s.license==="subscription"?s.price:undefined,
-        rating: +rand(3.2,4.9).toFixed(2), installs: randInt(12,2400),
+        rating: +rand(3.2,4.9).toFixed(2), reviewCount: randInt(3,140), installs: randInt(12,2400),
         qualityScore: +rand(0.7,0.98).toFixed(2),
         lineageStatus: s.publisher==="WINDELS"?"verified":"self_attested",
         complianceTags: s.compliance, tags: s.tags,
@@ -73,8 +87,8 @@ export const DataMarketplaceService = {
     logger?.info?.("[data-mp] bootstrap complete",{assets:SEED.length});
   },
 
-  async dashboard(oid="org-windels"): Promise<DmDashboard> {
-    if (!(await redis.exists(K.as(oid)))) await this.ensureBootstrapped(undefined, oid);
+  async dashboard(oid: string): Promise<DmDashboard> {
+    // Session 168: a read does not seed. bootstrap.ts owns seeding.
     const assets = await this.list(oid);
     const installs: MarketplaceInstall[] = [];
     const iids = await redis.smembers(K.is(oid));
@@ -92,8 +106,15 @@ export const DataMarketplaceService = {
     for (const i of installs){
       const a = assets.find(x=>x.id===i.assetId);
       if (a){
-        if (a.subscriptionMonthlyUsd && now - new Date(i.installedAt).getTime() < 30*86400000) revenue += a.subscriptionMonthlyUsd;
-        if (a.priceUsd && a.licenseModel==="one_time") revenue += a.priceUsd;
+        // Session 168: the 30-day window is applied to BOTH revenue kinds. The
+        // prior code windowed subscriptions but added every one_time price
+        // unconditionally, so a purchase from two years ago still counted
+        // toward a figure labelled "revenue (30d)".
+        const withinWindow = now - new Date(i.installedAt).getTime() < 30*86400000;
+        if (withinWindow) {
+          if (a.subscriptionMonthlyUsd) revenue += a.subscriptionMonthlyUsd;
+          if (a.priceUsd && a.licenseModel==="one_time") revenue += a.priceUsd;
+        }
         const e = pubCount.get(a.publisher); if (e) e.installs++;
       }
     }
@@ -108,11 +129,21 @@ export const DataMarketplaceService = {
       recentInstalls: installs.sort((a,b)=>b.installedAt.localeCompare(a.installedAt)).slice(0,8),
       categories, revenue30dUsd: +revenue.toFixed(2),
       featuredPublishers,
+      provenance: {
+        entries: [
+          { field: "totalAssets / published / installsTotal", basis: "measured", detail: "counted from the asset and install registries" },
+          { field: "revenue30dUsd", basis: "measured", detail: "sum of subscription and one-time prices for installs inside a real 30-day window" },
+          { field: "topAssets[].rating", basis: "measured", detail: "arithmetic mean of persisted reviews; null until a first review exists" },
+          { field: "topAssets[].qualityScore", basis: "not_measured", detail: "nothing assesses asset quality; null unless attested" },
+          { field: "categories / featuredPublishers", basis: "measured", detail: "aggregated from asset tags and publisher names" },
+        ],
+        note: DM_PROVENANCE_NOTE,
+      } satisfies DmProvenance,
     };
   },
 
-  async list(oid="org-windels", kind?:MktAssetKind): Promise<MarketplaceAsset[]> {
-    if (!(await redis.exists(K.as(oid)))) await this.ensureBootstrapped(undefined, oid);
+  async list(oid: string, kind?:MktAssetKind): Promise<MarketplaceAsset[]> {
+    // Session 168: a read does not seed.
     const ids = await redis.smembers(K.as(oid));
     const out: MarketplaceAsset[] = [];
     for (const id of ids){const r=await redis.hgetall(K.a(oid,id)); if(r._doc) out.push(JSON.parse(r._doc));}
@@ -121,8 +152,8 @@ export const DataMarketplaceService = {
     return list.sort((a,b)=>b.installs-a.installs);
   },
 
-  async get(id:string, oid="org-windels"): Promise<MarketplaceAsset|null>{
-    if (!(await redis.exists(K.as(oid)))) await this.ensureBootstrapped(undefined, oid);
+  async get(id:string, oid: string): Promise<MarketplaceAsset|null>{
+    // Session 168: a read does not seed.
     const r = await redis.hgetall(K.a(oid,id)); return r._doc?JSON.parse(r._doc):null;
   },
 
@@ -130,7 +161,7 @@ export const DataMarketplaceService = {
    * Shared access control and license verification primitive.
    * Leveraged by S61 Data Marketplace, S41.9 Voice Marketplace, and S52 Licensing Platform.
    */
-  async checkAccess(assetId: string, oid = "org-windels"): Promise<{ allowed: boolean; reason?: string; licenseModel?: MktLicenseModel }> {
+  async checkAccess(assetId: string, oid: string): Promise<{ allowed: boolean; reason?: string; licenseModel?: MktLicenseModel }> {
     const a = await this.get(assetId, oid);
     if (!a) return { allowed: false, reason: "asset_not_found" };
     if (a.licenseModel === "free") return { allowed: true, licenseModel: "free" };
@@ -150,14 +181,20 @@ export const DataMarketplaceService = {
   },
 
   async publish(input:{name:string;kind:MktAssetKind;description:string;licenseModel:MktLicenseModel;priceUsd?:number;subscriptionMonthlyUsd?:number;royaltyPct?:number;tags?:string[];complianceTags?:string[];rows?:number;sizeBytes?:number;publisher?:string;organizationId?:string;createdBy:string}): Promise<MarketplaceAsset>{
-    const oid = input.organizationId||"org-windels";
+    // Session 168: was `input.organizationId || "org-windels"`, which silently
+    // wrote a caller's record into the house organization whenever the org was
+    // missing. A missing tenant is an error, not a default.
+    const oid = input.organizationId;
+    if (!oid) throw Object.assign(new Error("organizationId is required"), { status: 400 });
     const id = uid("ma-"); const now = new Date().toISOString();
     const a: MarketplaceAsset = {
       id, organizationId:oid, name:input.name, kind:input.kind, publisher:input.publisher||"Internal",
       publisherUserId: input.createdBy, description:input.description, version:"1.0.0",
       licenseModel:input.licenseModel, priceUsd:input.priceUsd, royaltyPct:input.royaltyPct,
       subscriptionMonthlyUsd:input.subscriptionMonthlyUsd,
-      rating:0, installs:0, qualityScore:0.75, lineageStatus:"self_attested",
+      // Session 168: rating was 0 (a measured zero-star claim) and qualityScore
+      // was hard-coded 0.75 — an unearned score nothing computes. Both null.
+      rating:null, reviewCount:0, installs:0, qualityScore:null, lineageStatus:"self_attested",
       complianceTags:input.complianceTags||[], tags:input.tags||[],
       sizeBytes:input.sizeBytes, rows:input.rows, signed:false, status:"published",
       approvedAt: now, createdAt:now, updatedAt:now,
@@ -166,7 +203,7 @@ export const DataMarketplaceService = {
     return a;
   },
 
-  async install(assetId:string, userId:string, oid="org-windels"): Promise<MarketplaceInstall>{
+  async install(assetId:string, userId:string, oid: string): Promise<MarketplaceInstall>{
     const a = await this.get(assetId, oid); if(!a) throw Object.assign(new Error("asset not found"),{status:404});
     const id = uid("mi-"); const now = new Date().toISOString();
     const i: MarketplaceInstall = {
@@ -177,12 +214,57 @@ export const DataMarketplaceService = {
     return i;
   },
 
-  async review(assetId:string, userId:string, rating:number, comment?:string, oid="org-windels"): Promise<MarketplaceAsset>{
+  /**
+   * Session 168 — reviews are persisted and the rating is a real mean.
+   *
+   * The previous implementation was:
+   *
+   *   a.rating = ((a.rating * a.installs) + newRating) / (a.installs + 1)
+   *
+   * which used the INSTALL count as the denominator of a rating average. A
+   * published asset starts at rating 0; after 100 installs and three genuine
+   * five-star reviews it read 0.15 out of 5. The formula is only correct if
+   * every install left exactly one review, in order, and no review is ever
+   * revised — none of which the module enforced or recorded, because reviews
+   * were never stored at all. The `comment` argument was accepted, validated
+   * by zod on the route, and discarded.
+   *
+   * Now: one review row per (asset, user), re-reviewing replaces the prior
+   * row, and `rating` is the arithmetic mean over stored reviews with
+   * `reviewCount` as its honest denominator.
+   */
+  async review(assetId:string, userId:string, rating:number, comment: string | undefined, oid: string): Promise<MarketplaceAsset>{
     const a = await this.get(assetId,oid); if(!a) throw Object.assign(new Error("not found"),{status:404});
-    // rolling average
-    a.rating = +(((a.rating*a.installs) + Math.max(1,Math.min(5,rating)))/(a.installs+1)).toFixed(2);
-    a.updatedAt = new Date().toISOString();
+    const clamped = Math.max(1, Math.min(5, Math.round(rating)));
+    const now = new Date().toISOString();
+
+    // One review per user per asset: a stable id keyed on the reviewer means a
+    // second review replaces the first instead of stuffing the ballot.
+    const existing = await this.listReviews(assetId, oid);
+    const prior = existing.find((r) => r.userId === userId);
+    const id = prior?.id ?? uid("mrv-");
+    const row: MarketplaceReview = {
+      id, assetId, organizationId: oid, userId, rating: clamped, comment,
+      createdAt: prior?.createdAt ?? now, updatedAt: now,
+    };
+    await redis.hset(K.rv(oid,id),"_doc",s2(row));
+    await redis.sadd(K.rvs(oid,assetId),id);
+
+    const all = prior
+      ? existing.map((r) => (r.id === id ? row : r))
+      : [...existing, row];
+    a.reviewCount = all.length;
+    a.rating = all.length ? +(all.reduce((n,r)=>n+r.rating,0)/all.length).toFixed(2) : null;
+    a.updatedAt = now;
     await redis.hset(K.a(oid,assetId),"_doc",s2(a));
     return a;
+  },
+
+  /** Session 168 — the review ledger that `rating` averages over. */
+  async listReviews(assetId:string, oid: string): Promise<MarketplaceReview[]>{
+    const ids = await redis.smembers(K.rvs(oid,assetId));
+    const out: MarketplaceReview[] = [];
+    for (const id of ids){ const r = await redis.hgetall(K.rv(oid,id)); if (r._doc) out.push(JSON.parse(r._doc)); }
+    return out.sort((x,y)=>y.createdAt.localeCompare(x.createdAt));
   },
 };
