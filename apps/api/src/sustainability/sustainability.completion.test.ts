@@ -269,16 +269,31 @@ describe("dashboard honesty (Session 121)", () => {
     expect(d.provenance!.note.length).toBeGreaterThan(20);
   });
 
-  it("keeps the structural zeros for contract compatibility", async () => {
+  // Session 168 — this test previously asserted `toBe(0)` on all five fields,
+  // under the title "keeps the structural zeros for contract compatibility".
+  // It was a test that pinned a defect in place: Session 121 correctly labelled
+  // these fields structural_zero in `provenance` but left the VALUES at 0, and
+  // this test then made the 0 load-bearing. A dashboard renders 0 as a measured
+  // 0% recycling rate and a net-zero target of the year 0. Unmeasured is null.
+  it("reports unmeasured ESG fields as null, never 0", async () => {
     const d = await S.dashboard(ORG_A, NOW);
-    expect(d.energyRenewablePct).toBe(0);
-    expect(d.waterMl).toBe(0);
-    expect(d.wasteRecycledPct).toBe(0);
-    expect(d.offsetsPurchasedT).toBe(0);
-    expect(d.netZeroTargetYear).toBe(0);
+    expect(d.energyRenewablePct).toBeNull();
+    expect(d.waterMl).toBeNull();
+    expect(d.wasteRecycledPct).toBeNull();
+    expect(d.offsetsPurchasedT).toBeNull();
+    expect(d.netZeroTargetYear).toBeNull();
+    // Empty collections stay empty arrays: "no rows" is honestly expressible
+    // as [], unlike "no measurement" as 0.
     expect(d.resources).toEqual([]);
     expect(d.suppliers).toEqual([]);
     expect(d.reportingFrameworks).toEqual([]);
+  });
+
+  it("reports per-month renewable share and cost as null, never 0", async () => {
+    const d = await S.dashboard(ORG_A, NOW);
+    expect(d.energySeries).toHaveLength(12);
+    expect(d.energySeries.every((m) => m.renewablePct === null)).toBe(true);
+    expect(d.energySeries.every((m) => m.costUsd === null)).toBe(true);
   });
 
   it("records an empty dashboard honestly for a fresh org", async () => {

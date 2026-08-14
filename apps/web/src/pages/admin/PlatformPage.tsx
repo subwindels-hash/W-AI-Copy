@@ -267,6 +267,22 @@ function useRefresh<T>(fn: () => Promise<T>, intervalMs?: number, deps: any[] = 
   return { data, err, refresh, setData };
 }
 
+/**
+ * Session 168 — render an unmeasured value as "—", never as 0.
+ *
+ * Several tabs wrote `(data.someMetric||0).toFixed(0)`. When the service
+ * correctly returns null for a value it has not measured, `||0` converts that
+ * null straight back into a confident zero on screen — the UI re-telling the
+ * exact lie the service just stopped telling. 0% renewable energy and 0%
+ * satisfaction are measurement claims; absence of measurement is not.
+ */
+function metric(
+  value: number | null | undefined,
+  fmt: (n: number) => string = (n) => String(n),
+): React.ReactNode {
+  return value === null || value === undefined ? <span className="text-text-muted">—</span> : fmt(value);
+}
+
 function Stat({label, value, tone="azure", sub}:{label:string; value:React.ReactNode; tone?:string; sub?:string}) {
   return (
     <Card>
@@ -7548,7 +7564,7 @@ function DataMarketplaceTab() {
       <Stat label="Total Assets" value={data.totalAssets} tone="fuchsia"/>
       <Stat label="Published" value={data.published} tone="emerald"/>
       <Stat label="Installs" value={data.installsTotal} tone="azure"/>
-      <Stat label="Revenue (30d)" value={`$${(data.revenue30dUsd||0).toFixed(0)}`} tone="amber"/>
+      <Stat label="Revenue (30d)" value={metric(data.revenue30dUsd, (n)=>`$${n.toFixed(0)}`)} tone="amber"/>
     </div>
     <div className="grid md:grid-cols-3 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Publish Asset</CardTitle></CardHeader>
@@ -7602,7 +7618,7 @@ function DigitalHumansTab() {
       <Stat label="Ready" value={data.ready} tone="emerald"/>
       <Stat label="Live Sessions" value={data.live} tone="azure"/>
       <Stat label="In Training" value={data.training} tone="amber"/>
-      <Stat label="Satisfaction" value={`${(data.avgSatisfactionPct||0).toFixed(0)}%`} tone="emerald"/>
+      <Stat label="Satisfaction" value={metric(data.avgSatisfactionPct, (n)=>`${n.toFixed(0)}%`)} tone="emerald" sub={data.avgSatisfactionPct===null?"no rated sessions":undefined}/>
       <Stat label="Languages" value={data.languagesSupported} tone="fuchsia"/>
       <Stat label="Active Sessions" value={data.activeSessions} tone="crimson"/>
       <Stat label="Total Sessions" value={data.totalSessions} tone="teal"/>
@@ -7710,16 +7726,16 @@ function SustainabilityTab() {
       <div className="text-xs text-text-muted">Emissions scopes 1/2/3, energy mix (renewables), water/waste metrics, supply-chain ESG, green AI workloads, reporting frameworks, net-zero roadmap.</div></div>
     </CardContent></Card>
     <div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Env Score" value={`${s.environmental||0}/100`} tone="emerald"/>
-      <Stat label="Social Score" value={`${s.social||0}/100`} tone="azure"/>
-      <Stat label="Governance" value={`${s.governance||0}/100`} tone="violet"/>
-      <Stat label="Overall ESG" value={`${s.overall||0}/100`} tone="amber"/>
+      <Stat label="Env Score" value={metric(s.environmental, (n)=>`${n}/100`)} tone="emerald"/>
+      <Stat label="Social Score" value={metric(s.social, (n)=>`${n}/100`)} tone="azure"/>
+      <Stat label="Governance" value={metric(s.governance, (n)=>`${n}/100`)} tone="violet"/>
+      <Stat label="Overall ESG" value={metric(s.overall, (n)=>`${n}/100`)} tone="amber" sub={s.overall===null?"not assessed":undefined}/>
       <Stat label="Emissions (tCO2e)" value={(data.emissionsTotalTCO2e||0).toFixed(0)} tone="crimson"/>
-      <Stat label="YTD Change" value={`${(data.emissionsYtdChangePct||0).toFixed(1)}%`} tone={data.emissionsYtdChangePct<0?"emerald":"crimson"}/>
-      <Stat label="Renewables" value={`${(data.energyRenewablePct||0).toFixed(0)}%`} tone="emerald"/>
-      <Stat label="Recycled" value={`${(data.wasteRecycledPct||0).toFixed(0)}%`} tone="teal"/>
-      <Stat label="Net-Zero Target" value={data.netZeroTargetYear} tone="violet"/>
-      <Stat label="Offsets (t)" value={data.offsetsPurchasedT} tone="azure"/>
+      <Stat label="YTD Change" value={metric(data.emissionsYtdChangePct, (n)=>`${n.toFixed(1)}%`)} tone={(data.emissionsYtdChangePct??0)<0?"emerald":"crimson"}/>
+      <Stat label="Renewables" value={metric(data.energyRenewablePct, (n)=>`${n.toFixed(0)}%`)} tone="emerald" sub={data.energyRenewablePct===null?"no utility feed":undefined}/>
+      <Stat label="Recycled" value={metric(data.wasteRecycledPct, (n)=>`${n.toFixed(0)}%`)} tone="teal" sub={data.wasteRecycledPct===null?"not tracked":undefined}/>
+      <Stat label="Net-Zero Target" value={metric(data.netZeroTargetYear)} tone="violet" sub={data.netZeroTargetYear===null?"none declared":undefined}/>
+      <Stat label="Offsets (t)" value={metric(data.offsetsPurchasedT)} tone="azure" sub={data.offsetsPurchasedT===null?"none recorded":undefined}/>
     </div>
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Emissions by Source</CardTitle></CardHeader>

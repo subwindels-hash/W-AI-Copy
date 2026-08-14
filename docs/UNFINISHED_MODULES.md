@@ -82,14 +82,14 @@ structural zeros or round-robin values.
 | 14 | `disasterRecovery` | Ungated seed writes a `na-east` active region and standby regions for every component — a failover topology nobody configured. Honest on health (`healthy: false`), dishonest on topology. |
 | 15 | `benchmarks` | Ungated seed writes `optimizedModels: 0` / `pending: 0` as measured metrics on an org that has run nothing. |
 
-### Tier 3 — inconsistent with the track's own fixes
+### Tier 3 — inconsistent with the track's own fixes — ALL DONE (S168)
 
 | # | Module | Defect |
 |---|---|---|
-| 16 | `spatial` | **Regression / incomplete S156.** `listHoloDashboards` (l.253) *still* calls `ensureBootstrapped` on read. The seed is now gated so nothing is fabricated, but the session's stated rule — "never invoke it from a read" — is not actually met. |
-| 17 | `sustainability` | Seed correctly gated (l.146), but two reads (l.176, l.212) still call it. Same partial fix as spatial. |
-| 18 | `dataMarketplace` | Gated, but seeds from **three** read paths (l.77, 115, 125), and `ensureBootstrapped` opens with `_rng.reseed(...)` — an RNG in a bootstrap the track banned. |
-| 19 | `digitalHumans` | Same shape: gated, but seeds from three reads (l.77, 101, 154), same `_rng.reseed` call. |
+| 16 | ~~`spatial`~~ | **Done (S168).** `listHoloDashboards` no longer bootstraps. Added `spatial.demoSeed.test.ts`: the existing `spatial.test.ts` mocks `demoDataEnabled()` to **false** in every case, which is exactly why this survived S156 — with the gate shut the read-path call returned early and looked harmless. All 9 routes now use `orgOf`. |
+| 17 | ~~`sustainability`~~ | **Done (S168).** Both unconditional calls removed — note `record()` was one of them, so writing a first real measurement could inject seven synthetic baselines ahead of it. Also finished S121's half-fix: `energyRenewablePct`, `waterMl`, `wasteRecycledPct`, `offsetsPurchasedT`, `netZeroTargetYear` and the 12 monthly `renewablePct`/`costUsd` values returned **0** while the module's own provenance block called them structural zeros. `netZeroTargetYear: 0` asserted a target of the year 0. All now `null`. The old test asserted `toBe(0)` — it was pinning the defect in place. |
+| 18 | ~~`dataMarketplace`~~ | **Done (S168).** The read-path seeds and the `_rng.reseed` were the *least* of it. **`review()` divided by the install count**, so an asset with 100 installs and three genuine 5-star reviews read **0.15 / 5**; reviews were never persisted at all and the `comment` was validated then discarded. Now a real `dmp:rv/rvs` ledger with a true mean and `reviewCount`. Also: `qualityScore` was a hard-coded `0.75`, and `revenue30dUsd` added every `one_time` price forever regardless of date. First tests in the module's history (11). |
+| 19 | ~~`digitalHumans`~~ | **Done (S168).** The worst of the tier. **`endSession` — a live user action — overwrote the real transcript length with `randInt(20,180)`**, ungated, in production; the reseed made it *stably* fake, which is what let it pass review. `dashboard.totalSessions` **double-counted** every session (avatar counter + ledger). `avgSatisfactionPct` divided by `Math.max(1, humans.length)`, so an empty org reported `0.0%`. `create()` faked training with a `setTimeout(1500)`. `avgSessionSec` divided by sessions *started*. First tests (19) and first console page. |
 
 ### Tier 4 — no console surface
 
@@ -129,6 +129,14 @@ console:
 3. ~~`constitution`~~ — **done (S163).** ~~`licensing`~~ — **done (S164).**
 4. ~~`deployment` + `coreIntegration`~~ — **done (S165).**
 5. ~~`composer`~~ — **done (S166).** ~~`globalCurrency`~~ — **done (S167).**
-6. `spatial` / `sustainability` / `dataMarketplace` / `digitalHumans` — finish
-   the partial fixes; cheap, and they close the track's own rule.
+6. ~~`spatial` / `sustainability` / `dataMarketplace` / `digitalHumans`~~ —
+   **done (S168).** Filed as "cheap: finish the partial fixes". That estimate
+   was wrong, and the way it was wrong is worth recording: the grep that built
+   this tier searched for `ensureBootstrapped` on read paths, so the tier
+   describes only what that grep could see. Reading the four services in full
+   found a live-path RNG fabrication, a double count, a rating average with the
+   wrong denominator, five self-declared structural zeros still emitting `0`,
+   and 34 routes resolving the tenant with no null guard against services that
+   defaulted to `org-windels`. **A defect inventory built from one grep pattern
+   describes the pattern, not the module.**
 7. Fix `audit/build-inventory.mjs` `web.pages` detection.

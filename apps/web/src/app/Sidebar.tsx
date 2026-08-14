@@ -71,6 +71,7 @@ import {
   Scale,
   DollarSign,
   Server,
+  UserCircle,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -152,6 +153,7 @@ const navItems = [
   { to: "/app/global-currency", icon: GlobeIcon, label: "Global Currency" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },
   { to: "/app/spatial", icon: Box, label: "Spatial" },
+  { to: "/app/digital-humans", icon: UserCircle, label: "Digital Humans" },
   { to: "/app/quantum", icon: Atom, label: "Quantum Readiness" },
   { to: "/app/legal", icon: Gavel, label: "Legal Intelligence" },
   { to: "/app/scientific", icon: FlaskConical, label: "Scientific Research" },

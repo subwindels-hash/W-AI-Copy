@@ -357,6 +357,31 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "spa:dev", scope: "org_scoped" },
   { prefix: "spa:devhb", scope: "org_scoped" },
   { prefix: "spa:twin", scope: "org_scoped" },
+  // ── Session 168 — Tier 3 partials ────────────────────────────────────────
+  // These four modules were org-scoped in their key shapes but entirely absent
+  // from this catalogue, so nothing verified the scoping they claimed.
+  //
+  // sustainability: `esg:<org>:<entity>` puts the ORG FIRST, unlike almost
+  // every other module here, so the bare `esg` prefix is correct and safe —
+  // the segment after it really is the organization id.
+  { prefix: "esg", scope: "org_scoped" },
+  // dataMarketplace: `dmp:<entity>:<org>[:<id>]`. Bare `dmp` is never added —
+  // it would read `a`/`as`/`i` as an organization id.
+  { prefix: "dmp:a", scope: "org_scoped" },
+  { prefix: "dmp:as", scope: "org_scoped" },
+  { prefix: "dmp:i", scope: "org_scoped" },
+  { prefix: "dmp:is", scope: "org_scoped" },
+  { prefix: "dmp:rev", scope: "org_scoped" },
+  // Session 168 — the new review ledger.
+  { prefix: "dmp:rv", scope: "org_scoped" },
+  { prefix: "dmp:rvs", scope: "org_scoped" },
+  { prefix: "dm:notes", scope: "org_scoped" },
+  // digitalHumans: `dh:<entity>:<org>[:<id>]`. Bare `dh` is never added.
+  { prefix: "dh:h", scope: "org_scoped" },
+  { prefix: "dh:hs", scope: "org_scoped" },
+  { prefix: "dh:s", scope: "org_scoped" },
+  { prefix: "dh:ss", scope: "org_scoped" },
+  { prefix: "dh:notes", scope: "org_scoped" },
   // Session 157 quantum inventory / jobs / connector stubs / notes.
   // Bare `q` is never added (would read `inv` as an org id).
   { prefix: "q:inv", scope: "org_scoped" },

@@ -1403,10 +1403,12 @@
       "conversations.spec.ts",
       "cyber.spec.ts",
       "cyberCloudAcademy.spec.ts",
+      "dataMarketplace.spec.ts",
       "dataPlatform.spec.ts",
       "deployment.spec.ts",
       "derivatives.spec.ts",
       "devPortal.spec.ts",
+      "digitalHumans.spec.ts",
       "education.spec.ts",
       "engineering.spec.ts",
       "enterprise.spec.ts",
@@ -3646,15 +3648,16 @@
     "backend": {
       "serviceDir": "apps/api/src/dataMarketplace",
       "serviceFile": {
-        "file": "dataMarketplace.service.ts",
-        "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.ts",
-        "sloc": 189,
+        "file": "dataMarketplace.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.test.ts",
+        "sloc": 174,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1282,
+      "serviceTotalSloc": 1620,
       "serviceFiles": [
         "bootstrap.ts",
+        "dataMarketplace.service.test.ts",
         "dataMarketplace.service.ts",
         "dataMarketplace/dataMarketplace.service.ts",
         "enterprise/dataArchitecture/schemaGovernance.service.ts",
@@ -3674,10 +3677,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/dataMarketplace.ts",
-        "sloc": 105,
+        "sloc": 140,
         "counts": {
-          "total": 11,
-          "GET": 5,
+          "total": 12,
+          "GET": 6,
           "POST": 4,
           "PUT": 0,
           "PATCH": 1,
@@ -3691,6 +3694,7 @@
           "POST /assets",
           "POST /assets/:id/install",
           "POST /assets/:id/review",
+          "GET /assets/:id/reviews",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -3739,7 +3743,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/dataMarketplace.ts (83 LOC)",
+    "sharedTypes": "packages/shared/src/dataMarketplace.ts (132 LOC)",
     "web": {
       "client": "apps/web/src/lib/dataMarketplace.ts (18 LOC)",
       "pages": []
@@ -3760,7 +3764,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "dataMarketplace.spec.ts",
       "sessions61-72-82.spec.ts",
+      "dataMarketplace/dataMarketplace.service.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -4279,15 +4285,16 @@
     "backend": {
       "serviceDir": "apps/api/src/digitalHumans",
       "serviceFile": {
-        "file": "digitalHumans.service.ts",
-        "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.ts",
-        "sloc": 158,
+        "file": "digitalHumans.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.test.ts",
+        "sloc": 246,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 326,
+      "serviceTotalSloc": 788,
       "serviceFiles": [
         "bootstrap.ts",
+        "digitalHumans.service.test.ts",
         "digitalHumans.service.ts",
         "digitalHumans/digitalHumans.service.ts"
       ],
@@ -4299,11 +4306,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/digitalHumans.ts",
-        "sloc": 98,
+        "sloc": 149,
         "counts": {
-          "total": 10,
+          "total": 12,
           "GET": 4,
-          "POST": 4,
+          "POST": 6,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
@@ -4317,14 +4324,16 @@
           "GET /",
           "GET /:id",
           "POST /",
+          "POST /:id/ready",
           "POST /:id/sessions",
+          "POST /sessions/:id/turn",
           "POST /sessions/:id/end"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/digitalHumans.ts (83 LOC)",
+    "sharedTypes": "packages/shared/src/digitalHumans.ts (129 LOC)",
     "web": {
-      "client": "apps/web/src/lib/digitalHumans.ts (17 LOC)",
+      "client": "apps/web/src/lib/digitalHumans.ts (23 LOC)",
       "pages": []
     },
     "db": {
@@ -4332,13 +4341,16 @@
         "User",
         "Organization",
         "Activity",
+        "Conversation",
         "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "digitalHumans.spec.ts",
       "sessions61-72-82.spec.ts",
+      "digitalHumans/digitalHumans.service.test.ts",
       "config/seedGate.test.ts"
     ],
     "syntheticData": [],
@@ -10693,13 +10705,14 @@
       "serviceFile": {
         "file": "spatial.service.ts",
         "path": "/home/user/WIN/apps/api/src/spatial/spatial.service.ts",
-        "sloc": 470,
+        "sloc": 483,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1063,
+      "serviceTotalSloc": 1162,
       "serviceFiles": [
         "bootstrap.ts",
+        "spatial.demoSeed.test.ts",
         "spatial.service.ts",
         "spatial.test.ts",
         "spatial/spatial.service.ts"
@@ -10712,7 +10725,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/spatial.ts",
-        "sloc": 45,
+        "sloc": 87,
         "counts": {
           "total": 9,
           "GET": 6,
@@ -10742,6 +10755,7 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
         "Message",
         "Workflow",
@@ -10754,6 +10768,7 @@
     "tests": [
       "sessions54-60.spec.ts",
       "spatial.spec.ts",
+      "spatial/spatial.demoSeed.test.ts",
       "spatial/spatial.test.ts"
     ],
     "syntheticData": [],
@@ -10773,11 +10788,11 @@
       "serviceFile": {
         "file": "sustainability.service.ts",
         "path": "/home/user/WIN/apps/api/src/sustainability/sustainability.service.ts",
-        "sloc": 363,
+        "sloc": 372,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1115,
+      "serviceTotalSloc": 1148,
       "serviceFiles": [
         "bootstrap.ts",
         "sustainability.completion.test.ts",
@@ -10810,7 +10825,7 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/sustainability.ts (170 LOC)",
+    "sharedTypes": "packages/shared/src/sustainability.ts (176 LOC)",
     "web": {
       "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
       "pages": []
@@ -10939,11 +10954,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 696,
+        "sloc": 721,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1568,
+      "serviceTotalSloc": 1618,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

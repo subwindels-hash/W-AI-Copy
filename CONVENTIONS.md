@@ -2092,3 +2092,99 @@
   check.
 - **Grep for the template-literal-in-single-quotes bug.**
   `AppError.badRequest('`...${from}...`')` shipped `${from}` to users verbatim.
+
+### Session 168 — Tier 3 partials (spatial, sustainability, dataMarketplace, digitalHumans)
+
+1. **A defect inventory built from one grep pattern describes the pattern, not
+   the module.** This tier was filed as "cheap — finish the partial fixes"
+   because it was assembled by grepping for `ensureBootstrapped` on read paths.
+   Exactly one of the four modules (`spatial`) matched that description. The
+   other three hid a live-path RNG fabrication, a double count, and a rating
+   average with the wrong denominator. Read the service before estimating it.
+
+2. **A demo gate is not a fabrication audit.** "Seeding is gated behind
+   `demoDataEnabled()`" says nothing about code outside the seed block.
+   `digitalHumans.endSession` invented a transcript length on every real
+   session end, ungated, and the module still passed every "no fake data"
+   sweep the track had run. Grep for `rand`/`randInt` **call sites**, not for
+   the gate.
+
+3. **Determinism is not honesty — and it is excellent camouflage.** The
+   fabricated `transcriptLength` was preceded by `_rng.reseed(\`endSession:${sid}\`)`,
+   so the same session always produced the same fake number. Stable, reproducible,
+   test-friendly, and completely made up. Deterministic *looked* intentional,
+   which is why it survived. A reseed on a live path is a red flag, not a
+   reassurance.
+
+4. **Check what a test asserts, not whether it passes.**
+   `sustainability.completion.test.ts` contained
+   `expect(d.energyRenewablePct).toBe(0)` under the title "keeps the structural
+   zeros for contract compatibility". It was green, and it was pinning a defect
+   in place. When a fix requires editing an existing assertion, that assertion
+   was part of the bug.
+
+5. **A test suite that mocks the risky config off cannot find bugs in it.**
+   `spatial.test.ts` sets `demoDataEnabled: () => false` in every case, so the
+   read-path seed returned early and looked harmless for two sessions. If a
+   defect only manifests under a configuration, a test must run under that
+   configuration. Added `spatial.demoSeed.test.ts` with the gate open.
+
+6. **`Math.max(1, n)` in a denominator converts "unknown" into "zero".**
+   `avgSatisfactionPct` divided by `Math.max(1, humans.length)`, so an empty org
+   reported 0.0% satisfaction — a real-looking score for a product nobody had
+   used. If the denominator can be zero, the answer is `null`, not a clamp.
+
+7. **Check the denominator against the thing being averaged.** A *rating*
+   averaged over the *install* count (0.15/5 after three five-star reviews). A
+   *duration* averaged over sessions *started* rather than completed. Both
+   compile, both look like a rolling average, both are wrong. Name the
+   denominator field after what it counts (`reviewCount`, `completedSessions`,
+   `ratedSessions`) and the mismatch becomes visible.
+
+8. **If a value has no ledger, its average is a guess.** `review()` maintained a
+   running mean with no stored reviews to recompute from — the comment was
+   validated and thrown away. A derived aggregate needs the rows it derives
+   from, or it cannot be corrected, audited, or re-reviewed.
+
+9. **`0` and `null` remain different claims — and the UI must agree.** After
+   nulling the unmeasured ESG fields, `PlatformPage` still rendered
+   `(data.energyRenewablePct||0).toFixed(0)`, converting the honest null
+   straight back into "0%". **`||0` on a nullable metric is the UI re-telling
+   the lie the service just stopped telling.** Fixing a service contract is
+   half the job; grep the consumers for `||0`, `??0` and `|| 1`.
+
+10. **A timer is not a state machine.** `create()` used
+    `setTimeout(..., 1500)` to flip an avatar to `ready` — no model trained,
+    nothing rendered. It also died with the process, stranding avatars in
+    `training` forever, and its Redis write was unawaited. A status must be
+    earned by an event, so readiness is now an explicit `markReady()` call.
+    (S161's "a posture must be earned", applied to lifecycle state.)
+
+11. **A parameter default is an authorization decision.** `oid = "org-windels"`
+    on 26 service methods, combined with 34 routes reading
+    `(req.user as any).organizationId` with no null guard, meant a null-org
+    token silently read *and wrote* the house organization. Both halves are
+    required: guard at the route with `orgOf`, and make the service parameter
+    mandatory so the next unguarded caller fails to compile rather than
+    defaulting. Note each module's `/notes` sub-router already guarded — the
+    pattern was known and simply not applied to the real routes.
+
+12. **TypeScript will silently merge two interfaces with the same name in the
+    same file.** A dead `MarketplaceReview { ..., at: string }` — never
+    persisted, never imported — declaration-merged with the new one, producing
+    a type requiring both `at` and `createdAt`. The error surfaced at the
+    construction site, not the declaration. Grep for the type name before
+    adding it.
+
+13. **Reseeding from an object stringifies it.** Both marketplace modules opened
+    with ``_rng.reseed(`ensureBootstrapped:${logger}`)`` — seeding from the
+    literal string `"ensureBootstrapped:[object Object]"`, or
+    `"ensureBootstrapped:undefined"` when called from a read. Two call sites,
+    two streams, one "deterministic" claim. It also ran *before* the demo gate,
+    so a production deployment mutated RNG state on every read.
+
+14. **A dashboard field and its own provenance block can disagree.**
+    `sustainability` shipped a provenance entry labelling five fields
+    `structural_zero` while the fields returned `0`. The documentation of the
+    defect was written and committed; the defect was not fixed. When a module
+    explains why a number is meaningless, make the number `null`.
