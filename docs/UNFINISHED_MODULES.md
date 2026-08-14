@@ -27,6 +27,7 @@ enumerated anywhere in the repo. This document enumerates it.
 | 159 | `education` | null mastery, real learner set, recorded hours |
 | 160 | `scientific` | null KG/citations, no `1e6` divide, domains counted |
 | 161 | `cyber` | fabricated cloud findings + held certs → registers; null stats |
+| 162 | `voiceStudio` | **cross-tenant leak in a biometric store**; null latency; real 24h window |
 
 ## Update (S161): the committed inventory was also stale
 
@@ -58,7 +59,7 @@ A GET on a fresh org invents records. This is the exact bug spatial had.
 | # | Module | Defect |
 |---|---|---|
 | ~~1~~ | ~~`cyber`~~ | **DONE in S161.** |
-| 2 | `voiceStudio` | `listBuiltIn` (l.125) and `dashboard` (l.209) both seed `BUILTIN` voices; ungated. `avgSynthLatencyMs` falls back to a hardcoded **`180`** when no latency samples exist (l.217) — a fabricated metric, must be `null`. |
+| ~~2~~ | ~~`voiceStudio`~~ | **DONE in S162.** Inspection found far worse than the latency constant: no org segment in *any* key, `listPresets()`/`listJobs()` unscoped — every tenant could read every other tenant's cloned voices (biometric data), presets and TTS history. |
 | 3 | `constitution` | Ungated seed writes `SEED_POLICIES` + a "Default Enterprise Constitution" already `status: "approved"`, `approvedBy: "system"` — a fresh org is handed pre-approved governance it never ratified. |
 | 4 | `licensing` | Ungated seed registers `SEED_ASSETS` as owned IP assets. |
 | 5 | `deployment` | Ungated seed creates `SEED_TARGETS` as registered deployment targets across regions. `coreIntegration` then reads them back as evidence that deployment is `wired` — a seeded lie propagating into a health report. |
@@ -124,7 +125,7 @@ console:
 ## Suggested order for sessions 161+
 
 1. ~~`cyber`~~ — **done (S161).**
-2. `voiceStudio` — hardcoded `180 ms` is the clearest fabricated metric left.
+2. ~~`voiceStudio`~~ — **done (S162).**
 3. `constitution` + `licensing` — pre-approved governance / owned assets.
 4. `deployment` + `coreIntegration` — a seeded lie feeding a health report.
 5. `composer` + `globalCurrency` — re-seeding read, unbounded stale FX.

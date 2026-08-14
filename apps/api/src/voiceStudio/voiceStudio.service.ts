@@ -1,27 +1,58 @@
 /**
  * Enterprise Voice Studio singleton (Session 40).
+ * Session 162 — completion.
+ *
  * Consent gate enforced BEFORE any cloning. Voices default to private.
+ *
+ * **Tenant isolation (S162).** Before this session every store in this module
+ * was global: `vs:custom`, `vs:cv:<id>`, `vs:presets`, `vs:jobs`, `vs:lats`
+ * and `vs:consent-viol` carried no organization segment. `listPresets()` and
+ * `listJobs()` took no scope at all, so every tenant could read every other
+ * tenant's TTS history and presets, and `listCustom(ownerId?)` filtered only
+ * when the caller happened to supply an id. A cloned voice is biometric data
+ * gated by a consent record, so that was a compliance breach — and the
+ * `consentViolations` counter meant to surface misuse was itself cross-tenant.
+ *
+ * Every mutable key now carries the org in the segment after a two-segment
+ * prefix, and every read requires one.
+ *
+ * Keys: vs:cv:<org>:<id>     vs:custom:<org>
+ *       vs:preset:<org>:<id> vs:presets:<org>
+ *       vs:job:<org>:<id>    vs:jobs:<org>
+ *       vs:lats:<org>        vs:cviol:<org>
+ * The built-in catalogue is static configuration and is served from memory.
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import type {
   BuiltInVoice, CustomVoice, VoiceSettings, VoicePreset, VsEmotion as Emotion,
-  TtsJob, VoiceStudioDashboard, VsCloneMethod as CloneMethod, VsConsentState as ConsentState,
-  VsVoiceVisibility as VoiceVisibility, VsVoiceGender as VoiceGender, VsVoiceAge as VoiceAge,
+  TtsJob, VoiceStudioDashboard, VoiceStudioProvenance,
+  VsCloneMethod as CloneMethod,
+  VsVoiceGender as VoiceGender, VsVoiceAge as VoiceAge,
 } from "@windels/shared";
-import { makeRng } from "../utils/detRng.js";
-// Deterministic demo RNG — stable within a running process.
-const _rng = makeRng('voiceStudio:voiceStudio');
-function rand(min: number, max: number) { return _rng.rand(min, max); }
-function randInt(min: number, max: number) { return _rng.randInt(min, max); }
+import { VS_EMOTIONS } from "@windels/shared";
 
-
+const DAY_MS = 86_400_000;
 
 const K = {
-  builtin: "vs:builtin",
+  // Org-scoped. Two-segment prefix, then the organization id.
+  cv: (oid: string, id: string) => `vs:cv:${oid}:${id}`,
+  custom: (oid: string) => `vs:custom:${oid}`,
+  preset: (oid: string, id: string) => `vs:preset:${oid}:${id}`,
+  presets: (oid: string) => `vs:presets:${oid}`,
+  job: (oid: string, id: string) => `vs:job:${oid}:${id}`,
+  jobs: (oid: string) => `vs:jobs:${oid}`,
+  lats: (oid: string) => `vs:lats:${oid}`,
+  consentViol: (oid: string) => `vs:cviol:${oid}`,
+  migrated: "vs:migrated",
+};
+
+/** Pre-S162 global keys, read once during migration and then left alone. */
+const LEGACY = {
   custom: "vs:custom",
+  cv: (id: string) => `vs:cv:${id}`,
   presets: "vs:presets",
-  jobs: "vs:jobs", jobs24: "vs:jobs24", lats: "vs:lats", consentViol: "vs:consent-viol",
+  jobs: "vs:jobs",
 };
 const BUILTIN: Omit<BuiltInVoice,"id">[] = [];
 function bv(id: string, name: string, gender: VoiceGender, age: VoiceAge, lang: string, region: string | undefined, cat: string = "general", tags: string[] = [], accent?: string): Omit<BuiltInVoice,"id"> {
@@ -112,72 +143,175 @@ function genderFor(id: string): VoiceGender {
 
 const DEFAULT_SETTINGS: VoiceSettings = { pitch:0, speed:1.0, volume:0.9, energy:0.6, warmth:0.7, emotion:"calm", formality:0.5, accentStrength:0.8, pauseMs:240, breathing:0.2 };
 
+/** Built-in catalogue with stable ids. Static configuration, served from memory. */
+const BUILTIN_WITH_IDS: BuiltInVoice[] = BUILTIN.map((b) => ({
+  ...b,
+  id: "bv-" + b.name.toLowerCase().replace(/[^a-z0-9]+/g, "-").slice(0, 40),
+}));
+
+const s2 = (o: unknown) => JSON.stringify(o);
+
+/** An organization id is mandatory for every tenant-scoped operation. */
+function requireOrg(oid: string | undefined | null): string {
+  if (!oid || !oid.trim()) {
+    throw Object.assign(new Error("organization context required"), { code: "FORBIDDEN" });
+  }
+  return oid;
+}
+
+async function readSet<T>(setKey: string, itemKey: (id: string) => string): Promise<T[]> {
+  const ids = await redis.zrange(setKey, 0, -1);
+  const out: T[] = [];
+  for (const id of ids) {
+    const r = await redis.hgetall(itemKey(id));
+    if (r?._doc) { try { out.push(JSON.parse(r._doc) as T); } catch { /* skip */ } }
+  }
+  return out;
+}
+
 export const VoiceStudioService = {
-  async ensureBootstrapped() {
-    if (await redis.zcard(K.builtin) > 0) return;
-    for (const b of BUILTIN) {
-      const id = "bv-" + b.name.toLowerCase().replace(/[^a-z0-9]+/g,"-").slice(0,40);
-      await redis.zadd(K.builtin, 0, id);
-      await redis.hset(`vs:bvin:${id}`, "_doc", JSON.stringify({ ...b, id }));
+  /**
+   * One-time migration of the pre-S162 global stores into the default org.
+   *
+   * Reads never call this (the S156 rule) — it runs from the module bootstrap.
+   * Adopted records are flagged `migratedFrom: "global"`; no timestamp is
+   * invented for a record that did not carry one.
+   */
+  async ensureBootstrapped(logger?: { info?: (...a: unknown[]) => void }, oid = "org-windels") {
+    if (await redis.exists(K.migrated)) return;
+    await redis.set(K.migrated, new Date().toISOString());
+
+    let voices = 0, presets = 0, jobs = 0;
+
+    // Custom voices
+    const legacyVoiceIds = await redis.zrange(LEGACY.custom, 0, -1);
+    for (const id of legacyVoiceIds) {
+      const r = await redis.hgetall(LEGACY.cv(id));
+      if (!r?._doc) continue;
+      try {
+        const cv = JSON.parse(r._doc) as CustomVoice;
+        cv.organizationId = cv.organizationId ?? oid;
+        cv.migratedFrom = "global";
+        await redis.zadd(K.custom(cv.organizationId), Date.now(), cv.id);
+        await redis.hset(K.cv(cv.organizationId, cv.id), "_doc", s2(cv));
+        voices++;
+      } catch { /* skip malformed */ }
+    }
+
+    // Presets (legacy stored the whole doc as the zset member)
+    for (const raw of await redis.zrange(LEGACY.presets, 0, -1)) {
+      try {
+        const p = JSON.parse(raw) as VoicePreset;
+        if (!p?.id) continue;
+        p.organizationId = p.organizationId ?? oid;
+        p.migratedFrom = "global";
+        await redis.zadd(K.presets(p.organizationId), Date.now(), p.id);
+        await redis.hset(K.preset(p.organizationId, p.id), "_doc", s2(p));
+        presets++;
+      } catch { /* skip */ }
+    }
+
+    // Job ledger
+    for (const raw of await redis.zrange(LEGACY.jobs, 0, -1)) {
+      try {
+        const j = JSON.parse(raw) as TtsJob;
+        if (!j?.id) continue;
+        j.organizationId = j.organizationId ?? oid;
+        j.migratedFrom = "global";
+        await redis.zadd(K.jobs(j.organizationId), Date.parse(j.requestedAt) || 0, j.id);
+        await redis.hset(K.job(j.organizationId, j.id), "_doc", s2(j));
+        jobs++;
+      } catch { /* skip */ }
+    }
+
+    if (voices || presets || jobs) {
+      logger?.info?.("[voice-studio] migrated pre-S162 global records into org namespace", { oid, voices, presets, jobs });
     }
   },
+
+  /** Static catalogue — no Redis round-trip, and no seeding on read. */
   async listBuiltIn(): Promise<BuiltInVoice[]> {
-    await this.ensureBootstrapped();
-    const ids = await redis.zrange(K.builtin,0,-1);
-    const out: BuiltInVoice[] = [];
-    for (const id of ids) { const r = await redis.hgetall(`vs:bvin:${id}`); if (r._doc) out.push(JSON.parse(r._doc)); }
-    return out;
+    return BUILTIN_WITH_IDS;
   },
-  async listCustom(ownerId?: string): Promise<CustomVoice[]> {
-    const ids = await redis.zrange(K.custom, 0, -1);
-    let out: CustomVoice[] = [];
-    for (const id of ids) { const r = await redis.hgetall(`vs:cv:${id}`); if (r._doc) out.push(JSON.parse(r._doc)); }
-    if (ownerId) out = out.filter(v => v.ownerId === ownerId);
-    return out;
+
+  /** Org-scoped. `ownerId` narrows further to one user's private voices. */
+  async listCustom(oid: string, ownerId?: string): Promise<CustomVoice[]> {
+    const org = requireOrg(oid);
+    const out = await readSet<CustomVoice>(K.custom(org), (id) => K.cv(org, id));
+    return ownerId ? out.filter((v) => v.ownerId === ownerId) : out;
   },
+
+  async getCustom(oid: string, id: string): Promise<CustomVoice | null> {
+    const org = requireOrg(oid);
+    const r = await redis.hgetall(K.cv(org, id));
+    if (!r?._doc) return null;
+    try { return JSON.parse(r._doc) as CustomVoice; } catch { return null; }
+  },
+
+  /**
+   * Consent gate. A voice clone is biometric data — without a recorded consent
+   * grant this throws and increments the org's violation counter.
+   */
   async cloneVoice(input: {
+    organizationId: string;
     ownerId: string; name: string; gender: VoiceGender; age: VoiceAge; language: string;
     method: CloneMethod; consentGranted: boolean; consentRecordedBy?: string;
     baseVoiceId?: string;
   }): Promise<CustomVoice> {
+    const org = requireOrg(input.organizationId);
     if (!input.consentGranted) {
-      await redis.incr(K.consentViol);
-      throw Object.assign(new Error("Consent required before cloning"), { code:"CONSENT_REQUIRED" });
+      await redis.incr(K.consentViol(org));
+      throw Object.assign(new Error("Consent required before cloning"), { code: "CONSENT_REQUIRED" });
     }
-    const id = "cv-" + randomUUID().slice(0,8);
+    const id = "cv-" + randomUUID().slice(0, 8);
     const cv: CustomVoice = {
-      id, name: input.name, ownerId: input.ownerId, baseVoiceId: input.baseVoiceId,
-      gender: input.gender, age: input.age, language: input.language, languagesSpoken: [input.language],
+      id, name: input.name, ownerId: input.ownerId, organizationId: org,
+      baseVoiceId: input.baseVoiceId,
+      gender: input.gender, age: input.age, language: input.language,
+      languagesSpoken: [input.language],
       consent: "consent-recorded", consentRecordedAt: new Date().toISOString(),
-      cloneMethod: input.method, trainedEpochs: input.method==="hf-clone"?12:3,
-      visibility: "private", settings: { ...DEFAULT_SETTINGS }, emotions: ["calm","friendly","professional"],
+      consentRecordedBy: input.consentRecordedBy,
+      cloneMethod: input.method,
+      // This process trains no model. An epoch count would be invented.
+      trainedEpochs: null,
+      visibility: "private", settings: { ...DEFAULT_SETTINGS },
+      emotions: ["calm", "friendly", "professional"],
       createdAt: new Date().toISOString(),
     };
-    const multi = redis.multi();
-    multi.zadd(K.custom, Date.now(), id);
-    multi.hset(`vs:cv:${id}`, "_doc", JSON.stringify(cv));
-    await multi.exec();
+    await redis.zadd(K.custom(org), Date.now(), id);
+    await redis.hset(K.cv(org, id), "_doc", s2(cv));
     return cv;
   },
-  async updateSettings(id: string, patch: Partial<VoiceSettings>, ownerId: string): Promise<CustomVoice | null> {
-    const r = await redis.hgetall(`vs:cv:${id}`);
-    if (!r._doc) return null;
+
+  /** Tenancy is checked before ownership — the org gate is not optional. */
+  async updateSettings(oid: string, id: string, patch: Partial<VoiceSettings>, ownerId: string): Promise<CustomVoice | null> {
+    const org = requireOrg(oid);
+    const r = await redis.hgetall(K.cv(org, id));
+    if (!r?._doc) return null;
     const cv: CustomVoice = JSON.parse(r._doc);
+    if (cv.organizationId && cv.organizationId !== org) return null;
     if (cv.ownerId !== ownerId) return null;
     cv.settings = { ...cv.settings, ...patch };
-    await redis.hset(`vs:cv:${id}`, "_doc", JSON.stringify(cv));
+    await redis.hset(K.cv(org, id), "_doc", s2(cv));
     return cv;
   },
-  async createPreset(input: { voiceId: string; name: string; settings: Partial<VoiceSettings>; description?: string }): Promise<VoicePreset> {
-    const id = "vp-" + randomUUID().slice(0,8);
-    const p: VoicePreset = { id, ...input };
-    await redis.zadd(K.presets, Date.now(), JSON.stringify(p));
+
+  async createPreset(oid: string, input: { voiceId: string; name: string; settings: Partial<VoiceSettings>; description?: string }): Promise<VoicePreset> {
+    const org = requireOrg(oid);
+    const id = "vp-" + randomUUID().slice(0, 8);
+    const p: VoicePreset = { id, organizationId: org, createdAt: new Date().toISOString(), ...input };
+    await redis.zadd(K.presets(org), Date.now(), id);
+    await redis.hset(K.preset(org, id), "_doc", s2(p));
     return p;
   },
-  async listPresets(): Promise<VoicePreset[]> {
-    return (await redis.zrange(K.presets,0,-1)).map(s=>JSON.parse(s));
+
+  async listPresets(oid: string): Promise<VoicePreset[]> {
+    const org = requireOrg(oid);
+    return readSet<VoicePreset>(K.presets(org), (id) => K.preset(org, id));
   },
-  async synthesize(req: { voiceId: string; text: string; settings?: Partial<VoiceSettings>; emotion?: Emotion; language?: string; clientSide?: boolean }): Promise<TtsJob & { clientSide?: boolean; provider?: string; language?: string; warning?: string }> {
+
+  async synthesize(oid: string, req: { voiceId: string; text: string; settings?: Partial<VoiceSettings>; emotion?: Emotion; language?: string; clientSide?: boolean }): Promise<TtsJob & { clientSide?: boolean; provider?: string; language?: string; warning?: string }> {
+    const org = requireOrg(oid);
     const { VoiceService } = await import("./voice.service.js");
     const job = await VoiceService.synthesize({
       text: req.text,
@@ -186,15 +320,21 @@ export const VoiceStudioService = {
       speed: req.settings?.speed,
       clientSide: req.clientSide,
     });
-    // Preserve legacy audit record
-    await redis.zadd(K.jobs, Date.now(), JSON.stringify({
+    const record: TtsJob = {
       id: job.id, voiceId: job.voiceId, status: job.status, durationMs: job.durationMs,
-      audioUrl: job.audioUrl, requestedAt: job.createdAt,
-    }));
-    await redis.incr(K.jobs24);
-    if (job.durationMs) { await redis.lpush(K.lats, String(job.durationMs)); await redis.ltrim(K.lats,0,99); }
-    try { const { KernelService } = await import("../kernel/kernel.service.js"); await KernelService.dispatch({ kind:"voice.tts", source:"voice-studio", target:"voice", payload:{voiceId:req.voiceId,length:req.text.length,clientSide:job.clientSide,provider:job.provider,status:job.status} }); } catch {}
-    const legacy: any = { id: job.id, voiceId: job.voiceId, status: job.status, durationMs: job.durationMs, audioUrl: job.audioUrl, requestedAt: job.createdAt };
+      audioUrl: job.audioUrl, requestedAt: job.createdAt, organizationId: org,
+    };
+    await redis.zadd(K.jobs(org), Date.parse(record.requestedAt) || Date.now(), record.id);
+    await redis.hset(K.job(org, record.id), "_doc", s2(record));
+    if (job.durationMs) {
+      await redis.lpush(K.lats(org), String(job.durationMs));
+      await redis.ltrim(K.lats(org), 0, 99);
+    }
+    try {
+      const { KernelService } = await import("../kernel/kernel.service.js");
+      await KernelService.dispatch({ kind: "voice.tts", source: "voice-studio", target: "voice", payload: { voiceId: req.voiceId, length: req.text.length, clientSide: job.clientSide, provider: job.provider, status: job.status, organizationId: org } });
+    } catch { /* best effort */ }
+    const legacy: any = { ...record };
     if (job.status === "failed" || job.error) legacy.error = job.error;
     if (job.clientSide) legacy.clientSide = true;
     legacy.provider = job.provider;
@@ -202,25 +342,63 @@ export const VoiceStudioService = {
     if (job.status === "failed" && !job.audioUrl) legacy.warning = "VOICE MODEL NOT CONFIGURED — server-side audio unavailable. Use browser speech synthesis (clientSide=true) or configure ELEVENLABS_API_KEY / PLAYHT_API_KEY.";
     return legacy;
   },
-  async listJobs(limit=50): Promise<TtsJob[]> {
-    return (await redis.zrange(K.jobs,0,-1,"REV")).slice(0,limit).map(s=>JSON.parse(s));
+
+  async listJobs(oid: string, limit = 50): Promise<TtsJob[]> {
+    const org = requireOrg(oid);
+    const ids = await redis.zrange(K.jobs(org), 0, -1, "REV");
+    const out: TtsJob[] = [];
+    for (const id of ids.slice(0, limit)) {
+      const r = await redis.hgetall(K.job(org, id));
+      if (r?._doc) { try { out.push(JSON.parse(r._doc) as TtsJob); } catch { /* skip */ } }
+    }
+    return out;
   },
-  async summary(): Promise<VoiceStudioDashboard> {
-    await this.ensureBootstrapped();
-    const [builtin, custom, presets, jobs, lats, cv] = await Promise.all([
-      redis.zcard(K.builtin), redis.zcard(K.custom), redis.zcard(K.presets),
-      redis.get(K.jobs24).then(n=>Number(n??0)),
-      redis.lrange(K.lats,0,99),
-      this.listCustom(),
+
+  async summary(oid: string): Promise<VoiceStudioDashboard> {
+    const org = requireOrg(oid);
+    const [presets, jobs, lats, cv, viol] = await Promise.all([
+      redis.zcard(K.presets(org)),
+      this.listJobs(org, 1000),
+      redis.lrange(K.lats(org), 0, 99),
+      this.listCustom(org),
+      redis.get(K.consentViol(org)).then((n) => Number(n ?? 0)),
     ]);
-    const lat = lats.map(Number).filter(n=>n>0);
-    const avg = lat.length?Math.round(lat.reduce((a,b)=>a+b,0)/lat.length):180;
+
+    const lat = lats.map(Number).filter((n) => n > 0);
+    // Null until something was actually measured — never a hardcoded 180.
+    const avg = lat.length ? Math.round(lat.reduce((a, b) => a + b, 0) / lat.length) : null;
+
+    // A real rolling window, not a monotonic counter mislabelled "24h".
+    const since = Date.now() - DAY_MS;
+    const jobs24h = jobs.filter((j) => (Date.parse(j.requestedAt) || 0) >= since).length;
+
+    // Distinct languages actually present. The old figure was `19 + langs.size`,
+    // which inflated by a constant and double-counted built-in languages.
     const langs = new Set<string>();
-    for (const v of cv) { langs.add(v.language); v.languagesSpoken.forEach((l: any)=>langs.add(l)); }
+    for (const b of BUILTIN_WITH_IDS) langs.add(b.language);
+    for (const v of cv) { langs.add(v.language); (v.languagesSpoken ?? []).forEach((l) => langs.add(l)); }
+
+    const provenance: VoiceStudioProvenance = {
+      latency: lat.length
+        ? `mean of the last ${lat.length} measured synthesis job(s) in this organization`
+        : "no synthesis has been measured in this organization",
+      languages: "distinct languages across the built-in catalogue and this organization's custom voices",
+      jobs: "this organization's job ledger; 24h is a rolling window over requestedAt",
+      consentViolations: "cloning attempts rejected for missing consent in this organization",
+    };
+
     return {
-      builtInVoices: builtin, customVoices: custom, clonedVoices: cv.filter(v=>!!v.cloneMethod).length,
-      languages: 19 + langs.size, emotions: 13, presets, ttsJobs24h: jobs,
-      avgSynthLatencyMs: avg, consentViolations: Number(await redis.get(K.consentViol)??"0"),
+      builtInVoices: BUILTIN_WITH_IDS.length,
+      customVoices: cv.length,
+      clonedVoices: cv.filter((v) => !!v.cloneMethod).length,
+      languages: langs.size,
+      emotions: VS_EMOTIONS.length,
+      presets,
+      ttsJobs24h: jobs24h,
+      ttsJobsTotal: jobs.length,
+      avgSynthLatencyMs: avg,
+      consentViolations: viol,
+      provenance,
     };
   },
 };

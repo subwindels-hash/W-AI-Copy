@@ -250,6 +250,21 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "rob:pa", scope: "org_scoped" },
   { prefix: "rob:pas", scope: "org_scoped" },
   { prefix: "rob:tel", scope: "org_scoped" },
+  // Session 162 voice studio — cloned voices, presets, TTS jobs, latency and
+  // consent-violation counters. These stores were entirely GLOBAL before S162:
+  // a cloned voice is biometric data gated by a consent record, and every
+  // tenant could read every other tenant's voices, presets and job history.
+  // Keys are `vs:<entity>:<org>:…`. Bare `vs` is deliberately never added —
+  // it would read the literal `cv` as an organization id.
+  { prefix: "vs:cv", scope: "org_scoped" },
+  { prefix: "vs:custom", scope: "org_scoped" },
+  { prefix: "vs:preset", scope: "org_scoped" },
+  { prefix: "vs:presets", scope: "org_scoped" },
+  { prefix: "vs:job", scope: "org_scoped" },
+  { prefix: "vs:jobs", scope: "org_scoped" },
+  { prefix: "vs:lats", scope: "org_scoped" },
+  { prefix: "vs:cviol", scope: "org_scoped" },
+  { prefix: "vs:notes", scope: "org_scoped" },
   // Session 161 cyber academy — labs, findings, certifications, ranges.
   // Keys are `csec:<entity>:<org>:…`. Bare `csec` is deliberately never added:
   // it would read the literal `lab` as an organization id. `cy:notes` is the

@@ -1795,3 +1795,57 @@
   organization id. `cy:notes` — the notes ledger, which uses a *different*
   prefix from the rest of the module — was uncatalogued entirely and is
   now covered.
+
+### Session 162 — Voice Studio completion (`voiceStudio`)
+
+- **The audit found a latency constant; the module had a cross-tenant leak.**
+  The queue entry for `voiceStudio` was "hardcoded 180 ms fallback". Opening
+  the file showed `grep -c organizationId` = **0**: every store in the module
+  was global. The lesson is that the defect signature that gets a module onto
+  the list is rarely the worst thing in it — always read the whole file.
+- **A cloned voice is biometric data.** `vs:cv:<id>` with no org segment meant
+  any tenant could enumerate every other tenant's cloned voices, and
+  `listPresets()` / `listJobs()` took no scope argument at all — TTS history
+  including `voiceId` and `audioUrl` was fully shared. Honesty rules protect
+  users from false numbers; isolation rules protect them from each other, and
+  a consent-gated store needs both.
+- **An optional scope argument is not access control.**
+  `listCustom(ownerId?)` filtered only when the caller supplied an id, and the
+  route passed `req.user?.id`. Optional chaining turned a missing user into
+  "return everything". A tenant scope must be a required parameter that throws,
+  which is why `requireOrg()` exists rather than a default.
+- **Check tenancy before ownership.** The old `updateSettings` compared
+  `cv.ownerId !== ownerId` only. Owner ids are not globally unique across
+  tenants, so an ownership check alone is not an isolation boundary.
+- **The counter that detects misuse must not itself be shared.**
+  `vs:consent-viol` was one global integer, so one tenant's rejected clone
+  attempts appeared on every other tenant's compliance dashboard.
+- **Migrate, do not strand.** Pre-S162 global records are adopted into the
+  default org once, flagged `migratedFrom: "global"`, keeping their original
+  `createdAt` — never inventing a timestamp for a record that lacked one. The
+  legacy keys are left in place so the change is reversible.
+- **A constant added to a measurement is a fabricated measurement.**
+  `languages: 19 + langs.size` inflated every deployment by 19 and
+  double-counted any custom voice whose language a built-in already covered.
+  An empty deployment claimed 19 languages. The honest figure is the size of
+  the distinct set.
+- **A counter named `24h` that never resets is a lifetime total.**
+  `vs:jobs24` was `incr`-ed on every synthesis and never expired or windowed.
+  The window is now computed from the ledger's timestamps, and the lifetime
+  figure ships separately as `ttsJobsTotal` rather than being disguised.
+- **`trainedEpochs: method === "hf-clone" ? 12 : 3`** invented a training
+  result for a process that trains no model. It is `null` unless a real run
+  reports one.
+- **A missing state in a shared contract lets a placeholder pass as a
+  result.** `VoiceService` already returned `status: "demo"` (no provider
+  configured, no audio produced) but the shared `TtsJob` type omitted it, so
+  the value was only surviving through an untyped object literal. Adding
+  `demo` to the union makes "nothing was rendered" a state a UI must handle.
+- **Two sidebar entries were both called "Voice Studio".** `/app/voice` is a
+  browser-TTS playback surface; the new `/app/voice-studio` is the org-scoped
+  register. Shipping a console means checking the nav for a name collision,
+  not just adding a row.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `vs:cv/custom/preset/presets/job/jobs/lats/cviol` plus the pre-existing
+  `vs:notes`. A bare `vs` entry would make the sweep read the literal `cv` as
+  an organization id.

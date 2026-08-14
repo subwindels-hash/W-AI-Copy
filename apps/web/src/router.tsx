@@ -85,6 +85,7 @@ const CyberCloudAcademyPage = lazy(() => import("./pages/cyberCloudAcademy/Cyber
 const UniversityPage = lazy(() => import("./pages/university/UniversityPage").then((m) => ({ default: m.UniversityPage })));
 const RoboticsPage = lazy(() => import("./pages/robotics/RoboticsPage").then((m) => ({ default: m.RoboticsPage })));
 const CyberPage = lazy(() => import("./pages/cyber/CyberPage").then((m) => ({ default: m.CyberPage })));
+const OrgVoiceStudioPage = lazy(() => import("./pages/voiceStudio/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
 const SpatialPage = lazy(() => import("./pages/spatial/SpatialPage").then((m) => ({ default: m.SpatialPage })));
 const QuantumPage = lazy(() => import("./pages/quantum/QuantumPage").then((m) => ({ default: m.QuantumPage })));
 const LegalPage = lazy(() => import("./pages/legal/LegalPage").then((m) => ({ default: m.LegalPage })));
@@ -364,6 +365,7 @@ export const router = createBrowserRouter([
       { path: "university", element: withSuspense(<UniversityPage />) },
       { path: "robotics", element: withSuspense(<RoboticsPage />) },
       { path: "cyber", element: withSuspense(<CyberPage />) },
+      { path: "voice-studio", element: withSuspense(<OrgVoiceStudioPage />) },
       { path: "spatial", element: withSuspense(<SpatialPage />) },
       { path: "quantum", element: withSuspense(<QuantumPage />) },
       { path: "legal", element: withSuspense(<LegalPage />) },

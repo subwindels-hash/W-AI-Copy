@@ -11,6 +11,8 @@ export const vsApi = {
   dashboard: () => api<VoiceStudioDashboard>("/voice-studio/dashboard/rollup"),
   builtinVoices: () => api<BuiltInVoice[]>("/voice-studio/voices/builtin"),
   customVoices: () => api<CustomVoice[]>("/voice-studio/voices/custom"),
+  /** Only the caller's own voices, rather than the whole organization's. */
+  myVoices: () => api<CustomVoice[]>("/voice-studio/voices/custom", { params: { mine: 1 } }),
   cloneVoice: (input: {
     name: string; gender: VoiceGender; age: VoiceAge; language?: string;
     method?: CloneMethod; consentGranted: boolean; baseVoiceId?: string;
@@ -24,3 +26,5 @@ export const vsApi = {
     api<TtsJob>("/voice-studio/synthesize", { method: "POST", json: input }),
   jobs: () => api<TtsJob[]>("/voice-studio/jobs"),
 };
+
+export { VS_EMOTIONS } from "@windels/shared";

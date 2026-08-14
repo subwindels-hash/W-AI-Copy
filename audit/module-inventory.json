@@ -1453,6 +1453,7 @@
       "university.spec.ts",
       "universityEngine.spec.ts",
       "usage.spec.ts",
+      "voiceStudio.spec.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
     ],
@@ -10903,11 +10904,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 621,
+        "sloc": 636,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1418,
+      "serviceTotalSloc": 1448,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -12221,7 +12222,8 @@
       "aiEcosystem.spec.ts",
       "sessions37-40.spec.ts",
       "sessions41-76-80.spec.ts",
-      "sessions42-47.spec.ts"
+      "sessions42-47.spec.ts",
+      "voiceStudio.spec.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -12403,11 +12405,12 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 934,
+      "serviceTotalSloc": 1535,
       "serviceFiles": [
         "bootstrap.ts",
         "voice.service.ts",
         "voiceStudio.service.ts",
+        "voiceStudio.test.ts",
         "voiceStudio/voiceStudio.service.ts",
         "voiceStudio/voice.service.ts"
       ],
@@ -12420,7 +12423,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/voiceStudio.ts",
-        "sloc": 162,
+        "sloc": 198,
         "counts": {
           "total": 15,
           "GET": 8,
@@ -12448,9 +12451,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/voiceStudio.ts (59 LOC)",
+    "sharedTypes": "packages/shared/src/voiceStudio.ts (110 LOC)",
     "web": {
-      "client": "apps/web/src/lib/voiceStudio.ts (27 LOC)",
+      "client": "apps/web/src/lib/voiceStudio.ts (31 LOC)",
       "pages": []
     },
     "db": {
@@ -12463,7 +12466,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions37-40.spec.ts"
+      "sessions37-40.spec.ts",
+      "voiceStudio.spec.ts",
+      "voiceStudio/voiceStudio.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
