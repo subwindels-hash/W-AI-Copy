@@ -1945,3 +1945,50 @@
 - **Tenant-isolation two-segment rule, again.** Catalog
   `lic:a/as/g/gs/ag/r/rs/m`. A bare `lic` entry would make the sweep read the
   literal `a` as an organization id.
+
+### Session 165 — Deployment completion (`deployment`)
+
+- **A probe must never write the evidence it reports.** `coreIntegration`'s
+  `deployments` check called `ensureBootstrapped()` and then counted the rows
+  the seeder had just created. Its `missing` branch was unreachable on a first
+  run, so the platform's integration checkpoint asserted a working deployment
+  fleet on an installation with no deployments. Any health check that mutates
+  state can only ever confirm itself. Probes read; they do not seed.
+- **A test that accepts every outcome is not a test.** The guard here was
+  `expect(["wired","missing"]).toContain(dep.status)` — it could not fail, and
+  it sat directly on top of the defect while appearing to cover it. When
+  writing an assertion over a union, at least one member must be excluded.
+- **Registration is not verification.** The module already had a `routesPresent`
+  helper that returns `stub` with the note "route registration is not
+  integration verification" — and then the deployments probe reported `wired`
+  for the mere existence of a registry row. Reuse the standard the codebase
+  already set for itself: `stub` for declared, `wired` for demonstrated.
+- **A composite score built from invented per-state constants is not a
+  measurement.** `avgHealthScore` mapped healthy→100, degraded→60, failed→20
+  and *everything else*→50, then averaged. The `else` branch is the tell: a
+  target nobody had ever checked contributed a confident mid-range number.
+  Compute a score only over subjects that have a real result, and return null
+  when that set is empty.
+- **A derived metric whose inputs are all assigned is structurally constant.**
+  `outdatedTargets` counted `version !== LATEST_VERSION` while `create()` set
+  `version = LATEST_VERSION`, so it was always 0. When a comparison can only
+  produce one answer, the field is decorative — either observe the value from
+  outside (here, a `reportedVersion` an environment supplies) or drop it.
+- **Say which host a check actually probed.** `validate()` runs genuine probes
+  — Redis PING, `SELECT 1`, a real file write — but all against the *local API
+  process*, then wrote `healthy` onto a target in `us-east-1`. The two checks
+  that would have exercised the target are the two that get skipped. Checks now
+  carry `scope`, and a run that proves nothing about the target yields
+  `validated_locally` rather than `healthy`.
+- **Method names are claims.** `destroy()` on a deployment target asserts that
+  a cloud environment was torn down; what happened was `srem`. Renamed to
+  `deregister()`, returning `infrastructureModified: false`. Likewise the UI's
+  "Provision Target" became "Register Target".
+- **Respect prior remediation.** Unlike the previous four modules, this one had
+  already been partly fixed: `validate()`'s `Math.random() > 0.05` verdict and
+  the born-healthy targets were removed earlier, with `verdicts.test.ts`
+  guarding both. That work was left untouched and is not re-litigated —
+  checking for existing fixes before rewriting saved undoing them.
+- **Tenant-isolation two-segment rule, again.** Catalog `dep:t/ts/v` plus the
+  pre-existing `dep:notes`. A bare `dep` entry would read the literal `t` as an
+  organization id.

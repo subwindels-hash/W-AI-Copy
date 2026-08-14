@@ -293,6 +293,15 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "lic:r", scope: "org_scoped" },
   { prefix: "lic:rs", scope: "org_scoped" },
   { prefix: "lic:m", scope: "org_scoped" },
+  // Session 165 deployment platform — registered targets and their validation
+  // runs. Keys were already `dep:<entity>:<org>:…` but the six target routes
+  // called the service with no organization, so every tenant listed, created,
+  // validated and DELETED org-windels' targets. `dep:notes` was already
+  // org-aware. Bare `dep` is never added — it would read `t` as an org id.
+  { prefix: "dep:t", scope: "org_scoped" },
+  { prefix: "dep:ts", scope: "org_scoped" },
+  { prefix: "dep:v", scope: "org_scoped" },
+  { prefix: "dep:notes", scope: "org_scoped" },
   // Session 161 cyber academy — labs, findings, certifications, ranges.
   // Keys are `csec:<entity>:<org>:…`. Bare `csec` is deliberately never added:
   // it would read the literal `lab` as an organization id. `cy:notes` is the

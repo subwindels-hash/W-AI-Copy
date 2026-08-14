@@ -1403,6 +1403,7 @@
       "cyber.spec.ts",
       "cyberCloudAcademy.spec.ts",
       "dataPlatform.spec.ts",
+      "deployment.spec.ts",
       "derivatives.spec.ts",
       "devPortal.spec.ts",
       "education.spec.ts",
@@ -3227,11 +3228,11 @@
       "serviceFile": {
         "file": "coreIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/coreIntegration/coreIntegration.service.ts",
-        "sloc": 95,
+        "sloc": 118,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 235,
+      "serviceTotalSloc": 333,
       "serviceFiles": [
         "bootstrap.ts",
         "coreIntegration.service.ts",
@@ -3280,6 +3281,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "deployment.spec.ts",
       "sessions42-47.spec.ts",
       "coreIntegration/coreIntegration.test.ts"
     ],
@@ -3769,15 +3771,16 @@
     "backend": {
       "serviceDir": "apps/api/src/deployment",
       "serviceFile": {
-        "file": "deployment.service.ts",
-        "path": "/home/user/WIN/apps/api/src/deployment/deployment.service.ts",
-        "sloc": 201,
-        "mathRandom": false,
+        "file": "deployment.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/deployment/deployment.service.test.ts",
+        "sloc": 268,
+        "mathRandom": true,
         "externalFetch": false
       },
-      "serviceTotalSloc": 539,
+      "serviceTotalSloc": 961,
       "serviceFiles": [
         "bootstrap.ts",
+        "deployment.service.test.ts",
         "deployment.service.ts",
         "verdicts.test.ts",
         "deployment/deployment.service.ts"
@@ -3790,11 +3793,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/deployment.ts",
-        "sloc": 76,
+        "sloc": 139,
         "counts": {
-          "total": 10,
+          "total": 11,
           "GET": 4,
-          "POST": 3,
+          "POST": 4,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 2
@@ -3805,6 +3808,7 @@
           "POST /targets",
           "POST /targets/:id/validate",
           "GET /targets/:id/validation",
+          "POST /targets/:id/report",
           "DELETE /targets/:id",
           "GET /notes",
           "POST /notes",
@@ -3813,9 +3817,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/deployment.ts (98 LOC)",
+    "sharedTypes": "packages/shared/src/deployment.ts (165 LOC)",
     "web": {
-      "client": "apps/web/src/lib/deployment.ts (14 LOC)",
+      "client": "apps/web/src/lib/deployment.ts (22 LOC)",
       "pages": []
     },
     "db": {
@@ -3828,7 +3832,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "deployment.spec.ts",
       "mlOps.spec.ts",
+      "deployment/deployment.service.test.ts",
       "deployment/verdicts.test.ts"
     ],
     "syntheticData": [],
@@ -10920,11 +10926,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 664,
+        "sloc": 673,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1504,
+      "serviceTotalSloc": 1522,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

@@ -6,6 +6,7 @@
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import { TARGET_ENVIRONMENTS, DeployStatus, DeploymentDashboard, DeploymentTarget, DeploymentValidation, DeploymentValidationCheck } from "@windels/shared";
 
 const K = {
@@ -30,39 +31,64 @@ async function emitKernel(kind: string, payload: any) {
 }
 
 export const DeploymentService = {
+  /**
+   * S165 — seeding is opt-in.
+   *
+   * These are not neutral placeholders: "NA-East Production" (aws/us-east-1),
+   * "EU-West Production" (kubernetes/eu-west-1) and "Edge Retail NYC" were
+   * written on every boot, and `coreIntegration`'s health probe then counted
+   * them as evidence that the platform was deployed. A reader of that report
+   * concluded there were live production environments in two clouds and two
+   * regions on an installation where nobody had deployed anything.
+   */
   async ensureBootstrapped(logger?: any, oid = "org-windels") {
     if (await redis.exists(K.ts(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("deployment", logger);
     for (const s of SEED_TARGETS) {
-      await this.create({ name: s.name, environment: s.environment, region: s.region, modules: ["core","aiEcosystem","voiceFoundry","mediaGen","memoryEvolution","composer"], organizationId: oid, skipEmit: true });
+      await this.create({ name: s.name, environment: s.environment, region: s.region, modules: ["core","aiEcosystem","voiceFoundry","mediaGen","memoryEvolution","composer"], organizationId: oid, skipEmit: true, source: "demo_seed" });
     }
-    logger?.info?.("[deployment] bootstrap complete", { targets: SEED_TARGETS.length });
+    logger?.info?.("[deployment] demo seed complete", { targets: SEED_TARGETS.length });
   },
 
-  async dashboard(oid = "org-windels"): Promise<DeploymentDashboard> {
+  async dashboard(oid: string): Promise<DeploymentDashboard> {
     const targets = await this.list(oid);
     const byEnv: Record<DeploymentTarget["environment"], number> = Object.fromEntries(TARGET_ENVIRONMENTS.map(e=>[e,0])) as Record<DeploymentTarget["environment"],number>;
     for (const t of targets) byEnv[t.environment]++;
     const healthy = targets.filter(t=>t.status==="healthy").length;
     const degraded = targets.filter(t=>t.status==="degraded").length;
     const failed = targets.filter(t=>t.status==="failed").length;
-    const outdated = targets.filter(t=>t.version!==LATEST_VERSION).length;
-    const avg = targets.length ? Math.round((targets.reduce((s,t)=> s + (t.status==="healthy"?100:t.status==="degraded"?60:t.status==="failed"?20:50),0)/targets.length)*10)/10 : 0;
+
+    // S165: only a REPORTED version can be out of date. The assigned `version`
+    // is set to LATEST_VERSION at creation, so the old comparison was always 0.
+    const outdated = targets.filter(t => t.reportedVersion && t.reportedVersion !== LATEST_VERSION).length;
+    const unknownVersion = targets.filter(t => !t.reportedVersion).length;
+
+    // S165: health is the share of VALIDATED targets whose last real check
+    // passed. A target that has never been validated is excluded rather than
+    // scored 50, and an empty denominator is null rather than 0.
+    const validated = targets.filter(t => t.lastHealthOk !== undefined);
+    const avg = validated.length
+      ? Math.round((validated.filter(t => t.lastHealthOk).length / validated.length) * 1000) / 10
+      : null;
+
     return {
       totalTargets: targets.length, healthyTargets: healthy, degradedTargets: degraded, failedTargets: failed,
-      byEnvironment: byEnv, latestVersion: LATEST_VERSION, outdatedTargets: outdated,
-      avgHealthScore: avg, recent: targets.slice(0,6),
+      byEnvironment: byEnv, latestVersion: LATEST_VERSION,
+      outdatedTargets: outdated, unknownVersionTargets: unknownVersion,
+      avgHealthScore: avg, validatedTargets: validated.length,
+      recent: targets.slice(0,6),
     };
   },
 
-  async list(oid = "org-windels"): Promise<DeploymentTarget[]> {
+  async list(oid: string): Promise<DeploymentTarget[]> {
     const ids = await redis.smembers(K.ts(oid));
     const out: DeploymentTarget[] = [];
     for (const id of ids) { const r = await redis.hgetall(K.t(oid,id)); if (r._doc) out.push(JSON.parse(r._doc)); }
     return out.sort((a,b)=>b.createdAt.localeCompare(a.createdAt));
   },
 
-  async create(input: { name: string; environment: DeploymentTarget["environment"]; region?: string; endpoint?: string; modules?: string[]; organizationId?: string; skipEmit?: boolean }): Promise<DeploymentTarget> {
-    const oid = input.organizationId || "org-windels";
+  async create(input: { name: string; environment: DeploymentTarget["environment"]; region?: string; endpoint?: string; modules?: string[]; organizationId: string; skipEmit?: boolean; source?: DeploymentTarget["source"] }): Promise<DeploymentTarget> {
+    const oid = input.organizationId;
     const id = uid("dt-"); const now = new Date().toISOString();
     const t: DeploymentTarget = {
       id, organizationId: oid, name: input.name, environment: input.environment, region: input.region,
@@ -72,6 +98,7 @@ export const DeploymentService = {
       // and random cpu/mem/gpu telemetry that had never been sampled.
       status: "validating",
       modules: input.modules || [], validationPassed: false,
+      source: input.source ?? "operator_registered",
       createdAt: now, updatedAt: now,
     };
     await redis.hset(K.t(oid,id), "_doc", s2(t));
@@ -94,12 +121,15 @@ export const DeploymentService = {
    * from here) the check is marked `skipped` rather than passed, so the gap is
    * visible instead of being silently counted as success.
    */
-  async validate(targetId: string, oid = "org-windels"): Promise<DeploymentValidation> {
+  async validate(targetId: string, oid: string): Promise<DeploymentValidation> {
     const start = Date.now();
     const checks: DeploymentValidationCheck[] = [];
 
     const run = async (
       category: DeploymentValidationCheck["category"],
+      // S165 — every check declares what it actually exercised. A local_host
+      // probe is real but proves nothing about a remote environment.
+      scope: DeploymentValidationCheck["scope"],
       label: string,
       probe: () => Promise<{ ok: boolean; detail?: string } | "skip">,
     ) => {
@@ -113,24 +143,24 @@ export const DeploymentService = {
         passed = false;
         detail = e?.message ? String(e.message).slice(0, 300) : "probe threw";
       }
-      checks.push({ id: uid("chk-"), category, label, passed, skipped, detail, durationMs: Date.now() - c0 });
+      checks.push({ id: uid("chk-"), category, scope, label, passed, skipped, detail, durationMs: Date.now() - c0 });
     };
 
     // Redis — round-trip a real command.
-    await run("redis", "Redis connectivity", async () => {
+    await run("redis", "local_host", "Redis connectivity", async () => {
       const pong = await redis.ping();
       return { ok: pong === "PONG", detail: `PING -> ${pong}` };
     });
 
     // Postgres — issue a trivial query through Prisma.
-    await run("database", "PostgreSQL connectivity", async () => {
+    await run("database", "local_host", "PostgreSQL connectivity", async () => {
       const { prisma } = await import("../db/client.js");
       await prisma.$queryRaw`SELECT 1`;
       return { ok: true, detail: "SELECT 1 succeeded" };
     });
 
     // Storage — prove the uploads directory is actually writable.
-    await run("storage", "Persistent storage writable", async () => {
+    await run("storage", "local_host", "Persistent storage writable", async () => {
       const { writeFile, unlink, mkdir } = await import("node:fs/promises");
       const path = await import("node:path");
       const dir = process.env.UPLOAD_DIR || path.resolve(process.cwd(), "uploads");
@@ -142,35 +172,44 @@ export const DeploymentService = {
     });
 
     // Kernel — confirm the event bus module loads and reports a heartbeat.
-    await run("kernel", "Kernel heartbeat", async () => {
+    await run("kernel", "local_host", "Kernel heartbeat", async () => {
       const { KernelService } = await import("../kernel/kernel.service.js");
       const alive = typeof (KernelService as any)?.dispatch === "function";
       return { ok: alive, detail: alive ? "dispatch available" : "kernel not initialised" };
     });
 
     // Models — a provider must actually be registered.
-    await run("models", "Model registry reachable", async () => {
+    await run("models", "local_host", "Model registry reachable", async () => {
       const { aiRegistry } = await import("../services/ai/registry.js");
       const models = (aiRegistry as any)?.listModels?.() ?? [];
       return { ok: Array.isArray(models) && models.length > 0, detail: `${models.length} model(s) registered` };
     });
 
     // Connectivity / TLS to a remote target cannot be asserted from here.
-    await run("connectivity", "Reach target endpoint", async () => "skip");
-    await run("security", "TLS & certificate check", async () => "skip");
+    await run("connectivity", "target", "Reach target endpoint", async () => "skip");
+    await run("security", "target", "TLS & certificate check", async () => "skip");
 
     const executed = checks.filter((c) => !c.skipped);
     const skippedCount = checks.length - executed.length;
     // Everything-skipped is not a pass.
     const passed = executed.length > 0 && executed.every((c) => c.passed);
 
+    // S165: how much of this run actually exercised the TARGET. Every
+    // executable probe here interrogates the local API host; the two
+    // target-specific checks are precisely the two that get skipped. Writing
+    // "healthy" onto a remote environment on the strength of local Redis
+    // connectivity is a claim the run does not support.
+    const targetScopedChecks = executed.filter((c) => c.scope === "target").length;
+    const provedTarget = targetScopedChecks > 0;
+
     const tr = await redis.hgetall(K.t(oid, targetId));
     if (tr._doc) {
       const t: DeploymentTarget = JSON.parse(tr._doc);
       t.validationPassed = passed;
-      t.status = passed ? "healthy" : "degraded";
+      t.status = !passed ? "degraded" : provedTarget ? "healthy" : "validated_locally";
       t.lastHealthCheckAt = new Date().toISOString();
-      t.lastHealthOk = passed;
+      // Only claim target health when something actually probed the target.
+      if (provedTarget) t.lastHealthOk = passed;
       t.updatedAt = new Date().toISOString();
       // Resource telemetry is only reported when it was actually sampled. The
       // previous random cpu/mem/gpu figures are left untouched rather than
@@ -179,21 +218,59 @@ export const DeploymentService = {
     }
     const v: DeploymentValidation = {
       targetId, ranAt: new Date().toISOString(), passed, checks,
-      durationMs: Date.now() - start, skippedCount,
+      durationMs: Date.now() - start, skippedCount, targetScopedChecks,
     };
     await redis.set(K.v(oid, targetId), s2(v));
     return v;
   },
 
-  async getLatestValidation(targetId: string, oid = "org-windels"): Promise<DeploymentValidation | null> {
+  async getLatestValidation(targetId: string, oid: string): Promise<DeploymentValidation | null> {
     const s = await redis.get(K.v(oid,targetId));
     return s ? (JSON.parse(s) as DeploymentValidation) : null;
   },
 
-  async destroy(targetId: string, oid = "org-windels"): Promise<void> {
+  /**
+   * S165 — record the version an environment reports for itself.
+   *
+   * Nothing previously observed a target's running version: `create()` assigned
+   * `LATEST_VERSION`, so `outdatedTargets` (version !== LATEST) was always 0 by
+   * construction. A real report has to come from outside.
+   */
+  async reportVersion(input: { targetId: string; version: string; organizationId: string }): Promise<DeploymentTarget> {
+    const oid = input.organizationId;
+    const r = await redis.hgetall(K.t(oid, input.targetId));
+    if (!r._doc) throw Object.assign(new Error("target not found"), { status: 404 });
+    const t: DeploymentTarget = JSON.parse(r._doc);
+    t.reportedVersion = input.version;
+    t.versionReportedAt = new Date().toISOString();
+    t.updatedAt = t.versionReportedAt;
+    await redis.hset(K.t(oid, input.targetId), "_doc", s2(t));
+    return t;
+  },
+
+  /**
+   * S165 — remove a target from the registry.
+   *
+   * Renamed from `destroy()`: nothing here provisions or tears down
+   * infrastructure. This de-registers a declared target and touches no cloud
+   * environment, so the status it writes says exactly that.
+   */
+  async deregister(targetId: string, oid: string): Promise<{ deregistered: boolean; infrastructureModified: false }> {
     const r = await redis.hgetall(K.t(oid,targetId));
-    if (r._doc) { const t: DeploymentTarget = JSON.parse(r._doc); t.status = "destroyed"; t.updatedAt = new Date().toISOString(); await redis.hset(K.t(oid,targetId),"_doc",s2(t)); }
+    let found = false;
+    if (r._doc) {
+      found = true;
+      const t: DeploymentTarget = JSON.parse(r._doc);
+      t.status = "deregistered"; t.updatedAt = new Date().toISOString();
+      await redis.hset(K.t(oid,targetId),"_doc",s2(t));
+    }
     await redis.srem(K.ts(oid), targetId);
+    return { deregistered: found, infrastructureModified: false };
+  },
+
+  /** @deprecated S165 — use `deregister`. Kept so existing callers keep working. */
+  async destroy(targetId: string, oid: string): Promise<void> {
+    await this.deregister(targetId, oid);
   },
 };
 

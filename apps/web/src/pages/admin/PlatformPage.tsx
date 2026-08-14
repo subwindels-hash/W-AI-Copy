@@ -6949,12 +6949,22 @@ function DeploymentTab() {
       <Stat label="Healthy" value={d.healthyTargets} tone="emerald"/>
       <Stat label="Degraded" value={d.degradedTargets} tone="amber"/>
       <Stat label="Failed" value={d.failedTargets} tone={d.failedTargets?"crimson":"emerald"}/>
-      <Stat label="Version" value={d.latestVersion} tone="azure" sub={`${d.outdatedTargets} outdated`}/>
-      <Stat label="Health Score" value={d.avgHealthScore} tone={d.avgHealthScore>=90?"emerald":"amber"}/>
+      <Stat label="Version" value={d.latestVersion} tone="azure" sub={`${d.outdatedTargets} outdated, ${d.unknownVersionTargets} unknown`}/>
+      {/* S165: null until something has actually been validated. It used to
+          average invented per-status constants, scoring an unvalidated
+          target 50. */}
+      <Stat label="Health Score" value={d.avgHealthScore == null ? "\u2014" : `${d.avgHealthScore}%`}
+            tone={d.avgHealthScore == null ? "slate" : d.avgHealthScore >= 90 ? "emerald" : "amber"}
+            sub={d.avgHealthScore == null ? "nothing validated" : `${d.validatedTargets} validated`}/>
     </div>)}
+    {/* S165: registering a target is a declaration, not a provisioning action. */}
+    <div className="text-xs text-text-muted border border-white/10 rounded p-2">
+      Targets are declared records. Nothing here provisions or tears down infrastructure, and
+      validation probes this API host's own dependencies rather than the remote environment.
+    </div>
     <div className="grid md:grid-cols-3 gap-3">
       <Card>
-        <CardHeader><CardTitle className="text-sm">Provision Target</CardTitle></CardHeader>
+        <CardHeader><CardTitle className="text-sm">Register Target</CardTitle></CardHeader>
         <CardContent className="space-y-2 text-xs">
           <Input placeholder="Name" value={name} onChange={e=>setName(e.target.value)}/>
           <select value={env} onChange={e=>setEnv(e.target.value as any)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1">

@@ -12,6 +12,15 @@ import type { CeilCheckpointReport, CeilSystemLink } from "@windels/shared";
 
 const LINK_DEFS: Array<{ id: string; name: string; critical: boolean; probe: () => Promise<{ status: "wired" | "stub" | "missing"; evidence: string; routesThrough?: string[]; notes?: string }> }> = [];
 
+/**
+ * S165 — the organization whose records this platform-wide checkpoint reads.
+ *
+ * The checkpoint is a deployment-level report, not a tenant-facing one, so it
+ * needs an explicit subject rather than inheriting a service default. Named
+ * here so it is visible that the report describes one organization.
+ */
+const PLATFORM_ORG_ID = process.env.WINDELS_PLATFORM_ORG_ID || "org-windels";
+
 function pfxHas(prefix: string) { return async () => ({ status: (await redis.keys(`${prefix}*`)).length > 0 ? "wired" as const : "missing" as const, evidence: `${(await redis.keys(`${prefix}*`)).length} keys at ${prefix}*` }); }
 function routesPresent(modes: string[]) { return async () => ({ status: "stub" as const, evidence: `Route registration observed at ${modes.join(", ")}; no end-to-end dependency probe is implemented`, routesThrough: ["http-router"], notes: "route registration is not integration verification" }); }
 
@@ -43,14 +52,28 @@ LINK_DEFS.push(
   { id: "marketplace",      name: "Enterprise Marketplace Ecosystem",         critical: true,  probe: pfxHas("mk:") },
   { id: "deployments",      name: "Desktop / Mobile / Web / Cloud / Edge / Airgap / Offline", critical: true, probe: async () => {
     try {
-      // Verify the real DeploymentService targets (aws/kubernetes/edge/etc.) are
-      // registered. A target's health is only claimed after a real validation
-      // run, so we report presence + validation state honestly.
+      // S165 — this probe used to call `DeploymentService.ensureBootstrapped()`
+      // and then count what the seeder had just written. The `missing` branch
+      // was unreachable on a first run, so the integration checkpoint reported
+      // `deployments: wired` — feeding `criticalPassed` and `canProceedToSession46`
+      // — on an installation where nobody had deployed anything. It now reads
+      // only what already exists and never writes.
       const { DeploymentService } = await import("../deployment/deployment.service.js");
-      await DeploymentService.ensureBootstrapped();
-      const targets = await DeploymentService.list("org-windels");
-      if (!targets.length) return { status: "missing", evidence: "no deployment targets registered", routesThrough: ["deployment"] };
+      const targets = await DeploymentService.list(PLATFORM_ORG_ID);
+      if (!targets.length) {
+        return { status: "missing", evidence: "no deployment targets registered", routesThrough: ["deployment"] };
+      }
+      // Registration is a declaration, not a verification — the same reason
+      // `routesPresent` reports `stub`. Only a target that has actually passed
+      // validation counts as wired.
       const validated = targets.filter((t) => t.validationPassed).length;
+      if (!validated) {
+        return {
+          status: "stub",
+          evidence: `${targets.length} deployment target(s) registered, 0 validated — registration is not verification`,
+          routesThrough: ["deployment"],
+        };
+      }
       return {
         status: "wired",
         evidence: `${targets.length} deployment target(s) registered, ${validated} validated`,
