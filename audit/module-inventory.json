@@ -1398,6 +1398,7 @@
       "auth.spec.ts",
       "collaboration.spec.ts",
       "commerce.spec.ts",
+      "constitution.spec.ts",
       "conversations.spec.ts",
       "cyber.spec.ts",
       "cyberCloudAcademy.spec.ts",
@@ -2895,15 +2896,16 @@
     "backend": {
       "serviceDir": "apps/api/src/constitution",
       "serviceFile": {
-        "file": "constitution.service.ts",
-        "path": "/home/user/WIN/apps/api/src/constitution/constitution.service.ts",
-        "sloc": 198,
+        "file": "constitution.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/constitution/constitution.service.test.ts",
+        "sloc": 363,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 401,
+      "serviceTotalSloc": 1222,
       "serviceFiles": [
         "bootstrap.ts",
+        "constitution.service.test.ts",
         "constitution.service.ts",
         "constitution/constitution.service.ts"
       ],
@@ -2915,7 +2917,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/constitution.ts",
-        "sloc": 27,
+        "sloc": 92,
         "counts": {
           "total": 7,
           "GET": 4,
@@ -2935,19 +2937,24 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/constitution.ts (112 LOC)",
+    "sharedTypes": "packages/shared/src/constitution.ts (194 LOC)",
     "web": {
-      "client": "apps/web/src/lib/constitution.ts (17 LOC)",
+      "client": "apps/web/src/lib/constitution.ts (22 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Organization",
+        "Agent",
+        "Message"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "constitution.spec.ts",
+      "constitution/constitution.service.test.ts",
       "config/moduleGates.test.ts"
     ],
     "syntheticData": [],
@@ -10904,11 +10911,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 636,
+        "sloc": 650,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1448,
+      "serviceTotalSloc": 1476,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

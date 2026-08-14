@@ -1849,3 +1849,52 @@
   `vs:cv/custom/preset/presets/job/jobs/lats/cviol` plus the pre-existing
   `vs:notes`. A bare `vs` entry would make the sweep read the literal `cv` as
   an organization id.
+
+### Session 163 — Constitution completion (`constitution`)
+
+- **A safety gate must fail closed, and an unconfigured gate must say so.**
+  `checkRequest` returned `allowed: true` with `constitutionVersion: 0` for any
+  organization that had published no constitution. Nothing distinguished that
+  from a clean check, so a caller integrating the gate would have believed
+  every request had been reviewed. The rule this establishes: **when a check
+  cannot be performed, the answer is "no", not "yes"** — and the response
+  carries the reason (`posture: "unconfigured"`, `requiresConfiguration: true`)
+  so the caller can tell refusal-by-policy from refusal-by-misconfiguration.
+- **A permissive mode must be opt-in and self-declaring.** Some deployments
+  genuinely need the old behaviour, so `WINDELS_CONSTITUTION_FAIL_OPEN=true`
+  restores it — but the result then reports `posture: "fail_open"`. A
+  deployment that is not enforcing says so in the payload rather than looking
+  identical to one that is.
+- **Prose is not enforcement.** Eleven policies described precise, checkable
+  conditions ("over $10,000 USD must be reviewed by a human") and *none* was
+  evaluated; a keyword list did all the work, and a policy only supplied the
+  verb for a match that had already happened. Eight of eleven domains were
+  therefore incapable of producing a violation. Policies now carry a structured
+  `rule`, and a policy without one is counted in `unenforceablePolicies` — a
+  documented intention is allowed to exist, but it is not allowed to *look*
+  like a control.
+- **Org-scoped keys do not mean org-scoped access.** This is the counterexample
+  to S162's detection heuristic: `grep -c organizationId` on the *service*
+  looked fine because every key was already `cst:<entity>:<org>:…`. The leak
+  was in the routes, which passed nothing and let a default parameter
+  (`oid = "org-windels"`) silently substitute one tenant for another. **Check
+  the call sites, not just the key shapes** — and prefer a required parameter
+  over a defaulted one for anything tenant-scoped, so the type system catches
+  the omission instead of a string literal papering over it.
+- **Gating a seed is only safe if the empty state is safe.** The S162 move —
+  hide the seed behind `WINDELS_DEMO_DATA` — would have been *actively
+  harmful* here on its own: removing the seed empties `getActive()`, and an
+  empty constitution made `checkRequest` permissive. The seed could only be
+  gated once the gate failed closed. Ask what the module does with nothing
+  before you give it nothing.
+- **`approvedBy: "system"` on a governance artifact is a forged signature.**
+  Eleven policies and a constitution shipped pre-`approved` with an approver
+  that is not a person. The demo seed now signs itself `demo_seed`, and the
+  console labels those rows "review and re-approve before relying on it".
+- **A metric written once at bootstrap and never again is not a measurement.**
+  `cst:m:<org>.workforces` was set to `"0"` in `ensureBootstrapped` and nothing
+  in the platform ever incremented it, so `coveredWorkforces: 0` was structural,
+  not observed. It is `null`, and the field is no longer seeded.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `cst:active/policy/policies/c/cs/v/m`. A bare `cst` entry would make the
+  sweep read the literal `active` as an organization id.

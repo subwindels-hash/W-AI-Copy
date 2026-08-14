@@ -60,7 +60,7 @@ A GET on a fresh org invents records. This is the exact bug spatial had.
 |---|---|---|
 | ~~1~~ | ~~`cyber`~~ | **DONE in S161.** |
 | ~~2~~ | ~~`voiceStudio`~~ | **DONE in S162.** Inspection found far worse than the latency constant: no org segment in *any* key, `listPresets()`/`listJobs()` unscoped — every tenant could read every other tenant's cloned voices (biometric data), presets and TTS history. |
-| 3 | `constitution` | Ungated seed writes `SEED_POLICIES` + a "Default Enterprise Constitution" already `status: "approved"`, `approvedBy: "system"` — a fresh org is handed pre-approved governance it never ratified. |
+| ~~3~~ | ~~`constitution`~~ | **DONE in S163.** The seed was the least of it. `checkRequest` **failed open twice**: an org with no constitution got `allowed: true` / version `0` for every request (including self-harm and jailbreak prompts), and only a 12-keyword blocklist could ever trip — the policy *statements* (the $10,000 approval threshold, the $1,000/day spend cap) were never evaluated, leaving 8 of 11 domains unable to produce a violation. All seven routes also called the service with no org argument, so every tenant read and published `org-windels`' governance. |
 | 4 | `licensing` | Ungated seed registers `SEED_ASSETS` as owned IP assets. |
 | 5 | `deployment` | Ungated seed creates `SEED_TARGETS` as registered deployment targets across regions. `coreIntegration` then reads them back as evidence that deployment is `wired` — a seeded lie propagating into a health report. |
 | 6 | `composer` | Ungated seed, and worse: it **re-seeds on read** if the workflow set is empty or its rows fail to parse (`needsSeed` recovery path), so deleting the example workflow brings it back. |
@@ -126,7 +126,7 @@ console:
 
 1. ~~`cyber`~~ — **done (S161).**
 2. ~~`voiceStudio`~~ — **done (S162).**
-3. `constitution` + `licensing` — pre-approved governance / owned assets.
+3. ~~`constitution`~~ — **done (S163).** `licensing` — owned assets.
 4. `deployment` + `coreIntegration` — a seeded lie feeding a health report.
 5. `composer` + `globalCurrency` — re-seeding read, unbounded stale FX.
 6. `spatial` / `sustainability` / `dataMarketplace` / `digitalHumans` — finish

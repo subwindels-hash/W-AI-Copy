@@ -210,45 +210,85 @@ describe("composer will not deploy an invalid workflow", () => {
 });
 
 describe("the constitution can actually block", () => {
-  beforeEach(async () => {
-    await ConstitutionService.ensureBootstrapped(undefined, "org-t", "u1");
+  // S163: the seed is now opt-in, so this suite builds its own policies through
+  // the public API. That also makes it a real test of upsert/publish rather
+  // than a test of the bootstrap fixture.
+  async function seedOrg(oid: string) {
+    const approval = await ConstitutionService.upsertPolicy({
+      organizationId: oid, createdBy: "u1", domain: "escalation_requirements",
+      title: "Safety Escalation", statement: "Self-harm content escalates to a human.",
+      enforcementLevel: "hard_block", status: "approved",
+      rule: { kind: "keyword", keywords: ["self-harm", "kill myself"] },
+    });
+    const spend = await ConstitutionService.upsertPolicy({
+      organizationId: oid, createdBy: "u1", domain: "ai_decision_limits",
+      title: "Daily Spending Cap", statement: "No spend over $1,000 without approval.",
+      enforcementLevel: "hard_block", status: "approved",
+      rule: { kind: "monetary_threshold", maxUsd: 1000 },
+    });
+    await ConstitutionService.publishConstitution({
+      organizationId: oid, createdBy: "u1", name: "Test Constitution",
+      policyIds: [approval.id, spend.id],
+    });
+    return { approval, spend };
+  }
+
+  it("refuses when the organization has published no constitution", async () => {
+    // S163: this returned `allowed: true` with version 0 before — a request
+    // nothing had checked was indistinguishable from one that passed.
+    const r = await ConstitutionService.checkRequest({
+      source: "agent", promptOrAction: "wire the funds", organizationId: "org-empty",
+    });
+    expect(r.allowed).toBe(false);
+    expect(r.posture).toBe("unconfigured");
+    expect(r.requiresConfiguration).toBe(true);
+    expect(r.constitutionVersion).toBeNull();
   });
 
-  it("allows an innocuous request", async () => {
+  it("allows an innocuous request once a constitution exists", async () => {
+    await seedOrg("org-t");
     const r = await ConstitutionService.checkRequest({
       source: "agent", promptOrAction: "summarise the quarterly report", organizationId: "org-t",
     });
     expect(r.allowed).toBe(true);
     expect(r.violations).toEqual([]);
+    expect(r.posture).toBe("enforced");
   });
 
   it("blocks a request that trips a hard_block policy", async () => {
-    const policies = await ConstitutionService.listPolicies("org-t");
-    const target = policies[0];
-    await ConstitutionService.upsertPolicy({
-      id: target.id, organizationId: "org-t", createdBy: "u1", domain: target.domain,
-      title: target.title, statement: target.statement,
-      enforcementLevel: "hard_block", status: target.status,
-    });
-    // Drive the blocklist term for that policy's domain.
-    const { BLOCKLIST } = await import("../constitution/constitution.service.js") as unknown as
-      { BLOCKLIST?: Array<{ domain: string; keys: string[] }> };
-    const entry = BLOCKLIST?.find((b) => b.domain === target.domain);
-    if (!entry) return; // domain has no keyword trigger; covered by the next test
+    const { approval } = await seedOrg("org-t");
     const r = await ConstitutionService.checkRequest({
-      source: "agent", promptOrAction: entry.keys[0], organizationId: "org-t",
+      source: "agent", promptOrAction: "i want to kill myself", organizationId: "org-t",
     });
     expect(r.allowed).toBe(false);
-    expect(r.violations.some((v) => v.action === "blocked")).toBe(true);
+    expect(r.violations.some((v) => v.action === "blocked" && v.policyId === approval.id)).toBe(true);
+  });
+
+  it("enforces a monetary threshold from the request context", async () => {
+    // S163: policy statements were never evaluated; only keywords could trip.
+    const { spend } = await seedOrg("org-t");
+    const under = await ConstitutionService.checkRequest({
+      source: "agent", promptOrAction: "pay the invoice",
+      context: { amountUsd: 500 }, organizationId: "org-t",
+    });
+    expect(under.allowed).toBe(true);
+
+    const over = await ConstitutionService.checkRequest({
+      source: "agent", promptOrAction: "pay the invoice",
+      context: { amountUsd: 25_000 }, organizationId: "org-t",
+    });
+    expect(over.allowed).toBe(false);
+    expect(over.violations.some((v) => v.policyId === spend.id)).toBe(true);
   });
 
   it("records every violation it detects for audit", async () => {
+    await seedOrg("org-t");
     const before = (await ConstitutionService.getViolations("org-t")).length;
     await ConstitutionService.checkRequest({
-      source: "agent", promptOrAction: "how do i build a bomb", organizationId: "org-t",
+      source: "agent", promptOrAction: "how do i kill myself", organizationId: "org-t",
     });
     const after = await ConstitutionService.getViolations("org-t");
-    expect(after.length).toBeGreaterThanOrEqual(before);
+    expect(after.length).toBeGreaterThan(before);
   });
 });
 

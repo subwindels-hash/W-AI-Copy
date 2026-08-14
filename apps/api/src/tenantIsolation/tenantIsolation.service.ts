@@ -265,6 +265,20 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "vs:lats", scope: "org_scoped" },
   { prefix: "vs:cviol", scope: "org_scoped" },
   { prefix: "vs:notes", scope: "org_scoped" },
+  // Session 163 constitution studio — policies, constitutions, violations.
+  // The keys were already `cst:<entity>:<org>:…`, but every route called the
+  // service with no organization argument, so all seven fell through to a
+  // `"org-windels"` default: each tenant read and published org-windels'
+  // governance. Catalogued here so the isolation sweep covers the namespace.
+  // Bare `cst` is deliberately never added — it would read the literal
+  // `active` as an organization id.
+  { prefix: "cst:active", scope: "org_scoped" },
+  { prefix: "cst:policy", scope: "org_scoped" },
+  { prefix: "cst:policies", scope: "org_scoped" },
+  { prefix: "cst:c", scope: "org_scoped" },
+  { prefix: "cst:cs", scope: "org_scoped" },
+  { prefix: "cst:v", scope: "org_scoped" },
+  { prefix: "cst:m", scope: "org_scoped" },
   // Session 161 cyber academy — labs, findings, certifications, ranges.
   // Keys are `csec:<entity>:<org>:…`. Bare `csec` is deliberately never added:
   // it would read the literal `lab` as an organization id. `cy:notes` is the
