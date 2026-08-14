@@ -6147,14 +6147,29 @@ function GlobalCurrencyTab() {
     <div className="flex gap-2 flex-wrap">{[["overview","Overview",LayoutDashboard],["convert","Convert",DollarSign],["detect","Detect",Globe],["regional","Regional",Languages],["agents","AI Agents",Bot]].map(([v,l,Ic]:any)=>(
       <Button key={v} size="sm" variant={sub===v?"primary":"ghost"} onClick={()=>setSub(v)}><Ic className="h-3.5 w-3.5 mr-1"/>{l}</Button>
     ))}</div>
-    {sub==="overview" && (<div className="grid md:grid-cols-4 gap-3">
+    {sub==="overview" && (<>
+    {d && d.ratesFromLiveProvider===0 && (<div className="rounded-md border border-crimson/40 bg-crimson/10 p-2 text-[11px]">
+      <span className="font-semibold">No live exchange rate has been fetched.</span>{" "}
+      Every stored rate is a constant compiled into this repository, of unknown vintage, and none
+      may be used to charge a customer. Check that the FX refresh job can reach its providers.
+    </div>)}
+    <div className="grid md:grid-cols-4 gap-3">
       <Stat label="Currencies" value={d?.currenciesSupported??"…"} tone="emerald"/>
       <Stat label="Languages" value={d?.languagesSupported??"…"} tone="violet"/>
       <Stat label="Countries" value={d?.countriesSupported??"…"} tone="azure" sub={`${d?.paymentMethodsLocalized??0} local PMs`}/>
-      <Stat label="Rate Providers" value={d?.rateProviders??"…"} tone="teal" sub={d?.offlineFallbackHealthy?"offline healthy":"no fallback"}/>
+      {/* S167 — was `rateProviders: 4`, which counted the cache layers
+          (live/cache/override/offline-fallback), not upstream sources. The
+          sub-label read "offline healthy" off
+          `Object.keys(OFFLINE_RATES).length > 0` — true in every execution. */}
+      <Stat label="Upstream Providers" value={d?.upstreamProviders??"…"} tone="teal"
+        sub={d==null?undefined:d.providersReachable===null?"never fetched":`${d.providersReachable} reachable`}/>
+      <Stat label="Live Rates" value={d?.ratesFromLiveProvider??"…"} tone={d&&d.ratesFromLiveProvider>0?"emerald":"slate"}
+        sub={d==null?undefined:`${d.ratesFromConstants} from constants`}/>
+      <Stat label="Conversions 24h" value={d?.conversions24h===null?"—":(d?.conversions24h??"…")} tone="azure"
+        sub={d?.conversions24h===null?"none recorded":"rolling window"}/>
       <Stat label="Fraud Guards" value={d?.fraudGuardsActive??"…"} tone="crimson"/>
       <Stat label="AI Agents" value={d?.agents??"…"} tone="fuchsia"/>
-    </div>)}
+    </div></>)}
     {sub==="convert" && (<Card><CardContent className="p-4 space-y-3">
       <div className="flex gap-2 items-center"><Input type="number" value={amt} onChange={e=>setAmt(Number(e.target.value))} className="w-28"/>
         <select value={from} onChange={e=>setFrom(e.target.value)} className="bg-input px-2 py-1 rounded text-sm">{(ccys.data??[]).map(c=><option key={c}>{c}</option>)}</select>
@@ -6162,19 +6177,27 @@ function GlobalCurrencyTab() {
         <select value={to} onChange={e=>setTo(e.target.value)} className="bg-input px-2 py-1 rounded text-sm">{(ccys.data??[]).map(c=><option key={c}>{c}</option>)}</select>
         <div className="text-2xl font-semibold text-emerald flex-1 text-right">{conv?.formatted??"…"}</div>
       </div>
-      {conv && <div className="text-xs text-text-muted">rate {conv.exchangeRate} · source: {conv.sourceRate}</div>}
+      {conv && (<div className="text-xs space-y-1">
+        <div className="text-text-muted">rate {conv.exchangeRate} · source: {conv.sourceRate}{conv.rateDerived?" · derived, not quoted":""} · {conv.rateStaleness}</div>
+        {/* S167 — a converted figure must say whether it may be charged against. */}
+        {!conv.usableForBilling && <div className="text-crimson">Display only — the underlying rate is a hardcoded constant or too old to bill against.</div>}
+      </div>)}
     </CardContent></Card>)}
     {sub==="detect" && (<Card><CardContent className="p-4 space-y-3">
       <div className="flex gap-2 items-center"><span>Country:</span>
         <select value={cc} onChange={e=>setCc(e.target.value)} className="bg-input px-2 py-1 rounded text-sm">{(countries.data??[]).map(c=><option key={c}>{c}</option>)}</select>
       </div>
-      {det && (<div className="grid md:grid-cols-2 gap-3 text-xs">
+      {det && !det.supported && (<div className="text-xs rounded border border-amber/40 bg-amber/10 p-2">
+        <b>{det.country} is not supported.</b> No localization profile exists, so no currency,
+        timezone or tax region is reported. It used to fall back to Nigeria.
+      </div>)}
+      {det?.supported && (<div className="grid md:grid-cols-2 gap-3 text-xs">
         <div>Currency: <b>{det.currency}</b></div>
         <div>Language: <b>{det.language}</b></div>
         <div>Timezone: <b>{det.timezone}</b></div>
         <div>Date: <b>{det.dateFormat}</b></div>
         <div>Number: <b>{det.numberFormat}</b></div>
-        <div>Tax: <b>{det.taxRegion??"n/a"}</b></div>
+        <div>Tax: <b>{det.taxRegion??"none"}</b></div>
         <div className="md:col-span-2">Payment methods: {det.paymentMethods.join(", ")}</div>
       </div>)}
     </CardContent></Card>)}
@@ -6185,7 +6208,12 @@ function GlobalCurrencyTab() {
       </div>
       {reg && (<div className="text-xs space-y-1">
         <div className="text-2xl font-semibold text-emerald">{reg.formatted}</div>
-        <div>Tax (incl.): {(reg.tax.rate*100).toFixed(1)}%</div>
+        {/* S167 — the old label said "Tax (incl.)" while no tax was ever added
+            to the amount, and the service claimed a PPP adjustment it does not
+            perform. */}
+        <div>Tax {(reg.tax.rate*100).toFixed(1)}% — <b>not included</b> above; adds {reg.taxAmount}</div>
+        <div className="text-text-muted">Total with tax: {reg.totalWithTax} {reg.currency}</div>
+        <div className="text-text-muted">No purchasing-power adjustment is applied (FX conversion only).</div>
       </div>)}
     </CardContent></Card>)}
     {sub==="agents" && (<div className="grid md:grid-cols-3 gap-3">

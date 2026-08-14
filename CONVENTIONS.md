@@ -2043,3 +2043,52 @@
   and the suite re-run: the destructive bootstrap failed 2 tests, the fabricated
   success rate failed 3, the reversed range failed 1. A test written after the
   fix that has never seen the bug is not yet evidence.
+
+### Session 167 — Global currency completion (`globalCurrency`)
+
+- **A provenance label is load-bearing; do not lie in it for convenience.** The
+  bootstrap wrote hardcoded constants with `source: "cache"` because that was
+  the closest existing enum value. But `getRate` branched on exactly that
+  field — "cache under an hour old is fresh" — so the convenient label made
+  compiled-in numbers indistinguishable from live quotes, and made the honest
+  `offline-fallback` branch dead code. When no existing label is true, add one.
+- **A timestamp that resets on restart is not a timestamp.** Seeding constants
+  with `updatedAt: new Date()` meant they never aged out: every restart made
+  them fresh again. Data with no real vintage must carry `null`, and consumers
+  must treat null as "unknown", not "now".
+- **Never store a computed reciprocal.** Rounding `1/rate` to 4dp is fine for
+  EUR (0.00% error) and catastrophic for NGN (**6.40%**, $42 per ₦1,000,000).
+  Compute inverses at read time at full precision and flag them `derived` —
+  and remember a reciprocal is not a quote at all, since real FX has a spread
+  and `1/rate` is neither the bid nor the ask.
+- **A financial value must carry its age.** Serving an arbitrarily old rate
+  with the comment "stale cache still better than fallback" is a decision the
+  *caller* should be making. Every rate now reports `ageMs`, `staleness` and
+  `usableForBilling`, so a display path and a billing path can diverge.
+- **An option nobody passes is a feature nobody has.** `getRate(from, to,
+  { useOverride })` — grep found the parameter defined and never supplied. The
+  enterprise override was therefore write-only: stored, acknowledged with a
+  200, and ignored by every conversion in the platform. Default to the
+  behaviour that matters and let callers opt *out*.
+- **A guard whose baseline is a stale constant is an alarm on the wrong door.**
+  The manipulation check compared observed rates against the same hardcoded
+  table the module was serving. It failed open for every pair missing from that
+  table, and as reality drifted from the constants it began flagging *correct*
+  rates. Baseline on observed reality, and when there is none, say
+  `baselineAvailable: false` — never `safe: true`.
+- **A default locale is a claim about the user.** `?? COUNTRY_DEFAULTS["NG"]`
+  in three places meant an unrecognised country was told its currency was NGN,
+  its timezone Africa/Lagos, and — via `regionalPrice` — was quoted a price in
+  Naira. A fully populated wrong answer is worse than an empty right one.
+- **Check whether the docstring matches the function.** "Regional pricing
+  engine: returns price with PPP + tax adjustment" performs no PPP adjustment
+  and adds no tax while reporting `included: true`. Both claims lived only in
+  the comment and the return shape, and both were false for the whole life of
+  the module.
+- **Count the things, not the code paths that reach them.** `rateProviders: 4`
+  was the number of cache layers (live/cache/override/offline). There are two
+  providers. Similarly `offlineFallbackHealthy` was
+  `Object.keys(CONSTANT).length > 0` — a compile-time truth dressed as a health
+  check.
+- **Grep for the template-literal-in-single-quotes bug.**
+  `AppError.badRequest('`...${from}...`')` shipped `${from}` to users verbatim.

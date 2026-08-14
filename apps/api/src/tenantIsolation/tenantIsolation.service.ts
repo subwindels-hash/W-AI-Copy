@@ -302,6 +302,19 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "dep:ts", scope: "org_scoped" },
   { prefix: "dep:v", scope: "org_scoped" },
   { prefix: "dep:notes", scope: "org_scoped" },
+  // Session 167 global currency. FX rates, the supported-currency list and
+  // fraud events are deliberately PLATFORM-GLOBAL: an exchange rate is a
+  // property of the market, not of a tenant, and duplicating it per org would
+  // let two tenants see different prices for the same instant. That is a
+  // decision, so it is recorded here rather than left uncatalogued.
+  { prefix: "gcu:rates", scope: "platform_global" },
+  { prefix: "gcu:currencies", scope: "platform_global" },
+  { prefix: "gcu:fraud", scope: "platform_global" },
+  { prefix: "gcu:m", scope: "platform_global" },
+  { prefix: "gcu:agents", scope: "platform_global" },
+  // Currency preferences are per USER, not per organization.
+  { prefix: "gcu:prefs", scope: "user_scoped" },
+  { prefix: "gc:notes", scope: "org_scoped" },
   // Session 166 composer — workflows, run ledger and run counters. Keys were
   // already `cmp:<entity>:<org>[:<id>]` but ten of the fourteen routes called
   // the service with no organization, so every tenant read and OVERWROTE

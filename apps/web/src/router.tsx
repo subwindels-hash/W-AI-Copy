@@ -87,6 +87,7 @@ const RoboticsPage = lazy(() => import("./pages/robotics/RoboticsPage").then((m)
 const CyberPage = lazy(() => import("./pages/cyber/CyberPage").then((m) => ({ default: m.CyberPage })));
 const DeploymentConsolePage = lazy(() => import("./pages/deployment/DeploymentPage").then((m) => ({ default: m.DeploymentPage })));
 const ComposerConsolePage = lazy(() => import("./pages/composer/ComposerPage").then((m) => ({ default: m.ComposerPage })));
+const GlobalCurrencyConsolePage = lazy(() => import("./pages/globalCurrency/GlobalCurrencyPage").then((m) => ({ default: m.GlobalCurrencyPage })));
 const LicensingConsolePage = lazy(() => import("./pages/licensing/LicensingPage").then((m) => ({ default: m.LicensingPage })));
 const ConstitutionStudioPage = lazy(() => import("./pages/constitution/ConstitutionPage").then((m) => ({ default: m.ConstitutionPage })));
 const OrgVoiceStudioPage = lazy(() => import("./pages/voiceStudio/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
@@ -374,6 +375,7 @@ export const router = createBrowserRouter([
       { path: "licensing", element: withSuspense(<LicensingConsolePage />) },
       { path: "deployment", element: withSuspense(<DeploymentConsolePage />) },
       { path: "composer", element: withSuspense(<ComposerConsolePage />) },
+      { path: "global-currency", element: withSuspense(<GlobalCurrencyConsolePage />) },
       { path: "spatial", element: withSuspense(<SpatialPage />) },
       { path: "quantum", element: withSuspense(<QuantumPage />) },
       { path: "legal", element: withSuspense(<LegalPage />) },

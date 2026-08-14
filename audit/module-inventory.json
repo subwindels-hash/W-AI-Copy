@@ -1414,6 +1414,7 @@
       "events-webhook.spec.ts",
       "extensions.spec.ts",
       "geoBilling.spec.ts",
+      "globalCurrency.spec.ts",
       "googleAuth.spec.ts",
       "governance.spec.ts",
       "identityKnowledge.spec.ts",
@@ -5793,6 +5794,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "globalCurrency.spec.ts",
       "geoBilling/geoBilling.test.ts"
     ],
     "syntheticData": [],
@@ -5900,15 +5902,16 @@
     "backend": {
       "serviceDir": "apps/api/src/globalCurrency",
       "serviceFile": {
-        "file": "globalCurrency.service.ts",
-        "path": "/home/user/WIN/apps/api/src/globalCurrency/globalCurrency.service.ts",
-        "sloc": 227,
+        "file": "globalCurrency.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/globalCurrency/globalCurrency.service.test.ts",
+        "sloc": 453,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 513,
+      "serviceTotalSloc": 1644,
       "serviceFiles": [
         "bootstrap.ts",
+        "globalCurrency.service.test.ts",
         "globalCurrency.service.ts",
         "refreshRates.ts",
         "globalCurrency/globalCurrency.service.ts"
@@ -5921,14 +5924,14 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/globalCurrency.ts",
-        "sloc": 122,
+        "sloc": 135,
         "counts": {
-          "total": 18,
-          "GET": 8,
+          "total": 20,
+          "GET": 9,
           "POST": 7,
           "PUT": 1,
           "PATCH": 1,
-          "DELETE": 1
+          "DELETE": 2
         },
         "endpoints": [
           "GET /dashboard/rollup",
@@ -5938,6 +5941,8 @@
           "POST /detect",
           "GET /rates/:from/:to",
           "POST /rates/:from/:to/override",
+          "GET /rates/:from/:to/override",
+          "DELETE /rates/:from/:to/override",
           "POST /localize-price",
           "POST /regional-price",
           "POST /report",
@@ -5952,9 +5957,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/globalCurrency.ts (49 LOC)",
+    "sharedTypes": "packages/shared/src/globalCurrency.ts (195 LOC)",
     "web": {
-      "client": "apps/web/src/lib/globalCurrency.ts (39 LOC)",
+      "client": "apps/web/src/lib/globalCurrency.ts (54 LOC)",
       "pages": []
     },
     "db": {
@@ -5968,7 +5973,9 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions41-76-80.spec.ts"
+      "globalCurrency.spec.ts",
+      "sessions41-76-80.spec.ts",
+      "globalCurrency/globalCurrency.service.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
@@ -10932,11 +10939,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 683,
+        "sloc": 696,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1542,
+      "serviceTotalSloc": 1568,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

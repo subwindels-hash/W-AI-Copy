@@ -47,6 +47,19 @@ export function registerGlobalCurrencyRoutes(router: Router) {
   router.post("/rates/:from/:to/override", validate({ body: override }), async (req, res, next) => {
     try { res.json({ ok: true, data: await GlobalCurrencyService.setEnterpriseOverride(req.params.from, req.params.to, req.body.rate, req.user?.id ?? "system") }); } catch (e) { next(e); }
   });
+  // S167 — the override was write-only: nothing could read it back, and
+  // `getRate` ignored it unless a caller passed `useOverride`, which nothing
+  // in the repository ever did.
+  router.get("/rates/:from/:to/override", async (req, res, next) => {
+    try {
+      const ov = await GlobalCurrencyService.getEnterpriseOverride(req.params.from, req.params.to);
+      if (!ov) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "no override set" } });
+      res.json({ ok: true, data: ov });
+    } catch (e) { next(e); }
+  });
+  router.delete("/rates/:from/:to/override", async (req, res, next) => {
+    try { res.json({ ok: true, data: await GlobalCurrencyService.clearEnterpriseOverride(req.params.from, req.params.to) }); } catch (e) { next(e); }
+  });
   router.post("/localize-price", validate({ body: localize }), async (req, res, next) => {
     try { res.json({ ok: true, data: await GlobalCurrencyService.localizePrice(req.body.amount, req.body.from, req.body.to, req.body.country) }); } catch (e) { next(e); }
   });
