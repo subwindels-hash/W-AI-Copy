@@ -26,6 +26,24 @@ enumerated anywhere in the repo. This document enumerates it.
 | 158 | `legal` | null pass-rate / risk on empty register |
 | 159 | `education` | null mastery, real learner set, recorded hours |
 | 160 | `scientific` | null KG/citations, no `1e6` divide, domains counted |
+| 161 | `cyber` | fabricated cloud findings + held certs → registers; null stats |
+
+## Update (S161): the committed inventory was also stale
+
+Regenerating `audit/module-inventory.json` during Session 161 changed the
+counts materially — the file in git was **out of date**, not just heuristic:
+
+| | committed | regenerated |
+|---|---|---|
+| modules | 125 | **142** |
+| COMPLETE | 125 | 133 |
+| PARTIAL | 0 | **3** — `aiCommerce`, `conversationManage`, `developerGateway` |
+| MISSING | 0 | **1** — `channels` |
+| STUB | 0 | **5** — `cinematicAssets`, `videoAssets`, `videoEngine`, `videoTransformAssets`, `videoTransformerAssets` |
+
+So "125/125 COMPLETE" was not merely a soft heuristic; 17 modules had been
+added since the file was last generated and were not being scanned at all.
+The nine non-COMPLETE modules above join the queue below.
 
 ## Unfinished modules
 
@@ -39,7 +57,7 @@ A GET on a fresh org invents records. This is the exact bug spatial had.
 
 | # | Module | Defect |
 |---|---|---|
-| 1 | `cyber` | `dashboard` (l.84) calls `ensureBootstrapped`; ungated. Serves 7 `COURSE_SEEDS` / `CERT_SEEDS` / `FINDING_SEEDS` as catalogue rows with `enrolled: 0`, `rating: 0`, `solvedBy: 0` — structural zeros presented as measurements. Challenge points/difficulty assigned by `i % n` round-robin (the S160 "fabricated coverage" defect). |
+| ~~1~~ | ~~`cyber`~~ | **DONE in S161.** |
 | 2 | `voiceStudio` | `listBuiltIn` (l.125) and `dashboard` (l.209) both seed `BUILTIN` voices; ungated. `avgSynthLatencyMs` falls back to a hardcoded **`180`** when no latency samples exist (l.217) — a fabricated metric, must be `null`. |
 | 3 | `constitution` | Ungated seed writes `SEED_POLICIES` + a "Default Enterprise Constitution" already `status: "approved"`, `approvedBy: "system"` — a fresh org is handed pre-approved governance it never ratified. |
 | 4 | `licensing` | Ungated seed registers `SEED_ASSETS` as owned IP assets. |
@@ -105,7 +123,7 @@ console:
 
 ## Suggested order for sessions 161+
 
-1. `cyber` — the largest ungated read-seeder with fabricated catalogue stats.
+1. ~~`cyber`~~ — **done (S161).**
 2. `voiceStudio` — hardcoded `180 ms` is the clearest fabricated metric left.
 3. `constitution` + `licensing` — pre-approved governance / owned assets.
 4. `deployment` + `coreIntegration` — a seeded lie feeding a health report.
