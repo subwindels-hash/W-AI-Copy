@@ -65,6 +65,7 @@ import {
   Atom,
   Gavel,
   School,
+  FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -141,6 +142,7 @@ const navItems = [
   { to: "/app/spatial", icon: Box, label: "Spatial" },
   { to: "/app/quantum", icon: Atom, label: "Quantum Readiness" },
   { to: "/app/legal", icon: Gavel, label: "Legal Intelligence" },
+  { to: "/app/scientific", icon: FlaskConical, label: "Scientific Research" },
   { to: "/app/education-engine", icon: BookOpen, label: "Higher Education Engine" },
   { to: "/app/geo-billing", icon: Globe2, label: "Geo-Billing Engine" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },

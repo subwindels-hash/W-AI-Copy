@@ -159,6 +159,10 @@ describe("read paths do not seed on demand", () => {
     const d = await ScientificService.dashboard(OID);
     expect(d.papersIndexed).toBe(0);
     expect(d.experimentsActive).toBe(0);
+    // Unmeasured figures are null, never 0-as-a-reading (Session 160).
+    expect(d.knowledgeGraphNodes).toBeNull();
+    expect(d.collaborators).toBeNull();
+    expect(d.simulationsRun30d).toBeNull();
     expect(allKeys().filter((k) => k.startsWith("sci:exp:"))).toEqual([]);
   });
 

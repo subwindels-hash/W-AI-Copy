@@ -88,6 +88,7 @@ const SpatialPage = lazy(() => import("./pages/spatial/SpatialPage").then((m) =>
 const QuantumPage = lazy(() => import("./pages/quantum/QuantumPage").then((m) => ({ default: m.QuantumPage })));
 const LegalPage = lazy(() => import("./pages/legal/LegalPage").then((m) => ({ default: m.LegalPage })));
 const EducationPage = lazy(() => import("./pages/education/EducationPage").then((m) => ({ default: m.EducationPage })));
+const ScientificPage = lazy(() => import("./pages/scientific/ScientificPage").then((m) => ({ default: m.ScientificPage })));
 const UniversityEnginePage = lazy(() => import("./pages/universityEngine/UniversityEnginePage").then((m) => ({ default: m.UniversityEnginePage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
 const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
@@ -365,6 +366,7 @@ export const router = createBrowserRouter([
       { path: "quantum", element: withSuspense(<QuantumPage />) },
       { path: "legal", element: withSuspense(<LegalPage />) },
       { path: "education", element: withSuspense(<EducationPage />) },
+      { path: "scientific", element: withSuspense(<ScientificPage />) },
       { path: "education-engine", element: withSuspense(<UniversityEnginePage />) },
       { path: "geo-billing", element: withSuspense(<GeoBillingConsolePage />) },
       { path: "commerce", element: withSuspense(<CommercePage />) },

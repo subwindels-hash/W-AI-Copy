@@ -7859,14 +7859,14 @@ function ScientificTab() {
       <div className="text-xs text-text-muted">Literature review, citation analysis, experiment planning, research knowledge graph, hypothesis generation, scientific simulations, publication assistance, cross-institutional collaboration.</div></div>
     </CardContent></Card>
     <div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Papers Indexed" value={(data.papersIndexed/1e6).toFixed(0)+"M"} tone="teal"/>
+      <Stat label="Papers Indexed" value={data.papersIndexed} tone="teal"/>
       <Stat label="Active Experiments" value={data.experimentsActive} tone="azure"/>
       <Stat label="Hypotheses" value={data.hypothesesActive} tone="violet"/>
       <Stat label="Publications" value={data.publicationsInProgress} tone="amber"/>
-      <Stat label="Simulations (30d)" value={data.simulationsRun30d} tone="fuchsia"/>
-      <Stat label="Collaborators" value={data.collaborators} tone="emerald"/>
-      <Stat label="KG Nodes" value={(data.knowledgeGraphNodes/1e6).toFixed(1)+"M"} tone="teal"/>
-      <Stat label="KG Edges" value={(data.knowledgeGraphEdges/1e6).toFixed(0)+"M"} tone="crimson"/>
+      <Stat label="Simulations (30d)" value={data.simulationsRun30d == null ? "—" : data.simulationsRun30d} tone="fuchsia"/>
+      <Stat label="Collaborators" value={data.collaborators == null ? "—" : data.collaborators} tone="emerald"/>
+      <Stat label="KG Nodes" value={data.knowledgeGraphNodes == null ? "—" : data.knowledgeGraphNodes} tone="teal"/>
+      <Stat label="KG Edges" value={data.knowledgeGraphEdges == null ? "—" : data.knowledgeGraphEdges} tone="crimson"/>
     </div>
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Recent Experiments</CardTitle></CardHeader>
@@ -7881,7 +7881,7 @@ function ScientificTab() {
       <CardContent className="space-y-2 text-xs">
         {(data.recentPapers||[]).slice(0,6).map((p:any)=>(<div key={p.id} className="p-2 border border-white/5 rounded">
           <div className="flex items-center gap-2"><BookOpen className="h-3 w-3 text-azure"/><span className="font-semibold flex-1">{p.title}</span><Badge variant="slate">{p.year}</Badge></div>
-          <div className="text-text-muted">{p.authors.join(", ")} · <i>{p.venue}</i> · {p.citations} citations</div>
+          <div className="text-text-muted">{p.authors.join(", ")} · <i>{p.venue}</i> · {p.citations == null ? "citations unrecorded" : `${p.citations} citations`}</div>
         </div>))}
       </CardContent></Card>
     </div>
@@ -7890,7 +7890,7 @@ function ScientificTab() {
       {(data.recentHypotheses||[]).map((h:any)=>(<div key={h.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
         <Target className="h-3 w-3 text-violet"/><span className="flex-1">{h.statement}</span>
         <Badge variant="slate">{h.domain}</Badge>
-        <span className="text-text-muted">conf {(h.confidence*100).toFixed(0)}%</span>
+        <span className="text-text-muted">{h.confidence == null ? "unassessed" : `conf ${(h.confidence*100).toFixed(0)}%`}</span>
         <Badge variant={h.status==="supported"?"emerald":h.status==="refuted"?"crimson":"azure"}>{h.status}</Badge>
       </div>))}
     </CardContent></Card>

@@ -1722,3 +1722,21 @@
   is the LMS register. Completing one does not replace the other.
 - **Tenant-isolation two-segment rule, again.** Catalog `edu:c/cs/p/ps/t/ts/a/as/sk/sks`.
   A bare `edu` entry would make the sweep read the literal `c` as an org id.
+
+### Session 160 — Scientific completion (`scientific`)
+
+- **A millions-scale knowledge graph that does not exist is a lie.**
+  `knowledgeGraphNodes` / `knowledgeGraphEdges` are null, never 0 and never
+  millions. PlatformPage must not divide paper or KG counts by `1e6`.
+- **0 collaborators / 0 simulations / 0 citations tracked is a measurement.**
+  Those fields are null when unmeasured. `citationsTracked` is the sum of
+  recorded `paper.citations`, or null when none are recorded.
+- **A testing hypothesis is not a publication.** `publicationsInProgress`
+  stays 0 until a publication ledger exists.
+- **Round-robin domains are fabricated coverage.** `topDomains` only counts
+  records that carry a domain.
+- **Reads never seed.** Demo literature stays behind `WINDELS_DEMO_DATA` and
+  writes planned/proposed rows with null citations, relevance and confidence.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `sci:exp/exps/pap/paps/hyp/hyps/meta` + `sci:notes`. A bare `sci` entry
+  would make the sweep read the literal `exp` as an org id.

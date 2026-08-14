@@ -297,6 +297,17 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "edu:as", scope: "org_scoped" },
   { prefix: "edu:sk", scope: "org_scoped" },
   { prefix: "edu:sks", scope: "org_scoped" },
+  // Session 160 scientific experiments / papers / hypotheses / notes.
+  // Keys are `sci:<entity>:<org>:…`. Bare `sci` is never added — it would
+  // read the literal `exp` as an organization id.
+  { prefix: "sci:exp", scope: "org_scoped" },
+  { prefix: "sci:exps", scope: "org_scoped" },
+  { prefix: "sci:pap", scope: "org_scoped" },
+  { prefix: "sci:paps", scope: "org_scoped" },
+  { prefix: "sci:hyp", scope: "org_scoped" },
+  { prefix: "sci:hyps", scope: "org_scoped" },
+  { prefix: "sci:meta", scope: "org_scoped" },
+  { prefix: "sci:notes", scope: "org_scoped" },
   // Session 144 politics update engine: org-scoped change requests
   // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
   // the segment after the index marker (usg:evt/pay:tx shape).
