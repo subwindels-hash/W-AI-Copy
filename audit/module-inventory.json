@@ -473,9 +473,9 @@
   },
   {
     "moduleKey": "aiCommerce",
-    "title": "aiCommerce",
+    "title": "AI Commerce (WMPC Shopping)",
     "sessions": [],
-    "tier": "unknown",
+    "tier": "feature",
     "routePrefix": "/api/v1/aiCommerce",
     "backend": {
       "serviceDir": "apps/api/src/aiCommerce",
@@ -486,7 +486,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 3799,
+      "serviceTotalSloc": 4716,
       "serviceFiles": [
         "bootstrap.ts",
         "commerceAgent.service.ts",
@@ -499,9 +499,11 @@
         "commerceIntent.service.ts",
         "commerceSession.service.ts",
         "commerceVoice.service.ts",
+        "aiCommerce/tools/commerceTools.ts",
         "aiCommerce/commerceIntent.service.ts",
         "aiCommerce/commerceSession.service.ts",
         "aiCommerce/events/wmpcEventConsumer.service.ts",
+        "aiCommerce/wmpc/connectorFactory.ts",
         "aiCommerce/commerceFlags.ts",
         "aiCommerce/commerceAnalytics.service.ts",
         "aiCommerce/commerceAgent.service.ts",
@@ -509,9 +511,11 @@
         "services/tools/toolRegistry.ts"
       ],
       "importedServiceFiles": [
+        "aiCommerce/tools/commerceTools.ts",
         "aiCommerce/commerceIntent.service.ts",
         "aiCommerce/commerceSession.service.ts",
         "aiCommerce/events/wmpcEventConsumer.service.ts",
+        "aiCommerce/wmpc/connectorFactory.ts",
         "aiCommerce/commerceFlags.ts",
         "aiCommerce/commerceAnalytics.service.ts",
         "aiCommerce/commerceAgent.service.ts",
@@ -561,7 +565,7 @@
     ],
     "sharedTypes": "packages/shared/src/aiCommerce.ts (623 LOC)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/aiCommerce.ts (117 LOC)",
       "pages": []
     },
     "db": {
@@ -583,7 +587,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "aiEconomy",
@@ -1792,12 +1796,18 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1359,
+      "serviceTotalSloc": 1767,
       "serviceFiles": [
-        "tradingIntel/brokerIntegration.service.ts"
+        "tradingIntel/brokerIntegration.service.ts",
+        "tradingIntel/connectors/connector-registry.ts",
+        "tradingIntel/mt5/mt5-monitor.ts",
+        "tradingIntel/trading-events.ts"
       ],
       "importedServiceFiles": [
-        "tradingIntel/brokerIntegration.service.ts"
+        "tradingIntel/brokerIntegration.service.ts",
+        "tradingIntel/connectors/connector-registry.ts",
+        "tradingIntel/mt5/mt5-monitor.ts",
+        "tradingIntel/trading-events.ts"
       ],
       "bootstrapFile": null
     },
@@ -1881,7 +1891,9 @@
     },
     "tests": [
       "tradingIntel/brokerIntegration.test.ts",
-      "tradingIntel/ea.test.ts"
+      "tradingIntel/ea.test.ts",
+      "tradingIntel/trading-events.test.ts",
+      "tradingIntel/mt5/mt5-connector.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -2125,26 +2137,140 @@
   },
   {
     "moduleKey": "channels",
-    "title": "channels",
+    "title": "Messaging Channels (WhatsApp/Telegram)",
     "sessions": [],
-    "tier": "unknown",
+    "tier": "feature",
     "routePrefix": "/api/v1/channels",
     "backend": {
       "serviceDir": "apps/api/src/channels",
-      "serviceFile": null,
-      "serviceTotalSloc": 0,
-      "serviceFiles": [],
-      "importedServiceFiles": [],
+      "serviceFile": {
+        "file": "telegramChannel.service.ts",
+        "path": "/home/user/WIN/apps/api/src/channels/telegram/telegramChannel.service.ts",
+        "sloc": 139,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 2855,
+      "serviceFiles": [
+        "channels/telegram/telegramChannel.service.ts",
+        "channels/telegram/telegramIdentity.service.ts",
+        "audit/audit.service.ts",
+        "channels/telegram/telegramClient.ts",
+        "channels/telegram/telegramQueue.ts",
+        "channels/telegram/telegramPayload.ts",
+        "channels/telegram/telegramConfig.ts",
+        "channels/whatsapp/whatsappChannel.service.ts",
+        "channels/whatsapp/whatsappMessage.service.ts",
+        "channels/whatsapp/whatsappIdentity.service.ts",
+        "channels/whatsapp/whatsappClient.ts",
+        "channels/whatsapp/whatsappQueue.ts",
+        "channels/whatsapp/whatsappRateLimit.ts",
+        "channels/whatsapp/whatsappPayload.ts",
+        "channels/whatsapp/whatsappKernel.ts"
+      ],
+      "importedServiceFiles": [
+        "channels/telegram/telegramChannel.service.ts",
+        "channels/telegram/telegramIdentity.service.ts",
+        "audit/audit.service.ts",
+        "channels/telegram/telegramClient.ts",
+        "channels/telegram/telegramQueue.ts",
+        "channels/telegram/telegramPayload.ts",
+        "channels/telegram/telegramConfig.ts",
+        "channels/whatsapp/whatsappChannel.service.ts",
+        "channels/whatsapp/whatsappMessage.service.ts",
+        "channels/whatsapp/whatsappIdentity.service.ts",
+        "channels/whatsapp/whatsappClient.ts",
+        "channels/whatsapp/whatsappQueue.ts",
+        "channels/whatsapp/whatsappRateLimit.ts",
+        "channels/whatsapp/whatsappPayload.ts",
+        "channels/whatsapp/whatsappKernel.ts"
+      ],
       "bootstrapFile": null
     },
-    "routes": [],
-    "sharedTypes": null,
+    "routes": [
+      {
+        "file": "apps/api/src/channels/telegram/telegram.routes.ts",
+        "sloc": 117,
+        "counts": {
+          "total": 10,
+          "GET": 3,
+          "POST": 4,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 2
+        },
+        "endpoints": []
+      },
+      {
+        "file": "apps/api/src/channels/telegram/telegramWebhook.routes.ts",
+        "sloc": 107,
+        "counts": {
+          "total": 1,
+          "GET": 0,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "POST /"
+        ]
+      },
+      {
+        "file": "apps/api/src/channels/whatsapp/whatsapp.routes.ts",
+        "sloc": 607,
+        "counts": {
+          "total": 16,
+          "GET": 6,
+          "POST": 7,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 1
+        },
+        "endpoints": []
+      },
+      {
+        "file": "apps/api/src/channels/whatsapp/whatsappWebhook.routes.ts",
+        "sloc": 230,
+        "counts": {
+          "total": 2,
+          "GET": 1,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /",
+          "POST /"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/whatsapp.ts (267 LOC, supplies WhatsAppChannelSettings)",
     "web": {
       "client": "apps/web/src/lib/telegram.ts (41 LOC, serves /channels)",
       "pages": []
     },
     "db": {
-      "prismaModels": [],
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Agent",
+        "Conversation",
+        "Message",
+        "WhatsAppChannel",
+        "WhatsAppContact",
+        "WhatsAppConversation",
+        "WhatsAppMessage",
+        "WhatsAppWebhookEvent",
+        "WhatsAppJob",
+        "WhatsAppSession",
+        "TelegramChannel",
+        "TelegramConnection",
+        "TelegramChat",
+        "TelegramMessage",
+        "TelegramWebhookEvent"
+      ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
@@ -2161,17 +2287,20 @@
       "channels/whatsapp/whatsappQueue.test.ts",
       "channels/whatsapp/whatsappSecurity.test.ts",
       "channels/whatsapp/whatsappSession.test.ts",
-      "channels/whatsapp/whatsappWebhook.routes.test.ts"
+      "channels/whatsapp/whatsappWebhook.routes.test.ts",
+      "audit/audit.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "MISSING"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "cinematic",
-    "title": "cinematic",
-    "sessions": [],
-    "tier": "unknown",
+    "title": "Cinematic AI Video Studio",
+    "sessions": [
+      42
+    ],
+    "tier": "feature",
     "routePrefix": "/api/v1/cinematic",
     "backend": {
       "serviceDir": "apps/api/src/cinematic",
@@ -2231,6 +2360,21 @@
           "GET /characters/:id",
           "DELETE /characters/:id"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/cinematicAssets.ts",
+        "sloc": 36,
+        "counts": {
+          "total": 1,
+          "GET": 1,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /*"
+        ]
       }
     ],
     "sharedTypes": "packages/shared/src/cinematic.ts (330 LOC)",
@@ -2260,52 +2404,6 @@
       "FFmpeg"
     ],
     "status": "COMPLETE"
-  },
-  {
-    "moduleKey": "cinematicAssets",
-    "title": "cinematicAssets",
-    "sessions": [],
-    "tier": "unknown",
-    "routePrefix": "/api/v1/cinematicAssets",
-    "backend": {
-      "serviceDir": null,
-      "serviceFile": null,
-      "serviceTotalSloc": 0,
-      "serviceFiles": [],
-      "importedServiceFiles": [],
-      "bootstrapFile": null
-    },
-    "routes": [
-      {
-        "file": "apps/api/src/http/routes/cinematicAssets.ts",
-        "sloc": 36,
-        "counts": {
-          "total": 1,
-          "GET": 1,
-          "POST": 0,
-          "PUT": 0,
-          "PATCH": 0,
-          "DELETE": 0
-        },
-        "endpoints": [
-          "GET /*"
-        ]
-      }
-    ],
-    "sharedTypes": null,
-    "web": {
-      "client": null,
-      "pages": []
-    },
-    "db": {
-      "prismaModels": [],
-      "migrations": [],
-      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
-    },
-    "tests": [],
-    "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "STUB"
   },
   {
     "moduleKey": "cognitive",
@@ -3049,66 +3147,6 @@
     "status": "COMPLETE"
   },
   {
-    "moduleKey": "conversationManage",
-    "title": "conversationManage",
-    "sessions": [],
-    "tier": "unknown",
-    "routePrefix": "/api/v1/conversationManage",
-    "backend": {
-      "serviceDir": null,
-      "serviceFile": {
-        "file": "conversationManage.service.ts",
-        "path": "/home/user/WIN/apps/api/src/conversations/conversationManage.service.ts",
-        "sloc": 538,
-        "mathRandom": false,
-        "externalFetch": false
-      },
-      "serviceTotalSloc": 538,
-      "serviceFiles": [
-        "conversations/conversationManage.service.ts"
-      ],
-      "importedServiceFiles": [
-        "conversations/conversationManage.service.ts"
-      ],
-      "bootstrapFile": null
-    },
-    "routes": [
-      {
-        "file": "apps/api/src/http/routes/conversationManage.ts",
-        "sloc": 161,
-        "counts": {
-          "total": 14,
-          "GET": 3,
-          "POST": 6,
-          "PUT": 0,
-          "PATCH": 2,
-          "DELETE": 3
-        },
-        "endpoints": []
-      }
-    ],
-    "sharedTypes": "packages/shared/src/conversations.ts (451 LOC, imported)",
-    "web": {
-      "client": null,
-      "pages": []
-    },
-    "db": {
-      "prismaModels": [
-        "User",
-        "Agent",
-        "Conversation"
-      ],
-      "migrations": [],
-      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
-    },
-    "tests": [
-      "conversations/conversationManage.test.ts"
-    ],
-    "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "PARTIAL"
-  },
-  {
     "moduleKey": "conversations",
     "title": "Conversations / Messaging",
     "sessions": [
@@ -3127,7 +3165,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 3596,
+      "serviceTotalSloc": 4134,
       "serviceFiles": [
         "conversationManage.service.ts",
         "conversationManage.test.ts",
@@ -3135,11 +3173,13 @@
         "conversationOps.test.ts",
         "conversations.service.ts",
         "conversations.test.ts",
+        "conversations/conversationManage.service.ts",
         "conversations/conversationOps.service.ts",
         "conversations/conversations.service.ts",
         "services/message.service.ts"
       ],
       "importedServiceFiles": [
+        "conversations/conversationManage.service.ts",
         "conversations/conversationOps.service.ts",
         "conversations/conversations.service.ts",
         "services/message.service.ts"
@@ -3147,6 +3187,19 @@
       "bootstrapFile": null
     },
     "routes": [
+      {
+        "file": "apps/api/src/http/routes/conversationManage.ts",
+        "sloc": 161,
+        "counts": {
+          "total": 14,
+          "GET": 3,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 3
+        },
+        "endpoints": []
+      },
       {
         "file": "apps/api/src/http/routes/conversationOps.ts",
         "sloc": 216,
@@ -3948,9 +4001,9 @@
   },
   {
     "moduleKey": "developerGateway",
-    "title": "developerGateway",
+    "title": "Developer Gateway",
     "sessions": [],
-    "tier": "unknown",
+    "tier": "platform",
     "routePrefix": "/api/v1/developerGateway",
     "backend": {
       "serviceDir": null,
@@ -4003,7 +4056,7 @@
     ],
     "sharedTypes": "packages/shared/src/developerPlatform.ts (222 LOC, imported)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/developerGateway.ts (109 LOC)",
       "pages": []
     },
     "db": {
@@ -4027,7 +4080,7 @@
     ],
     "syntheticData": [],
     "externalIntegrations": [],
-    "status": "PARTIAL"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "developerPlatform",
@@ -7543,7 +7596,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2254,
+      "serviceTotalSloc": 2877,
       "serviceFiles": [
         "bootstrap.ts",
         "mediaFactory.service.ts",
@@ -7556,14 +7609,16 @@
         "mediaFactory/mediaFactory.service.ts",
         "mediaFactory/pipeline.service.ts",
         "mediaFactory/publishing.service.ts",
-        "mediaFactory/metering.service.ts"
+        "mediaFactory/metering.service.ts",
+        "mediaFactory/publishing/platforms.ts"
       ],
       "importedServiceFiles": [
         "services/workspace.service.ts",
         "mediaFactory/mediaFactory.service.ts",
         "mediaFactory/pipeline.service.ts",
         "mediaFactory/publishing.service.ts",
-        "mediaFactory/metering.service.ts"
+        "mediaFactory/metering.service.ts",
+        "mediaFactory/publishing/platforms.ts"
       ],
       "bootstrapFile": "apps/api/src/mediaFactory/bootstrap.ts"
     },
@@ -8692,14 +8747,16 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 265,
+      "serviceTotalSloc": 410,
       "serviceFiles": [
         "permissions.module.ts",
         "permissions.test.ts",
-        "services/permissions.service.ts"
+        "services/permissions.service.ts",
+        "permissions/permissions.module.ts"
       ],
       "importedServiceFiles": [
-        "services/permissions.service.ts"
+        "services/permissions.service.ts",
+        "permissions/permissions.module.ts"
       ],
       "bootstrapFile": null
     },
@@ -9550,11 +9607,14 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 94,
+      "serviceTotalSloc": 188,
       "serviceFiles": [
-        "publishing.module.ts"
+        "publishing.module.ts",
+        "publishing/publishing.module.ts"
       ],
-      "importedServiceFiles": [],
+      "importedServiceFiles": [
+        "publishing/publishing.module.ts"
+      ],
       "bootstrapFile": null
     },
     "routes": [
@@ -11742,13 +11802,15 @@
     "status": "COMPLETE"
   },
   {
-    "moduleKey": "video",
-    "title": "video",
-    "sessions": [],
-    "tier": "unknown",
-    "routePrefix": "/api/v1/video",
+    "moduleKey": "videoEngine",
+    "title": "Video Engine / AI Video Studio",
+    "sessions": [
+      42
+    ],
+    "tier": "feature",
+    "routePrefix": "/api/v1/videoEngine",
     "backend": {
-      "serviceDir": null,
+      "serviceDir": "apps/api/src/videoEngine",
       "serviceFile": {
         "file": "video.service.ts",
         "path": "/home/user/WIN/apps/api/src/videoEngine/video.service.ts",
@@ -11756,14 +11818,26 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 640,
+      "serviceTotalSloc": 2739,
       "serviceFiles": [
-        "videoEngine/video.service.ts"
+        "audio.ts",
+        "bootstrap.ts",
+        "director.ts",
+        "jobQueue.ts",
+        "providerGateway.ts",
+        "quality.ts",
+        "renderer.ts",
+        "storage.ts",
+        "video.service.ts",
+        "video.test.ts",
+        "videoEngine/video.service.ts",
+        "videoEngine/storage.ts"
       ],
       "importedServiceFiles": [
-        "videoEngine/video.service.ts"
+        "videoEngine/video.service.ts",
+        "videoEngine/storage.ts"
       ],
-      "bootstrapFile": null
+      "bootstrapFile": "apps/api/src/videoEngine/bootstrap.ts"
     },
     "routes": [
       {
@@ -11799,54 +11873,7 @@
           "GET /jobs/:id",
           "POST /jobs/:id/cancel"
         ]
-      }
-    ],
-    "sharedTypes": "packages/shared/src/video.ts (400 LOC)",
-    "web": {
-      "client": "apps/web/src/lib/video.ts (85 LOC)",
-      "pages": []
-    },
-    "db": {
-      "prismaModels": [
-        "User",
-        "Organization",
-        "Message"
-      ],
-      "migrations": [],
-      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
-    },
-    "tests": [
-      "videoEngine/video.test.ts"
-    ],
-    "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "COMPLETE"
-  },
-  {
-    "moduleKey": "videoAssets",
-    "title": "videoAssets",
-    "sessions": [],
-    "tier": "unknown",
-    "routePrefix": "/api/v1/videoAssets",
-    "backend": {
-      "serviceDir": null,
-      "serviceFile": {
-        "file": "storage.ts",
-        "path": "/home/user/WIN/apps/api/src/videoEngine/storage.ts",
-        "sloc": 70,
-        "mathRandom": false,
-        "externalFetch": false
       },
-      "serviceTotalSloc": 70,
-      "serviceFiles": [
-        "videoEngine/storage.ts"
-      ],
-      "importedServiceFiles": [
-        "videoEngine/storage.ts"
-      ],
-      "bootstrapFile": null
-    },
-    "routes": [
       {
         "file": "apps/api/src/http/routes/videoAssets.ts",
         "sloc": 56,
@@ -11863,61 +11890,15 @@
         ]
       }
     ],
-    "sharedTypes": null,
-    "web": {
-      "client": null,
-      "pages": []
-    },
-    "db": {
-      "prismaModels": [],
-      "migrations": [],
-      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
-    },
-    "tests": [],
-    "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "STUB"
-  },
-  {
-    "moduleKey": "videoEngine",
-    "title": "videoEngine",
-    "sessions": [],
-    "tier": "unknown",
-    "routePrefix": "/api/v1/videoEngine",
-    "backend": {
-      "serviceDir": "apps/api/src/videoEngine",
-      "serviceFile": {
-        "file": "video.service.ts",
-        "path": "/home/user/WIN/apps/api/src/videoEngine/video.service.ts",
-        "sloc": 640,
-        "mathRandom": false,
-        "externalFetch": false
-      },
-      "serviceTotalSloc": 2029,
-      "serviceFiles": [
-        "audio.ts",
-        "bootstrap.ts",
-        "director.ts",
-        "jobQueue.ts",
-        "providerGateway.ts",
-        "quality.ts",
-        "renderer.ts",
-        "storage.ts",
-        "video.service.ts",
-        "video.test.ts"
-      ],
-      "importedServiceFiles": [],
-      "bootstrapFile": "apps/api/src/videoEngine/bootstrap.ts"
-    },
-    "routes": [],
     "sharedTypes": "packages/shared/src/video.ts (400 LOC, supplies VideoMusicTrack/VideoProject/VideoVoiceTrack)",
     "web": {
-      "client": null,
+      "client": "apps/web/src/lib/video.ts (85 LOC, serves /video)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
         "Message",
         "Integration"
@@ -11932,7 +11913,7 @@
     "externalIntegrations": [
       "FFmpeg"
     ],
-    "status": "STUB"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "videoTransform",
@@ -11949,7 +11930,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2278,
+      "serviceTotalSloc": 2376,
       "serviceFiles": [
         "ffmpegOps.ts",
         "nodes.ts",
@@ -11958,11 +11939,13 @@
         "transform.service.ts",
         "videoTransform.test.ts",
         "videoTransform/transform.service.ts",
-        "videoTransform/nodes.ts"
+        "videoTransform/nodes.ts",
+        "videoTransform/storage.ts"
       ],
       "importedServiceFiles": [
         "videoTransform/transform.service.ts",
-        "videoTransform/nodes.ts"
+        "videoTransform/nodes.ts",
+        "videoTransform/storage.ts"
       ],
       "bootstrapFile": null
     },
@@ -11998,6 +11981,21 @@
           "POST /workflows/:id/connect",
           "POST /workflows/:id/run"
         ]
+      },
+      {
+        "file": "apps/api/src/http/routes/videoTransformAssets.ts",
+        "sloc": 42,
+        "counts": {
+          "total": 1,
+          "GET": 1,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /*"
+        ]
       }
     ],
     "sharedTypes": "packages/shared/src/videoTransform.ts (267 LOC)",
@@ -12028,62 +12026,6 @@
     "status": "COMPLETE"
   },
   {
-    "moduleKey": "videoTransformAssets",
-    "title": "videoTransformAssets",
-    "sessions": [],
-    "tier": "unknown",
-    "routePrefix": "/api/v1/videoTransformAssets",
-    "backend": {
-      "serviceDir": null,
-      "serviceFile": {
-        "file": "storage.ts",
-        "path": "/home/user/WIN/apps/api/src/videoTransform/storage.ts",
-        "sloc": 98,
-        "mathRandom": false,
-        "externalFetch": false
-      },
-      "serviceTotalSloc": 98,
-      "serviceFiles": [
-        "videoTransform/storage.ts"
-      ],
-      "importedServiceFiles": [
-        "videoTransform/storage.ts"
-      ],
-      "bootstrapFile": null
-    },
-    "routes": [
-      {
-        "file": "apps/api/src/http/routes/videoTransformAssets.ts",
-        "sloc": 42,
-        "counts": {
-          "total": 1,
-          "GET": 1,
-          "POST": 0,
-          "PUT": 0,
-          "PATCH": 0,
-          "DELETE": 0
-        },
-        "endpoints": [
-          "GET /*"
-        ]
-      }
-    ],
-    "sharedTypes": null,
-    "web": {
-      "client": null,
-      "pages": []
-    },
-    "db": {
-      "prismaModels": [],
-      "migrations": [],
-      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
-    },
-    "tests": [],
-    "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "STUB"
-  },
-  {
     "moduleKey": "videoTransformer",
     "title": "videoTransformer",
     "sessions": [],
@@ -12098,7 +12040,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1220,
+      "serviceTotalSloc": 1279,
       "serviceFiles": [
         "editParser.ts",
         "providerGateway.ts",
@@ -12106,10 +12048,12 @@
         "transform.service.ts",
         "understanding.ts",
         "videoTransformer.test.ts",
-        "videoTransformer/transform.service.ts"
+        "videoTransformer/transform.service.ts",
+        "videoTransformer/storage.ts"
       ],
       "importedServiceFiles": [
-        "videoTransformer/transform.service.ts"
+        "videoTransformer/transform.service.ts",
+        "videoTransformer/storage.ts"
       ],
       "bootstrapFile": null
     },
@@ -12126,6 +12070,21 @@
           "DELETE": 0
         },
         "endpoints": []
+      },
+      {
+        "file": "apps/api/src/http/routes/videoTransformerAssets.ts",
+        "sloc": 31,
+        "counts": {
+          "total": 1,
+          "GET": 1,
+          "POST": 0,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /*"
+        ]
       }
     ],
     "sharedTypes": "packages/shared/src/videoTransformer.ts (254 LOC)",
@@ -12155,62 +12114,6 @@
     "status": "COMPLETE"
   },
   {
-    "moduleKey": "videoTransformerAssets",
-    "title": "videoTransformerAssets",
-    "sessions": [],
-    "tier": "unknown",
-    "routePrefix": "/api/v1/videoTransformerAssets",
-    "backend": {
-      "serviceDir": null,
-      "serviceFile": {
-        "file": "storage.ts",
-        "path": "/home/user/WIN/apps/api/src/videoTransformer/storage.ts",
-        "sloc": 59,
-        "mathRandom": false,
-        "externalFetch": false
-      },
-      "serviceTotalSloc": 59,
-      "serviceFiles": [
-        "videoTransformer/storage.ts"
-      ],
-      "importedServiceFiles": [
-        "videoTransformer/storage.ts"
-      ],
-      "bootstrapFile": null
-    },
-    "routes": [
-      {
-        "file": "apps/api/src/http/routes/videoTransformerAssets.ts",
-        "sloc": 31,
-        "counts": {
-          "total": 1,
-          "GET": 1,
-          "POST": 0,
-          "PUT": 0,
-          "PATCH": 0,
-          "DELETE": 0
-        },
-        "endpoints": [
-          "GET /*"
-        ]
-      }
-    ],
-    "sharedTypes": null,
-    "web": {
-      "client": null,
-      "pages": []
-    },
-    "db": {
-      "prismaModels": [],
-      "migrations": [],
-      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
-    },
-    "tests": [],
-    "syntheticData": [],
-    "externalIntegrations": [],
-    "status": "STUB"
-  },
-  {
     "moduleKey": "voice",
     "title": "voice",
     "sessions": [],
@@ -12225,11 +12128,14 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 448,
+      "serviceTotalSloc": 896,
       "serviceFiles": [
-        "voice.module.ts"
+        "voice.module.ts",
+        "voice/voice.module.ts"
       ],
-      "importedServiceFiles": [],
+      "importedServiceFiles": [
+        "voice/voice.module.ts"
+      ],
       "bootstrapFile": null
     },
     "routes": [
