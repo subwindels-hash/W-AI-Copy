@@ -93,6 +93,7 @@ const ConstitutionStudioPage = lazy(() => import("./pages/constitution/Constitut
 const OrgVoiceStudioPage = lazy(() => import("./pages/voiceStudio/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
 const SpatialPage = lazy(() => import("./pages/spatial/SpatialPage").then((m) => ({ default: m.SpatialPage })));
 const DigitalHumansPage = lazy(() => import("./pages/digitalHumans/DigitalHumansPage").then((m) => ({ default: m.DigitalHumansPage })));
+const IndustryPage = lazy(() => import("./pages/industry/IndustryPage").then((m) => ({ default: m.IndustryPage })));
 const QuantumPage = lazy(() => import("./pages/quantum/QuantumPage").then((m) => ({ default: m.QuantumPage })));
 const LegalPage = lazy(() => import("./pages/legal/LegalPage").then((m) => ({ default: m.LegalPage })));
 const EducationPage = lazy(() => import("./pages/education/EducationPage").then((m) => ({ default: m.EducationPage })));
@@ -379,6 +380,7 @@ export const router = createBrowserRouter([
       { path: "global-currency", element: withSuspense(<GlobalCurrencyConsolePage />) },
       { path: "spatial", element: withSuspense(<SpatialPage />) },
       { path: "digital-humans", element: withSuspense(<DigitalHumansPage />) },
+      { path: "industry", element: withSuspense(<IndustryPage />) },
       { path: "quantum", element: withSuspense(<QuantumPage />) },
       { path: "legal", element: withSuspense(<LegalPage />) },
       { path: "education", element: withSuspense(<EducationPage />) },

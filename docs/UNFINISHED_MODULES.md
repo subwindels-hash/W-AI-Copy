@@ -73,7 +73,7 @@ structural zeros or round-robin values.
 
 | # | Module | Defect |
 |---|---|---|
-| 8 | `industry` | `dashboard` (l.53) seeds a meta flag, then serves `INDUSTRY_SUITES` as if adopted. |
+| ~~8~~ | ~~`industry`~~ | **DONE in S169.** Removed read-path bootstrap seeder from `dashboard()`. Linked vertical pack rollups to the real tenant `ind:adopt` registry to compute actual employee counts, deployed workflows, and calculated readiness scores. Provided honest `null` for unmeasured search latency and maturity dimensions. Added `orgOf(req, res)` route guards, CRUD endpoints, dedicated `/app/industry` console UI, tenant isolation catalog entries (`ind:meta`, `ind:adopt:idx`, `ind:adopt:i`), and 12 unit tests + Playwright e2e spec. |
 | 9 | `biomedical` | `dashboard` (l.69) seeds; empty-org turnaround/alert figures are zeros, not null. |
 | 10 | `healthEcosystem` | `dashboard` (l.314) seeds per user. |
 | 11 | `opex` | Two read paths (l.68, l.114) call `ensureBootstrapped`. |

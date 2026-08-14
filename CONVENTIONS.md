@@ -2188,3 +2188,10 @@
     `structural_zero` while the fields returned `0`. The documentation of the
     defect was written and committed; the defect was not fixed. When a module
     explains why a number is meaningless, make the number `null`.
+
+15. **A vertical catalog is not an adoption registry.** (Session 169)
+    Returning static solution suites with structural 0s for employee coverage and
+    workflows creates disconnected dashboards. Link vertical catalog rollups to
+    a real tenant-scoped adoption store (`ind:adopt`) so active deployments,
+    employee coverage, and readiness scores are derived from real records.
+    Unmeasured latency and unconducted maturity assessments must report `null`.
