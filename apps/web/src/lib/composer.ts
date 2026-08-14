@@ -1,6 +1,10 @@
 import { api } from "./api";
 import type { ComposedWorkflow, ComposerDashboard, ComposerLibraryEntry, ComposerRunLog, ComposerValidationResult } from "@windels/shared";
-export type { ComposedWorkflow, ComposerDashboard, ComposerLibraryEntry, ComposerRunLog, ComposerValidationResult } from "@windels/shared";
+export type {
+  ComposedWorkflow, ComposerDashboard, ComposerLibraryEntry, ComposerRunLog,
+  ComposerValidationResult, ComposedWorkflowStatus, ComposerWorkflowSource,
+  ComposerCapabilityType, ComposerNode, ComposerEdge, ComposerRunStatus,
+} from "@windels/shared";
 
 export const composerApi = {
   dashboard: () => api<ComposerDashboard>("/composer/dashboard/rollup"),
@@ -12,5 +16,8 @@ export const composerApi = {
   deploy: (id: string) => api<ComposedWorkflow>(`/composer/workflows/${encodeURIComponent(id)}/deploy`, { method: "POST" }),
   run: (id: string) => api<ComposerRunLog>(`/composer/workflows/${encodeURIComponent(id)}/run`, { method: "POST", json: {} }),
   runs: () => api<ComposerRunLog[]>("/composer/runs"),
+  // S166 — `paused` was declared in the status union with no way to reach it.
+  pause: (id: string) => api<ComposedWorkflow>(`/composer/workflows/${encodeURIComponent(id)}/pause`, { method: "POST" }),
+  resume: (id: string) => api<ComposedWorkflow>(`/composer/workflows/${encodeURIComponent(id)}/resume`, { method: "POST" }),
   library: () => api<ComposerLibraryEntry[]>("/composer/library"),
 };

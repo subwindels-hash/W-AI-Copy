@@ -1992,3 +1992,54 @@
 - **Tenant-isolation two-segment rule, again.** Catalog `dep:t/ts/v` plus the
   pre-existing `dep:notes`. A bare `dep` entry would read the literal `t` as an
   organization id.
+
+### Session 166 — Composer completion (`composer`)
+
+- **A bootstrap may create. It must never delete.** `ensureBootstrapped` treated
+  "no stored row parses" as licence to `DEL` every workflow key in the
+  organization and reseed a demo example. It was written as error recovery, but
+  a recovery path that discards the data it cannot read is indistinguishable
+  from data loss — and this one ran automatically at boot. If a bootstrap
+  cannot read something, it must leave it alone and say so; here that became
+  `unreadableWorkflows` on the dashboard.
+- **Verify the audit's claim before implementing against it.** The backlog said
+  composer "re-seeds on read". It does not — `ensureBootstrapped` has exactly
+  one call site, a boot timer. The row had been inferred from the shape of the
+  `needsSeed` branch without tracing callers. Grepping call sites first cost two
+  minutes and turned a mischaracterised defect into the real, worse one. The
+  audit row was corrected rather than quietly satisfied.
+- **An id in the request body is not an identity.** `POST /workflows` accepted
+  `{ id }` and the route supplied no organization, so `upsert` defaulted to
+  `org-windels` and wrote over whatever lived at that id. Ownership must come
+  from the authenticated caller; a body field can only ever be a request.
+- **`0` and `null` are different claims, and so are `0` and "unknown".** The
+  service returned `1` for an unmeasured success rate — a perfect score for
+  zero work — and the console then wrote `(d.successRate || 1)`, which also
+  converted a true 0% into 100%. The worst possible reading rendered as the
+  best. A JavaScript `||` on a numeric metric is nearly always this bug.
+- **Do not denominate an invented number in dollars.** `estimatedCostPerRun`
+  was `capabilityCount * 0.002` with no pricing table in the module, charging a
+  video generation the same as an analytics event, and it was displayed to four
+  decimal places — precision implying measurement. Null plus
+  `costModelConfigured: false` is the honest form.
+- **Check the direction of a reversed range.** `zrange(key, -limit, -1, "REV")`
+  reads naturally as "the last N, newest first" and means the opposite: REV
+  already reverses, so the negative window selects the oldest. The panel titled
+  "Recent Runs" had been showing the least recent since it was written. Redis
+  range bugs are silent — the data is real, only the window is wrong.
+- **A colour is an assertion too.** The runs list rendered anything not
+  `succeeded` as crimson, so a `queued` run — which has no outcome at all —
+  was displayed as a failure. Adding a status to a union means auditing every
+  ternary that switches on it.
+- **A UI guard is not an authorization rule.** The Run button was disabled for
+  non-deployed workflows; the endpoint accepted them. Anything enforced only in
+  the client is not enforced.
+- **Preserve prior art exactly, adapt only what the contract forces.** 13
+  existing tests pinned the earlier fake-verdict fix, and the repo's
+  `noFakeVerdict.guard.test.ts` names `composer.run()` as a reference pattern.
+  Only call signatures and the two `successRate === 0` expectations changed
+  (0 → null); no assertion was weakened or removed.
+- **Prove the new tests can fail.** Three defects were restored one at a time
+  and the suite re-run: the destructive bootstrap failed 2 tests, the fabricated
+  success rate failed 3, the reversed range failed 1. A test written after the
+  fix that has never seen the bug is not yet evidence.

@@ -6632,11 +6632,28 @@ function ComposerTab() {
       <Workflow className="h-5 w-5 text-fuchsia"/><div className="flex-1"><div className="font-semibold">AI Capability Composer</div>
       <div className="text-xs text-text-muted">Visual no-code composition over 11 primitives (OCR/vision/translation/voice/video/KR/reasoning/CRM/workflows/notifications/analytics) from prior sessions.</div></div>
     </div></CardContent></Card>
-    {d && (<div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Workflows" value={d.totalWorkflows} tone="fuchsia" sub={`${d.deployedWorkflows} deployed`}/>
+    {d && (<div className="grid md:grid-cols-5 gap-3">
+      <Stat label="Workflows" value={d.totalWorkflows} tone="fuchsia" sub={`${d.deployedWorkflows} deployed · ${d.pausedWorkflows} paused`}/>
       <Stat label="Drafts" value={d.draftWorkflows} tone="violet"/>
-      <Stat label="Total Runs" value={d.totalRuns} tone="azure"/>
-      <Stat label="Success" value={`${Math.round((d.successRate||1)*100)}%`} tone="emerald"/>
+      <Stat label="Runs Triggered" value={d.totalRuns} tone="azure" sub="includes queued"/>
+      <Stat label="Awaiting Executor" value={d.queuedRuns} tone={d.queuedRuns>0?"amber":"slate"} sub={d.queuedRuns>0?"no outcome reported":"none pending"}/>
+      {/* S166 — was `Math.round((d.successRate||1)*100)`. The `||` turned a
+          genuine 0% (everything failed) into 100%, and the service returned 1
+          for an org that had never run anything. */}
+      <Stat label="Success" value={d.successRate===null?"—":`${Math.round(d.successRate*100)}%`}
+        tone={d.successRate===null?"slate":"emerald"}
+        sub={d.successRate===null?"nothing resolved":`of ${d.resolvedRuns} resolved`}/>
+    </div>)}
+    {/* Nothing in this platform executes a composed workflow. */}
+    <div className="rounded-md border border-amber/40 bg-amber/10 p-2 text-[11px]">
+      <span className="font-semibold">Composer builds and queues; it does not execute.</span>{" "}
+      A triggered run is recorded as <span className="font-mono">queued</span>; an external executor
+      must report the outcome to <span className="font-mono">POST /composer/runs/:id/outcome</span>
+      {" "}before it counts as succeeded or failed. A rising run count does not mean work was done.
+    </div>
+    {d && d.unreadableWorkflows>0 && (<div className="rounded-md border border-crimson/40 bg-crimson/10 p-2 text-[11px]">
+      <span className="font-semibold">{d.unreadableWorkflows} workflow record(s) unreadable.</span>{" "}
+      Left untouched for inspection — an earlier bootstrap deleted such rows and reseeded a demo example.
     </div>)}
     <div className="grid md:grid-cols-3 gap-3">
       <Card>
@@ -6644,7 +6661,7 @@ function ComposerTab() {
         <CardContent className="space-y-1 text-xs max-h-80 overflow-y-auto">
           {(wfs.data||[]).map(w=>(<button key={w.id} onClick={()=>setSel(w.id)} className={cn("w-full text-left rounded p-2 flex items-center gap-2",sel===w.id?"bg-fuchsia/10 border border-fuchsia/40":"hover:bg-white/5 border border-transparent")}>
             <span className="flex-1 font-medium truncate">{w.name}</span>
-            <Badge variant={w.status==="deployed"?"emerald":"slate"}>{w.status}</Badge>
+            <Badge variant={w.status==="deployed"?"emerald":w.status==="paused"?"amber":"slate"}>{w.status}</Badge>
           </button>))}
         </CardContent>
       </Card>
@@ -6661,7 +6678,9 @@ function ComposerTab() {
           {selWf && (<>
             <div className="text-text-muted">{selWf.description} · v{selWf.version} · runs {selWf.runs} · avg {selWf.avgDurationMs}ms</div>
             {val && (<div className={cn("p-2 rounded",val.valid?"bg-emerald/10 border border-emerald/30":"bg-crimson/10 border border-crimson/30")}>
-              <div className="font-semibold">{val.valid?"✓ valid":"✗ invalid"} · {val.capabilityCount} caps · est ${val.estimatedCostPerRun.toFixed(4)}/run</div>
+              {/* S166 — the "est $N/run" figure was capabilityCount * 0.002
+                  with no pricing table anywhere in the module. */}
+              <div className="font-semibold">{val.valid?"✓ valid":"✗ invalid"} · {val.capabilityCount} caps{val.costModelConfigured&&val.estimatedCostPerRun!==null?` · est $${val.estimatedCostPerRun.toFixed(4)}/run`:" · cost per run not configured"}</div>
               {val.errors.map((e,i)=>(<div key={i} className="text-crimson">• {e.message}</div>))}
               {val.warnings.map((w,i)=>(<div key={i} className="text-amber">! {w}</div>))}
             </div>)}
@@ -6676,8 +6695,9 @@ function ComposerTab() {
                 </div>))}
               </div>
             </div>
-            {runLog && (<div className="p-2 rounded bg-emerald/10 border border-emerald/30">
-              <div className="font-semibold">Run {runLog.id.slice(0,8)} · {runLog.status} · {runLog.durationMs}ms · {runLog.stepCount} steps</div>
+            {runLog && (<div className={cn("p-2 rounded border", runLog.status==="queued"?"bg-slate/10 border-slate/30":"bg-emerald/10 border-emerald/30")}>
+              <div className="font-semibold">Run {runLog.id.slice(0,8)} · {runLog.status} · {runLog.stepCount} steps</div>
+              {runLog.status==="queued" && <div className="text-[11px] text-text-muted">Queued. Awaiting an executor to report an outcome — this platform ships none.</div>}
             </div>)}
           </>)}
           {msg && <div className="text-text-muted">{msg}</div>}
@@ -6697,7 +6717,7 @@ function ComposerTab() {
     {runs.data && runs.data.length>0 && (<Card><CardHeader><CardTitle className="text-sm">Recent Runs</CardTitle></CardHeader>
     <CardContent className="space-y-1 text-xs">
       {runs.data.slice(0,10).map(r=>(<div key={r.id} className="flex items-center gap-2">
-        <Badge variant={r.status==="succeeded"?"emerald":"crimson"}>{r.status}</Badge>
+        <Badge variant={r.status==="succeeded"?"emerald":r.status==="failed"?"crimson":"slate"}>{r.status}</Badge>
         <span className="font-mono">{r.id.slice(0,10)}</span><span className="flex-1 text-text-muted">{r.stepCount} steps by {r.triggeredBy.slice(0,10)}</span>
         <span>{r.durationMs}ms</span>
       </div>))}

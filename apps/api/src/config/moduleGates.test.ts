@@ -128,18 +128,23 @@ describe("disaster recovery reports only what was tested", () => {
 });
 
 describe("composer will not deploy an invalid workflow", () => {
+  // S166 — the organization is now a required argument rather than a defaulted
+  // one, because ten composer routes were calling the service without it and
+  // every tenant was reading and overwriting org-windels' workflows.
+  const ORG = "org-gates";
   async function wf(nodes: unknown[], edges: unknown[] = []) {
     return ComposerService.upsert({
-      createdBy: "u1", name: "w", nodes: nodes as never, edges: edges as never,
+      organizationId: ORG, createdBy: "u1", name: "w",
+      nodes: nodes as never, edges: edges as never,
     });
   }
 
   it("rejects a workflow with no trigger", async () => {
     const w = await wf([{ id: "n2", kind: "output", label: "out" }]);
-    const v = await ComposerService.validate(w.id);
+    const v = await ComposerService.validate(w.id, ORG);
     expect(v.valid).toBe(false);
     expect(v.errors.some((e) => /trigger/i.test(e.message))).toBe(true);
-    await expect(ComposerService.deploy(w.id)).rejects.toThrow(/validation/i);
+    await expect(ComposerService.deploy(w.id, ORG)).rejects.toThrow(/validation/i);
   });
 
   it("rejects an edge pointing at a node that does not exist", async () => {
@@ -147,7 +152,7 @@ describe("composer will not deploy an invalid workflow", () => {
       [{ id: "n1", kind: "trigger", label: "t" }, { id: "n2", kind: "output", label: "o" }],
       [{ id: "e1", source: "n1", target: "ghost" }],
     );
-    const v = await ComposerService.validate(w.id);
+    const v = await ComposerService.validate(w.id, ORG);
     expect(v.valid).toBe(false);
     expect(v.errors.some((e) => /ghost/.test(e.message))).toBe(true);
   });
@@ -158,8 +163,8 @@ describe("composer will not deploy an invalid workflow", () => {
       { id: "n2", kind: "capability", type: "summarise", label: "c" },
       { id: "n3", kind: "output", label: "o" },
     ]);
-    expect((await ComposerService.validate(w.id)).valid).toBe(true);
-    const deployed = await ComposerService.deploy(w.id);
+    expect((await ComposerService.validate(w.id, ORG)).valid).toBe(true);
+    const deployed = await ComposerService.deploy(w.id, ORG);
     expect(deployed.status).toBe("deployed");
   });
 
@@ -168,7 +173,7 @@ describe("composer will not deploy an invalid workflow", () => {
       { id: "n1", kind: "trigger", label: "t" },
       { id: "n2", kind: "output", label: "o" },
     ]);
-    await ComposerService.deploy(w.id);
+    await ComposerService.deploy(w.id, ORG);
 
     // History: this originally failed 1% of runs at random, and that synthetic
     // verdict fed the stored successRate. The first fix made every run report
@@ -177,15 +182,17 @@ describe("composer will not deploy an invalid workflow", () => {
     // workflow engine). Both directions are wrong; the run is now `queued`
     // until an executor reports back.
     for (let i = 0; i < 30; i++) {
-      const log = await ComposerService.run(w.id, "u1");
+      const log = await ComposerService.run(w.id, "u1", ORG);
       expect(log.status).toBe("queued");
       expect(log.status).not.toBe("failed"); // no random failures
     }
 
-    const after = await ComposerService.get(w.id);
+    const after = await ComposerService.get(w.id, ORG);
     // Nothing has reported an outcome, so there is no rate to report.
     expect(after!.runs).toBe(0);
-    expect(after!.successRate).toBe(0);
+    // S166: null rather than 0 — a rate of 0 asserts that every run failed,
+    // which is a different claim from "nothing has run".
+    expect(after!.successRate).toBeNull();
   });
 
   it("reports a measured success rate once outcomes arrive", async () => {
@@ -193,17 +200,17 @@ describe("composer will not deploy an invalid workflow", () => {
       { id: "n1", kind: "trigger", label: "t" },
       { id: "n2", kind: "output", label: "o" },
     ]);
-    await ComposerService.deploy(w.id);
+    await ComposerService.deploy(w.id, ORG);
 
     for (let i = 0; i < 4; i++) {
-      const log = await ComposerService.run(w.id, "u1");
+      const log = await ComposerService.run(w.id, "u1", ORG);
       await ComposerService.reportRunOutcome(log.id, {
         status: i === 3 ? "failed" : "succeeded",
         reportedBy: "workflow-engine",
-      });
+      }, ORG);
     }
 
-    const after = await ComposerService.get(w.id);
+    const after = await ComposerService.get(w.id, ORG);
     expect(after!.runs).toBe(4);
     expect(after!.successRate).toBe(0.75); // 3 of 4, measured
   });

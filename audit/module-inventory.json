@@ -1398,6 +1398,7 @@
       "auth.spec.ts",
       "collaboration.spec.ts",
       "commerce.spec.ts",
+      "composer.spec.ts",
       "constitution.spec.ts",
       "conversations.spec.ts",
       "cyber.spec.ts",
@@ -2786,15 +2787,16 @@
     "backend": {
       "serviceDir": "apps/api/src/composer",
       "serviceFile": {
-        "file": "composer.service.ts",
-        "path": "/home/user/WIN/apps/api/src/composer/composer.service.ts",
-        "sloc": 284,
+        "file": "composer.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/composer/composer.service.test.ts",
+        "sloc": 445,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1446,
+      "serviceTotalSloc": 2262,
       "serviceFiles": [
         "bootstrap.ts",
+        "composer.service.test.ts",
         "composer.service.ts",
         "composer.test.ts",
         "composer/composer.service.ts",
@@ -2809,11 +2811,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/composer.ts",
-        "sloc": 100,
+        "sloc": 155,
         "counts": {
-          "total": 14,
+          "total": 16,
           "GET": 7,
-          "POST": 5,
+          "POST": 7,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
@@ -2825,6 +2827,8 @@
           "POST /workflows",
           "GET /workflows/:id/validate",
           "POST /workflows/:id/deploy",
+          "POST /workflows/:id/pause",
+          "POST /workflows/:id/resume",
           "POST /workflows/:id/run",
           "POST /runs/:runId/outcome",
           "GET /runs",
@@ -2861,9 +2865,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/composer.ts (147 LOC)",
+    "sharedTypes": "packages/shared/src/composer.ts (204 LOC)",
     "web": {
-      "client": "apps/web/src/lib/composer.ts (17 LOC)",
+      "client": "apps/web/src/lib/composer.ts (24 LOC)",
       "pages": []
     },
     "db": {
@@ -2879,6 +2883,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "composer.spec.ts",
+      "composer/composer.service.test.ts",
       "composer/composer.test.ts",
       "services/workflow.engine.test.ts",
       "config/moduleGates.test.ts"
@@ -10926,11 +10932,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 673,
+        "sloc": 683,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1522,
+      "serviceTotalSloc": 1542,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -10978,6 +10984,7 @@
         "Activity",
         "Message",
         "Canvas",
+        "Workflow",
         "Alert"
       ],
       "migrations": [],

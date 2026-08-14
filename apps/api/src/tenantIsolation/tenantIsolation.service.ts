@@ -302,6 +302,16 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "dep:ts", scope: "org_scoped" },
   { prefix: "dep:v", scope: "org_scoped" },
   { prefix: "dep:notes", scope: "org_scoped" },
+  // Session 166 composer — workflows, run ledger and run counters. Keys were
+  // already `cmp:<entity>:<org>[:<id>]` but ten of the fourteen routes called
+  // the service with no organization, so every tenant read and OVERWROTE
+  // org-windels' workflow definitions. Bare `cmp` is never added: it would
+  // read the literal `wf` as an organization id.
+  { prefix: "cmp:wf", scope: "org_scoped" },
+  { prefix: "cmp:wfs", scope: "org_scoped" },
+  { prefix: "cmp:runs", scope: "org_scoped" },
+  { prefix: "cmp:m", scope: "org_scoped" },
+  { prefix: "cmp:notes", scope: "org_scoped" },
   // Session 161 cyber academy — labs, findings, certifications, ranges.
   // Keys are `csec:<entity>:<org>:…`. Bare `csec` is deliberately never added:
   // it would read the literal `lab` as an organization id. `cy:notes` is the

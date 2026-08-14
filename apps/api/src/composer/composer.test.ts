@@ -15,6 +15,12 @@
  * real outcome can resolve it or move the success rate.
  *
  * Redis is substituted with FakeKv; no infrastructure required.
+ *
+ * S166 adapted the call signatures (org id is now required, and `run()` refuses
+ * a workflow that is not deployed) and the two `successRate` expectations that
+ * asserted `0` for a workflow with no resolved runs — that is now `null`, since
+ * 0 means "every run failed" rather than "nothing has run". Every assertion's
+ * original intent is preserved; none was weakened.
  */
 import { describe, it, expect, beforeEach, vi } from "vitest";
 import { FakeKv } from "../mediaFactory/publishing/fakeKv.js";
@@ -25,18 +31,30 @@ vi.mock("../db/redis.js", () => ({ redis: kv, redisCmd: kv, redisSub: kv }));
 const { ComposerService } = await import("./composer.service.js");
 
 const USER = "user-1";
+const ORG = "org-a";
 
-async function makeWorkflow() {
-  return ComposerService.upsert({
+/**
+ * A workflow that passes validation, so it can be deployed and therefore run.
+ *
+ * S166 — the original fixture used `{ type: "trigger" }` and `{ from, to }`
+ * edges, neither of which matches ComposerNode/ComposerEdge. It never mattered
+ * because `run()` did not check the workflow's status and nothing validated the
+ * graph. Now that a run requires a deployed workflow, and deploying requires a
+ * valid one, the fixture has to be the real shape.
+ */
+async function makeWorkflow(org = ORG) {
+  const wf = await ComposerService.upsert({
+    organizationId: org,
     name: "Nightly sync",
     description: "",
     nodes: [
-      { id: "n1", type: "trigger", label: "Start", config: {} },
-      { id: "n2", type: "action", label: "Sync", config: {} },
+      { id: "n1", kind: "trigger", label: "Start", x: 0, y: 0, config: {} },
+      { id: "n2", kind: "output", label: "Sync", x: 100, y: 0, config: {} },
     ],
-    edges: [{ from: "n1", to: "n2" }],
+    edges: [{ id: "e1", source: "n1", target: "n2" }],
     createdBy: USER,
-  } as any);
+  });
+  return ComposerService.deploy(wf.id, org);
 }
 
 beforeEach(() => {
@@ -46,7 +64,7 @@ beforeEach(() => {
 describe("triggering a run claims nothing about the outcome", () => {
   it("records the run as queued, not succeeded", async () => {
     const wf = await makeWorkflow();
-    const log = await ComposerService.run(wf.id, USER);
+    const log = await ComposerService.run(wf.id, USER, ORG);
 
     // The specific regression: reporting success for work never done.
     expect(log.status).toBe("queued");
@@ -57,12 +75,13 @@ describe("triggering a run claims nothing about the outcome", () => {
 
   it("does not move the success rate", async () => {
     const wf = await makeWorkflow();
-    await ComposerService.run(wf.id, USER);
+    await ComposerService.run(wf.id, USER, ORG);
 
-    const after = await ComposerService.get(wf.id);
+    const after = await ComposerService.get(wf.id, ORG);
     // No outcome has been reported, so there is nothing to average yet.
     expect(after!.runs).toBe(0);
-    expect(after!.successRate).toBe(0);
+    // S166: null, not 0. A rate of 0 asserts every run failed.
+    expect(after!.successRate).toBeNull();
   });
 
   it("a workflow that has never run does not advertise a perfect record", async () => {
@@ -70,22 +89,24 @@ describe("triggering a run claims nothing about the outcome", () => {
     // success having executed nothing.
     const wf = await makeWorkflow();
     expect(wf.runs).toBe(0);
-    expect(wf.successRate).toBe(0);
+    // S166: null, not 0 — and emphatically not the original 1.
+    expect(wf.successRate).toBeNull();
+    expect(wf.successRate).not.toBe(1);
   });
 
   it("records the real step count from the workflow", async () => {
     const wf = await makeWorkflow();
-    const log = await ComposerService.run(wf.id, USER);
+    const log = await ComposerService.run(wf.id, USER, ORG);
     expect(log.stepCount).toBe(2);
   });
 
   it("404s for a workflow that does not exist", async () => {
-    await expect(ComposerService.run("no-such-workflow", USER)).rejects.toMatchObject({ status: 404 });
+    await expect(ComposerService.run("no-such-workflow", USER, ORG)).rejects.toMatchObject({ status: 404 });
   });
 
   it("attributes the run to the triggering user", async () => {
     const wf = await makeWorkflow();
-    const log = await ComposerService.run(wf.id, USER);
+    const log = await ComposerService.run(wf.id, USER, ORG);
     expect(log.triggeredBy).toBe(USER);
   });
 });
@@ -93,11 +114,11 @@ describe("triggering a run claims nothing about the outcome", () => {
 describe("only a reported outcome resolves a run", () => {
   it("marks a run succeeded and records who said so", async () => {
     const wf = await makeWorkflow();
-    const queued = await ComposerService.run(wf.id, USER);
+    const queued = await ComposerService.run(wf.id, USER, ORG);
 
     const done = await ComposerService.reportRunOutcome(queued.id, {
       status: "succeeded", durationMs: 1200, reportedBy: "workflow-engine-1",
-    });
+    }, ORG);
 
     expect(done.status).toBe("succeeded");
     expect(done.durationMs).toBe(1200);
@@ -107,49 +128,49 @@ describe("only a reported outcome resolves a run", () => {
 
   it("marks a run failed when the executor says it failed", async () => {
     const wf = await makeWorkflow();
-    const queued = await ComposerService.run(wf.id, USER);
+    const queued = await ComposerService.run(wf.id, USER, ORG);
     const done = await ComposerService.reportRunOutcome(queued.id, {
       status: "failed", reportedBy: "workflow-engine-1",
-    });
+    }, ORG);
     expect(done.status).toBe("failed");
   });
 
   it("moves the success rate only once a real outcome arrives", async () => {
     const wf = await makeWorkflow();
-    const a = await ComposerService.run(wf.id, USER);
-    const b = await ComposerService.run(wf.id, USER);
+    const a = await ComposerService.run(wf.id, USER, ORG);
+    const b = await ComposerService.run(wf.id, USER, ORG);
 
-    await ComposerService.reportRunOutcome(a.id, { status: "succeeded", reportedBy: "e" });
-    await ComposerService.reportRunOutcome(b.id, { status: "failed", reportedBy: "e" });
+    await ComposerService.reportRunOutcome(a.id, { status: "succeeded", reportedBy: "e" }, ORG);
+    await ComposerService.reportRunOutcome(b.id, { status: "failed", reportedBy: "e" }, ORG);
 
-    const after = await ComposerService.get(wf.id);
+    const after = await ComposerService.get(wf.id, ORG);
     expect(after!.runs).toBe(2);
     expect(after!.successRate).toBe(0.5); // one of two, measured
   });
 
   it("refuses to resolve the same run twice", async () => {
     const wf = await makeWorkflow();
-    const queued = await ComposerService.run(wf.id, USER);
-    await ComposerService.reportRunOutcome(queued.id, { status: "succeeded", reportedBy: "e" });
+    const queued = await ComposerService.run(wf.id, USER, ORG);
+    await ComposerService.reportRunOutcome(queued.id, { status: "succeeded", reportedBy: "e" }, ORG);
 
     // A second report would let an executor inflate the success rate.
     await expect(
-      ComposerService.reportRunOutcome(queued.id, { status: "succeeded", reportedBy: "e" }),
+      ComposerService.reportRunOutcome(queued.id, { status: "succeeded", reportedBy: "e" }, ORG),
     ).rejects.toMatchObject({ status: 409 });
   });
 
   it("404s for an unknown run id", async () => {
     await expect(
-      ComposerService.reportRunOutcome("run-nope", { status: "succeeded", reportedBy: "e" }),
+      ComposerService.reportRunOutcome("run-nope", { status: "succeeded", reportedBy: "e" }, ORG),
     ).rejects.toMatchObject({ status: 404 });
   });
 
   it("keeps the resolved run visible in the run list", async () => {
     const wf = await makeWorkflow();
-    const queued = await ComposerService.run(wf.id, USER);
-    await ComposerService.reportRunOutcome(queued.id, { status: "succeeded", reportedBy: "e" });
+    const queued = await ComposerService.run(wf.id, USER, ORG);
+    await ComposerService.reportRunOutcome(queued.id, { status: "succeeded", reportedBy: "e" }, ORG);
 
-    const runs = await ComposerService.getRuns();
+    const runs = await ComposerService.getRuns(ORG);
     const found = runs.find((r) => r.id === queued.id);
     expect(found).toBeTruthy();
     expect(found!.status).toBe("succeeded");
@@ -159,10 +180,10 @@ describe("only a reported outcome resolves a run", () => {
 
   it("measures elapsed time when the executor does not supply a duration", async () => {
     const wf = await makeWorkflow();
-    const queued = await ComposerService.run(wf.id, USER);
+    const queued = await ComposerService.run(wf.id, USER, ORG);
     const done = await ComposerService.reportRunOutcome(queued.id, {
       status: "succeeded", reportedBy: "e",
-    });
+    }, ORG);
     expect(done.durationMs).toBeGreaterThanOrEqual(0);
     expect(Number.isFinite(done.durationMs)).toBe(true);
   });
