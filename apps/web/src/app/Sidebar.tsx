@@ -138,6 +138,7 @@ const navItems = [
   { to: "/app/life-principles", icon: Lightbulb, label: "Rules of Life" },
   { to: "/app/cyber-cloud-academy", icon: ShieldCheck, label: "Cyber & Cloud Academy" },
   { to: "/app/university", icon: GraduationCap, label: "University Education" },
+  { to: "/app/cyber", icon: Shield, label: "Cyber & Cloud Posture" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },
   { to: "/app/spatial", icon: Box, label: "Spatial" },
   { to: "/app/quantum", icon: Atom, label: "Quantum Readiness" },

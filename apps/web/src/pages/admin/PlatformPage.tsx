@@ -8146,7 +8146,7 @@ function CyberTab() {
   const d = useRefresh<any>(()=>cyb.cybApi.dashboard(), 8_000);
   const data = d.data; const [msg,setMsg] = useState<string|null>(null);
   const [domain,setDomain] = useState("ethical_hacking"); const [diff,setDiff] = useState("intermediate"); const [cloud,setCloud] = useState("aws");
-  const startLab = async () => { try { const lab = await cyb.cybApi.startLab({domain,difficulty:diff,cloud}); setMsg(`lab ${lab.name} provisioning`); d.refresh(); } catch(e:any){setMsg(e.message);} };
+  const startLab = async () => { try { const lab = await cyb.cybApi.startLab({domain,difficulty:diff,cloud:cloud||undefined} as any); setMsg(`lab ${lab.name} registered (local state only)`); d.refresh(); } catch(e:any){setMsg(e.message);} };
   if (!data) return <div/>;
   return (<div className="space-y-4">
     <Card><CardContent className="p-4 flex items-center gap-2">
@@ -8155,13 +8155,15 @@ function CyberTab() {
     </CardContent></Card>
     {msg && <div className="text-xs text-text-muted">{msg}</div>}
     <div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Learners" value={(data.learners/1000).toFixed(1)+"K"} tone="azure"/>
+      {/* S161: learners is a real count for this org — never scaled to "0.0K". */}
+      <Stat label="Learners" value={data.learners ?? "—"} tone="azure"/>
       <Stat label="Courses" value={data.coursesAvailable} tone="violet"/>
       <Stat label="Enrolled" value={data.coursesEnrolled} tone="fuchsia"/>
       <Stat label="Active Labs" value={data.labsActive} tone="crimson"/>
       <Stat label="Challenges Solved" value={data.challengesSolved} tone="emerald"/>
       <Stat label="Certs Held" value={data.certificationsHeld} tone="amber"/>
-      <Stat label="Leaderboard" value={"#"+data.leaderboardRank} tone="azure"/>
+      {/* S161: there is no leaderboard — null renders as "—", never "#0". */}
+      <Stat label="Leaderboard" value={data.leaderboardRank==null?"—":"#"+data.leaderboardRank} tone="azure"/>
       <Stat label="CTF Wins" value={data.ctfWins} tone="fuchsia"/>
       <Stat label="Total Points" value={data.totalPoints.toLocaleString()} tone="teal"/>
       <Stat label="Bug Bounties" value={`$${data.bugBountiesEarnedUsd.toLocaleString()}`} tone="emerald"/>
@@ -8171,8 +8173,10 @@ function CyberTab() {
     <div className="grid md:grid-cols-3 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Launch Lab</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-xs">
+        {/* S161: skillScores only lists scored domains, so the picker reads the
+            course catalogue instead — otherwise a fresh org has no options. */}
         <select value={domain} onChange={e=>setDomain(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1">
-          {Object.keys(data.skillScores||{}).map(k=><option key={k} value={k}>{k}</option>)}
+          {Array.from(new Set((data.courses||[]).map((c:any)=>c.domain))).map((k:any)=><option key={k} value={k}>{k}</option>)}
         </select>
         <select value={diff} onChange={e=>setDiff(e.target.value)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1">
           {["beginner","intermediate","advanced","expert"].map(l=><option key={l} value={l}>{l}</option>)}
@@ -8196,6 +8200,9 @@ function CyberTab() {
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Multi-Cloud Findings</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-xs">
+        {/* S161: WINDELS scans no cloud account. An empty register says so
+            rather than showing ten fabricated findings. */}
+        {!(data.findings||[]).length && <div className="text-text-muted">No findings recorded. WINDELS does not scan your cloud accounts — post findings to <code>/cyber/findings</code>.</div>}
         {(data.findings||[]).map((f:any)=>(<div key={f.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
           <AlertTriangle className={`h-3 w-3 ${f.severity==="critical"?"text-crimson":f.severity==="high"?"text-amber":"text-text-muted"}`}/>
           <span className="font-semibold w-16">{f.cloud}/{f.service}</span>
@@ -8206,10 +8213,17 @@ function CyberTab() {
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="text-sm">Certifications</CardTitle></CardHeader>
       <CardContent className="space-y-2 text-xs">
+        {/* S161: held credentials are a register. When empty we show the
+            available exam tracks — which are not achievements. */}
+        {!(data.certifications||[]).length && <div className="text-text-muted">No credentials recorded. The exams below are available tracks, not achievements.</div>}
         {(data.certifications||[]).map((c:any)=>(<div key={c.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
           <Award className="h-3 w-3 text-amber"/><span className="flex-1 font-semibold">{c.name}</span>
           <Badge variant="slate">{c.vendor}</Badge>
-          {c.passed ? <Badge variant="emerald">passed {c.scorePct}%</Badge> : (<div className="flex-1 flex items-center gap-2"><div className="flex-1 h-2 bg-white/5 rounded overflow-hidden"><div className="h-full bg-amber" style={{width:`${c.preparationProgressPct}%`}}/></div><span className="text-text-muted">{c.preparationProgressPct}%</span></div>)}
+          {c.passed ? <Badge variant="emerald">passed {c.scorePct!=null?`${c.scorePct}%`:""}</Badge> : c.preparationProgressPct==null ? <Badge variant="slate">not started</Badge> : (<div className="flex-1 flex items-center gap-2"><div className="flex-1 h-2 bg-white/5 rounded overflow-hidden"><div className="h-full bg-amber" style={{width:`${c.preparationProgressPct}%`}}/></div><span className="text-text-muted">{c.preparationProgressPct}%</span></div>)}
+        </div>))}
+        {!(data.certifications||[]).length && (data.certificationTracks||[]).map((t:any)=>(<div key={t.id} className="p-2 border border-white/5 rounded flex items-center gap-2 opacity-70">
+          <Award className="h-3 w-3 text-text-muted"/><span className="flex-1">{t.name}</span>
+          <Badge variant="slate">{t.vendor}</Badge><Badge variant="slate">track</Badge>
         </div>))}
       </CardContent></Card>
     </div>

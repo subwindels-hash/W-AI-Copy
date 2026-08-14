@@ -250,6 +250,23 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "rob:pa", scope: "org_scoped" },
   { prefix: "rob:pas", scope: "org_scoped" },
   { prefix: "rob:tel", scope: "org_scoped" },
+  // Session 161 cyber academy — labs, findings, certifications, ranges.
+  // Keys are `csec:<entity>:<org>:…`. Bare `csec` is deliberately never added:
+  // it would read the literal `lab` as an organization id. `cy:notes` is the
+  // pre-existing notes ledger and uses a different prefix from the service.
+  { prefix: "csec:meta", scope: "org_scoped" },
+  { prefix: "csec:lab", scope: "org_scoped" },
+  { prefix: "csec:labs", scope: "org_scoped" },
+  { prefix: "csec:progress", scope: "org_scoped" },
+  { prefix: "csec:activity", scope: "org_scoped" },
+  { prefix: "csec:find", scope: "org_scoped" },
+  { prefix: "csec:finds", scope: "org_scoped" },
+  { prefix: "csec:cert", scope: "org_scoped" },
+  { prefix: "csec:certs", scope: "org_scoped" },
+  { prefix: "csec:rng", scope: "org_scoped" },
+  { prefix: "csec:rngs", scope: "org_scoped" },
+  { prefix: "csec:learners", scope: "org_scoped" },
+  { prefix: "cy:notes", scope: "org_scoped" },
   // Session 156 spatial sessions / maps / waypoints / holo / remote / devices.
   // Keys are `spa:<entity>:<org>:…`. Bare `spa` is never added.
   { prefix: "spa:s", scope: "org_scoped" },

@@ -1740,3 +1740,58 @@
 - **Tenant-isolation two-segment rule, again.** Catalog
   `sci:exp/exps/pap/paps/hyp/hyps/meta` + `sci:notes`. A bare `sci` entry
   would make the sweep read the literal `exp` as an org id.
+
+### Session 161 — Cyber completion (`cyber`)
+
+- **A catalogue may be served; a posture must be earned.** This is the
+  governing distinction the module was missing. Courses, challenge
+  definitions and vendor exams are curriculum — static configuration, now
+  labelled `kind: "catalog"`. Cloud findings, held certifications, ranges
+  and labs describe what an organization *did*, and are registers that
+  start empty. Serving the second as if it were the first is how ten
+  fabricated findings ended up on every tenant.
+- **A fabricated security finding is worse than a fabricated metric.** The
+  module told every organization — including ones with no cloud account
+  connected — that it had a public S3 bucket ACL, root account access keys
+  and a GCP default service account with editor role. An operator could
+  act on that, or be falsely reassured by `cloudFindingsRemediated30d: 4`.
+  Honesty rules are not cosmetic in a security module.
+- **An empty register is not a clean bill of health, and the UI must say
+  so.** The Cloud Posture tab states that WINDELS scans no cloud account,
+  so an empty findings list means nothing was reported — not that the
+  estate is secure. Silence and safety are different claims.
+- **A certification track is not a certification.** The six vendor exams
+  stay, but as `certificationTracks` with no `passed`/`scorePct`.
+  `certificationsHeld` counts recorded passes only. Same rule S159 applied
+  to `education`: inferring a credential from activity fabricates it.
+- **`i % n` is fabricated metadata.** Challenge domain, points and
+  difficulty came from the index into a title array, so a challenge's
+  subject depended on its position. They are authored on the definition
+  now. Finding status came from `i % 3` / `i % 5` — "remediated" was
+  positional, not recorded.
+- **A 30-day window needs a timestamp, not a status tally.**
+  `cloudFindingsRemediated30d` counts findings whose `remediatedAt` falls
+  in the window; the stamp is written on the transition into
+  `remediated` and cleared when the status moves back.
+- **`rating: 0` and `rank: 0` are claims.** Uncollected statistics
+  (`enrolled`, `rating`, `solvedBy`, `preparationProgressPct`) are `null`.
+  There is no leaderboard at all, so `leaderboardRank` is `null` — rank 0
+  is not a rank.
+- **A declared-but-unused type is an unfinished feature.**
+  `RANGE_KINDS` was defined and never referenced; `ranges` was hardcoded
+  `[]` while the dashboard reported `upcomingRanges`/`activeRanges`.
+  Ranges are now a real register with a lifecycle.
+- **A lab that never expires lies twice.** Expiry is computed from
+  `expiresAt` on read, so a two-hour lab does not sit "running" forever,
+  and `provisioning: "local_state_only"` stops a UI presenting a register
+  row as a provisioned range (the S155 rule).
+- **The buried tab needed the same fix as the new console.** PlatformPage
+  divided learners by 1000 (`"0.0K"`) and rendered `"#" + leaderboardRank`
+  (`"#null"`). Same class of defect as S160's `1e6` divide — when a
+  contract goes null-aware, every existing consumer must too.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `csec:meta/lab/labs/progress/activity/find/finds/cert/certs/rng/rngs/learners`.
+  A bare `csec` entry would make the sweep read the literal `lab` as an
+  organization id. `cy:notes` — the notes ledger, which uses a *different*
+  prefix from the rest of the module — was uncatalogued entirely and is
+  now covered.
