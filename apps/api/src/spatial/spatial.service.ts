@@ -16,11 +16,15 @@
  */
 import { createHash, randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
+import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
 import {
   SpatialSession, SpatialMode, SPATIAL_MODES, SpatialStatus,
   HolographicDashboard, SpatialWaypoint, IndoorMap, RemoteExpertSession,
   SpatialDashboard,
 } from "@windels/shared";
+
+/** A device is "online" only if it heartbeated inside this window. */
+export const SPATIAL_DEVICE_ONLINE_MS = 2 * 60 * 1000;
 
 // ─── Integration Imports ───
 import { MemoryService } from "../enterprise/memory/memory.service.js";
@@ -42,8 +46,9 @@ const K = {
   wps: (oid: string) => `spa:wps:${oid}`,
   rx: (oid: string, id: string) => `spa:rx:${oid}:${id}`,
   rxs: (oid: string) => `spa:rxs:${oid}`,
-  dev: (oid: string) => `spa:dev:${oid}`,     // SET of device fingerprints seen recently
-  twin: (oid: string) => `spa:twin:${oid}`,   // SET of visualized twin IDs
+  dev: (oid: string) => `spa:dev:${oid}`,       // SET of device fingerprints ever seen
+  devhb: (oid: string) => `spa:devhb:${oid}`,   // HASH fingerprint -> lastSeen ISO
+  twin: (oid: string) => `spa:twin:${oid}`,     // SET of visualized twin IDs
 };
 const s2 = (o: any) => JSON.stringify(o);
 const uid = (p: string) => p + randomUUID().slice(0, 8);
@@ -83,8 +88,9 @@ function seededRng(seed: string) {
 }
 
 export const SpatialService = {
-  async ensureBootstrapped(logger?: any, oid = "org-windels", uid0 = "user-admin") {
+  async ensureBootstrapped(logger?: { info?: (...a: unknown[]) => void }, oid = "org-windels", uid0 = "user-admin") {
     if (await redis.exists(K.ss(oid))) return;
+    if (!demoDataEnabled()) return skipDemoSeed("spatial", logger);
     const now = new Date().toISOString();
     for (let i = 0; i < SEED_SESSIONS.length; i++) {
       const s = SEED_SESSIONS[i];
@@ -138,9 +144,29 @@ export const SpatialService = {
     logger?.info?.("[spatial] bootstrap complete", { orgId: oid });
   },
 
-  /** Record a device fingerprint (called on session create). Set has TTL-like semantics via periodic prune. */
-  async touchDevice(oid: string, fingerprint: string) {
+  /** Record a device fingerprint and its last heartbeat. */
+  async touchDevice(oid: string, fingerprint: string, at = new Date().toISOString()) {
     await redis.sadd(K.dev(oid), fingerprint);
+    await redis.hset(K.devhb(oid), fingerprint, at);
+  },
+
+  /** Device reports it is still present. This is the live spatial connector. */
+  async heartbeat(input: { fingerprint: string; deviceTarget?: SpatialSession["deviceTarget"]; organizationId?: string }) {
+    const oid = input.organizationId || "org-windels";
+    const at = new Date().toISOString();
+    await this.touchDevice(oid, input.fingerprint, at);
+    return { fingerprint: input.fingerprint, lastSeenAt: at, organizationId: oid, deviceTarget: input.deviceTarget };
+  },
+
+  async devicesOnlineCount(oid: string): Promise<number> {
+    const hb = await redis.hgetall(K.devhb(oid));
+    const now = Date.now();
+    let n = 0;
+    for (const ts of Object.values(hb)) {
+      const t = Date.parse(ts);
+      if (Number.isFinite(t) && now - t <= SPATIAL_DEVICE_ONLINE_MS) n++;
+    }
+    return n;
   },
 
   /** Record a twin id being visualized in a session. */
@@ -149,11 +175,11 @@ export const SpatialService = {
   },
 
   async dashboard(oid = "org-windels"): Promise<SpatialDashboard> {
-    if (!(await redis.exists(K.ss(oid)))) await this.ensureBootstrapped(undefined, oid);
-    const [sids, mids, hids, wids, rxids, deviceCount, twinCount] = await Promise.all([
+    const [sids, mids, hids, wids, rxids, deviceCount, twinCount, online] = await Promise.all([
       redis.smembers(K.ss(oid)), redis.smembers(K.mps(oid)), redis.smembers(K.hds(oid)),
       redis.smembers(K.wps(oid)), redis.smembers(K.rxs(oid)),
       redis.scard(K.dev(oid)), redis.scard(K.twin(oid)),
+      this.devicesOnlineCount(oid),
     ]);
     const multiGet = async <T,>(ids: string[], keyFn: (id: string) => string): Promise<T[]> => {
       const out: T[] = [];
@@ -175,12 +201,18 @@ export const SpatialService = {
     return {
       activeSessions: sessions.filter((s) => s.status === "streaming" || s.status === "recording").length,
       totalSessions: sessions.length,
-      devicesOnline: deviceCount, // real count of registered device fingerprints
+      devicesOnline: online,
       holoDashboards: holos.length,
       indoorMaps: maps.length,
       waypoints: waypoints.length,
       remoteSessionsToday: remote.filter((r) => new Date(r.startedAt) >= today).length,
-      twinsVisualized: twinCount, // real count of twin refs
+      twinsVisualized: twinCount,
+      devicesSeen: deviceCount,
+      provenance: {
+        devicesOnline: `Count of fingerprints that heartbeated in the last ${SPATIAL_DEVICE_ONLINE_MS / 1000}s. Not a live WebXR probe.`,
+        devicesSeen: "Fingerprints ever recorded (session create or heartbeat). Includes demo seeds when WINDELS_DEMO_DATA is on.",
+        twinsVisualized: "Count of twin ids referenced by created sessions — not a live twin stream.",
+      },
       byMode,
       recent: sessions.slice(0, 6),
       waypointsRecent: waypoints.slice(0, 8),
@@ -198,7 +230,6 @@ export const SpatialService = {
   },
 
   async listMaps(oid = "org-windels"): Promise<IndoorMap[]> {
-    if (!(await redis.exists(K.mps(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids = await redis.smembers(K.mps(oid));
     const out: IndoorMap[] = [];
     for (const id of ids) {
@@ -209,7 +240,6 @@ export const SpatialService = {
   },
 
   async listWaypoints(oid = "org-windels"): Promise<SpatialWaypoint[]> {
-    if (!(await redis.exists(K.wps(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids = await redis.smembers(K.wps(oid));
     const out: SpatialWaypoint[] = [];
     for (const id of ids) {
@@ -231,7 +261,6 @@ export const SpatialService = {
   },
 
   async listRemoteExpertSessions(oid = "org-windels"): Promise<RemoteExpertSession[]> {
-    if (!(await redis.exists(K.rxs(oid)))) await this.ensureBootstrapped(undefined, oid);
     const ids = await redis.smembers(K.rxs(oid));
     const out: RemoteExpertSession[] = [];
     for (const id of ids) {

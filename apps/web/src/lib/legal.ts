@@ -1,10 +1,26 @@
 /** Session 66 — Legal Intelligence client + public marketing legal docs */
 import { api } from "./api";
-import type { LegalDashboard, LegalResearchItem, RegulatoryUpdate } from "@windels/shared";
-export type { LegalDashboard, LegalResearchItem, RegulatoryUpdate } from "@windels/shared";
+import type {
+  LegalDashboard, LegalResearchItem, RegulatoryUpdate, LegalMatter, Contract,
+} from "@windels/shared";
+export type {
+  LegalDashboard, LegalResearchItem, RegulatoryUpdate, LegalMatter, Contract,
+} from "@windels/shared";
 
 export const legalApi = {
   dashboard: () => api<LegalDashboard>("/legal/dashboard/rollup"),
+  listMatters: () => api<LegalMatter[]>("/legal/matters"),
+  createMatter: (input: { title: string; kind: LegalMatter["kind"]; riskScore: number; dueDate?: string; summary?: string }) =>
+    api<LegalMatter>("/legal/matters", { method: "POST", json: input }),
+  updateMatterStatus: (id: string, status: LegalMatter["status"]) =>
+    api<LegalMatter>(`/legal/matters/${id}/status`, { method: "PATCH", json: { status } }),
+  listContracts: () => api<Contract[]>("/legal/contracts"),
+  createContract: (input: { title: string; counterparty: string; type: Contract["type"]; valueUsd?: number }) =>
+    api<Contract>("/legal/contracts", { method: "POST", json: input }),
+  listUpdates: () => api<RegulatoryUpdate[]>("/legal/updates"),
+  createUpdate: (input: { jurisdiction: string; title: string; topic: string; impact: RegulatoryUpdate["impact"]; summary?: string }) =>
+    api<RegulatoryUpdate>("/legal/updates", { method: "POST", json: input }),
+  listResearch: () => api<LegalResearchItem[]>("/legal/research"),
   research: (query: string) => api<LegalResearchItem>("/legal/research", { method: "POST", json: { query } }),
   acknowledge: (id: string) => api<RegulatoryUpdate>(`/legal/updates/${id}/acknowledge`, { method: "POST" }),
 };

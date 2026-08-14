@@ -60,6 +60,12 @@ import {
   Workflow,
   Wand2,
   Puzzle,
+  Bot,
+  Box,
+  Atom,
+  Gavel,
+  School,
+  FlaskConical,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -71,6 +77,7 @@ const navItems = [
   { to: "/app/voice-console", icon: Mic, label: "Voice" },
   { to: "/app/media", icon: Film, label: "Media Factory" },
   { to: "/app/learn", icon: BookOpen, label: "Lecturer AI" },
+  { to: "/app/education", icon: School, label: "Learning Platform" },
   { to: "/app/projects", icon: FolderKanban, label: "Project Continuity" },
   { to: "/app/leads", icon: UsersRound, label: "Lead Discovery" },
   { to: "/app/lead-pipeline", icon: ClipboardList, label: "Lead Pipeline" },
@@ -131,6 +138,11 @@ const navItems = [
   { to: "/app/life-principles", icon: Lightbulb, label: "Rules of Life" },
   { to: "/app/cyber-cloud-academy", icon: ShieldCheck, label: "Cyber & Cloud Academy" },
   { to: "/app/university", icon: GraduationCap, label: "University Education" },
+  { to: "/app/robotics", icon: Bot, label: "Robotics" },
+  { to: "/app/spatial", icon: Box, label: "Spatial" },
+  { to: "/app/quantum", icon: Atom, label: "Quantum Readiness" },
+  { to: "/app/legal", icon: Gavel, label: "Legal Intelligence" },
+  { to: "/app/scientific", icon: FlaskConical, label: "Scientific Research" },
   { to: "/app/education-engine", icon: BookOpen, label: "Higher Education Engine" },
   { to: "/app/geo-billing", icon: Globe2, label: "Geo-Billing Engine" },
   { to: "/app/camera", icon: Camera, label: "Camera Intelligence" },

@@ -27,4 +27,18 @@ export function registerSpatialRoutes(router: Router) {
   router.get("/waypoints", async (req, res, next) => { try { res.json({ ok:true, data: await SpatialService.listWaypoints((req.user as any).organizationId) }); } catch (e) { next(e); } });
   router.get("/holo-dashboards", async (req, res, next) => { try { res.json({ ok:true, data: await SpatialService.listHoloDashboards((req.user as any).organizationId) }); } catch (e) { next(e); } });
   router.get("/remote-expert-sessions", async (req, res, next) => { try { res.json({ ok:true, data: await SpatialService.listRemoteExpertSessions((req.user as any).organizationId) }); } catch (e) { next(e); } });
+
+  // Session 156 — device heartbeat (the live spatial connector)
+  router.post("/devices/heartbeat", validate({
+    body: z.object({
+      fingerprint: z.string().min(2).max(128),
+      deviceTarget: z.enum(["vision_pro","hololens","quest","desktop","mobile","smart_glasses"]).optional(),
+    }),
+  }), async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await SpatialService.heartbeat({
+        ...req.body, organizationId: (req.user as any).organizationId,
+      }) });
+    } catch (e) { next(e); }
+  });
 }

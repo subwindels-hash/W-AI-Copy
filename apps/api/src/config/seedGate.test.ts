@@ -159,17 +159,27 @@ describe("read paths do not seed on demand", () => {
     const d = await ScientificService.dashboard(OID);
     expect(d.papersIndexed).toBe(0);
     expect(d.experimentsActive).toBe(0);
+    // Unmeasured figures are null, never 0-as-a-reading (Session 160).
+    expect(d.knowledgeGraphNodes).toBeNull();
+    expect(d.collaborators).toBeNull();
+    expect(d.simulationsRun30d).toBeNull();
     expect(allKeys().filter((k) => k.startsWith("sci:exp:"))).toEqual([]);
   });
 
   it("robotics dashboard reports an empty fleet without NaN", async () => {
     const d = await RoboticsService.dashboard(OID);
     expect(d.totalRobots).toBe(0);
-    // avgCpuPct divided by robots.length unconditionally; with the seed gone
-    // the empty fleet produced NaN, which serialises to null over JSON.
-    expect(d.avgCpuPct).toBe(0);
-    expect(Number.isNaN(d.avgCpuPct)).toBe(false);
-    expect(d.avgBatteryPct).toBe(0);
+    // Unmeasured averages are null, never 0-as-a-reading (Session 155).
+    expect(d.avgCpuPct).toBeNull();
+    expect(d.avgBatteryPct).toBeNull();
+  });
+
+  it("education dashboard reports null mastery rather than seeding", async () => {
+    const d = await EducationService.dashboard(OID);
+    expect(d.totalContent).toBe(0);
+    expect(d.avgMasteryPct).toBeNull();
+    expect(d.activeLearners).toBe(0);
+    expect(allKeys().filter((k) => k.startsWith("edu:"))).toEqual([]);
   });
 
   it("data marketplace dashboard reports no listings", async () => {

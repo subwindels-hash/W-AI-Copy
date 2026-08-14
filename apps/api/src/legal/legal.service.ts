@@ -116,7 +116,6 @@ export const LegalService = {
   },
 
   async dashboard(oid = "org-windels"): Promise<LegalDashboard> {
-    if (!(await redis.exists(K.ms(oid)))) await this.ensureBootstrapped(undefined, oid);
     const [mids, uids, cids, rids, chkIds] = await Promise.all([
       redis.smembers(K.ms(oid)), redis.smembers(K.us(oid)), redis.smembers(K.cs(oid)),
       redis.smembers(K.rs(oid)), redis.smembers(K.chks(oid)),
@@ -139,7 +138,7 @@ export const LegalService = {
     const now = Date.now();
     const byStatus: Record<string, number> = {};
     for (const m of matters) { byStatus[m.status] = (byStatus[m.status] || 0) + 1; }
-    const passRate = checks.length ? checks.filter((c) => c.status === "pass").length / checks.length : 1;
+    const passRate = checks.length ? +(checks.filter((c) => c.status === "pass").length / checks.length).toFixed(2) : null;
     const upcoming = [...matters.filter((m) => m.dueDate)]
       .sort((a, b) => (a.dueDate || "").localeCompare(b.dueDate || ""))
       .slice(0, 6)
@@ -163,14 +162,19 @@ export const LegalService = {
       contractsExpiring90d: contracts.filter((c) => c.endDate && new Date(c.endDate).getTime() - now < 90 * 86_400_000 && c.status === "signed").length,
       regulatoryUpdates7d: updates.filter((u) => Date.now() - new Date(u.publishedAt).getTime() < 7 * 86_400_000).length,
       openResearchTasks: research.length,
-      compliancePassRate: +passRate.toFixed(2),
-      riskAvg: Math.round(matters.reduce((s, m) => s + m.riskScore, 0) / Math.max(1, matters.length)),
+      compliancePassRate: passRate,
+      riskAvg: matters.length ? Math.round(matters.reduce((s, m) => s + m.riskScore, 0) / matters.length) : null,
       mattersByStatus: byStatus,
       recentMatters: matters.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6),
       recentUpdates: updates.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt)).slice(0, 6),
       recentContracts: contracts.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt)).slice(0, 6),
       upcomingDeadlines: upcoming,
       topRisks: risks,
+      provenance: {
+        compliancePassRate: "pass / recorded checks, or null when none exist. An empty register is not 100% compliant.",
+        riskAvg: "Mean of recorded matter riskScore values, or null when no matters exist.",
+        research: "research() logs the query. It does not invent citations or case identifiers.",
+      },
     };
   },
 
@@ -219,6 +223,76 @@ export const LegalService = {
     await redis.hset(K.r(oid, id), "_doc", s2(item));
     await redis.sadd(K.rs(oid), id);
     return item;
+  },
+
+  async listMatters(oid: string): Promise<LegalMatter[]> {
+    const ids = await redis.smembers(K.ms(oid));
+    const out: LegalMatter[] = [];
+    for (const id of ids) {
+      const r = await redis.hgetall(K.m(oid, id));
+      if (r._doc) out.push(JSON.parse(r._doc));
+    }
+    return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  },
+
+  async listContracts(oid: string): Promise<Contract[]> {
+    const ids = await redis.smembers(K.cs(oid));
+    const out: Contract[] = [];
+    for (const id of ids) {
+      const r = await redis.hgetall(K.c(oid, id));
+      if (r._doc) out.push(JSON.parse(r._doc));
+    }
+    return out.sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+  },
+
+  async listUpdates(oid: string): Promise<RegulatoryUpdate[]> {
+    const ids = await redis.smembers(K.us(oid));
+    const out: RegulatoryUpdate[] = [];
+    for (const id of ids) {
+      const r = await redis.hgetall(K.u(oid, id));
+      if (r._doc) out.push(JSON.parse(r._doc));
+    }
+    return out.sort((a, b) => b.publishedAt.localeCompare(a.publishedAt));
+  },
+
+  async listResearch(oid: string): Promise<LegalResearchItem[]> {
+    const ids = await redis.smembers(K.rs(oid));
+    const out: LegalResearchItem[] = [];
+    for (const id of ids) {
+      const r = await redis.hgetall(K.r(oid, id));
+      if (r._doc) out.push(JSON.parse(r._doc));
+    }
+    return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  },
+
+  async createContract(oid: string, userId: string, input: {
+    title: string; counterparty: string; type: Contract["type"]; valueUsd?: number;
+  }): Promise<Contract> {
+    const id = uid("ctr-");
+    const now = new Date().toISOString();
+    const ct: Contract = {
+      id, title: input.title, counterparty: input.counterparty, type: input.type,
+      status: "draft", valueUsd: input.valueUsd, riskFlags: [], clausesCount: 0,
+      owner: userId, version: 1, updatedAt: now,
+    };
+    await redis.hset(K.c(oid, id), "_doc", s2(ct));
+    await redis.sadd(K.cs(oid), id);
+    return ct;
+  },
+
+  async createUpdate(oid: string, input: {
+    jurisdiction: string; title: string; topic: string; impact: RegulatoryUpdate["impact"]; summary?: string;
+  }): Promise<RegulatoryUpdate> {
+    const id = uid("reg-");
+    const now = new Date().toISOString();
+    const ru: RegulatoryUpdate = {
+      id, jurisdiction: input.jurisdiction, title: input.title, topic: input.topic,
+      impact: input.impact, summary: input.summary ?? input.title,
+      acknowledged: false, publishedAt: now,
+    };
+    await redis.hset(K.u(oid, id), "_doc", s2(ru));
+    await redis.sadd(K.us(oid), id);
+    return ru;
   },
 
   async acknowledgeUpdate(id: string, oid: string, userId?: string): Promise<RegulatoryUpdate | null> {

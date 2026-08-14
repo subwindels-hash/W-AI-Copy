@@ -7210,8 +7210,8 @@ function RoboticsTab() {
       <Stat label="Offline" value={data.offline} tone="crimson"/>
       <Stat label="Sites" value={data.sites} tone="azure"/>
       <Stat label="Tasks Today" value={data.tasksCompletedToday} tone="teal"/>
-      <Stat label="Avg Battery" value={`${data.avgBatteryPct}%`} tone="emerald"/>
-      <Stat label="Avg CPU" value={`${data.avgCpuPct}%`} tone="amber"/>
+      <Stat label="Avg Battery" value={data.avgBatteryPct == null ? "—" : `${data.avgBatteryPct}%`} tone="emerald"/>
+      <Stat label="Avg CPU" value={data.avgCpuPct == null ? "—" : `${data.avgCpuPct}%`} tone="amber"/>
       <Stat label="Predictive Alerts" value={data.predictiveAlerts} tone={data.predictiveAlerts?"amber":"emerald"}/>
     </div>
     <div className="grid md:grid-cols-3 gap-3">
@@ -7594,7 +7594,7 @@ function QuantumTab() {
       <Stat label="Readiness" value={data.readiness} tone="azure"/>
       <Stat label="Crypto Systems" value={data.cryptoInventory} tone="violet"/>
       <Stat label="Vulnerable" value={data.vulnerableCount} tone="crimson"/>
-      <Stat label="Migrated" value={`${(data.migrationPct||0).toFixed(0)}%`} tone="emerald"/>
+      <Stat label="Migrated" value={data.migrationPct == null ? "—" : `${data.migrationPct}%`} tone="emerald"/>
       <Stat label="Hybrid Jobs" value={data.hybridJobs} tone="fuchsia"/>
       <Stat label="Completed 30d" value={data.completedJobs30d} tone="teal"/>
       <Stat label="PQ Algorithms" value={(data.pqAlgorithmsSupported||[]).length} tone="amber"/>
@@ -7762,8 +7762,8 @@ function LegalTab() {
       <Stat label="Contracts" value={data.contractsActive} tone="violet"/>
       <Stat label="Expiring 90d" value={data.contractsExpiring90d} tone="amber"/>
       <Stat label="Reg Updates 7d" value={data.regulatoryUpdates7d} tone="fuchsia"/>
-      <Stat label="Compliance" value={`${(data.compliancePassRate*100||0).toFixed(0)}%`} tone="emerald"/>
-      <Stat label="Avg Risk" value={(data.riskAvg||0).toFixed(1)} tone={data.riskAvg>50?"crimson":"emerald"}/>
+      <Stat label="Compliance" value={data.compliancePassRate == null ? "—" : `${Math.round(data.compliancePassRate * 100)}%`} tone="emerald"/>
+      <Stat label="Avg Risk" value={data.riskAvg == null ? "—" : data.riskAvg} tone={data.riskAvg != null && data.riskAvg > 50 ? "crimson" : "emerald"}/>
       <Stat label="Open Research" value={data.openResearchTasks} tone="teal"/>
     </div>
     <div className="grid md:grid-cols-2 gap-3">
@@ -7811,9 +7811,9 @@ function EducationTab() {
       <Stat label="Published" value={data.publishedContent} tone="emerald"/>
       <Stat label="Active Learners" value={data.activeLearners} tone="azure"/>
       <Stat label="Completions 30d" value={data.completions30d} tone="violet"/>
-      <Stat label="Mastery" value={`${(data.avgMasteryPct||0).toFixed(0)}%`} tone="emerald"/>
+      <Stat label="Mastery" value={data.avgMasteryPct == null ? "—" : `${data.avgMasteryPct.toFixed(0)}%`} tone="emerald"/>
       <Stat label="Certs Issued" value={data.certificationsIssued} tone="fuchsia"/>
-      <Stat label="Hours Learned" value={data.hoursLearned30d?.toFixed(0)||0} tone="teal"/>
+      <Stat label="Hours Learned" value={data.hoursLearned30d ?? 0} tone="teal"/>
       <Stat label="Active Tutors" value={data.activeTutorSessions} tone="crimson"/>
       <Stat label="Paths in Progress" value={data.pathsInProgress} tone="azure"/>
     </div>
@@ -7842,7 +7842,7 @@ function EducationTab() {
     <CardContent className="grid md:grid-cols-2 gap-2 text-xs">
       {(data.popularContent||[]).slice(0,8).map((c:any)=>(<div key={c.id} className="p-2 border border-white/5 rounded">
         <div className="font-semibold flex items-center gap-1"><BookOpen className="h-3 w-3 text-amber"/>{c.title}</div>
-        <div className="flex gap-2 text-text-muted"><Badge variant="slate">{c.kind}</Badge><span>★{(c.rating||0).toFixed(1)}</span><span>{c.enrollments||0} enrolled</span></div>
+        <div className="flex gap-2 text-text-muted"><Badge variant="slate">{c.kind}</Badge><span>{c.rating == null ? "unrated" : `★${c.rating.toFixed(1)}`}</span><span>{c.enrollments||0} enrolled</span></div>
       </div>))}
     </CardContent></Card>
   </div>);
@@ -7859,14 +7859,14 @@ function ScientificTab() {
       <div className="text-xs text-text-muted">Literature review, citation analysis, experiment planning, research knowledge graph, hypothesis generation, scientific simulations, publication assistance, cross-institutional collaboration.</div></div>
     </CardContent></Card>
     <div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Papers Indexed" value={(data.papersIndexed/1e6).toFixed(0)+"M"} tone="teal"/>
+      <Stat label="Papers Indexed" value={data.papersIndexed} tone="teal"/>
       <Stat label="Active Experiments" value={data.experimentsActive} tone="azure"/>
       <Stat label="Hypotheses" value={data.hypothesesActive} tone="violet"/>
       <Stat label="Publications" value={data.publicationsInProgress} tone="amber"/>
-      <Stat label="Simulations (30d)" value={data.simulationsRun30d} tone="fuchsia"/>
-      <Stat label="Collaborators" value={data.collaborators} tone="emerald"/>
-      <Stat label="KG Nodes" value={(data.knowledgeGraphNodes/1e6).toFixed(1)+"M"} tone="teal"/>
-      <Stat label="KG Edges" value={(data.knowledgeGraphEdges/1e6).toFixed(0)+"M"} tone="crimson"/>
+      <Stat label="Simulations (30d)" value={data.simulationsRun30d == null ? "—" : data.simulationsRun30d} tone="fuchsia"/>
+      <Stat label="Collaborators" value={data.collaborators == null ? "—" : data.collaborators} tone="emerald"/>
+      <Stat label="KG Nodes" value={data.knowledgeGraphNodes == null ? "—" : data.knowledgeGraphNodes} tone="teal"/>
+      <Stat label="KG Edges" value={data.knowledgeGraphEdges == null ? "—" : data.knowledgeGraphEdges} tone="crimson"/>
     </div>
     <div className="grid md:grid-cols-2 gap-3">
       <Card><CardHeader><CardTitle className="text-sm">Recent Experiments</CardTitle></CardHeader>
@@ -7881,7 +7881,7 @@ function ScientificTab() {
       <CardContent className="space-y-2 text-xs">
         {(data.recentPapers||[]).slice(0,6).map((p:any)=>(<div key={p.id} className="p-2 border border-white/5 rounded">
           <div className="flex items-center gap-2"><BookOpen className="h-3 w-3 text-azure"/><span className="font-semibold flex-1">{p.title}</span><Badge variant="slate">{p.year}</Badge></div>
-          <div className="text-text-muted">{p.authors.join(", ")} · <i>{p.venue}</i> · {p.citations} citations</div>
+          <div className="text-text-muted">{p.authors.join(", ")} · <i>{p.venue}</i> · {p.citations == null ? "citations unrecorded" : `${p.citations} citations`}</div>
         </div>))}
       </CardContent></Card>
     </div>
@@ -7890,7 +7890,7 @@ function ScientificTab() {
       {(data.recentHypotheses||[]).map((h:any)=>(<div key={h.id} className="p-2 border border-white/5 rounded flex items-center gap-2">
         <Target className="h-3 w-3 text-violet"/><span className="flex-1">{h.statement}</span>
         <Badge variant="slate">{h.domain}</Badge>
-        <span className="text-text-muted">conf {(h.confidence*100).toFixed(0)}%</span>
+        <span className="text-text-muted">{h.confidence == null ? "unassessed" : `conf ${(h.confidence*100).toFixed(0)}%`}</span>
         <Badge variant={h.status==="supported"?"emerald":h.status==="refuted"?"crimson":"azure"}>{h.status}</Badge>
       </div>))}
     </CardContent></Card>

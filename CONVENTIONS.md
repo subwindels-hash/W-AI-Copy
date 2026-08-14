@@ -1634,3 +1634,109 @@
   broken. The real value of the completion pass: every module now has a
   console surface, e2e coverage and pinned semantics — and the scanner
   truthfully reports 0 unfinished modules.
+
+### Session 155 — Robotics completion (`robotics`)
+
+- **COMPLETE in the inventory is not the same as finished.** Robotics had
+  six routes and a PlatformPage tab, so the scanner said COMPLETE. It still
+  could not ingest a reading, reported `0` averages on an empty fleet, and
+  implied start/stop reached a machine. The unfinished-module track starts
+  with substance, not the scanner.
+- **HTTP ingest is the live connector; MQTT is a declaration.**
+  `POST /robots/:id/telemetry` stores a `device_reported` reading. Setting
+  `WINDELS_ROBOTICS_MQTT_URL` only moves MQTT from `not_configured` to
+  `configured_not_connected`. Status is never `connected` without a live
+  broker session, and this process does not open one.
+- **Averages are device-reported or null.** Operator-entered and demo_seed
+  robots keep their stored cpu/battery fields (the create/seed shape is
+  unchanged enough that existing UIs compile) but they do not enter
+  `avgCpuPct` / `avgBatteryPct`. An empty or paper fleet is `null`, never
+  `0`. The seed-gate assertion was updated to match.
+- **Commands that only write Redis are `local_state_only`.** The field
+  ships on the robot so a UI cannot present a local status flip as a
+  dispatched order.
+- **Predictive alerts cite a live reading or they do not fire.** Scanning
+  an operator-entered robot with a high stored CPU must not invent a
+  fault. Thresholds (temp ≥ 70 °C, battery ≤ 15 %, CPU ≥ 95 %) are pinned.
+- **Tenant-isolation two-segment rule, again.** Keys are `rob:<entity>:<org>:…`.
+  Catalog `rob:r`, `rob:rs`, `rob:mw`, `rob:mws`, `rob:pa`, `rob:pas`,
+  `rob:tel`. A bare `rob` entry would make the sweep read the literal `r`
+  as an organization id.
+- **Dedicated console, PlatformPage kept.** `/app/robotics` is the
+  completion surface; the buried tab stays and is null-aware. Additive-only
+  held: the original six endpoints keep their paths and envelopes.
+
+### Session 156 — Spatial completion (`spatial`)
+
+- **A read path must never be a seeder.** Spatial's dashboard and four
+  list methods called `ensureBootstrapped()` on first access, and that
+  bootstrap was not gated. A GET invented a campus. The rule: gate the
+  seed, and never invoke it from a read.
+- **`devicesOnline` is a heartbeat window, not a lifetime set.** Counting
+  every fingerprint ever seen (including seeds) made a dark building look
+  occupied. Online = last seen ≤ 120s via `POST /devices/heartbeat` or
+  session create. `devicesSeen` is the lifetime count and is labelled.
+- **This is not a WebXR runtime.** The console says so. A session row is
+  a register entry; ending it flips status. No headset stream is opened.
+
+### Session 157 — Quantum completion (`quantum`)
+
+- **A configured token is not a connected QPU.** `WINDELS_IBM_QUANTUM_TOKEN`
+  (and the Braket/Azure/Cirq/D-Wave peers) only move a connector from
+  `not_configured` to `configured_not_connected`. `connected` is reserved
+  for a live session this process does not open.
+- **`0` qubits available is a measurement.** Disconnected connectors
+  report `qubitsAvailable: null` and `queueDepth: null`, not 0.
+- **Jobs do not complete themselves.** `submitJob` used to pick 20–200
+  qubits and, historically, invent an objective. The job stays `queued`
+  with a note. Qubit count is operator-supplied or omitted.
+- **Empty inventory is `unassessed`, not `planning` at 0% migrated.**
+  `migrationPct` is null when nothing is recorded.
+- **Reads never seed.** Same rule as spatial. Demo inventory still exists
+  behind `WINDELS_DEMO_DATA` and is tagged `demo_seed`.
+
+### Session 158 — Legal completion (`legal`)
+
+- **100% compliant with no checks is a lie.** `compliancePassRate` is null
+  on an empty register. Same for `riskAvg` — 0 is a score, not a gap.
+- **Research logs the question.** It does not mint case identifiers. A
+  Westlaw/Lexis connector would be a later session; until then
+  `citations: []` and a disclosure string.
+- **Reads never seed.** The Acme/Globex campus stays behind
+  `WINDELS_DEMO_DATA`.
+
+### Session 159 — Education completion (`education`)
+
+- **0% mastery with no skills is a lie.** `avgMasteryPct` is null on an
+  empty inventory. Same for catalog `rating` — 0 is a score, not a gap.
+- **`Math.max(1, …)` is a fabricated learner.** `activeLearners` is the
+  distinct userId set across assessments, tutor sessions and paths.
+- **Hours are recorded time, not catalog arithmetic.** `hoursLearned30d`
+  sums assessment `timeSpentSec`. `durationMin × completions` invented
+  study that nobody sat.
+- **A certificate is a passed assessment on `certification_prep` content.**
+  Inferring one from `completions > 10` is a fabricated credential.
+- **Reads never seed.** Demo titles stay behind `WINDELS_DEMO_DATA` and
+  write zeros / null ratings — no RNG enrollments, no fake quizzes.
+- **Lecturer AI is a different surface.** `/app/learn` tutors; `/app/education`
+  is the LMS register. Completing one does not replace the other.
+- **Tenant-isolation two-segment rule, again.** Catalog `edu:c/cs/p/ps/t/ts/a/as/sk/sks`.
+  A bare `edu` entry would make the sweep read the literal `c` as an org id.
+
+### Session 160 — Scientific completion (`scientific`)
+
+- **A millions-scale knowledge graph that does not exist is a lie.**
+  `knowledgeGraphNodes` / `knowledgeGraphEdges` are null, never 0 and never
+  millions. PlatformPage must not divide paper or KG counts by `1e6`.
+- **0 collaborators / 0 simulations / 0 citations tracked is a measurement.**
+  Those fields are null when unmeasured. `citationsTracked` is the sum of
+  recorded `paper.citations`, or null when none are recorded.
+- **A testing hypothesis is not a publication.** `publicationsInProgress`
+  stays 0 until a publication ledger exists.
+- **Round-robin domains are fabricated coverage.** `topDomains` only counts
+  records that carry a domain.
+- **Reads never seed.** Demo literature stays behind `WINDELS_DEMO_DATA` and
+  writes planned/proposed rows with null citations, relevance and confidence.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `sci:exp/exps/pap/paps/hyp/hyps/meta` + `sci:notes`. A bare `sci` entry
+  would make the sweep read the literal `exp` as an org id.

@@ -239,6 +239,75 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   // knowledge by design — there is no organization segment at all.
   { prefix: "rel:sub", scope: "org_scoped" },
   { prefix: "rel:ext", scope: "shared" },
+  // Session 155 robotics fleet / telemetry / alerts / maintenance.
+  // Keys are `rob:<entity>:<org>:…` — org sits in the segment after the
+  // two-segment prefix (same derivation as cam:feed). A bare `rob` entry
+  // is deliberately never added: it would read the literal `r` as an org id.
+  { prefix: "rob:r", scope: "org_scoped" },
+  { prefix: "rob:rs", scope: "org_scoped" },
+  { prefix: "rob:mw", scope: "org_scoped" },
+  { prefix: "rob:mws", scope: "org_scoped" },
+  { prefix: "rob:pa", scope: "org_scoped" },
+  { prefix: "rob:pas", scope: "org_scoped" },
+  { prefix: "rob:tel", scope: "org_scoped" },
+  // Session 156 spatial sessions / maps / waypoints / holo / remote / devices.
+  // Keys are `spa:<entity>:<org>:…`. Bare `spa` is never added.
+  { prefix: "spa:s", scope: "org_scoped" },
+  { prefix: "spa:ss", scope: "org_scoped" },
+  { prefix: "spa:hd", scope: "org_scoped" },
+  { prefix: "spa:hds", scope: "org_scoped" },
+  { prefix: "spa:mp", scope: "org_scoped" },
+  { prefix: "spa:mps", scope: "org_scoped" },
+  { prefix: "spa:wp", scope: "org_scoped" },
+  { prefix: "spa:wps", scope: "org_scoped" },
+  { prefix: "spa:rx", scope: "org_scoped" },
+  { prefix: "spa:rxs", scope: "org_scoped" },
+  { prefix: "spa:dev", scope: "org_scoped" },
+  { prefix: "spa:devhb", scope: "org_scoped" },
+  { prefix: "spa:twin", scope: "org_scoped" },
+  // Session 157 quantum inventory / jobs / connector stubs / notes.
+  // Bare `q` is never added (would read `inv` as an org id).
+  { prefix: "q:inv", scope: "org_scoped" },
+  { prefix: "q:invs", scope: "org_scoped" },
+  { prefix: "q:j", scope: "org_scoped" },
+  { prefix: "q:js", scope: "org_scoped" },
+  { prefix: "q:c", scope: "org_scoped" },
+  { prefix: "q:meta", scope: "org_scoped" },
+  { prefix: "qtm:notes", scope: "org_scoped" },
+  // Session 158 legal matters / updates / contracts / research / checks.
+  { prefix: "leg:m", scope: "org_scoped" },
+  { prefix: "leg:ms", scope: "org_scoped" },
+  { prefix: "leg:u", scope: "org_scoped" },
+  { prefix: "leg:us", scope: "org_scoped" },
+  { prefix: "leg:c", scope: "org_scoped" },
+  { prefix: "leg:cs", scope: "org_scoped" },
+  { prefix: "leg:r", scope: "org_scoped" },
+  { prefix: "leg:rs", scope: "org_scoped" },
+  { prefix: "leg:chk", scope: "org_scoped" },
+  { prefix: "leg:chks", scope: "org_scoped" },
+  // Session 159 education catalog / paths / tutors / assessments / skills.
+  // Keys are `edu:<entity>:<org>:…`. Bare `edu` is never added.
+  { prefix: "edu:c", scope: "org_scoped" },
+  { prefix: "edu:cs", scope: "org_scoped" },
+  { prefix: "edu:p", scope: "org_scoped" },
+  { prefix: "edu:ps", scope: "org_scoped" },
+  { prefix: "edu:t", scope: "org_scoped" },
+  { prefix: "edu:ts", scope: "org_scoped" },
+  { prefix: "edu:a", scope: "org_scoped" },
+  { prefix: "edu:as", scope: "org_scoped" },
+  { prefix: "edu:sk", scope: "org_scoped" },
+  { prefix: "edu:sks", scope: "org_scoped" },
+  // Session 160 scientific experiments / papers / hypotheses / notes.
+  // Keys are `sci:<entity>:<org>:…`. Bare `sci` is never added — it would
+  // read the literal `exp` as an organization id.
+  { prefix: "sci:exp", scope: "org_scoped" },
+  { prefix: "sci:exps", scope: "org_scoped" },
+  { prefix: "sci:pap", scope: "org_scoped" },
+  { prefix: "sci:paps", scope: "org_scoped" },
+  { prefix: "sci:hyp", scope: "org_scoped" },
+  { prefix: "sci:hyps", scope: "org_scoped" },
+  { prefix: "sci:meta", scope: "org_scoped" },
+  { prefix: "sci:notes", scope: "org_scoped" },
   // Session 144 politics update engine: org-scoped change requests
   // (pol:upd). Shape: `pol:upd:idx:<org>` / `pol:upd:i:<org>:<id>` — org in
   // the segment after the index marker (usg:evt/pay:tx shape).
