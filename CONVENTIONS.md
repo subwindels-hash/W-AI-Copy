@@ -1898,3 +1898,50 @@
 - **Tenant-isolation two-segment rule, again.** Catalog
   `cst:active/policy/policies/c/cs/v/m`. A bare `cst` entry would make the
   sweep read the literal `active` as an organization id.
+
+### Session 164 — Licensing completion (`licensing`)
+
+- **A counter is not a window — and on a financial figure that is a
+  misstatement, not a rounding error.** `revenueCents30d` was incremented on
+  every usage event and never decayed, so it reported lifetime revenue under a
+  30-day label. The giveaway was structural: it was *always exactly equal* to
+  `revenueCentsAllTime`. Two fields that can never diverge are one field with
+  two names. Revenue is now summed from the royalty ledger, which makes the
+  window real and the two figures independent.
+- **A liability you cannot discharge is not a liability, it is a growing
+  number.** `payoutsPendingCents` only ever increased: no code path could mark
+  a royalty paid, and `RoyaltyEntry.paid` was written `false` and never
+  updated. Any accrual field needs a settlement path shipped alongside it, or
+  the dashboard is quoting a debt that can only grow.
+- **Write-only data is a design smell that hides missing features.** Every
+  usage event wrote `lic:r:<oid>:<id>` and a `lic:rs` zset entry, and nothing
+  ever read either. The ledger — the actual record of who is owed what — was
+  invisible to the API. If a store has no reader, either delete it or expose
+  it; leaving it is a feature that looks implemented from the inside.
+- **Never fabricate a rate to keep a transaction alive.** `recordUsage` fell
+  back to `{ revenueSharePct: 10 }` when the grant's asset was missing and
+  recorded the charge regardless. A billing event against a nonexistent asset
+  is an error. Likewise `revenueSharePct ?? 10` invented a split for assets
+  that declared none — it is now `0`, and the applied rate is recorded on the
+  entry so a payout can be audited without reading the source.
+- **A fee that appears in no type and no response cannot be audited.** A bare
+  `usageCents * 0.2` took a fifth of every transaction. `PLATFORM_FEE_PCT`
+  now lives in the shared contract and is echoed on every `RoyaltyEntry`.
+- **A status value the code never assigns is a promise the type makes and the
+  service breaks.** `LicenseGrant.status` included `"expired"` and `grant()`
+  accepted `expiresAt`, but nothing ever compared them — so an expired grant
+  stayed active, counted as a live licence and kept billing. When a union has
+  a terminal state, something must be able to reach it.
+- **Two services can share a class name.** `platformServices/licensing.service.ts`
+  (S251, signed licence keys, well tested) and `licensing/licensing.service.ts`
+  (S52, monetization, zero tests) both export `LicensingService`. The existing
+  "licence verification" tests in `moduleGates.test.ts` cover the *former*, so
+  the latter looked tested and was not. Check which import a test actually
+  resolves before crediting a module with coverage.
+- **Say when money is notional.** No payment processor is wired: settling marks
+  the ledger and moves nothing. Rather than let a dollar figure imply a
+  transfer, `payoutsSettleable: false` ships in the contract and both the new
+  console and the PlatformPage tab carry a "ledger only" banner.
+- **Tenant-isolation two-segment rule, again.** Catalog
+  `lic:a/as/g/gs/ag/r/rs/m`. A bare `lic` entry would make the sweep read the
+  literal `a` as an organization id.

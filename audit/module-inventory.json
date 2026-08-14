@@ -1419,6 +1419,7 @@
       "knowledge.spec.ts",
       "leadPipeline.spec.ts",
       "legal.spec.ts",
+      "licensing.spec.ts",
       "lifePrinciples.spec.ts",
       "marketplace.spec.ts",
       "mediaPublishing.spec.ts",
@@ -7131,15 +7132,16 @@
     "backend": {
       "serviceDir": "apps/api/src/licensing",
       "serviceFile": {
-        "file": "licensing.service.ts",
-        "path": "/home/user/WIN/apps/api/src/licensing/licensing.service.ts",
-        "sloc": 139,
+        "file": "licensing.service.test.ts",
+        "path": "/home/user/WIN/apps/api/src/licensing/licensing.service.test.ts",
+        "sloc": 288,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 283,
+      "serviceTotalSloc": 899,
       "serviceFiles": [
         "bootstrap.ts",
+        "licensing.service.test.ts",
         "licensing.service.ts",
         "licensing/licensing.service.ts"
       ],
@@ -7151,11 +7153,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/licensing.ts",
-        "sloc": 30,
+        "sloc": 114,
         "counts": {
-          "total": 6,
-          "GET": 3,
-          "POST": 3,
+          "total": 9,
+          "GET": 4,
+          "POST": 5,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -7164,21 +7166,26 @@
           "GET /dashboard/rollup",
           "GET /assets",
           "GET /grants",
+          "GET /royalties",
           "POST /assets",
           "POST /grants",
-          "POST /usage"
+          "POST /grants/cancel",
+          "POST /usage",
+          "POST /payouts/settle"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/licensing.ts (112 LOC)",
+    "sharedTypes": "packages/shared/src/licensing.ts (161 LOC)",
     "web": {
-      "client": "apps/web/src/lib/licensing.ts (16 LOC)",
+      "client": "apps/web/src/lib/licensing.ts (24 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
+        "Message",
         "Invoice",
         "Plugin"
       ],
@@ -7186,6 +7193,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "licensing.spec.ts",
+      "licensing/licensing.service.test.ts",
       "config/moduleGates.test.ts"
     ],
     "syntheticData": [],
@@ -10911,11 +10920,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 650,
+        "sloc": 664,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1476,
+      "serviceTotalSloc": 1504,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -11522,6 +11531,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "licensing.spec.ts",
       "publicApi.spec.ts",
       "sessions54-60.spec.ts",
       "usage.spec.ts",

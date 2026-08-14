@@ -67,6 +67,7 @@ import {
   School,
   FlaskConical,
   Scale,
+  DollarSign,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -142,6 +143,7 @@ const navItems = [
   { to: "/app/cyber", icon: Shield, label: "Cyber & Cloud Posture" },
   { to: "/app/voice-studio", icon: Mic, label: "Voice Studio (Org)" },
   { to: "/app/constitution", icon: Scale, label: "Constitution" },
+  { to: "/app/licensing", icon: DollarSign, label: "Licensing" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },
   { to: "/app/spatial", icon: Box, label: "Spatial" },
   { to: "/app/quantum", icon: Atom, label: "Quantum Readiness" },

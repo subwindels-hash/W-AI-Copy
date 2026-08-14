@@ -6867,9 +6867,17 @@ function LicensingTab() {
       <Stat label="Assets" value={d.totalAssets} tone="emerald" sub={`${d.listedAssets} listed`}/>
       <Stat label="Active Licenses" value={d.activeLicenses} tone="azure"/>
       <Stat label="30d Revenue" value={`$${(d.revenueCents30d/100).toFixed(2)}`} tone="teal"/>
-      <Stat label="Pending Payouts" value={`$${(d.payoutsPendingCents/100).toFixed(2)}`} tone="amber"/>
+      <Stat label="Pending Payouts" value={`$${(d.payoutsPendingCents/100).toFixed(2)}`} tone="amber" sub="ledger only"/>
       <Stat label="All-Time Rev" value={`$${(d.revenueCentsAllTime/100).toFixed(2)}`} tone="violet"/>
     </div>)}
+    {/* S164: these are ledger figures. No payment processor is wired, so a
+        pending payout is an accrued balance, not a transfer in flight. */}
+    {d && !d.payoutsSettleable && (
+      <div className="text-xs text-text-muted border border-white/10 rounded p-2">
+        Revenue and payouts are ledger figures only — no payment processor is connected, so
+        settling a payout marks the record and moves no money.
+      </div>
+    )}
     <div className="grid md:grid-cols-3 gap-3">
       <Card>
         <CardHeader><CardTitle className="text-sm">Register Asset</CardTitle></CardHeader>

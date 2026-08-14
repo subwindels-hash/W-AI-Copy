@@ -279,6 +279,20 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "cst:cs", scope: "org_scoped" },
   { prefix: "cst:v", scope: "org_scoped" },
   { prefix: "cst:m", scope: "org_scoped" },
+  // Session 164 licensing & monetization — licensed assets, grants, the
+  // royalty ledger and payout balances. Keys were already `lic:<entity>:<org>:…`
+  // but all six routes called the service with no organization, so everything
+  // defaulted to org-windels: one tenant's metered usage credited another
+  // tenant's revenue and pending-payout balance. Bare `lic` is deliberately
+  // never added — it would read the literal `a` as an organization id.
+  { prefix: "lic:a", scope: "org_scoped" },
+  { prefix: "lic:as", scope: "org_scoped" },
+  { prefix: "lic:g", scope: "org_scoped" },
+  { prefix: "lic:gs", scope: "org_scoped" },
+  { prefix: "lic:ag", scope: "org_scoped" },
+  { prefix: "lic:r", scope: "org_scoped" },
+  { prefix: "lic:rs", scope: "org_scoped" },
+  { prefix: "lic:m", scope: "org_scoped" },
   // Session 161 cyber academy — labs, findings, certifications, ranges.
   // Keys are `csec:<entity>:<org>:…`. Bare `csec` is deliberately never added:
   // it would read the literal `lab` as an organization id. `cy:notes` is the
