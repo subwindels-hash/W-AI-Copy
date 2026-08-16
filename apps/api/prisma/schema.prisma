@@ -278,6 +278,7 @@ model User {
   moduleReleasesInstalled   PlatformModuleRelease[] @relation("module_release_installed_by")
   platformModulesInstalled  PlatformModule[]        @relation("platform_module_installed_by")
   moduleOperations          PlatformModuleOperation[] @relation("module_operation_requested_by")
+  externalAgentRuns         ExternalAgentRun[]        @relation("external_agent_run_requested_by")
 
   @@index([role])
   @@index([createdAt])
@@ -349,6 +350,7 @@ model Organization {
   nfcCards           NfcCard[]
   nfcProfiles        NfcProfile[]
   nfcOperations      NfcOperation[]
+  externalAgentRuns  ExternalAgentRun[]
 }
 
 model Workspace {
@@ -481,6 +483,7 @@ model Agent {
   memories      AgentMemory[]
   knowledge     AgentKnowledge[]
   events        AgentEvent[]
+  externalRuns  ExternalAgentRun[]
   talkMemberships       TalkMember[]
   talkMessages          TalkMessage[]
   meetingParticipations MeetingParticipant[]
@@ -1059,6 +1062,7 @@ model ApiKey {
   updatedAt      DateTime      @updatedAt
 
   usage          ApiUsageRecord[]
+  externalAgentRuns ExternalAgentRun[]
   @@index([organizationId])
   @@index([appId])
 }
@@ -1628,12 +1632,25 @@ model ApiUsageRecord {
   sourceIp       String?
   environment    String   @default("production")
   permission     String   // the scope decision that granted the request
+  requestId      String?
+  model          String?
+  provider       String?
+  toolCalls      Int      @default(0)
+  actualCostMicros Int?
+  errorCode      String?
+  agentRuns      Int      @default(0)
+  workflowExecutions Int  @default(0)
+  images         Int      @default(0)
+  audioSeconds   Int      @default(0)
+  storageBytes   Int      @default(0)
   createdAt      DateTime @default(now())
 
   @@index([organizationId, createdAt])
   @@index([apiKeyId])
   @@index([endpoint])
   @@index([appId])
+  @@index([requestId])
+  @@index([model])
 }
 
 // ─────────────────── Session: Contact & Support Center ───────────────────
@@ -2834,4 +2851,55 @@ model PlatformModuleOperation {
   @@index([moduleRegistryId, createdAt])
   @@index([status, createdAt])
   @@map("platform_module_operations")
+}
+
+// ─── Native AI API — externally invoked WINDELS agent runs ──────────────────
+model ExternalAgentRun {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agentId        String
+  agent          Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  apiKeyId       String?
+  apiKey         ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  requestedById  String
+  requestedBy    User         @relation("external_agent_run_requested_by", fields: [requestedById], references: [id], onDelete: Restrict)
+  idempotencyKey String
+  status         String       @default("running")
+  model          String?
+  input          Json
+  output         Json         @default("{}")
+  usage          Json         @default("{}")
+  provider       String?
+  toolCalls      Int          @default(0)
+  errorCode      String?
+  errorMessage   String?
+  cancelRequestedAt DateTime?
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  messages       ExternalAgentMessage[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, createdAt])
+  @@index([agentId, createdAt])
+  @@index([apiKeyId])
+  @@index([status])
+  @@map("external_agent_runs")
+}
+
+model ExternalAgentMessage {
+  id         String           @id @default(cuid())
+  runId      String
+  run        ExternalAgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  role       String
+  content    String           @db.Text
+  toolCallId String?
+  metadata   Json             @default("{}")
+  createdAt  DateTime         @default(now())
+
+  @@index([runId, createdAt])
+  @@map("external_agent_messages")
 }

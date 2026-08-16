@@ -136,7 +136,19 @@ export type AuditAction =
   | "module.removed"
   | "module.remove_failed"
   | "module.runtime_read"
-  | "module.runtime_write";
+  | "module.runtime_write"
+  // Native AI API
+  | "native_api.request"
+  | "native_api.models_listed"
+  | "native_api.chat_completed"
+  | "native_api.chat_streamed"
+  | "native_api.response_completed"
+  | "native_api.embeddings_created"
+  | "native_api.file_uploaded"
+  | "native_api.image_generated"
+  | "native_api.speech_generated"
+  | "native_api.audio_transcribed"
+  | "native_api.agent_executed";
 
 export type AuditResourceType =
   | "user"
@@ -168,6 +180,7 @@ export type AuditResourceType =
   | "module_upload"
   | "module_release"
   | "platform_module"
+  | "native_ai_request"
   | "custom";
 
 export interface AuditLogCreateInput {

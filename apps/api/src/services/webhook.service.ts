@@ -38,6 +38,11 @@ export const WEBHOOK_EVENTS = [
   "agent.completed",
   "agent.failed",
   "agent.started",
+  "agent.run.started",
+  "agent.run.requires_action",
+  "agent.run.completed",
+  "agent.run.failed",
+  "agent.run.cancelled",
   "ai.job.completed",
   "ai.job.failed",
   // Messaging / collaboration

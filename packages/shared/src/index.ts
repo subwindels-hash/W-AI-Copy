@@ -155,3 +155,4 @@ export * from "./pluginOs.js";
 export * from "./nfc.js";
 export * from "./developerPlatform.js";
 export * from "./moduleCenter.js";
+export * from "./nativeAiApi.js";

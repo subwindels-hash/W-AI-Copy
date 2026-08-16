@@ -55,7 +55,7 @@ describe("public API keys", () => {
   it("returns the plaintext key once and stores only a hash", async () => {
     const created: any = await apikeys.createApiKey(USER_A, { name: "ci", scopes: ["READ"] } as any);
     const token = created.token ?? created.key ?? created.plaintext;
-    expect(String(token)).toMatch(/^wnd_/);
+    expect(String(token)).toMatch(/^WND_/);
     const row = db.tables.get("ApiKey")![0];
     // The raw token must never be persisted.
     expect(JSON.stringify(row)).not.toContain(String(token));
@@ -69,6 +69,17 @@ describe("public API keys", () => {
     expect(await apikeys.verifyApiKey("wnd_not_a_real_key")).toBeNull();
     // A token without the prefix is rejected before any DB lookup.
     expect(await apikeys.verifyApiKey("bearer-ish-nonsense")).toBeNull();
+  });
+
+  it("rotates atomically, returns the replacement once, and invalidates the old secret", async () => {
+    const created: any = await apikeys.createApiKey(USER_A, { name: "rotate", scopes: ["READ", "WRITE"], granularScopes: ["models:read", "ai:execute"] } as any);
+    const oldToken = created.key;
+    const replacement: any = await apikeys.rotateApiKey(USER_A, created.id);
+    expect(replacement.key).toMatch(/^WND_/);
+    expect(replacement.key).not.toBe(oldToken);
+    expect(await apikeys.verifyApiKey(oldToken)).toBeNull();
+    expect(await apikeys.verifyApiKey(replacement.key)).toBeTruthy();
+    expect(JSON.stringify(db.tables.get("ApiKey"))).not.toContain(replacement.key);
   });
 
   it("rejects a revoked key", async () => {

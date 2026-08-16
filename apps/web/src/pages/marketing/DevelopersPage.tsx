@@ -42,7 +42,7 @@ npm install @windels/sdk
 
 # Trigger a workflow run with curl
 curl -X POST https://api.windels.ai/api/rest/v1/workflows/wf_abc123/run \\
-  -H "Authorization: Bearer wnd_your_key_here" \\
+  -H "Authorization: Bearer WND_your_key_here" \\
   -H "Content-Type: application/json" \\
   -d '{"input": {"customerId": "cus_42", "tier": "pro"}}'
 

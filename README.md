@@ -100,6 +100,7 @@ tests/e2e/                # Playwright specs
 | [docs/SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md) | Four-layer architecture overview |
 | [docs/NFC_CARD_MANAGER.md](./docs/NFC_CARD_MANAGER.md) | NFC architecture, security/API model, capability truth table, PC/SC prerequisites, and mandatory real-hardware qualification protocol |
 | [docs/MODULE_PLUGIN_CENTER.md](./docs/MODULE_PLUGIN_CENTER.md) | Signed `.wmod` format, fail-closed verification, isolated Module Runner contract, Super Admin lifecycle, runtime registration, rollback, and production validation |
+| [docs/NATIVE_AI_API.md](./docs/NATIVE_AI_API.md) | Native `/v1` AI provider API, WND keys, truthful model routing, SSE, external tool/agent loops, multimodal adapters, metering, billing, OpenAPI and production acceptance |
 | [docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md) | Install, build, systemd/nginx deploy, backup, troubleshooting |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |

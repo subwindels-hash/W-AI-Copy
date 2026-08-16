@@ -1,4 +1,5 @@
 import { Router } from "express";
+import { z } from "zod";
 import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import type { ApiEnvelope } from "@windels/shared/api";
@@ -9,7 +10,7 @@ import {
   AkApiKeyUpdateSchema,
 } from "@windels/shared/apiKeys";
 import { PubUsageQuerySchema } from "@windels/shared/publicApi";
-import { createApiKey, deleteApiKey, getApiKey, listApiKeys, updateApiKey } from "../../publicApi/publicApi.service.js";
+import { createApiKey, deleteApiKey, getApiKey, listApiKeys, rotateApiKey, updateApiKey } from "../../publicApi/publicApi.service.js";
 import { publicApiUsage } from "../../publicApi/publicApiUsage.service.js";
 import { resolveUserContext } from "../../services/workspace.service.js";
 
@@ -44,6 +45,13 @@ export function registerApiKeyRoutes(router: Router) {
       const envelope: ApiEnvelope<typeof data> = { ok: true, data, meta: meta(req) };
       res.json(envelope);
     } catch (e) { next(e); }
+  });
+
+  keys.post("/:id/revoke", validate({ params: AkApiKeyIdSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await updateApiKey(req.user!.id, req.params.id, { revoked: true }), meta: meta(req) }); } catch (e) { next(e); }
+  });
+  keys.post("/:id/rotate", validate({ params: AkApiKeyIdSchema, body: z.object({ expiresInDays: z.number().int().min(1).max(365).optional() }) }), async (req, res, next) => {
+    try { res.status(201).json({ ok: true, data: await rotateApiKey(req.user!.id, req.params.id, req.body.expiresInDays), meta: meta(req) }); } catch (e) { next(e); }
   });
 
   keys.get("/:id", validate({ params: AkApiKeyIdSchema }), async (req, res, next) => {

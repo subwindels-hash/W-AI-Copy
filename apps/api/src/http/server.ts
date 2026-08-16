@@ -167,6 +167,7 @@ import { registerNfcRoutes } from "./routes/nfc.js";
 import { registerPublicNfcRoutes } from "./routes/nfcPublic.js";
 import { registerModuleCenterRoutes } from "./routes/moduleCenter.js";
 import { registerModuleRuntimeRoutes } from "./routes/moduleRuntime.js";
+import { registerNativeAiApiRoutes } from "./routes/nativeAiApi.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
 import { logger } from "../observability/logger.js";
@@ -1506,6 +1507,12 @@ export function createApp() {
 
   app.get("/healthz", (_req, res) => res.send("ok"));
   app.use("/api/v1", v1);
+
+  // Native AI provider surface. It deliberately lives at top-level /v1 while
+  // the existing /api/rest/v1 gateway remains mounted and unchanged.
+  const nativeAiRouter = express.Router();
+  registerNativeAiApiRoutes(nativeAiRouter);
+  app.use("/v1", rateLimit("apiGlobal"), nativeAiRouter);
 
   // Public API Gateway (api-key authenticated, stable REST surface)
   const publicRouter = express.Router();

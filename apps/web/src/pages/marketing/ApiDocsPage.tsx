@@ -26,7 +26,7 @@ const AGENT_EXAMPLES: Example[] = [
     input={"message": "Analyze this business data"}
 )` },
   { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/agents/agent_id/execute \\
-  -H "Authorization: Bearer wnd_your_key" \\
+  -H "Authorization: Bearer WND_your_key" \\
   -H "Content-Type: application/json" \\
   -d '{"message": "Analyze this business data"}'` },
   { lang: "TypeScript", code: `const result = await windels.agents.execute<string>({
@@ -36,49 +36,55 @@ const AGENT_EXAMPLES: Example[] = [
 ];
 
 const ENDPOINTS: Endpoint[] = [
+  { method: "GET", path: "/v1/models", scope: "models:read", desc: "List only currently health-verified WINDELS public model aliases.", examples: [{ lang: "cURL", code: `curl https://api.windels.ai/v1/models -H "Authorization: Bearer WND_your_key"` }] },
+  { method: "POST", path: "/v1/chat/completions", scope: "ai:execute", desc: "Create a standard or SSE-streamed chat completion using windels-native.", examples: [{ lang: "cURL", code: `curl https://api.windels.ai/v1/chat/completions \\
+  -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" \\
+  -d '{"model":"windels-native","messages":[{"role":"user","content":"Hello"}]}'` }] },
+  { method: "POST", path: "/v1/responses", scope: "ai:execute", desc: "Create a unified WINDELS response object.", examples: [{ lang: "cURL", code: `curl https://api.windels.ai/v1/responses -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" -d '{"model":"windels-native","input":"Analyze this plan"}'` }] },
+  { method: "POST", path: "/v1/embeddings", scope: "ai:execute", desc: "Create real provider-backed embeddings; hash fallback is never exposed.", examples: [{ lang: "cURL", code: `curl https://api.windels.ai/v1/embeddings -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" -d '{"model":"windels-embedding","input":"knowledge"}'` }] },
   { method: "GET", path: "/api/rest/v1", scope: "any key", desc: "Gateway identity + organization.", examples: [
-    { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1 -H "Authorization: Bearer wnd_your_key"` },
+    { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1 -H "Authorization: Bearer WND_your_key"` },
   ]},
   { method: "GET", path: "/api/rest/v1/agents", scope: "agents:read", desc: "List AI agents in your organization.", examples: [
-    { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1/agents -H "Authorization: Bearer wnd_your_key"` },
+    { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1/agents -H "Authorization: Bearer WND_your_key"` },
   ]},
   { method: "POST", path: "/api/rest/v1/agents/:id/execute", scope: "agents:execute", desc: "Execute an AI agent with structured input.", examples: AGENT_EXAMPLES },
   { method: "POST", path: "/api/rest/v1/ai/complete", scope: "ai:execute", desc: "Run an AI completion.", examples: [
     { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/ai/complete \\
-  -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" \\
   -d '{"messages":[{"role":"user","content":"Hello"}]}'` },
   ]},
   { method: "GET", path: "/api/rest/v1/workflows", scope: "workflows:read", desc: "List workflows.", examples: [
-    { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1/workflows -H "Authorization: Bearer wnd_your_key"` },
+    { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1/workflows -H "Authorization: Bearer WND_your_key"` },
   ]},
   { method: "POST", path: "/api/rest/v1/workflows/:id/execute", scope: "workflows:execute", desc: "Trigger a workflow execution.", examples: [
     { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/workflows/wf_1/execute \\
-  -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" \\
   -d '{"input":{"customerId":"cus_42"}}'` },
   ]},
   { method: "GET", path: "/api/rest/v1/knowledge/search", scope: "knowledge:read", desc: "Search approved knowledge.", examples: [
-    { lang: "cURL", code: `curl "https://api.windels.ai/api/rest/v1/knowledge/search?q=growth" -H "Authorization: Bearer wnd_your_key"` },
+    { lang: "cURL", code: `curl "https://api.windels.ai/api/rest/v1/knowledge/search?q=growth" -H "Authorization: Bearer WND_your_key"` },
   ]},
   { method: "GET", path: "/api/rest/v1/trading/analysis", scope: "trading:read", desc: "Market & technical analysis (analysis only).", examples: [
-    { lang: "cURL", code: `curl "https://api.windels.ai/api/rest/v1/trading/analysis?symbol=BTCUSDT&timeframe=1d" -H "Authorization: Bearer wnd_your_key"` },
+    { lang: "cURL", code: `curl "https://api.windels.ai/api/rest/v1/trading/analysis?symbol=BTCUSDT&timeframe=1d" -H "Authorization: Bearer WND_your_key"` },
   ]},
   { method: "POST", path: "/api/rest/v1/media/generate", scope: "media:generate", desc: "Generate image, audio or video.", examples: [
     { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/media/generate \\
-  -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" \\
   -d '{"modality":"image","op":"text2image","prompt":"a serene mountain lake"}'` },
   ]},
   { method: "GET", path: "/api/rest/v1/nfc/cards", scope: "nfc:read", desc: "List tenant-scoped NFC cards. Raw UIDs are never returned.", examples: [
     { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1/nfc/cards \\
-  -H "Authorization: Bearer wnd_your_key"` },
+  -H "Authorization: Bearer WND_your_key"` },
   ]},
   { method: "POST", path: "/api/rest/v1/nfc/write", scope: "nfc:write", desc: "Create a capacity-checked, short-lived hardware write plan. This does not write hardware from the cloud.", examples: [
     { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/nfc/write \\
-  -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" \\
   -d '{"cardId":"card_cuid","readerId":"reader_cuid","idempotencyKey":"unique-request-id-123","records":[{"kind":"url","value":"https://profile.example.com","language":"en"}],"previousNdefHash":"verified_sha256","overwriteConfirmed":true}'` },
   ]},
   { method: "POST", path: "/api/rest/v1/nfc/verify", scope: "nfc:write", desc: "Submit hardware read-back evidence. Success is recorded only when read-back bytes match the intended NDEF message.", examples: [
     { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/nfc/verify \\
-  -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
+  -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" \\
   -d '{"operationId":"operation_cuid","operationToken":"short_lived_token","hardwareSucceeded":true,"readbackNdefBase64":"..."}'` },
   ]},
 ];
@@ -86,7 +92,7 @@ const ENDPOINTS: Endpoint[] = [
 const SECTIONS: DocSection[] = [
   { id: "start", title: "Getting Started", body: [
     "Create an account, then generate an API key in the Developer Dashboard (API Keys page).",
-    "Authenticate every request with the key in the Authorization header: `Authorization: Bearer wnd_...`.",
+    "Authenticate every request with the key in the Authorization header: `Authorization: Bearer WND_...`.",
     "Restrict keys by environment (development / test / production), optional IP CIDRs, and granular scopes.",
     "Your first call: GET /api/rest/v1 returns the gateway identity and your organization name.",
   ]},
@@ -104,6 +110,12 @@ const SECTIONS: DocSection[] = [
     "A WINDELS Desktop PC/SC bridge, supported mobile native adapter, or Web NFC client performs local I/O. Web NFC is read-only in WINDELS when capacity cannot be established safely.",
     "Writes are denied until the exact reader, driver/OS stack, and card technology have a recorded real-hardware qualification. The API returns UNVERIFIED rather than guessing support.",
     "Use nfc:admin only for erase, permanent lock, or protection requests. Lock/protection still require explicit irreversible confirmation and hardware read-back evidence.",
+  ]},
+  { id: "native-ai", title: "Native AI API", body: [
+    "The additive top-level base URL is https://api.windels.ai/v1. The existing /api/rest/v1 gateway remains supported.",
+    "Public aliases hide internal provider routing. `windels-native` is listed only when a real chat provider passes health checks; embeddings and multimodal aliases follow the same rule.",
+    "The surface follows familiar OpenAI patterns where tested, but WINDELS does not claim complete compatibility. Unsupported combinations return explicit errors.",
+    "Download OpenAPI 3.1 from GET /v1/openapi.json.",
   ]},
   { id: "errors", title: "Errors", body: [
     "401 Unauthorized — missing or invalid API key.",

@@ -17,6 +17,8 @@ import { z } from "zod";
 export const API_SCOPE_CATALOG = [
   "ai:read",
   "ai:execute",
+  "models:read",
+  "tools:execute",
   "agents:read",
   "agents:execute",
   "workflows:read",
@@ -25,7 +27,13 @@ export const API_SCOPE_CATALOG = [
   "memory:write",
   "knowledge:read",
   "knowledge:write",
+  "knowledge:search",
   "search:read",
+  "files:read",
+  "files:write",
+  "images:generate",
+  "audio:generate",
+  "audio:transcribe",
   "media:generate",
   "voice:generate",
   "documents:generate",
@@ -40,14 +48,15 @@ export const API_SCOPE_CATALOG = [
 export type ApiScope = (typeof API_SCOPE_CATALOG)[number];
 
 export const API_SCOPE_GROUPS: Record<string, string[]> = {
-  AI: ["ai:read", "ai:execute"],
+  AI: ["ai:read", "ai:execute", "models:read", "tools:execute"],
   Agents: ["agents:read", "agents:execute"],
   Workflows: ["workflows:read", "workflows:execute"],
   Memory: ["memory:read", "memory:write"],
-  Knowledge: ["knowledge:read", "knowledge:write"],
+  Knowledge: ["knowledge:read", "knowledge:write", "knowledge:search"],
   Search: ["search:read"],
-  Media: ["media:generate", "documents:generate"],
-  Voice: ["voice:generate"],
+  Files: ["files:read", "files:write", "documents:generate"],
+  Media: ["media:generate", "images:generate"],
+  Voice: ["voice:generate", "audio:generate", "audio:transcribe"],
   Analytics: ["analytics:read"],
   Billing: ["billing:read"],
   Marketplace: ["marketplace:read", "marketplace:write"],
@@ -156,6 +165,17 @@ export interface ApiUsageRecordRow {
   sourceIp: string | null;
   environment: string;
   permission: string | null;
+  requestId: string | null;
+  model: string | null;
+  provider: string | null;
+  toolCalls: number;
+  actualCostMicros: number | null;
+  errorCode: string | null;
+  agentRuns: number;
+  workflowExecutions: number;
+  images: number;
+  audioSeconds: number;
+  storageBytes: number;
   createdAt: string;
 }
 
@@ -170,6 +190,13 @@ export interface ApiDashboardMetrics {
   totalTokensIn: number;
   totalTokensOut: number;
   estimatedCostUsd: number;
+  actualCostUsd: number | null;
+  agentRuns: number;
+  toolExecutions: number;
+  workflowExecutions: number;
+  images: number;
+  audioSeconds: number;
+  storageBytes: number;
   byEndpoint: Array<{ endpoint: string; count: number; success: number }>;
   byChannel: Array<{ channel: string; count: number }>;
   daily: Array<{ date: string; requests: number; success: number; failed: number }>;
@@ -182,6 +209,10 @@ export const ApiUsageQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).default(7),
   appId: z.string().cuid().optional(),
   apiKeyId: z.string().cuid().optional(),
+  model: z.string().max(120).optional(),
+  endpoint: z.string().max(160).optional(),
+  environment: z.enum(["development", "test", "production"]).optional(),
+  status: z.coerce.number().int().min(100).max(599).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(20),
 });

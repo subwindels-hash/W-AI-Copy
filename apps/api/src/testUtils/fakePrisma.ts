@@ -201,6 +201,9 @@ export class FakePrisma {
       PlatformModuleRelease: { moduleRegistry: "PlatformModule", upload: "PlatformModuleUpload", operation: "PlatformModuleOperation", uploadedBy: "User", approvedBy: "User", installedBy: "User" },
       PlatformModuleUpload: { release: "PlatformModuleRelease", uploadedBy: "User" },
       PlatformModuleOperation: { moduleRegistry: "PlatformModule", release: "PlatformModuleRelease", requestedBy: "User" },
+      Agent: { externalRun: "ExternalAgentRun" },
+      ExternalAgentRun: { agent: "Agent", apiKey: "ApiKey", requestedBy: "User", message: "ExternalAgentMessage" },
+      ExternalAgentMessage: { run: "ExternalAgentRun" },
     };
     if (parentModel && prefixed[parentModel]?.[singular]) {
       return prefixed[parentModel]![singular]!;
@@ -217,7 +220,7 @@ export class FakePrisma {
     // with a known prefix stripped, so both conventions resolve.
     const candidates = [`${model.charAt(0).toLowerCase()}${model.slice(1)}Id`];
     if (model === "PlatformModule") candidates.unshift("moduleRegistryId");
-    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp", "Nfc", "PlatformModule"]) {
+    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp", "Nfc", "PlatformModule", "ExternalAgent"]) {
       if (model.startsWith(prefix) && model.length > prefix.length) {
         const bare = model.slice(prefix.length);
         candidates.push(`${bare.charAt(0).toLowerCase()}${bare.slice(1)}Id`);

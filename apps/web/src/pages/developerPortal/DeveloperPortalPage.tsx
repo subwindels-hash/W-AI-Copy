@@ -8,10 +8,10 @@
  */
 import { useCallback, useEffect, useState, type ReactNode } from "react";
 import {
-  Activity, BarChart3, BookOpen, Code2, Globe, LayoutDashboard,
+  Activity, BarChart3, BookOpen, Code2, Cpu, Globe, KeyRound, LayoutDashboard,
   Package, Plus, RefreshCw, Trash2, Terminal, Layers, ShieldCheck,
 } from "lucide-react";
-import { developerApi, consoleRequest, type ApiDashboardMetrics, type DeveloperAppRow, type ApiProductRow, type ApiSubscriptionRow } from "@/lib/developerPlatform";
+import { developerApi, consoleRequest, type ApiDashboardMetrics, type ApiScope, type DeveloperAppRow, type ApiProductRow, type ApiSubscriptionRow } from "@/lib/developerPlatform";
 import { apiKeysApi } from "@/lib/apiKeys";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
@@ -20,11 +20,15 @@ import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/Tabs";
 import { toast } from "@/lib/toast";
+import { ApiKeysPage } from "@/pages/apiKeys/ApiKeysPage";
+import type { NativePublicModel } from "@windels/shared/nativeAiApi";
 
-type Tab = "dashboard" | "apps" | "products" | "console" | "docs";
+type Tab = "dashboard" | "keys" | "models" | "apps" | "products" | "console" | "docs";
 
 const TABS: Array<{ id: Tab; label: string; icon: ReactNode }> = [
-  { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-4 w-4" /> },
+  { id: "dashboard", label: "Usage", icon: <LayoutDashboard className="h-4 w-4" /> },
+  { id: "keys", label: "API Keys", icon: <KeyRound className="h-4 w-4" /> },
+  { id: "models", label: "Models", icon: <Cpu className="h-4 w-4" /> },
   { id: "apps", label: "Applications", icon: <Layers className="h-4 w-4" /> },
   { id: "products", label: "API Products", icon: <Package className="h-4 w-4" /> },
   { id: "console", label: "API Console", icon: <Terminal className="h-4 w-4" /> },
@@ -52,7 +56,10 @@ export function DeveloperPortalPage() {
   const [apps, setApps] = useState<DeveloperAppRow[]>([]);
   const [products, setProducts] = useState<ApiProductRow[]>([]);
   const [subs, setSubs] = useState<ApiSubscriptionRow[]>([]);
+  const [models, setModels] = useState<NativePublicModel[]>([]);
   const [days, setDays] = useState(7);
+  const [usageModel, setUsageModel] = useState("");
+  const [usageEnvironment, setUsageEnvironment] = useState("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [maxDaily, setMaxDaily] = useState(1);
@@ -65,16 +72,18 @@ export function DeveloperPortalPage() {
   const loadAll = useCallback(async () => {
     setLoading(true);
     try {
-      const [m, a, p, s] = await Promise.all([
-        developerApi.dashboard(days),
+      const [m, a, p, s, nativeModels] = await Promise.all([
+        developerApi.dashboard(days, { model: usageModel || undefined, environment: usageEnvironment || undefined }),
         developerApi.apps(),
         developerApi.products(),
         developerApi.subscriptions(),
+        developerApi.nativeModels(),
       ]);
       setMetrics(m);
       setApps(a);
       setProducts(p);
       setSubs(s);
+      setModels(nativeModels);
       setMaxDaily(Math.max(1, ...m.daily.map((d) => d.requests)));
       setError(null);
     } catch (e: any) {
@@ -82,7 +91,7 @@ export function DeveloperPortalPage() {
     } finally {
       setLoading(false);
     }
-  }, [days]);
+  }, [days, usageModel, usageEnvironment]);
 
   useEffect(() => { void loadAll(); }, [loadAll]);
 
@@ -113,14 +122,16 @@ export function DeveloperPortalPage() {
         <div>
           <div className="flex items-center gap-2">
             <Code2 className="h-7 w-7 text-azure" />
-            <h1 className="text-2xl font-black text-text-bright">Developer / API Platform</h1>
+            <h1 className="text-2xl font-black text-text-bright">WINDELS AI API Platform</h1>
             <Badge variant="azure">WINDELS AI OS</Badge>
           </div>
           <p className="mt-1 text-sm text-text-muted">
-            Build on WINDELS AI OS — agents, workflows, knowledge, trading intelligence, media and voice through official APIs.
+            Use WINDELS as the intelligence backend for external applications and autonomous agents. Native base URL: https://api.windels.ai/v1
           </p>
         </div>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          <Select value={usageModel} onChange={(e) => setUsageModel(e.target.value)} className="w-44"><option value="">All models</option>{models.map((model) => <option key={model.id} value={model.id}>{model.id}</option>)}</Select>
+          <Select value={usageEnvironment} onChange={(e) => setUsageEnvironment(e.target.value)} className="w-36"><option value="">All environments</option><option value="development">Development</option><option value="test">Test</option><option value="production">Production</option></Select>
           <Select value={String(days)} onChange={(e) => setDays(Number(e.target.value))} className="w-32">
             <option value="1">Last 24h</option>
             <option value="7">Last 7 days</option>
@@ -140,6 +151,8 @@ export function DeveloperPortalPage() {
         </TabsList>
 
       <TabsContent value="dashboard" className="space-y-4"><Dashboard metrics={metrics} maxDaily={maxDaily} loading={loading} /></TabsContent>
+      <TabsContent value="keys" className="space-y-4"><ApiKeysPage /></TabsContent>
+      <TabsContent value="models" className="space-y-4"><ModelCatalog models={models} /></TabsContent>
       <TabsContent value="apps" className="space-y-4">
         <Card>
           <CardHeader><CardTitle>Create application</CardTitle><CardDescription>Register a new developer application under your organization.</CardDescription></CardHeader>
@@ -226,6 +239,10 @@ export function DeveloperPortalPage() {
   );
 }
 
+function ModelCatalog({ models }: { models: NativePublicModel[] }) {
+  return <div className="space-y-4"><div className="rounded-xl border border-azure/30 bg-azure/10 p-4 text-sm text-azure"><strong>Truthful availability:</strong> only health-verified real providers are represented. Demo echo, hash embeddings, simulator media, and unavailable models are never listed.</div><div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">{models.map((model) => <Card key={model.id}><CardHeader><div className="flex items-center justify-between"><Cpu className="h-6 w-6 text-violet" /><Badge variant="emerald">available</Badge></div><CardTitle>{model.id}</CardTitle><CardDescription>Owned by {model.owned_by}</CardDescription></CardHeader><CardContent className="space-y-3"><div className="flex flex-wrap gap-1">{model.capabilities.map((capability) => <Badge key={capability} variant="azure">{capability}</Badge>)}</div><div className="text-xs text-text-muted">Modalities: {model.modalities.join(", ")}{model.context_window ? ` · context ${model.context_window.toLocaleString()}` : ""}{model.max_output_tokens ? ` · output ${model.max_output_tokens.toLocaleString()}` : ""}</div></CardContent></Card>)}{models.length === 0 && <Card className="md:col-span-2 xl:col-span-3"><CardContent className="py-12 text-center text-sm text-text-muted">No real model is currently health-verified. Configure and test an approved provider; no placeholder model is exposed.</CardContent></Card>}</div></div>;
+}
+
 function Dashboard({ metrics, maxDaily, loading }: { metrics: ApiDashboardMetrics | null; maxDaily: number; loading: boolean }) {
   if (loading && !metrics) return <Card><CardContent className="py-12 text-center text-sm text-text-muted">Loading metrics…</CardContent></Card>;
   if (!metrics) return <Card><CardContent className="py-12 text-center text-sm text-text-muted">No usage data yet.</CardContent></Card>;
@@ -238,6 +255,7 @@ function Dashboard({ metrics, maxDaily, loading }: { metrics: ApiDashboardMetric
         <Stat icon={<BarChart3 className="h-5 w-5" />} label="Error rate" value={metrics.errorRatePct === null ? "—" : `${metrics.errorRatePct}%`} hint={`avg ${metrics.avgDurationMs ?? 0}ms`} />
         <Stat icon={<Globe className="h-5 w-5" />} label="Est. cost" value={`$${metrics.estimatedCostUsd.toFixed(4)}`} hint={`${metrics.totalTokensIn.toLocaleString()} in · ${metrics.totalTokensOut.toLocaleString()} out`} />
       </div>
+      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-7"><Stat icon={<Cpu className="h-5 w-5" />} label="Agent runs" value={metrics.agentRuns.toLocaleString()} /><Stat icon={<Code2 className="h-5 w-5" />} label="Tool calls" value={metrics.toolExecutions.toLocaleString()} /><Stat icon={<Layers className="h-5 w-5" />} label="Workflows" value={metrics.workflowExecutions.toLocaleString()} /><Stat icon={<Globe className="h-5 w-5" />} label="Images" value={metrics.images.toLocaleString()} /><Stat icon={<Activity className="h-5 w-5" />} label="Audio seconds" value={metrics.audioSeconds.toLocaleString()} /><Stat icon={<Package className="h-5 w-5" />} label="Storage" value={`${(metrics.storageBytes / 1024 / 1024).toFixed(2)} MB`} /><Stat icon={<ShieldCheck className="h-5 w-5" />} label="Actual cost" value={metrics.actualCostUsd === null ? "unavailable" : `$${metrics.actualCostUsd.toFixed(4)}`} /></div>
 
       <Card>
         <CardHeader><CardTitle>Requests over time</CardTitle></CardHeader>
@@ -302,7 +320,12 @@ function Dashboard({ metrics, maxDaily, loading }: { metrics: ApiDashboardMetric
 }
 
 const CONSOLE_ENDPOINTS = [
-  { method: "GET", path: "/api/rest/v1/agents", scope: "agents:read", label: "List agents" },
+  { method: "GET", path: "/v1/models", scope: "models:read", label: "Native model registry" },
+  { method: "POST", path: "/v1/chat/completions", scope: "ai:execute", label: "Native chat completion", body: { model: "windels-native", messages: [{ role: "user", content: "Explain how WINDELS can power my external agent." }] } },
+  { method: "POST", path: "/v1/responses", scope: "ai:execute", label: "Native response", body: { model: "windels-native", input: "Create a concise business automation plan." } },
+  { method: "POST", path: "/v1/embeddings", scope: "ai:execute", label: "Native embeddings", body: { model: "windels-embedding", input: "WINDELS knowledge retrieval" } },
+  { method: "GET", path: "/v1/agents", scope: "agents:read", label: "Native agent list" },
+  { method: "GET", path: "/api/rest/v1/agents", scope: "agents:read", label: "Legacy gateway: list agents" },
   { method: "POST", path: "/api/rest/v1/agents/{{id}}/execute", scope: "agents:execute", label: "Execute agent", body: { message: "Analyze this business data" } },
   { method: "POST", path: "/api/rest/v1/ai/complete", scope: "ai:execute", label: "AI completion", body: { messages: [{ role: "user", content: "Hello" }] } },
   { method: "GET", path: "/api/rest/v1/knowledge/search", scope: "knowledge:read", label: "Search knowledge", params: { q: "growth" } },
@@ -336,7 +359,7 @@ function ApiConsole({ apps }: { apps: DeveloperAppRow[] }) {
         const created = await apiKeysApi.create({
           name: `console-${Date.now()}`,
           scopes: ["READ"],
-          granularScopes: [ep.scope],
+          granularScopes: [ep.scope as ApiScope],
           environment: "development",
         });
         key = created.key;
@@ -421,15 +444,17 @@ function ApiConsole({ apps }: { apps: DeveloperAppRow[] }) {
 
 function Documentation() {
   const sections: Array<{ title: string; body: string[] }> = [
-    { title: "Authentication", body: ["All API requests authenticate with an API key in the Authorization header: `Authorization: Bearer wnd_...`.", "Keys are scoped to your organization and to the granular capabilities you grant (e.g. agents:execute).", "Plaintext keys are shown exactly once at creation and stored as SHA-256 hashes — they are never recoverable."] },
-    { title: "API keys", body: ["Create keys via the API Keys page or the /apikeys endpoints.", "Restrict a key by environment (development / test / production), optional IP CIDRs, and scopes.", "Revoked or expired keys are rejected immediately by the gateway."] },
-    { title: "Endpoints", body: ["Agents: GET /v1/agents, POST /v1/agents/{id}/execute", "AI: POST /v1/ai/complete", "Workflows: GET /v1/workflows, POST /v1/workflows/{id}/execute, GET /v1/workflows/{id}/runs", "Knowledge: GET /v1/knowledge/search", "Trading: GET /v1/trading/analysis", "Media: POST /v1/media/generate"] },
-    { title: "Error codes", body: ["401 Unauthorized — missing/invalid API key", "403 Forbidden — missing scope or IP not allowed", "404 Not Found — resource not found in your org", "429 Too Many Requests — rate limit exceeded (see X-RateLimit-* headers)", "500 Internal — a WINDELS service error"] },
-    { title: "Rate limits", body: ["The gateway emits X-RateLimit-Limit, X-RateLimit-Remaining and X-RateLimit-Reset on every response.", "Per-key sliding-window limits apply; keys with granular scopes get a higher default allowance."] },
-    { title: "Webhooks", body: ["Subscribe to events via the Developers page (webhooks). Payloads are HMAC-signed with a per-endpoint secret.", "Failed deliveries are retried with exponential backoff and recorded for replay."] },
-    { title: "Versioning", body: ["The stable public surface is /api/rest/v1. Breaking changes require a new major version with a deprecation window."] },
-    { title: "Security & governance", body: ["All access is subject to IAM, RBAC/ABAC, scope enforcement, rate limiting, audit logging and the existing security controls.", "Sensitive capabilities require explicit scopes; production access for an application is gated by Super Admin approval."] },
-    { title: "Billing & usage", body: ["Every gateway call is recorded to a persistent usage ledger.", "The Dashboard shows request volume, success/failure, token usage and an estimated cost.", "Usage is metered into the existing WINDELS billing architecture."] },
+    { title: "Overview", body: ["Base URL: https://api.windels.ai/v1", "WINDELS provides health-gated chat, responses, real embeddings, files, image/audio capabilities and tenant-scoped WINDELS agents. Existing /api/rest/v1 remains supported.", "Model/provider internals are routed by WINDELS policy; public responses use WINDELS model aliases."] },
+    { title: "Authentication & keys", body: ["Send `Authorization: Bearer WND_...` on every request.", "Secrets are CSPRNG-generated, SHA-256 hashed at rest, shown once, revocable, rotatable, expirable, environment-scoped and optionally IP-restricted.", "Fine-grained scopes are authoritative when present."] },
+    { title: "Models, chat and responses", body: ["GET /v1/models lists only real health-verified capabilities.", "POST /v1/chat/completions supports non-streaming and SSE streaming.", "POST /v1/responses provides a unified response object. This is a tested compatibility subset, not a claim of complete OpenAI API compatibility."] },
+    { title: "Agents and tool loops", body: ["GET /v1/agents and POST /v1/agents/{agent_id}/execute use organization-scoped WINDELS agents.", "Non-streaming chat and agent calls accept external function schemas. WINDELS may return structured tool calls; your application executes its own tool and submits a tool-result message in the next turn.", "Agent runs are durable, queryable and cancellable, with signed lifecycle webhooks."] },
+    { title: "Embeddings, knowledge and files", body: ["POST /v1/embeddings never exposes deterministic hash fallback as a production model.", "POST /v1/files stores approved files in the existing tenant-isolated attachment service.", "Knowledge and search access remains scope- and tenant-bound through existing WINDELS services."] },
+    { title: "Vision, images and audio", body: ["Inline data-URL images are accepted only when a real vision model is health-verified.", "POST /v1/images, /v1/audio/speech and /v1/audio/transcriptions fail unavailable rather than invoking simulator or fabricated media services.", "Only MIME types, limits and providers implemented by the live service are exposed."] },
+    { title: "Streaming", body: ["Use `stream: true` on /v1/chat/completions for `text/event-stream` chunks ending in `data: [DONE]`.", "Disconnects abort the provider request and are metered with status 499.", "Streaming tool-call emulation is outside the current tested subset and is rejected explicitly."] },
+    { title: "Webhooks", body: ["Agent run started/completed/failed/requires-action events use the existing HMAC-signed webhook system.", "Delivery IDs, timestamps, retries and delivery logs are persisted; failed deliveries use the existing failure event path."] },
+    { title: "Errors, limits and security", body: ["Native errors use `{ error: { message, type, code, param }, request_id }`.", "Per-IP and per-key rate limits, product quotas, billing status, prompt guard, validation, request IDs, audit and tenant isolation are enforced.", "A key can never cross its organization boundary for agents, runs, files, workflows, memory or knowledge."] },
+    { title: "Usage & billing", body: ["Every request records API key, organization, user, endpoint, request ID, model, provider, tokens, duration, tool calls, resources, status, error and cost where available.", "Native API product subscriptions increment the existing monthly usage counter; no separate billing system is created.", "Use dashboard filters for key, model, endpoint, environment, status and date."] },
+    { title: "OpenAPI", body: ["Download the production OpenAPI 3.1 document at GET /v1/openapi.json or from the authenticated Developer Platform."] },
   ];
   return (
     <div className="space-y-4">
@@ -443,20 +468,13 @@ function Documentation() {
               <div className="mt-1 space-y-1">{s.body.map((b, i) => <p key={i} className="text-xs text-text-muted">{b}</p>)}</div>
             </div>
           ))}
-          <div className="rounded-lg border border-white/10 bg-bg-deep/60 p-3">
-            <div className="text-[11px] text-text-muted mb-1">JavaScript SDK</div>
-            <pre className="text-[11px] text-azure">{`const result = await windels.agents.execute({
-  agentId: "agent_id",
-  input: { message: "Analyze this business data" }
-});`}</pre>
-          </div>
-          <div className="rounded-lg border border-white/10 bg-bg-deep/60 p-3">
-            <div className="text-[11px] text-text-muted mb-1">Python SDK</div>
-            <pre className="text-[11px] text-azure">{`result = windels.agents.execute(
-    agent_id="agent_id",
-    input={"message": "Analyze this business data"}
-)`}</pre>
-          </div>
+          {[
+            { lang: "JavaScript / TypeScript", code: `const response = await fetch("https://api.windels.ai/v1/chat/completions", {\n  method: "POST", headers: { Authorization: "Bearer WND_...", "Content-Type": "application/json" },\n  body: JSON.stringify({ model: "windels-native", messages: [{ role: "user", content: "Hello" }] })\n});` },
+            { lang: "Python", code: `from openai import OpenAI\nclient = OpenAI(api_key="WND_...", base_url="https://api.windels.ai/v1")\nresult = client.chat.completions.create(model="windels-native", messages=[{"role":"user","content":"Hello"}])` },
+            { lang: "cURL", code: `curl https://api.windels.ai/v1/chat/completions -H "Authorization: Bearer WND_..." -H "Content-Type: application/json" -d '{"model":"windels-native","messages":[{"role":"user","content":"Hello"}]}'` },
+            { lang: "PHP", code: `$client = new GuzzleHttp\\Client(["base_uri" => "https://api.windels.ai/v1/"]);\n$response = $client->post("chat/completions", ["headers" => ["Authorization" => "Bearer WND_..."], "json" => ["model" => "windels-native", "messages" => [["role" => "user", "content" => "Hello"]]]]);` },
+            { lang: "Go", code: `payload := strings.NewReader(\`{"model":"windels-native","messages":[{"role":"user","content":"Hello"}]}\`)\nreq, _ := http.NewRequest("POST", "https://api.windels.ai/v1/chat/completions", payload)\nreq.Header.Set("Authorization", "Bearer WND_...")\nreq.Header.Set("Content-Type", "application/json")` },
+          ].map((example) => <div key={example.lang} className="rounded-lg border border-white/10 bg-bg-deep/60 p-3"><div className="mb-1 text-[11px] text-text-muted">{example.lang} integration example</div><pre className="overflow-x-auto whitespace-pre-wrap text-[11px] text-azure">{example.code}</pre></div>)}
         </CardContent>
       </Card>
     </div>

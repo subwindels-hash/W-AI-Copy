@@ -120,6 +120,14 @@ const EnvSchema = z.object({
     .optional(),
   AI_DEFAULT_MODEL: z.string().default("windels-assistant"),
   AI_MAX_CONTEXT_MESSAGES: z.coerce.number().int().min(4).max(200).default(40),
+  // Public WINDELS provider aliases route to these internal models when set.
+  // Values are never exposed by the /v1 response surface.
+  WINDELS_PUBLIC_API_ORIGIN: z.string().url().default("https://api.windels.ai"),
+  WINDELS_NATIVE_API_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
+  WINDELS_NATIVE_CHAT_MODEL: z.string().max(160).optional(),
+  WINDELS_NATIVE_EMBEDDING_MODEL: z.string().max(160).optional(),
+  WINDELS_IMAGE_MODEL: z.string().max(160).default("gpt-image-1"),
+  WINDELS_SPEECH_MODEL: z.string().max(160).default("gpt-4o-mini-tts"),
 
   // Encryption (AES-256-GCM) — 64 hex chars. Falls back to deterministic dev key in NODE_ENV=development.
   WINDELS_ENCRYPTION_KEY: z.string().length(64).optional(),

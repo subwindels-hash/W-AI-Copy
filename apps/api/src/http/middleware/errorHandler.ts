@@ -12,8 +12,13 @@ export function errorHandler(
   _next: NextFunction
 ) {
   const requestId = req.requestId ?? "unknown";
+  const native = req.originalUrl?.startsWith("/v1/") || req.baseUrl === "/v1";
 
   if (err instanceof AppError) {
+    if (native) {
+      const type = err.status === 401 ? "authentication_error" : err.status === 403 ? "permission_error" : err.status === 429 ? "rate_limit_error" : err.status >= 500 ? "api_error" : "invalid_request_error";
+      return res.status(err.status).json({ error: { message: err.message, type, code: String(err.code).toLowerCase(), param: null, ...(err.details ? { details: err.details } : {}) }, request_id: requestId });
+    }
     const envelope: ApiErrorEnvelope = {
       ok: false,
       error: {
@@ -29,6 +34,7 @@ export function errorHandler(
   }
 
   if (err instanceof ZodError) {
+    if (native) return res.status(422).json({ error: { message: "Request validation failed", type: "invalid_request_error", code: "validation_error", param: null, details: err.flatten() }, request_id: requestId });
     const envelope: ApiErrorEnvelope = {
       ok: false,
       error: {
@@ -43,6 +49,7 @@ export function errorHandler(
 
   const unknown = err instanceof Error ? err : new Error(String(err));
   logger.error("unhandled error", { err: unknown, requestId });
+  if (native) return res.status(500).json({ error: { message: process.env.NODE_ENV === "production" ? "Internal server error" : unknown.message, type: "api_error", code: "internal_error", param: null }, request_id: requestId });
   const envelope: ApiErrorEnvelope = {
     ok: false,
     error: {

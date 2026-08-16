@@ -30,6 +30,8 @@ import {
   listUsageRecords,
 } from "../../publicApi/apiUsage.service.js";
 import { resolveUserContext } from "../../services/workspace.service.js";
+import { nativeModelCatalog } from "../../nativeAi/nativeAi.service.js";
+import { nativeAiOpenApi } from "../../nativeAi/openapi.js";
 
 const Id = z.object({ id: z.string().cuid() });
 const SubscribeSchema = z.object({ appId: z.string().cuid().optional(), productId: z.string().cuid() });
@@ -39,6 +41,12 @@ function meta(req: any) { return { requestId: req.requestId ?? "", tookMs: Date.
 export function registerDeveloperPlatformRoutes(router: Router) {
   const dp = Router();
   dp.use(authenticate);
+
+  /* ── Native AI provider catalog/documentation ──────────────────────── */
+  dp.get("/native-ai/models", async (req, res, next) => {
+    try { res.json({ ok: true, data: (await nativeModelCatalog(true)).public, meta: meta(req) }); } catch (e) { next(e); }
+  });
+  dp.get("/native-ai/openapi", (req, res) => res.json({ ok: true, data: nativeAiOpenApi(process.env.WINDELS_PUBLIC_API_ORIGIN || "https://api.windels.ai"), meta: meta(req) }));
 
   /* ── Applications ───────────────────────────────────────────────────── */
   dp.get("/apps", async (req, res, next) => { try { res.json({ ok: true, data: await listDeveloperApps(req.user!.id), meta: meta(req) }); } catch (e) { next(e); } });
