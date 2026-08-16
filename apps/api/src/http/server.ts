@@ -163,6 +163,8 @@ import { registerAiCommerceRoutes } from "./routes/aiCommerce.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
+import { registerNfcRoutes } from "./routes/nfc.js";
+import { registerPublicNfcRoutes } from "./routes/nfcPublic.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
 import { logger } from "../observability/logger.js";
@@ -1308,6 +1310,10 @@ export function createApp() {
   v1.use("/camera", cameraRouter);
   registerCameraRoutes(cameraRouter);
 
+  // /nfc — NFC Card Manager. The API creates authorization/verification plans;
+  // local PC/SC, mobile native, or Web NFC adapters perform hardware I/O.
+  registerNfcRoutes(v1);
+
   // /advertising — AI Advertising Platform (unified multi-mode: standard,
   // smart, performance, autonomous). One module, multiple campaign modes.
   const advertisingRouter = express.Router();
@@ -1497,6 +1503,7 @@ export function createApp() {
   // Public API Gateway (api-key authenticated, stable REST surface)
   const publicRouter = express.Router();
   registerPublicApiRoutes(publicRouter);
+  registerPublicNfcRoutes(publicRouter);
   // Developer gateway extensions (agent execution, workflows, knowledge,
   // trading, media) mounted after the Session 120 predecessors so their exact
   // paths remain authoritative.

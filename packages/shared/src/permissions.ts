@@ -35,7 +35,9 @@ export const ALL_PERMISSIONS = [
   "CANVAS_READ","CANVAS_WRITE",
   "BILLING_READ","BILLING_WRITE",
   "DEVELOPER_READ","DEVELOPER_WRITE",
-  "AUDIT_READ","ADMIN_STAR",
+  "AUDIT_READ",
+  "NFC_READ","NFC_WRITE","NFC_DESTRUCTIVE","NFC_ADMIN",
+  "ADMIN_STAR",
 ] as const;
 export type Permission = typeof ALL_PERMISSIONS[number];
 
@@ -48,6 +50,7 @@ export const PERMISSION_CATEGORIES: Record<string, Permission[]> = {
   billing: ["BILLING_READ","BILLING_WRITE"],
   developer: ["DEVELOPER_READ","DEVELOPER_WRITE"],
   audit: ["AUDIT_READ"],
+  nfc: ["NFC_READ","NFC_WRITE","NFC_DESTRUCTIVE","NFC_ADMIN"],
   admin: ["ADMIN_STAR"],
 };
 

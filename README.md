@@ -98,6 +98,7 @@ tests/e2e/                # Playwright specs
 | File | Purpose |
 |---|---|
 | [docs/SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md) | Four-layer architecture overview |
+| [docs/NFC_CARD_MANAGER.md](./docs/NFC_CARD_MANAGER.md) | NFC architecture, security/API model, capability truth table, PC/SC prerequisites, and mandatory real-hardware qualification protocol |
 | [docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md) | Install, build, systemd/nginx deploy, backup, troubleshooting |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |

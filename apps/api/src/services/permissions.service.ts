@@ -11,7 +11,9 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.CANVAS_READ, Permission.CANVAS_WRITE,
     Permission.BILLING_READ, Permission.BILLING_WRITE,
     Permission.DEVELOPER_READ, Permission.DEVELOPER_WRITE,
-    Permission.AUDIT_READ, Permission.ADMIN_STAR,
+    Permission.AUDIT_READ,
+    Permission.NFC_READ, Permission.NFC_WRITE, Permission.NFC_DESTRUCTIVE, Permission.NFC_ADMIN,
+    Permission.ADMIN_STAR,
   ],
   ADMIN: [
     Permission.ORG_READ, Permission.ORG_WRITE, Permission.ORG_ADMIN,
@@ -22,6 +24,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.BILLING_READ, Permission.BILLING_WRITE,
     Permission.DEVELOPER_READ, Permission.DEVELOPER_WRITE,
     Permission.AUDIT_READ,
+    Permission.NFC_READ, Permission.NFC_WRITE, Permission.NFC_DESTRUCTIVE, Permission.NFC_ADMIN,
   ],
   USER: [
     Permission.ORG_READ,
@@ -29,6 +32,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.AGENT_READ, Permission.AGENT_WRITE,
     Permission.TALK_READ, Permission.TALK_WRITE,
     Permission.CANVAS_READ, Permission.CANVAS_WRITE,
+    Permission.NFC_READ, Permission.NFC_WRITE,
   ],
 };
 
@@ -70,7 +74,7 @@ export function requirePerm(permission: Permission) {
   return async (req: any, _res: any, next: any) => {
     const userId = req.user?.id;
     if (!userId) return _res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Auth required" } });
-    const ok = await hasPermission(userId, permission);
+    const ok = await hasPermission(userId, permission, req.user?.organizationId ?? undefined);
     if (!ok) return _res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: `Missing permission: ${permission}` } });
     next();
   };

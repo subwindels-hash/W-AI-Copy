@@ -195,6 +195,8 @@ export class FakePrisma {
       WhatsAppJob: { conversation: "WhatsAppConversation" },
       WhatsAppSession: { conversation: "WhatsAppConversation" },
       WhatsAppMedia: { conversation: "WhatsAppConversation", message: "WhatsAppMessage" },
+      NfcCard: { record: "NfcNdefRecord", profile: "NfcProfile", reader: "NfcReader" },
+      NfcOperation: { card: "NfcCard", reader: "NfcReader" },
     };
     if (parentModel && prefixed[parentModel]?.[singular]) {
       return prefixed[parentModel]![singular]!;
@@ -210,7 +212,7 @@ export class FakePrisma {
     // not `talkChannelId`. Try the model-derived key first, then the same name
     // with a known prefix stripped, so both conventions resolve.
     const candidates = [`${model.charAt(0).toLowerCase()}${model.slice(1)}Id`];
-    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp"]) {
+    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp", "Nfc"]) {
       if (model.startsWith(prefix) && model.length > prefix.length) {
         const bare = model.slice(prefix.length);
         candidates.push(`${bare.charAt(0).toLowerCase()}${bare.slice(1)}Id`);

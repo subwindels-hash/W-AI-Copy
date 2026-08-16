@@ -265,6 +265,12 @@ model User {
   whatsappJobs              WhatsAppJob[]         @relation("whatsapp_jobs_requested")
   whatsappSessions          WhatsAppSession[]     @relation("whatsapp_sessions_user")
   telegramConnections       TelegramConnection[]  @relation("telegram_linked_users")
+  // ── NFC Card Manager ──
+  nfcReadersRegistered      NfcReader[]            @relation("nfc_reader_registered_by")
+  nfcCardsCreated           NfcCard[]              @relation("nfc_card_created_by")
+  nfcCardsAssigned          NfcCard[]              @relation("nfc_card_assigned_user")
+  nfcProfilesCreated        NfcProfile[]           @relation("nfc_profile_created_by")
+  nfcOperations             NfcOperation[]         @relation("nfc_operation_requested_by")
 
   @@index([role])
   @@index([createdAt])
@@ -331,6 +337,11 @@ model Organization {
   whatsappChannels  WhatsAppChannel[]
   // ── Telegram Channel ──
   telegramChannels  TelegramChannel[]
+  // ── NFC Card Manager ──
+  nfcReaders         NfcReader[]
+  nfcCards           NfcCard[]
+  nfcProfiles        NfcProfile[]
+  nfcOperations      NfcOperation[]
 }
 
 model Workspace {
@@ -1245,6 +1256,10 @@ enum Permission {
   DEVELOPER_READ
   DEVELOPER_WRITE
   AUDIT_READ
+  NFC_READ
+  NFC_WRITE
+  NFC_DESTRUCTIVE
+  NFC_ADMIN
   ADMIN_STAR
 }
 
@@ -2424,4 +2439,210 @@ enum TelegramConnectionStatus {
 enum TelegramDirection {
   INBOUND
   OUTBOUND
+}
+
+// ─── NFC Card Manager ───────────────────────────────────────────────────────
+// A capability is never inferred solely from a marketing card name. The reader
+// observation, card capability container and real-hardware qualification state
+// are persisted separately and evaluated together before a mutation is planned.
+enum NfcInterfaceType {
+  PCSC
+  WEB_NFC
+  ANDROID_NATIVE
+  IOS_CORE_NFC
+  READER_SDK
+}
+
+enum NfcSupportStatus {
+  SUPPORTED
+  PARTIALLY_SUPPORTED
+  READ_ONLY
+  WRITE_SUPPORTED
+  UNSUPPORTED
+  UNVERIFIED
+}
+
+enum NfcLockStatus {
+  UNLOCKED
+  LOCKED
+  PARTIALLY_LOCKED
+  UNKNOWN
+}
+
+enum NfcOperationType {
+  DETECT
+  READ
+  WRITE
+  UPDATE
+  VERIFY
+  ERASE
+  LOCK
+  PROTECT
+}
+
+enum NfcOperationStatus {
+  PENDING_CONFIRMATION
+  READY
+  IN_PROGRESS
+  VERIFYING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+model NfcReader {
+  id                    String           @id @default(cuid())
+  organizationId        String
+  organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  registeredById        String
+  registeredBy          User             @relation("nfc_reader_registered_by", fields: [registeredById], references: [id], onDelete: Restrict)
+  localIdHash           String
+  name                  String
+  vendor                String?
+  product               String?
+  interfaceType         NfcInterfaceType
+  status                String           @default("OFFLINE")
+  capabilities          Json             @default("{}")
+  qualifiedCombinations Json             @default("[]")
+  bridgeVersion         String?
+  platform              String?
+  lastSeenAt            DateTime?
+  lastError              String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  cards                 NfcCard[]
+  operations            NfcOperation[]
+
+  @@unique([organizationId, localIdHash])
+  @@index([organizationId, lastSeenAt])
+  @@map("nfc_readers")
+}
+
+model NfcProfile {
+  id                    String       @id @default(cuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById           String
+  createdBy             User         @relation("nfc_profile_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  name                  String
+  profileType           String
+  targetType            String
+  targetId              String?
+  secureUrl             String
+  metadata              Json         @default("{}")
+  active                Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  cards                 NfcCard[]
+
+  @@index([organizationId, profileType])
+  @@index([targetType, targetId])
+  @@map("nfc_profiles")
+}
+
+model NfcCard {
+  id                    String           @id @default(cuid())
+  organizationId        String
+  organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById           String
+  createdBy             User             @relation("nfc_card_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedUserId        String?
+  assignedUser          User?            @relation("nfc_card_assigned_user", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  readerId              String?
+  reader                NfcReader?       @relation(fields: [readerId], references: [id], onDelete: SetNull)
+  profileId             String?
+  profile               NfcProfile?      @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  cardKeyHash           String
+  uidMasked             String?
+  name                  String
+  technology            String           @default("Unknown NFC Technology")
+  supportStatus         NfcSupportStatus @default(UNVERIFIED)
+  memoryBytes           Int?
+  writableBytes         Int?
+  ndefSupported         Boolean          @default(false)
+  readable              Boolean          @default(false)
+  writable              Boolean          @default(false)
+  erasable              Boolean          @default(false)
+  lockable              Boolean          @default(false)
+  protectable           Boolean          @default(false)
+  lockStatus            NfcLockStatus    @default(UNKNOWN)
+  capabilitySource      String           @default("UNKNOWN")
+  qualification         String           @default("NOT_QUALIFIED")
+  capabilities          Json             @default("{}")
+  ndefHash              String?
+  status                String           @default("ACTIVE")
+  lastDetectedAt        DateTime?
+  lastReadAt            DateTime?
+  lastWrittenAt         DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  records               NfcNdefRecord[]
+  operations            NfcOperation[]
+
+  @@unique([organizationId, cardKeyHash])
+  @@index([organizationId, updatedAt])
+  @@index([profileId])
+  @@map("nfc_cards")
+}
+
+model NfcNdefRecord {
+  id                    String    @id @default(cuid())
+  cardId                String
+  card                  NfcCard   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  position              Int
+  kind                  String
+  tnf                   Int
+  recordType            String
+  payload               Json
+  payloadHash           String
+  sizeBytes             Int
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([cardId, position])
+  @@index([cardId])
+  @@map("nfc_ndef_records")
+}
+
+model NfcOperation {
+  id                    String             @id @default(cuid())
+  organizationId        String
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedById         String
+  requestedBy           User               @relation("nfc_operation_requested_by", fields: [requestedById], references: [id], onDelete: Restrict)
+  readerId              String?
+  reader                NfcReader?         @relation(fields: [readerId], references: [id], onDelete: SetNull)
+  cardId                String?
+  card                  NfcCard?           @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  operationType         NfcOperationType
+  status                NfcOperationStatus
+  idempotencyKey        String
+  challengeHash         String?
+  requestedRecords      Json               @default("[]")
+  expectedNdefHash      String?
+  previousNdefHash      String?
+  readbackNdefHash      String?
+  requiredBytes         Int?
+  availableBytes        Int?
+  overwriteConfirmed    Boolean            @default(false)
+  irreversibleConfirmed Boolean            @default(false)
+  hardwareEvidence      Json               @default("{}")
+  result                Json               @default("{}")
+  errorCode             String?
+  errorMessage          String?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  expiresAt             DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, createdAt])
+  @@index([cardId, createdAt])
+  @@index([status, expiresAt])
+  @@map("nfc_operations")
 }

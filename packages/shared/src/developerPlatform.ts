@@ -33,6 +33,9 @@ export const API_SCOPE_CATALOG = [
   "billing:read",
   "marketplace:read",
   "marketplace:write",
+  "nfc:read",
+  "nfc:write",
+  "nfc:admin",
 ] as const;
 export type ApiScope = (typeof API_SCOPE_CATALOG)[number];
 
@@ -48,11 +51,13 @@ export const API_SCOPE_GROUPS: Record<string, string[]> = {
   Analytics: ["analytics:read"],
   Billing: ["billing:read"],
   Marketplace: ["marketplace:read", "marketplace:write"],
+  NFC: ["nfc:read", "nfc:write", "nfc:admin"],
 };
 
 /** Map a granular scope to the legacy scope it needs for backward-compat
  *  gateway routing (READ for reads, WRITE/ADMIN for writes). */
 export function scopeLegacy(s: string): "READ" | "WRITE" | "ADMIN" {
+  if (s.endsWith(":admin")) return "ADMIN";
   if (s.endsWith(":read")) return "READ";
   if (s.endsWith(":execute") || s.endsWith(":write") || s.endsWith(":generate")) return "WRITE";
   return "READ";
@@ -63,7 +68,7 @@ export type DeveloperAppEnvironment = (typeof APP_ENVIRONMENTS)[number];
 
 export const API_PRODUCT_CATEGORIES = [
   "agents", "workforce", "trading", "media", "voice", "knowledge",
-  "workflows", "documents", "business", "search", "marketplace", "communication",
+  "workflows", "documents", "business", "search", "marketplace", "communication", "hardware",
 ] as const;
 export type ApiProductCategory = (typeof API_PRODUCT_CATEGORIES)[number];
 

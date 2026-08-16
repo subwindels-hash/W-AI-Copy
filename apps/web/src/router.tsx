@@ -145,6 +145,7 @@ const MobileOfflinePage = lazy(() => import("./pages/mobile/MobileOfflinePage").
 
 // Desktop (Session 16)
 const DesktopHomePage = lazy(() => import("./pages/desktop/DesktopHomePage").then((m) => ({ default: m.DesktopHomePage })));
+const NfcCardManagerPage = lazy(() => import("./pages/nfc/NfcCardManagerPage").then((m) => ({ default: m.NfcCardManagerPage })));
 const DesktopLayout = lazy(() => import("./app/desktop/DesktopLayout").then((m) => ({ default: m.DesktopLayout })));
 
 function HomeRedirect() {
@@ -255,6 +256,7 @@ export const router = createBrowserRouter([
       { path: "chat", element: withSuspense(<ChatPage />) },
       { path: "workflow", element: withSuspense(<WorkflowPage />) },
       { path: "canvas", element: withSuspense(<CanvasPage />) },
+      { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
     ],
   },
@@ -283,6 +285,7 @@ export const router = createBrowserRouter([
       { path: "settings", element: withSuspense(<MobileSettingsPage />) },
       { path: "profile", element: withSuspense(<MobileProfilePage />) },
       { path: "offline", element: withSuspense(<MobileOfflinePage />) },
+      { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
     ],
   },
   {
@@ -317,6 +320,7 @@ export const router = createBrowserRouter([
       { path: "lead-pipeline", element: withSuspense(<LeadPipelinePage />) },
       { path: "mfa-assurance", element: withSuspense(<MfaAssurancePage />) },
       { path: "mobile-devices", element: withSuspense(<MobileDevicesPage />) },
+      { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
       { path: "opex", element: withSuspense(<OpexAssurancePage />) },
       { path: "prompt-templates", element: withSuspense(<PromptTemplatesPage />) },
       { path: "public-api", element: withSuspense(<PublicApiPage />) },

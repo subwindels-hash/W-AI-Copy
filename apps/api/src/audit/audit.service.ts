@@ -99,7 +99,21 @@ export type AuditAction =
   | "commerce.order_viewed"
   | "commerce.gift_card_applied"
   | "commerce.webhook_received"
-  | "commerce.webhook_rejected";
+  | "commerce.webhook_rejected"
+  // NFC Card Manager
+  | "nfc.reader_detected"
+  | "nfc.reader_qualified"
+  | "nfc.card_detected"
+  | "nfc.card_read"
+  | "nfc.mutation_requested"
+  | "nfc.verification_succeeded"
+  | "nfc.verification_failed"
+  | "nfc.card_written"
+  | "nfc.card_updated"
+  | "nfc.card_erased"
+  | "nfc.card_locked"
+  | "nfc.card_protected"
+  | "nfc.hardware_error";
 
 export type AuditResourceType =
   | "user"
@@ -124,6 +138,10 @@ export type AuditResourceType =
   | "commerce_order"
   | "commerce_payment"
   | "commerce_product"
+  | "nfc_reader"
+  | "nfc_card"
+  | "nfc_profile"
+  | "nfc_operation"
   | "custom";
 
 export interface AuditLogCreateInput {

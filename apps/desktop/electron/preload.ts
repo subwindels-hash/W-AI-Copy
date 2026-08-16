@@ -4,6 +4,7 @@
  */
 import { contextBridge, ipcRenderer } from "electron";
 import type { OpenDialogOptions, SaveDialogOptions } from "electron";
+import type { DesktopNfcHardwarePlan, DesktopNfcState } from "@windels/shared/desktop";
 
 export const desktopApi = {
   platform: process.platform,
@@ -36,6 +37,17 @@ export const desktopApi = {
     send: (payload: { title: string; body?: string; silent?: boolean; url?: string }) =>
       ipcRenderer.invoke("notify:send", payload),
     setBadge: (count: number) => ipcRenderer.invoke("notify:set-badge", count),
+  },
+
+  nfc: {
+    state: () => ipcRenderer.invoke("nfc:state"),
+    refresh: (readerLocalId: string) => ipcRenderer.invoke("nfc:refresh", readerLocalId),
+    execute: (plan: DesktopNfcHardwarePlan) => ipcRenderer.invoke("nfc:execute", plan),
+    onState: (callback: (state: DesktopNfcState) => void) => {
+      const handler = (_event: unknown, state: DesktopNfcState) => callback(state);
+      ipcRenderer.on("nfc:state", handler);
+      return () => ipcRenderer.removeListener("nfc:state", handler);
+    },
   },
 
   app: {

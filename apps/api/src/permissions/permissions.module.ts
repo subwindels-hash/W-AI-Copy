@@ -49,6 +49,7 @@ export const PERMISSION_CATEGORIES = {
   billing: [Permission.BILLING_READ, Permission.BILLING_WRITE],
   developer: [Permission.DEVELOPER_READ, Permission.DEVELOPER_WRITE],
   audit: [Permission.AUDIT_READ],
+  nfc: [Permission.NFC_READ, Permission.NFC_WRITE, Permission.NFC_DESTRUCTIVE, Permission.NFC_ADMIN],
   admin: [Permission.ADMIN_STAR],
 } as const;
 

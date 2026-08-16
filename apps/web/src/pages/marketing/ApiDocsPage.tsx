@@ -67,6 +67,20 @@ const ENDPOINTS: Endpoint[] = [
   -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
   -d '{"modality":"image","op":"text2image","prompt":"a serene mountain lake"}'` },
   ]},
+  { method: "GET", path: "/api/rest/v1/nfc/cards", scope: "nfc:read", desc: "List tenant-scoped NFC cards. Raw UIDs are never returned.", examples: [
+    { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1/nfc/cards \\
+  -H "Authorization: Bearer wnd_your_key"` },
+  ]},
+  { method: "POST", path: "/api/rest/v1/nfc/write", scope: "nfc:write", desc: "Create a capacity-checked, short-lived hardware write plan. This does not write hardware from the cloud.", examples: [
+    { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/nfc/write \\
+  -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
+  -d '{"cardId":"card_cuid","readerId":"reader_cuid","idempotencyKey":"unique-request-id-123","records":[{"kind":"url","value":"https://profile.example.com","language":"en"}],"previousNdefHash":"verified_sha256","overwriteConfirmed":true}'` },
+  ]},
+  { method: "POST", path: "/api/rest/v1/nfc/verify", scope: "nfc:write", desc: "Submit hardware read-back evidence. Success is recorded only when read-back bytes match the intended NDEF message.", examples: [
+    { lang: "cURL", code: `curl -X POST https://api.windels.ai/api/rest/v1/nfc/verify \\
+  -H "Authorization: Bearer wnd_your_key" -H "Content-Type: application/json" \\
+  -d '{"operationId":"operation_cuid","operationToken":"short_lived_token","hardwareSucceeded":true,"readbackNdefBase64":"..."}'` },
+  ]},
 ];
 
 const SECTIONS: DocSection[] = [
@@ -85,6 +99,12 @@ const SECTIONS: DocSection[] = [
   { id: "endpoints", title: "API Reference", body: [
     "The stable public surface lives at /api/rest/v1. Endpoints below are implemented and enforced by the live gateway.",
   ], endpoints: ENDPOINTS },
+  { id: "nfc", title: "NFC Hardware Model", body: [
+    "NFC endpoints orchestrate authorization, size validation, idempotency, audit, and read-back verification. The cloud API never bypasses browser or operating-system hardware security.",
+    "A WINDELS Desktop PC/SC bridge, supported mobile native adapter, or Web NFC client performs local I/O. Web NFC is read-only in WINDELS when capacity cannot be established safely.",
+    "Writes are denied until the exact reader, driver/OS stack, and card technology have a recorded real-hardware qualification. The API returns UNVERIFIED rather than guessing support.",
+    "Use nfc:admin only for erase, permanent lock, or protection requests. Lock/protection still require explicit irreversible confirmation and hardware read-back evidence.",
+  ]},
   { id: "errors", title: "Errors", body: [
     "401 Unauthorized — missing or invalid API key.",
     "403 Forbidden — missing scope, or IP not allowed by the key's restrictions.",

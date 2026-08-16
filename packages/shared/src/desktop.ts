@@ -27,6 +27,77 @@ export interface DesktopNotifyAPI {
   setBadge: (count: number) => Promise<boolean>;
 }
 
+export interface DesktopNfcReader {
+  localId: string;
+  name: string;
+  interfaceType: "PCSC";
+  bridgeVersion: string;
+  platform: string;
+  status: "ONLINE" | "OFFLINE" | "ERROR";
+  capabilities: Record<string, unknown>;
+  error?: string;
+}
+
+export interface DesktopNfcCardObservation {
+  readerLocalId: string;
+  hardwareCardKey: string;
+  uid?: string;
+  technology: string;
+  identificationConfidence: "PROTOCOL_VERIFIED" | "ATR_FAMILY_ONLY" | "UNKNOWN";
+  capabilities: {
+    canRead: boolean; canWrite: boolean; canErase: boolean; canLock: boolean; canProtect: boolean; ndef: boolean;
+    memoryBytes: number | null; writableBytes: number | null;
+    lockStatus: "UNLOCKED" | "LOCKED" | "PARTIALLY_LOCKED" | "UNKNOWN";
+    supportStatus: "UNVERIFIED" | "UNSUPPORTED";
+    qualification: "NOT_QUALIFIED";
+    source: "PCSC_CC" | "PCSC_GET_VERSION" | "UNKNOWN";
+  };
+  ndefMessageBase64: string;
+  detectedAt: string;
+  diagnostics: Array<{ code: string; message: string }>;
+}
+
+export interface DesktopNfcState {
+  available: boolean;
+  adapter: "PCSC";
+  bridgeVersion: string;
+  readers: DesktopNfcReader[];
+  cards: DesktopNfcCardObservation[];
+  logs: Array<{ at: string; level: "info" | "warn" | "error"; code: string; message: string; readerLocalId?: string }>;
+  error?: { code: string; message: string };
+}
+
+export interface DesktopNfcHardwarePlan {
+  operationId: string;
+  operationToken: string;
+  operationType: "WRITE" | "UPDATE" | "ERASE" | "LOCK" | "PROTECT";
+  readerLocalId: string;
+  hardwareCardKey: string;
+  ndefMessageBase64?: string;
+  expectedNdefHash?: string;
+  previousNdefHash?: string;
+  expiresAt: string;
+  irreversibleConfirmed?: boolean;
+}
+
+export interface DesktopNfcHardwareResult {
+  operationId: string;
+  hardwareSucceeded: boolean;
+  readbackNdefBase64?: string;
+  lockStatus?: "UNLOCKED" | "LOCKED" | "PARTIALLY_LOCKED" | "UNKNOWN";
+  protected?: boolean;
+  errorCode?: string;
+  errorMessage?: string;
+  hardwareEvidence: Record<string, unknown>;
+}
+
+export interface DesktopNfcAPI {
+  state: () => Promise<DesktopNfcState>;
+  refresh: (readerLocalId: string) => Promise<DesktopNfcCardObservation>;
+  execute: (plan: DesktopNfcHardwarePlan) => Promise<DesktopNfcHardwareResult>;
+  onState: (callback: (state: DesktopNfcState) => void) => () => void;
+}
+
 export interface DesktopAppAPI {
   info: () => Promise<{
     version: string; name: string; platform: string; arch: string; osVersion: string;
@@ -45,6 +116,7 @@ export interface DesktopAPI {
   window: DesktopWindowAPI;
   fs: DesktopFSAPI;
   notify: DesktopNotifyAPI;
+  nfc: DesktopNfcAPI;
   app: DesktopAppAPI;
   onDeepLink: (cb: (data: { path: string; token?: string; url: string }) => void) => () => void;
   onAuthToken: (cb: (token: string) => void) => () => void;
