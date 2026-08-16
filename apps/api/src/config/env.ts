@@ -258,6 +258,21 @@ const EnvSchema = z.object({
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
 
+  // ── Super Admin Module & Plugin Deployment Center ───────────────
+  WINDELS_PLATFORM_VERSION: z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/).default("0.1.0"),
+  MODULE_PACKAGE_STORAGE_PATH: z.string().max(500).optional(),
+  MODULE_MAX_PACKAGE_MB: z.coerce.number().int().min(1).max(500).default(50),
+  MODULE_TRUSTED_PUBLISHER_KEYS: z.string().optional(), // JSON object: key id -> Ed25519 PEM public key
+  MODULE_RUNNER_URL: z.string().url().optional(),
+  MODULE_RUNNER_HMAC_SECRET: z.string().min(32).optional(),
+  MODULE_RUNNER_ARTIFACT_BASE_URL: z.string().url().optional(),
+  MODULE_RUNNER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(900000).default(180000),
+  MODULE_RUNTIME_ALLOWED_ORIGINS: z.string().optional(),
+  MODULE_RUNTIME_TIMEOUT_MS: z.coerce.number().int().min(500).max(120000).default(15000),
+  MODULE_RUNTIME_RESPONSE_MAX_BYTES: z.coerce.number().int().min(1024).max(50 * 1024 * 1024).default(5 * 1024 * 1024),
+  MODULE_MAX_MEMORY_MB: z.coerce.number().int().min(64).max(32768).default(4096),
+  MODULE_MAX_CPU_MILLICORES: z.coerce.number().int().min(100).max(32000).default(4000),
+
   // ── Crypto Exchange connectors (Crypto vertical, Phase 1) ──
 
   /** Global kill-switch for crypto: when true, all crypto connectors refuse

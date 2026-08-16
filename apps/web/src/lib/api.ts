@@ -110,10 +110,11 @@ export async function apiRaw<T = unknown>(
     if (qs) url += `?${qs}`;
   }
 
+  const isFormData = typeof FormData !== "undefined" && rest.body instanceof FormData;
   const res = await fetch(url, {
     ...rest,
     headers: {
-      "Content-Type": "application/json",
+      ...(!isFormData ? { "Content-Type": "application/json" } : {}),
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
       ...headers,
     },

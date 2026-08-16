@@ -271,6 +271,13 @@ model User {
   nfcCardsAssigned          NfcCard[]              @relation("nfc_card_assigned_user")
   nfcProfilesCreated        NfcProfile[]           @relation("nfc_profile_created_by")
   nfcOperations             NfcOperation[]         @relation("nfc_operation_requested_by")
+  // ── Super Admin Module & Plugin Center ──
+  moduleUploads             PlatformModuleUpload[] @relation("module_upload_uploaded_by")
+  moduleReleasesUploaded    PlatformModuleRelease[] @relation("module_release_uploaded_by")
+  moduleReleasesApproved    PlatformModuleRelease[] @relation("module_release_approved_by")
+  moduleReleasesInstalled   PlatformModuleRelease[] @relation("module_release_installed_by")
+  platformModulesInstalled  PlatformModule[]        @relation("platform_module_installed_by")
+  moduleOperations          PlatformModuleOperation[] @relation("module_operation_requested_by")
 
   @@index([role])
   @@index([createdAt])
@@ -2645,4 +2652,186 @@ model NfcOperation {
   @@index([cardId, createdAt])
   @@index([status, expiresAt])
   @@map("nfc_operations")
+}
+
+// ─── Super Admin Module & Plugin Deployment Center ──────────────────────────
+enum PlatformModuleLifecycle {
+  UPLOADED
+  SCANNING
+  VALIDATING
+  COMPATIBILITY_CHECK
+  SANDBOX_TEST
+  VALIDATED
+  APPROVED
+  INSTALLING
+  MIGRATING
+  HEALTH_CHECK
+  ACTIVE
+  DISABLED
+  FAILED
+  ROLLING_BACK
+  QUARANTINED
+  REMOVING
+  REMOVED
+}
+
+enum PlatformModuleHealth {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  DISABLED
+  QUARANTINED
+}
+
+enum PlatformModuleOperationType {
+  UPLOAD
+  VERIFY
+  SANDBOX_TEST
+  APPROVE
+  INSTALL
+  UPDATE
+  ENABLE
+  DISABLE
+  RESTART
+  HEALTH_CHECK
+  ROLLBACK
+  REMOVE
+}
+
+enum PlatformModuleOperationStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model PlatformModuleUpload {
+  id             String                  @id @default(cuid())
+  originalName   String
+  checksum       String                  @unique
+  sizeBytes      Int
+  artifactPath   String
+  status         PlatformModuleLifecycle @default(UPLOADED)
+  manifestId     String?
+  manifestVersion String?
+  signatureKeyId String?
+  report         Json                    @default("{}")
+  uploadedById   String
+  uploadedBy     User                    @relation("module_upload_uploaded_by", fields: [uploadedById], references: [id], onDelete: Restrict)
+  releaseId      String?                 @unique
+  release        PlatformModuleRelease?  @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([status, createdAt])
+  @@index([manifestId, manifestVersion])
+  @@map("platform_module_uploads")
+}
+
+model PlatformModule {
+  id                  String                  @id @default(cuid())
+  moduleKey           String                  @unique
+  name                String
+  packageType         String
+  description         String
+  vendor              String
+  status              PlatformModuleLifecycle @default(UPLOADED)
+  health              PlatformModuleHealth    @default(UNKNOWN)
+  currentVersion      String?
+  activeReleaseId     String?
+  enabled             Boolean                 @default(false)
+  manifest            Json                    @default("{}")
+  configuration       Json                    @default("{}")
+  runtimeRegistration Json                    @default("{}")
+  dependencies        Json                    @default("[]")
+  permissions         Json                    @default("[]")
+  installedById       String?
+  installedBy         User?                   @relation("platform_module_installed_by", fields: [installedById], references: [id], onDelete: SetNull)
+  installedAt         DateTime?
+  lastHealthCheckAt   DateTime?
+  lastError           String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  releases            PlatformModuleRelease[]
+  operations          PlatformModuleOperation[]
+
+  @@index([status, enabled])
+  @@index([health])
+  @@map("platform_modules")
+}
+
+model PlatformModuleRelease {
+  id                   String                  @id @default(cuid())
+  moduleRegistryId     String
+  moduleRegistry       PlatformModule          @relation(fields: [moduleRegistryId], references: [id], onDelete: Cascade)
+  version              String
+  status               PlatformModuleLifecycle @default(UPLOADED)
+  checksum             String                  @unique
+  artifactPath         String
+  packageSizeBytes     Int
+  manifest             Json
+  signatureKeyId       String?
+  signatureVerified    Boolean                 @default(false)
+  scanStatus           String                  @default("PENDING")
+  compatibilityStatus  String                  @default("PENDING")
+  sandboxStatus        String                  @default("PENDING")
+  approvalStatus       String                  @default("PENDING")
+  migrationStatus      String                  @default("NOT_STARTED")
+  verificationReport   Json                    @default("{}")
+  sandboxReport        Json                    @default("{}")
+  healthReport         Json                    @default("{}")
+  rollbackMetadata     Json                    @default("{}")
+  previousReleaseId    String?
+  uploadedById         String
+  uploadedBy           User                    @relation("module_release_uploaded_by", fields: [uploadedById], references: [id], onDelete: Restrict)
+  approvedById         String?
+  approvedBy           User?                   @relation("module_release_approved_by", fields: [approvedById], references: [id], onDelete: SetNull)
+  installedById        String?
+  installedBy          User?                   @relation("module_release_installed_by", fields: [installedById], references: [id], onDelete: SetNull)
+  uploadedAt           DateTime                @default(now())
+  verifiedAt           DateTime?
+  sandboxedAt          DateTime?
+  approvedAt           DateTime?
+  installedAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  upload               PlatformModuleUpload?
+  operations           PlatformModuleOperation[]
+
+  @@unique([moduleRegistryId, version])
+  @@index([status, createdAt])
+  @@index([moduleRegistryId, createdAt])
+  @@map("platform_module_releases")
+}
+
+model PlatformModuleOperation {
+  id               String                        @id @default(cuid())
+  moduleRegistryId String
+  moduleRegistry   PlatformModule                @relation(fields: [moduleRegistryId], references: [id], onDelete: Cascade)
+  releaseId        String?
+  release          PlatformModuleRelease?        @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  operationType    PlatformModuleOperationType
+  status           PlatformModuleOperationStatus @default(PENDING)
+  idempotencyKey   String                        @unique
+  correlationId    String
+  requestedById    String
+  requestedBy      User                          @relation("module_operation_requested_by", fields: [requestedById], references: [id], onDelete: Restrict)
+  fromVersion      String?
+  toVersion        String?
+  result           Json                          @default("{}")
+  logs             Json                          @default("[]")
+  errorCode        String?
+  errorMessage     String?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime                      @default(now())
+  updatedAt        DateTime                      @updatedAt
+
+  @@index([moduleRegistryId, createdAt])
+  @@index([status, createdAt])
+  @@map("platform_module_operations")
 }

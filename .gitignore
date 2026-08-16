@@ -62,6 +62,7 @@ windels-ai-os-sessions-1-88.zip
 
 # Session 84 project intake / Session 77B media cache (runtime dirs)
 project-intake/
+module-packages/
 media-cache/
 music-cache/
 music-video-cache/

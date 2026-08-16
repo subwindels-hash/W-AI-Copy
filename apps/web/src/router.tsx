@@ -57,6 +57,8 @@ const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
 const AdminApiControlPage = lazy(() => import("./pages/admin/AdminApiControlPage"));
+const ModuleCenterPage = lazy(() => import("./pages/admin/ModuleCenterPage").then((m) => ({ default: m.ModuleCenterPage })));
+const ModuleRuntimePage = lazy(() => import("./pages/modules/ModuleRuntimePage").then((m) => ({ default: m.ModuleRuntimePage })));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
 const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
 const EmailIntelPage = lazy(() => import("./pages/emailIntel/EmailIntelPage").then((m) => ({ default: m.EmailIntelPage })));
@@ -402,7 +404,17 @@ export const router = createBrowserRouter([
       { path: "derivatives", element: withSuspense(<DerivativesPage />) },
       { path: "audit", element: withSuspense(<AuditConsolePage />) },
       { path: "google-identity", element: withSuspense(<GoogleIdentityPage />) },
+      { path: "modules/:moduleId/*", element: withSuspense(<ModuleRuntimePage />) },
     ],
+  },
+  {
+    path: "/admin/modules",
+    element: (
+      <ProtectedRoute minRole="super_admin">
+        <AppShell />
+      </ProtectedRoute>
+    ),
+    children: [{ index: true, element: withSuspense(<ModuleCenterPage />) }],
   },
   {
     path: "/admin",

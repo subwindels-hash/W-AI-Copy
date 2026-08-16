@@ -1,4 +1,7 @@
+import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { moduleRuntimeApi } from "@/lib/moduleCenter";
+import type { ModuleRuntimeRegistration } from "@windels/shared/moduleCenter";
 import {
   LayoutDashboard,
   Users,
@@ -174,6 +177,7 @@ const navItems = [
   { to: "/app/publishing", icon: Megaphone, label: "Publishing" },
   { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
+  { to: "/admin/modules", icon: Blocks, label: "Module & Plugin Center" },
   { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/extensions", icon: Puzzle, label: "Extensions" },
@@ -182,6 +186,13 @@ const navItems = [
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
+  const [runtimeModules, setRuntimeModules] = useState<ModuleRuntimeRegistration[]>([]);
+  useEffect(() => { void moduleRuntimeApi.registrations().then(setRuntimeModules).catch(() => setRuntimeModules([])); }, []);
+  const runtimeItems = runtimeModules.flatMap((module) => module.frontend.navigation.map((item) => ({
+    to: `/app/modules/${module.moduleId}${item.path === "/" ? "" : item.path}`,
+    label: item.label,
+    moduleId: module.moduleId,
+  }))).sort((a, b) => a.label.localeCompare(b.label));
   return (
     <aside
       className={cn(
@@ -221,6 +232,8 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
             {!collapsed && <span className="truncate">{item.label}</span>}
           </NavLink>
         ))}
+        {runtimeItems.length > 0 && !collapsed && <div className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-widest text-text-muted">Installed modules</div>}
+        {runtimeItems.map((item) => <NavLink key={`${item.moduleId}:${item.to}`} to={item.to} className={({ isActive }) => cn("flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-slate-300 transition-colors hover:bg-white/5 hover:text-white", isActive && "bg-violet/10 text-white border-l-2 border-violet rounded-l-none pl-[11px]")}><Puzzle className="h-5 w-5 shrink-0 text-violet" />{!collapsed && <span className="truncate">{item.label}</span>}</NavLink>)}
       </nav>
 
       <div className="p-2 border-t border-white/5">

@@ -62,7 +62,7 @@ const CATALOG: PluginManifest[] = [
 export async function bootstrapPluginOs(): Promise<void> {
   for (const m of CATALOG) {
     const existing = await PluginRegistry.getManifest(m.id);
-    if (!existing) await PluginRegistry.publish({ manifest: m }).catch(() => {});
+    if (!existing) await PluginRegistry.publish({ manifest: m, trustedSource: "builtin_catalog" }).catch(() => {});
   }
   // Register capabilities for any already-installed plugins across orgs.
   try {

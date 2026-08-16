@@ -197,6 +197,10 @@ export class FakePrisma {
       WhatsAppMedia: { conversation: "WhatsAppConversation", message: "WhatsAppMessage" },
       NfcCard: { record: "NfcNdefRecord", profile: "NfcProfile", reader: "NfcReader" },
       NfcOperation: { card: "NfcCard", reader: "NfcReader" },
+      PlatformModule: { release: "PlatformModuleRelease", operation: "PlatformModuleOperation", installedBy: "User" },
+      PlatformModuleRelease: { moduleRegistry: "PlatformModule", upload: "PlatformModuleUpload", operation: "PlatformModuleOperation", uploadedBy: "User", approvedBy: "User", installedBy: "User" },
+      PlatformModuleUpload: { release: "PlatformModuleRelease", uploadedBy: "User" },
+      PlatformModuleOperation: { moduleRegistry: "PlatformModule", release: "PlatformModuleRelease", requestedBy: "User" },
     };
     if (parentModel && prefixed[parentModel]?.[singular]) {
       return prefixed[parentModel]![singular]!;
@@ -212,7 +216,8 @@ export class FakePrisma {
     // not `talkChannelId`. Try the model-derived key first, then the same name
     // with a known prefix stripped, so both conventions resolve.
     const candidates = [`${model.charAt(0).toLowerCase()}${model.slice(1)}Id`];
-    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp", "Nfc"]) {
+    if (model === "PlatformModule") candidates.unshift("moduleRegistryId");
+    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp", "Nfc", "PlatformModule"]) {
       if (model.startsWith(prefix) && model.length > prefix.length) {
         const bare = model.slice(prefix.length);
         candidates.push(`${bare.charAt(0).toLowerCase()}${bare.slice(1)}Id`);
@@ -260,7 +265,7 @@ export class FakePrisma {
       // instead of exposing the related row as a one-item array.
       const target = this.relatedModel(field, model);
       const related = this.relatedRows(model, row, field);
-      if (field === "profile") {
+      if (field === "profile" || field === "upload") {
         out[field] = related[0] ? this.hydrate(target, related[0], typeof spec === "object" ? spec as Row : {}) : null;
       } else {
         // to-many

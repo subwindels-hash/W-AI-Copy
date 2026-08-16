@@ -3,9 +3,10 @@
  *
  * Stores the catalog of available plugins (published manifests) and the
  * per-organization installed instances. Manifest validation is zod-based and
- * strict. Signatures are verified with HMAC-SHA256 against a configured
- * publisher key; unsigned community plugins are marked `unverified` and never
- * receive privileged access. Installed-plugin secrets are stored through the
+ * strict. Publisher manifests are verified with HMAC-SHA256 where configured;
+ * unsigned manifests cannot self-claim official/verified trust. Full modules
+ * are accepted only from the Ed25519/ClamAV/sandbox-gated Module Center. The
+ * compiled built-in catalog is tagged as an internal trusted source. Installed-plugin secrets are stored through the
  * existing AES-256-GCM encryption module and never returned to callers.
  *
  * State lives in Redis (same idiom as the existing extension registry). This
@@ -28,6 +29,7 @@ const K = {
   installIndex: (oid: string) => `pluginos:installidx:${oid}`,
   secret: (id: string) => `pluginos:secret:${id}`,
   stats: (id: string) => `pluginos:stats:${id}`,
+  source: (id: string) => `pluginos:source:${id}`,
   audit: (oid: string) => `pluginos:audit:${oid}`,
 };
 
@@ -69,7 +71,7 @@ export const manifestSchema = z.object({
   trust: z.enum(["official", "verified", "community", "unverified", "blocked"]).default("community"),
 });
 
-export interface PublishInput { manifest: PluginManifest; signatureSecret?: string; }
+export interface PublishInput { manifest: PluginManifest; signatureSecret?: string; trustedSource?: "builtin_catalog" | "module_center"; }
 
 function canonical(m: PluginManifest): string {
   // Sign over a stable subset (everything except the signature itself).
@@ -77,16 +79,22 @@ function canonical(m: PluginManifest): string {
   return JSON.stringify(rest, Object.keys(rest).sort());
 }
 
-function verifySignature(m: PluginManifest, secret?: string): { ok: boolean; reason?: string } {
+function verifySignature(m: PluginManifest, secret?: string, trustedSource?: PublishInput["trustedSource"]): { ok: boolean; reason?: string } {
+  // Manifests compiled into this repository and package releases that already
+  // passed the Super Admin Module Center's Ed25519/ClamAV/sandbox gates may be
+  // registered internally. HTTP callers cannot set trustedSource.
+  if (trustedSource === "builtin_catalog" || trustedSource === "module_center") return { ok: true };
   if (m.trust === "official") {
-    // Official plugins are signed with the platform publisher key.
     const key = process.env.WINDELS_PLUGIN_SIGNING_KEY;
     if (!m.signature) return { ok: false, reason: "official plugin must be signed" };
     if (!key) return { ok: false, reason: "platform signing key not configured" };
     return checkSig(m, key);
   }
+  if (m.trust === "verified") {
+    if (!secret || !m.signature) return { ok: false, reason: "verified plugin requires a recognized publisher signature" };
+    return checkSig(m, secret);
+  }
   if (secret && m.signature) return checkSig(m, secret);
-  // Community/unverified: allowed but unsigned -> trust downgraded.
   return { ok: true };
 }
 
@@ -104,7 +112,7 @@ export const PluginRegistry = {
   // ── Catalog ──
   async publish(input: PublishInput): Promise<PluginManifest> {
     const parsed = manifestSchema.parse(input.manifest) as PluginManifest;
-    const sig = verifySignature(parsed, input.signatureSecret);
+    const sig = verifySignature(parsed, input.signatureSecret, input.trustedSource);
     if (!sig.ok) throw Object.assign(new Error(`Manifest signature invalid: ${sig.reason}`), { status: 400, code: "INVALID_SIGNATURE" });
     // Community plugins without a valid signature remain unverified.
     if (parsed.trust === "community" && input.signatureSecret && parsed.signature) {
@@ -113,6 +121,7 @@ export const PluginRegistry = {
     }
     await redis.sadd(K.catalog, parsed.id);
     await redis.set(K.manifest(parsed.id), JSON.stringify(parsed));
+    await redis.set(K.source(parsed.id), input.trustedSource ?? "publisher_manifest");
     await redis.hset(K.stats(parsed.id), "publishedAt", nowIso(), "installs", 0);
     logger.info("plugin published", { id: parsed.id, version: parsed.version });
     return parsed;
@@ -151,6 +160,8 @@ export const PluginRegistry = {
     const m = await this.getManifest(manifestId);
     if (!m) throw Object.assign(new Error("plugin not found"), { status: 404 });
     if (m.trust === "blocked") throw Object.assign(new Error("plugin is blocked"), { status: 403 });
+    const source = await redis.get(K.source(manifestId));
+    if (m.class === "full_module" && source !== "module_center") throw Object.assign(new Error("full modules must be installed through the Super Admin Module & Plugin Center"), { status: 403, code: "MODULE_CENTER_REQUIRED" });
     // Permissions must be a subset of declared permissions (§9).
     const granted = (opts.grantedPermissions ?? m.permissions).filter((p) => m.permissions.includes(p));
     const existing = await this.getInstalled(oid, manifestId);

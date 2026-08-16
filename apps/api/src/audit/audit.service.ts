@@ -113,7 +113,30 @@ export type AuditAction =
   | "nfc.card_erased"
   | "nfc.card_locked"
   | "nfc.card_protected"
-  | "nfc.hardware_error";
+  | "nfc.hardware_error"
+  // Super Admin Module & Plugin Center
+  | "module.uploaded"
+  | "module.upload_rejected"
+  | "module.signature_updated"
+  | "module.verification_succeeded"
+  | "module.verification_failed"
+  | "module.sandbox_succeeded"
+  | "module.sandbox_failed"
+  | "module.approved"
+  | "module.installed"
+  | "module.updated"
+  | "module.install_failed"
+  | "module.enable"
+  | "module.disable"
+  | "module.restart"
+  | "module.health_check"
+  | "module.lifecycle_failed"
+  | "module.rolled_back"
+  | "module.rollback_failed"
+  | "module.removed"
+  | "module.remove_failed"
+  | "module.runtime_read"
+  | "module.runtime_write";
 
 export type AuditResourceType =
   | "user"
@@ -142,6 +165,9 @@ export type AuditResourceType =
   | "nfc_card"
   | "nfc_profile"
   | "nfc_operation"
+  | "module_upload"
+  | "module_release"
+  | "platform_module"
   | "custom";
 
 export interface AuditLogCreateInput {
