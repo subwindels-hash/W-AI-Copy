@@ -4,6 +4,7 @@
 // contain prefixes and hashes are never exposed across the API boundary.
 
 import { z } from "zod";
+import { API_SCOPE_CATALOG } from "./developerPlatform.js";
 
 export const API_KEY_SCOPES = ["READ", "WRITE", "ADMIN"] as const;
 export type AkScope = (typeof API_KEY_SCOPES)[number];
@@ -22,6 +23,7 @@ export interface AkApiKeyRow {
   revoked: boolean;
   revokedAt: string | null;
   createdBy: { id: string; displayName: string };
+  usage: { requests: number; tokensIn: number; tokensOut: number; costMicros: number; errors: number };
   createdAt: string;
 }
 
@@ -52,7 +54,7 @@ export interface AkApiKeyMutation {
 export const AkApiKeyCreateSchema = z.object({
   name: z.string().trim().min(1).max(100),
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).default(["READ"]),
-  granularScopes: z.array(z.string().min(3).max(64)).max(50).optional(),
+  granularScopes: z.array(z.enum(API_SCOPE_CATALOG)).max(50).optional(),
   appId: z.string().cuid().optional(),
   environment: z.enum(["development", "test", "production"]).optional(),
   ipRestrictions: z.array(z.string().min(7).max(64)).max(20).optional(),
@@ -63,7 +65,7 @@ export type AkApiKeyCreateInput = z.infer<typeof AkApiKeyCreateSchema>;
 export const AkApiKeyUpdateSchema = z.object({
   name: z.string().trim().min(1).max(100).optional(),
   scopes: z.array(z.enum(API_KEY_SCOPES)).min(1).max(3).optional(),
-  granularScopes: z.array(z.string().min(3).max(64)).max(50).optional(),
+  granularScopes: z.array(z.enum(API_SCOPE_CATALOG)).max(50).optional(),
   appId: z.string().cuid().optional().nullable(),
   environment: z.enum(["development", "test", "production"]).optional(),
   ipRestrictions: z.array(z.string().min(7).max(64)).max(20).optional(),

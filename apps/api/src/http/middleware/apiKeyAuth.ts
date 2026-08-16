@@ -11,6 +11,13 @@ const rateBuckets = new Map<string, { windowStart: number; count: number }>();
 const RATE_WINDOW_MS = 60_000;
 const DEFAULT_RATE_LIMIT = 60;
 
+function nativeStyle(req: Request): boolean { return req.baseUrl === "/v1" || req.originalUrl?.startsWith("/v1/"); }
+function authError(req: Request, res: Response, status: number, code: string, message: string) {
+  if (nativeStyle(req)) return res.status(status).json({ error: { message, type: status === 401 ? "authentication_error" : status === 429 ? "rate_limit_error" : "permission_error", code, param: null }, request_id: req.requestId });
+  const legacyCode = status === 401 ? "UNAUTHORIZED" : status === 403 ? "FORBIDDEN" : status === 429 ? "TOO_MANY_REQUESTS" : code;
+  return res.status(status).json({ ok: false, error: { code: legacyCode, message } });
+}
+
 function checkRateLimit(keyId: string, limit: number): { allowed: boolean; current: number; remaining: number; reset: number } {
   const now = Date.now();
   const bucket = rateBuckets.get(keyId);
@@ -59,14 +66,14 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
   // API keys in query strings are routinely captured in logs, browser history,
   // referrers, and proxies. Public API clients must use Bearer authentication.
   const token = header.startsWith("Bearer ") ? header.slice(7) : undefined;
-  if (!token) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "API key required" } });
+  if (!token) return authError(req, res, 401, "invalid_api_key", "API key required");
   const verified = await verifyApiKey(token);
-  if (!verified) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid or revoked API key" } });
+  if (!verified) return authError(req, res, 401, "invalid_api_key", "Invalid, expired, or revoked API key");
 
   // IP restrictions (when the key defines any).
   const clientIp = req.ip ?? req.socket?.remoteAddress;
   if (!ipAllowed(clientIp, verified.ipRestrictions)) {
-    return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "API key not allowed from this IP address" } });
+    return authError(req, res, 403, "ip_restricted", "API key not allowed from this IP address");
   }
 
   // Rate limiting with standard headers (defensive: a minimal `res` mock used
@@ -79,7 +86,7 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
   setHeader("X-RateLimit-Reset", String(Math.ceil(rl.reset / 1000)));
   if (!rl.allowed) {
     setHeader("Retry-After", String(Math.ceil((rl.reset - Date.now()) / 1000)));
-    return res.status(429).json({ ok: false, error: { code: "TOO_MANY_REQUESTS", message: "Rate limit exceeded" } });
+    return authError(req, res, 429, "rate_limit_exceeded", "Rate limit exceeded");
   }
 
   // Session 120 — best-effort call ledger: never fails or slows the request.
@@ -97,7 +104,9 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
   // Defensive: a minimal `res` mock in tests may not expose `on`.
   const started = Date.now();
   if (typeof (res as any).on !== "function") return next();
-  res.on("finish", () => {
+  let usageRecorded = false;
+  const persistUsage = (status: number, disconnect = false) => {
+    if (usageRecorded) return; usageRecorded = true;
     const local = (res as any).locals?.apiUsage ?? {};
     recordUsage({
       organizationId: verified.organization.id,
@@ -107,18 +116,31 @@ export async function apiKeyAuth(req: Request, res: Response, next: NextFunction
       method: req.method,
       path: req.originalUrl?.split("?")[0] ?? req.path,
       endpoint: local.endpoint ?? req.path.split("/").slice(0, 4).join("/"),
-      status: res.statusCode,
+      status,
       durationMs: Date.now() - started,
       channel: local.channel ?? "gateway",
       productSlug: local.productSlug ?? null,
       tokensIn: local.tokensIn ?? 0,
       tokensOut: local.tokensOut ?? 0,
       aiCostMicros: local.aiCostMicros ?? 0,
+      actualCostMicros: local.actualCostMicros ?? null,
+      requestId: req.requestId ?? null,
+      model: local.model ?? null,
+      provider: local.provider ?? null,
+      toolCalls: local.toolCalls ?? 0,
+      errorCode: local.errorCode ?? (disconnect ? "CLIENT_DISCONNECTED" : null),
+      agentRuns: local.agentRuns ?? 0,
+      workflowExecutions: local.workflowExecutions ?? 0,
+      images: local.images ?? 0,
+      audioSeconds: local.audioSeconds ?? 0,
+      storageBytes: local.storageBytes ?? 0,
       sourceIp: req.ip ?? null,
       environment: verified.environment ?? "production",
       permission: local.permission ?? (verified.granularScopes?.join(",") || verified.scopes?.join(",")),
     }).catch(() => {});
-  });
+  };
+  res.on("finish", () => persistUsage(res.statusCode));
+  res.on("close", () => { if (!res.writableEnded) persistUsage(499, true); });
   next();
 }
 
@@ -151,10 +173,7 @@ export function requireScope(...required: string[]) {
         return granular.includes(r);
       });
       if (!ok) {
-        return res.status(403).json({
-          ok: false,
-          error: { code: "FORBIDDEN", message: `API key missing required scope: ${required.join(",")}` },
-        });
+        return authError(req, res, 403, "insufficient_scope", `API key missing required scope: ${required.join(",")}`);
       }
       return next();
     }
@@ -169,7 +188,7 @@ export function requireScope(...required: string[]) {
     }
     const ok = [...needed].some((n) => legacy.includes(n)) || legacy.includes("ADMIN");
     if (!ok) {
-      return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: `API key missing required scope: ${required.join(",")}` } });
+      return authError(req, res, 403, "insufficient_scope", `API key missing required scope: ${required.join(",")}`);
     }
     next();
   };

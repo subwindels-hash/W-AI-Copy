@@ -168,6 +168,9 @@ const DEFAULT_PRODUCTS: Array<{ slug: string; name: string; category: string; de
   { slug: "billing", name: "Billing & Invoices", category: "business", description: "Read billing and invoice data.", requiredScopes: ["billing:read"], rateLimitPerMin: 120, basePriceUsd: 0.5 },
   { slug: "search", name: "Enterprise Search", category: "search", description: "Search across approved organization records.", requiredScopes: ["search:read"], rateLimitPerMin: 120, basePriceUsd: 0.5 },
   { slug: "marketplace", name: "Marketplace", category: "marketplace", description: "Discover and manage marketplace products.", requiredScopes: ["marketplace:read", "marketplace:write"], rateLimitPerMin: 60, basePriceUsd: 0.5 },
+  { slug: "nfc", name: "NFC Card Manager", category: "hardware", description: "Orchestrate authorized NFC reads and capability-checked, read-back-verified NDEF operations through a local WINDELS hardware adapter.", requiredScopes: ["nfc:read", "nfc:write"], rateLimitPerMin: 30, basePriceUsd: 0.5 },
+  { slug: "native-ai", name: "WINDELS Native AI API", category: "agents", description: "OpenAI-pattern chat, responses, real embeddings, files, health-gated multimodal APIs, and tenant-scoped agent execution.", requiredScopes: ["models:read", "ai:execute"], rateLimitPerMin: 120, basePriceUsd: 0.6 },
+  { slug: "cloud-android", name: "WINDELS AI Cloud Android", category: "hardware", description: "Human and AI collaborative cloud Android control with policy, approvals, sessions and verified actions.", requiredScopes: ["cloud-android:read", "cloud-android:control"], rateLimitPerMin: 120, basePriceUsd: 1.0 },
 ];
 
 export async function seedDefaultProducts(): Promise<number> {

@@ -63,6 +63,19 @@ describe("plugin registry", () => {
     expect(catalog.some((c) => c.manifest.id === "com.example.video")).toBe(true);
   });
 
+  it("rejects an unsigned manifest that self-claims verified trust", async () => {
+    const { PluginRegistry } = await import("./pluginRegistry.js");
+    await expect(PluginRegistry.publish({ manifest: manifest({ trust: "verified" }) })).rejects.toThrow(/signature/i);
+  });
+
+  it("requires full modules to come from the signed Module Center gate", async () => {
+    const { PluginRegistry } = await import("./pluginRegistry.js");
+    await PluginRegistry.publish({ manifest: manifest({ class: "full_module" }) });
+    await expect(PluginRegistry.install(OID, UID, "com.example.video")).rejects.toMatchObject({ code: "MODULE_CENTER_REQUIRED" });
+    await PluginRegistry.publish({ manifest: manifest({ class: "full_module", trust: "verified" }), trustedSource: "module_center" });
+    await expect(PluginRegistry.install(OID, UID, "com.example.video")).resolves.toMatchObject({ manifestId: "com.example.video" });
+  });
+
   it("installs with a subset of granted permissions and enables none-auth plugins", async () => {
     const { PluginRegistry } = await import("./pluginRegistry.js");
     await PluginRegistry.publish({ manifest: manifest({ authentication: ["none"] }) });

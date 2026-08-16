@@ -120,6 +120,23 @@ const EnvSchema = z.object({
     .optional(),
   AI_DEFAULT_MODEL: z.string().default("windels-assistant"),
   AI_MAX_CONTEXT_MESSAGES: z.coerce.number().int().min(4).max(200).default(40),
+  // Public WINDELS provider aliases route to these internal models when set.
+  // Values are never exposed by the /v1 response surface.
+  WINDELS_PUBLIC_API_ORIGIN: z.string().url().default("https://api.windels.ai"),
+  WINDELS_NATIVE_API_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
+  WINDELS_NATIVE_CHAT_MODEL: z.string().max(160).optional(),
+  WINDELS_NATIVE_EMBEDDING_MODEL: z.string().max(160).optional(),
+  WINDELS_IMAGE_MODEL: z.string().max(160).default("gpt-image-1"),
+  WINDELS_SPEECH_MODEL: z.string().max(160).default("gpt-4o-mini-tts"),
+
+  // WINDELS AI Cloud Android provider adapter. The public/control APIs fail
+  // closed until a signed, healthy provider is configured and explicitly enabled.
+  CLOUD_ANDROID_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
+  CLOUD_ANDROID_PROVIDER_URL: z.string().url().optional(),
+  CLOUD_ANDROID_PROVIDER_HMAC_SECRET: z.string().min(32).optional(),
+  CLOUD_ANDROID_PROVIDER_ID: z.string().max(100).default("windels-provider"),
+  CLOUD_ANDROID_PROVIDER_NAME: z.string().max(120).default("WINDELS Cloud Android Provider"),
+  CLOUD_ANDROID_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600000).default(120000),
 
   // Encryption (AES-256-GCM) — 64 hex chars. Falls back to deterministic dev key in NODE_ENV=development.
   WINDELS_ENCRYPTION_KEY: z.string().length(64).optional(),
@@ -257,6 +274,21 @@ const EnvSchema = z.object({
     .union([z.boolean(), z.enum(["true", "false"])])
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
+
+  // ── Super Admin Module & Plugin Deployment Center ───────────────
+  WINDELS_PLATFORM_VERSION: z.string().regex(/^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?$/).default("0.1.0"),
+  MODULE_PACKAGE_STORAGE_PATH: z.string().max(500).optional(),
+  MODULE_MAX_PACKAGE_MB: z.coerce.number().int().min(1).max(500).default(50),
+  MODULE_TRUSTED_PUBLISHER_KEYS: z.string().optional(), // JSON object: key id -> Ed25519 PEM public key
+  MODULE_RUNNER_URL: z.string().url().optional(),
+  MODULE_RUNNER_HMAC_SECRET: z.string().min(32).optional(),
+  MODULE_RUNNER_ARTIFACT_BASE_URL: z.string().url().optional(),
+  MODULE_RUNNER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(900000).default(180000),
+  MODULE_RUNTIME_ALLOWED_ORIGINS: z.string().optional(),
+  MODULE_RUNTIME_TIMEOUT_MS: z.coerce.number().int().min(500).max(120000).default(15000),
+  MODULE_RUNTIME_RESPONSE_MAX_BYTES: z.coerce.number().int().min(1024).max(50 * 1024 * 1024).default(5 * 1024 * 1024),
+  MODULE_MAX_MEMORY_MB: z.coerce.number().int().min(64).max(32768).default(4096),
+  MODULE_MAX_CPU_MILLICORES: z.coerce.number().int().min(100).max(32000).default(4000),
 
   // ── Crypto Exchange connectors (Crypto vertical, Phase 1) ──
 

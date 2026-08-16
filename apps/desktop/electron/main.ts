@@ -21,6 +21,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import os from "node:os";
 import { autoUpdater } from "electron-updater";
+import { PcscNfcBridge, type HardwarePlan } from "./nfc/pcscBridge.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const isDev = process.env.NODE_ENV === "development" || !app.isPackaged;
@@ -39,6 +40,18 @@ type WindowKind = "main" | "chat" | "workflow" | "canvas" | "settings" | "auth";
 const windows = new Map<number, WindelsWindow>();
 let mainWindow: WindelsWindow | null = null;
 let tray: Tray | null = null;
+const nfcBridge = new PcscNfcBridge();
+
+function isTrustedNfcSender(event: Electron.IpcMainInvokeEvent): boolean {
+  const frameUrl = event.senderFrame?.url ?? "";
+  if (event.senderFrame !== event.sender.mainFrame) return false;
+  if (!isDev) return frameUrl.startsWith("file://");
+  try { return new URL(frameUrl).origin === new URL(WEB_URL).origin; } catch { return false; }
+}
+
+function assertTrustedNfcSender(event: Electron.IpcMainInvokeEvent) {
+  if (!isTrustedNfcSender(event)) throw new Error("NFC IPC denied for an untrusted renderer origin");
+}
 
 function createWindow(kind: WindowKind, opts: Electron.BrowserWindowConstructorOptions = {}, query = ""): WindelsWindow {
   const preload = path.join(__dirname, "preload.js");
@@ -105,6 +118,10 @@ function showOrFocus(kind: WindowKind) {
 // ─── App lifecycle ────────────────────────────────────────────────────────
 app.whenReady().then(() => {
   registerIpc();
+  nfcBridge.on("state", (state) => {
+    for (const w of windows.values()) w.webContents.send("nfc:state", state);
+  });
+  void nfcBridge.start();
   buildTray();
   buildMenu();
   createWindow("main");
@@ -136,6 +153,7 @@ app.on("second-instance", (_e, argv) => {
 app.on("window-all-closed", () => {
   if (process.platform !== "darwin") app.quit();
 });
+app.on("before-quit", () => nfcBridge.stop());
 
 // ─── Deep links ───────────────────────────────────────────────────────────
 if (process.defaultApp) {
@@ -303,6 +321,22 @@ function registerIpc() {
     return { ok: true };
   });
   ipcMain.handle("notify:set-badge", (_e, count: number) => { setBadgeCount(count); return true; });
+
+  // NFC hardware adapter. All operations are local PC/SC calls, restricted to
+  // the trusted WINDELS renderer. Mutation plans must carry a short-lived token
+  // issued by the authenticated backend; the bridge always reads back writes.
+  ipcMain.handle("nfc:state", (event) => {
+    assertTrustedNfcSender(event);
+    return nfcBridge.state();
+  });
+  ipcMain.handle("nfc:refresh", (event, readerLocalId: string) => {
+    assertTrustedNfcSender(event);
+    return nfcBridge.refresh(readerLocalId);
+  });
+  ipcMain.handle("nfc:execute", (event, plan: HardwarePlan) => {
+    assertTrustedNfcSender(event);
+    return nfcBridge.execute(plan);
+  });
 
   // App info
   ipcMain.handle("app:info", () => ({

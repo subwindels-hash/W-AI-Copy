@@ -163,6 +163,12 @@ import { registerAiCommerceRoutes } from "./routes/aiCommerce.js";
 import { registerBrokerIntegrationRoutes } from "./routes/brokerIntegration.js";
 import { registerEaRoutes } from "./routes/ea.js";
 import { registerMarketingRoutes } from "./routes/marketing.js";
+import { registerNfcRoutes } from "./routes/nfc.js";
+import { registerPublicNfcRoutes } from "./routes/nfcPublic.js";
+import { registerModuleCenterRoutes } from "./routes/moduleCenter.js";
+import { registerModuleRuntimeRoutes } from "./routes/moduleRuntime.js";
+import { registerNativeAiApiRoutes } from "./routes/nativeAiApi.js";
+import { registerCloudAndroidRoutes } from "./routes/cloudAndroid.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
 import { logger } from "../observability/logger.js";
@@ -1308,6 +1314,16 @@ export function createApp() {
   v1.use("/camera", cameraRouter);
   registerCameraRoutes(cameraRouter);
 
+  // /nfc — NFC Card Manager. The API creates authorization/verification plans;
+  // local PC/SC, mobile native, or Web NFC adapters perform hardware I/O.
+  registerNfcRoutes(v1);
+
+  // Permanent signed-package module control plane (Super Admin only) and
+  // authenticated runtime registrations/proxy for successfully activated modules.
+  registerModuleCenterRoutes(v1);
+  registerModuleRuntimeRoutes(v1);
+  registerCloudAndroidRoutes(v1);
+
   // /advertising — AI Advertising Platform (unified multi-mode: standard,
   // smart, performance, autonomous). One module, multiple campaign modes.
   const advertisingRouter = express.Router();
@@ -1494,9 +1510,16 @@ export function createApp() {
   app.get("/healthz", (_req, res) => res.send("ok"));
   app.use("/api/v1", v1);
 
+  // Native AI provider surface. It deliberately lives at top-level /v1 while
+  // the existing /api/rest/v1 gateway remains mounted and unchanged.
+  const nativeAiRouter = express.Router();
+  registerNativeAiApiRoutes(nativeAiRouter);
+  app.use("/v1", rateLimit("apiGlobal"), nativeAiRouter);
+
   // Public API Gateway (api-key authenticated, stable REST surface)
   const publicRouter = express.Router();
   registerPublicApiRoutes(publicRouter);
+  registerPublicNfcRoutes(publicRouter);
   // Developer gateway extensions (agent execution, workflows, knowledge,
   // trading, media) mounted after the Session 120 predecessors so their exact
   // paths remain authoritative.

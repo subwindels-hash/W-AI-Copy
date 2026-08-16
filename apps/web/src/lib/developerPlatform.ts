@@ -7,6 +7,7 @@
  * the API.
  */
 import { api } from "./api";
+import type { NativePublicModel } from "@windels/shared/nativeAiApi";
 import type {
   ApiDashboardMetrics,
   ApiProductRow,
@@ -28,6 +29,8 @@ export type {
 } from "@windels/shared/developerPlatform";
 
 export const developerApi = {
+  nativeModels: () => api<NativePublicModel[]>("/developer/native-ai/models"),
+  nativeOpenApi: () => api<Record<string, unknown>>("/developer/native-ai/openapi"),
   /* Applications */
   apps: () => api<DeveloperAppRow[]>("/developer/apps"),
   createApp: (input: DeveloperAppCreateInput) => api<DeveloperAppRow>("/developer/apps", { method: "POST", json: input }),
@@ -43,7 +46,7 @@ export const developerApi = {
     api<{ id: string; status: string }>(`/developer/subscriptions/${id}/cancel`, { method: "POST" }),
 
   /* Usage */
-  dashboard: (days = 7, opts: { appId?: string; apiKeyId?: string } = {}) =>
+  dashboard: (days = 7, opts: { appId?: string; apiKeyId?: string; model?: string; endpoint?: string; environment?: string; status?: number } = {}) =>
     api<ApiDashboardMetrics>("/developer/usage/dashboard", { params: { days, ...opts } }),
   usageRecords: (params: { days?: number; page?: number; perPage?: number; appId?: string; apiKeyId?: string } = {}) =>
     api<{ items: ApiUsageRecordRow[]; total: number; page: number; perPage: number }>("/developer/usage/records", { params }),
@@ -62,7 +65,9 @@ export async function consoleRequest(
   const base = import.meta.env.VITE_API_URL ?? "/api/v1";
   const gatewayBase = base.replace(/\/api\/v1\/?$/, "/api/rest/v1");
   const pathOnly = path.startsWith("/api/rest/v1") ? path.slice("/api/rest/v1".length) : path;
-  const url = new URL(pathOnly, `${window.location.origin}${gatewayBase}`);
+  const url = path.startsWith("/v1/")
+    ? new URL(path, window.location.origin)
+    : new URL(pathOnly, `${window.location.origin}${gatewayBase}`);
   if (params) {
     for (const [k, v] of Object.entries(params)) {
       if (v !== undefined && v !== null) url.searchParams.set(k, String(v));

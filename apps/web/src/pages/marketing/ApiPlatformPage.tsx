@@ -71,7 +71,7 @@ export default function ApiPlatformPage() {
             <pre className="p-5 font-mono text-sm leading-relaxed overflow-x-auto text-slate-200">
 {`import { Windels } from "@windels/sdk";
 
-const windels = new Windels({ apiKey: "wnd_your_key_here" });
+const windels = new Windels({ apiKey: "WND_your_key_here" });
 
 // Execute an AI agent
 const result = await windels.agents.execute({

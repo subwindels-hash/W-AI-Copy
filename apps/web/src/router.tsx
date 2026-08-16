@@ -57,6 +57,8 @@ const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
 const AdminApiControlPage = lazy(() => import("./pages/admin/AdminApiControlPage"));
+const ModuleCenterPage = lazy(() => import("./pages/admin/ModuleCenterPage").then((m) => ({ default: m.ModuleCenterPage })));
+const ModuleRuntimePage = lazy(() => import("./pages/modules/ModuleRuntimePage").then((m) => ({ default: m.ModuleRuntimePage })));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
 const CrmPage = lazy(() => import("./pages/crm/CrmPage").then((m) => ({ default: m.CrmPage })));
 const EmailIntelPage = lazy(() => import("./pages/emailIntel/EmailIntelPage").then((m) => ({ default: m.EmailIntelPage })));
@@ -145,6 +147,8 @@ const MobileOfflinePage = lazy(() => import("./pages/mobile/MobileOfflinePage").
 
 // Desktop (Session 16)
 const DesktopHomePage = lazy(() => import("./pages/desktop/DesktopHomePage").then((m) => ({ default: m.DesktopHomePage })));
+const NfcCardManagerPage = lazy(() => import("./pages/nfc/NfcCardManagerPage").then((m) => ({ default: m.NfcCardManagerPage })));
+const CloudAndroidPage = lazy(() => import("./pages/cloudAndroid/CloudAndroidPage").then((m) => ({ default: m.CloudAndroidPage })));
 const DesktopLayout = lazy(() => import("./app/desktop/DesktopLayout").then((m) => ({ default: m.DesktopLayout })));
 
 function HomeRedirect() {
@@ -255,6 +259,8 @@ export const router = createBrowserRouter([
       { path: "chat", element: withSuspense(<ChatPage />) },
       { path: "workflow", element: withSuspense(<WorkflowPage />) },
       { path: "canvas", element: withSuspense(<CanvasPage />) },
+      { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
+      { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
     ],
   },
@@ -283,6 +289,8 @@ export const router = createBrowserRouter([
       { path: "settings", element: withSuspense(<MobileSettingsPage />) },
       { path: "profile", element: withSuspense(<MobileProfilePage />) },
       { path: "offline", element: withSuspense(<MobileOfflinePage />) },
+      { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
+      { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
     ],
   },
   {
@@ -317,6 +325,8 @@ export const router = createBrowserRouter([
       { path: "lead-pipeline", element: withSuspense(<LeadPipelinePage />) },
       { path: "mfa-assurance", element: withSuspense(<MfaAssurancePage />) },
       { path: "mobile-devices", element: withSuspense(<MobileDevicesPage />) },
+      { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
+      { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
       { path: "opex", element: withSuspense(<OpexAssurancePage />) },
       { path: "prompt-templates", element: withSuspense(<PromptTemplatesPage />) },
       { path: "public-api", element: withSuspense(<PublicApiPage />) },
@@ -398,7 +408,17 @@ export const router = createBrowserRouter([
       { path: "derivatives", element: withSuspense(<DerivativesPage />) },
       { path: "audit", element: withSuspense(<AuditConsolePage />) },
       { path: "google-identity", element: withSuspense(<GoogleIdentityPage />) },
+      { path: "modules/:moduleId/*", element: withSuspense(<ModuleRuntimePage />) },
     ],
+  },
+  {
+    path: "/admin/modules",
+    element: (
+      <ProtectedRoute minRole="super_admin">
+        <AppShell />
+      </ProtectedRoute>
+    ),
+    children: [{ index: true, element: withSuspense(<ModuleCenterPage />) }],
   },
   {
     path: "/admin",

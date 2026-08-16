@@ -13,6 +13,8 @@ export default {
     "dist/**/*",
     "package.json",
   ],
+  // PC/SC includes a native Node addon and must remain outside app.asar.
+  asarUnpack: ["**/node_modules/@pokusew/pcsclite/**/*"],
   extraResources: [
     { from: "../web/dist", to: "web", filter: ["**/*"] },
   ],

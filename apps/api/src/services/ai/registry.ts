@@ -201,6 +201,15 @@ export class ProviderRegistry {
 
   hasRealModelConfigured(): boolean { return this.hasRealProvider; }
 
+  /** Refresh and return only configured, healthy, real model entries for public routing. */
+  async listPublicRoutableModels(): Promise<ModelInfo[]> {
+    await this.healthSweep();
+    await this.rebuildModelIndex();
+    return this.listModels()
+      .filter((model) => model.source === "real" && model.configured && model.healthy === true && model.provider !== "windels")
+      .map(({ source: _source, healthy: _healthy, configured: _configured, ...model }) => model);
+  }
+
   resolve(modelId?: string): { provider: AIProvider; model: ModelInfo; source: "real" | "echo-demo" } | null {
     if (modelId) {
       const hit = this.modelToProvider.get(modelId);

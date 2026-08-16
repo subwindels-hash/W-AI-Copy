@@ -152,3 +152,8 @@ export * from "./commerce.js";
 export * from "./aiCommerce.js";
 export * from "./videoTransformer.js";
 export * from "./pluginOs.js";
+export * from "./nfc.js";
+export * from "./developerPlatform.js";
+export * from "./moduleCenter.js";
+export * from "./nativeAiApi.js";
+export * from "./cloudAndroid.js";

@@ -17,6 +17,8 @@ import { z } from "zod";
 export const API_SCOPE_CATALOG = [
   "ai:read",
   "ai:execute",
+  "models:read",
+  "tools:execute",
   "agents:read",
   "agents:execute",
   "workflows:read",
@@ -25,7 +27,13 @@ export const API_SCOPE_CATALOG = [
   "memory:write",
   "knowledge:read",
   "knowledge:write",
+  "knowledge:search",
   "search:read",
+  "files:read",
+  "files:write",
+  "images:generate",
+  "audio:generate",
+  "audio:transcribe",
   "media:generate",
   "voice:generate",
   "documents:generate",
@@ -33,26 +41,39 @@ export const API_SCOPE_CATALOG = [
   "billing:read",
   "marketplace:read",
   "marketplace:write",
+  "nfc:read",
+  "nfc:write",
+  "nfc:admin",
+  "cloud-android:read",
+  "cloud-android:control",
+  "cloud-android:manage",
+  "cloud-android:apps",
+  "cloud-android:files",
+  "cloud-android:approve",
 ] as const;
 export type ApiScope = (typeof API_SCOPE_CATALOG)[number];
 
 export const API_SCOPE_GROUPS: Record<string, string[]> = {
-  AI: ["ai:read", "ai:execute"],
+  AI: ["ai:read", "ai:execute", "models:read", "tools:execute"],
   Agents: ["agents:read", "agents:execute"],
   Workflows: ["workflows:read", "workflows:execute"],
   Memory: ["memory:read", "memory:write"],
-  Knowledge: ["knowledge:read", "knowledge:write"],
+  Knowledge: ["knowledge:read", "knowledge:write", "knowledge:search"],
   Search: ["search:read"],
-  Media: ["media:generate", "documents:generate"],
-  Voice: ["voice:generate"],
+  Files: ["files:read", "files:write", "documents:generate"],
+  Media: ["media:generate", "images:generate"],
+  Voice: ["voice:generate", "audio:generate", "audio:transcribe"],
   Analytics: ["analytics:read"],
   Billing: ["billing:read"],
   Marketplace: ["marketplace:read", "marketplace:write"],
+  NFC: ["nfc:read", "nfc:write", "nfc:admin"],
+  "Cloud Android": ["cloud-android:read", "cloud-android:control", "cloud-android:manage", "cloud-android:apps", "cloud-android:files", "cloud-android:approve"],
 };
 
 /** Map a granular scope to the legacy scope it needs for backward-compat
  *  gateway routing (READ for reads, WRITE/ADMIN for writes). */
 export function scopeLegacy(s: string): "READ" | "WRITE" | "ADMIN" {
+  if (s.endsWith(":admin")) return "ADMIN";
   if (s.endsWith(":read")) return "READ";
   if (s.endsWith(":execute") || s.endsWith(":write") || s.endsWith(":generate")) return "WRITE";
   return "READ";
@@ -63,7 +84,7 @@ export type DeveloperAppEnvironment = (typeof APP_ENVIRONMENTS)[number];
 
 export const API_PRODUCT_CATEGORIES = [
   "agents", "workforce", "trading", "media", "voice", "knowledge",
-  "workflows", "documents", "business", "search", "marketplace", "communication",
+  "workflows", "documents", "business", "search", "marketplace", "communication", "hardware",
 ] as const;
 export type ApiProductCategory = (typeof API_PRODUCT_CATEGORIES)[number];
 
@@ -151,6 +172,17 @@ export interface ApiUsageRecordRow {
   sourceIp: string | null;
   environment: string;
   permission: string | null;
+  requestId: string | null;
+  model: string | null;
+  provider: string | null;
+  toolCalls: number;
+  actualCostMicros: number | null;
+  errorCode: string | null;
+  agentRuns: number;
+  workflowExecutions: number;
+  images: number;
+  audioSeconds: number;
+  storageBytes: number;
   createdAt: string;
 }
 
@@ -165,6 +197,13 @@ export interface ApiDashboardMetrics {
   totalTokensIn: number;
   totalTokensOut: number;
   estimatedCostUsd: number;
+  actualCostUsd: number | null;
+  agentRuns: number;
+  toolExecutions: number;
+  workflowExecutions: number;
+  images: number;
+  audioSeconds: number;
+  storageBytes: number;
   byEndpoint: Array<{ endpoint: string; count: number; success: number }>;
   byChannel: Array<{ channel: string; count: number }>;
   daily: Array<{ date: string; requests: number; success: number; failed: number }>;
@@ -177,6 +216,10 @@ export const ApiUsageQuerySchema = z.object({
   days: z.coerce.number().int().min(1).max(90).default(7),
   appId: z.string().cuid().optional(),
   apiKeyId: z.string().cuid().optional(),
+  model: z.string().max(120).optional(),
+  endpoint: z.string().max(160).optional(),
+  environment: z.enum(["development", "test", "production"]).optional(),
+  status: z.coerce.number().int().min(100).max(599).optional(),
   page: z.coerce.number().int().min(1).default(1),
   perPage: z.coerce.number().int().min(1).max(100).default(20),
 });

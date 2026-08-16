@@ -102,6 +102,7 @@ describe("scope helpers", () => {
     expect(scopeLegacy("agents:execute")).toBe("WRITE");
     expect(scopeLegacy("media:generate")).toBe("WRITE");
     expect(scopeLegacy("analytics:read")).toBe("READ");
+    expect(scopeLegacy("nfc:admin")).toBe("ADMIN");
   });
 });
 

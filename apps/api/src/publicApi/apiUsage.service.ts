@@ -27,6 +27,17 @@ export interface RecordUsageInput {
   sourceIp?: string | null;
   environment?: string;
   permission?: string | null;
+  requestId?: string | null;
+  model?: string | null;
+  provider?: string | null;
+  toolCalls?: number;
+  actualCostMicros?: number | null;
+  errorCode?: string | null;
+  agentRuns?: number;
+  workflowExecutions?: number;
+  images?: number;
+  audioSeconds?: number;
+  storageBytes?: number;
 }
 
 /** Best-effort persist; never throws to the request path. */
@@ -51,8 +62,26 @@ export async function recordUsage(input: RecordUsageInput): Promise<void> {
         sourceIp: input.sourceIp ?? null,
         environment: input.environment ?? "production",
         permission: input.permission ?? null,
+        requestId: input.requestId ?? null,
+        model: input.model ?? null,
+        provider: input.provider ?? null,
+        toolCalls: input.toolCalls ?? 0,
+        actualCostMicros: input.actualCostMicros ?? null,
+        errorCode: input.errorCode ?? null,
+        agentRuns: input.agentRuns ?? 0,
+        workflowExecutions: input.workflowExecutions ?? 0,
+        images: input.images ?? 0,
+        audioSeconds: input.audioSeconds ?? 0,
+        storageBytes: input.storageBytes ?? 0,
       },
     });
+    if (input.productSlug) {
+      const product = await prisma.apiProduct.findFirst({ where: { slug: input.productSlug, enabled: true, OR: [{ organizationId: input.organizationId }, { organizationId: null }] }, select: { id: true } });
+      if (product) {
+        const subscription = await prisma.apiSubscription.findFirst({ where: { organizationId: input.organizationId, productId: product.id, status: "active" } });
+        if (subscription) await prisma.apiSubscription.update({ where: { id: subscription.id }, data: { usedThisMonth: { increment: 1 } } });
+      }
+    }
   } catch (err) {
     logger.warn("[api-platform] usage record failed", { err: (err as Error)?.message });
   }
@@ -80,6 +109,17 @@ async function toRow(r: any): Promise<ApiUsageRecordRow> {
     sourceIp: r.sourceIp ?? null,
     environment: r.environment ?? "production",
     permission: r.permission ?? null,
+    requestId: r.requestId ?? null,
+    model: r.model ?? null,
+    provider: r.provider ?? null,
+    toolCalls: r.toolCalls ?? 0,
+    actualCostMicros: r.actualCostMicros ?? null,
+    errorCode: r.errorCode ?? null,
+    agentRuns: r.agentRuns ?? 0,
+    workflowExecutions: r.workflowExecutions ?? 0,
+    images: r.images ?? 0,
+    audioSeconds: r.audioSeconds ?? 0,
+    storageBytes: r.storageBytes ?? 0,
     createdAt: iso(r.createdAt),
   };
 }
@@ -104,6 +144,10 @@ export async function apiDashboardMetrics(
     createdAt: { gte: since },
     ...(query.appId ? { appId: query.appId } : {}),
     ...(query.apiKeyId ? { apiKeyId: query.apiKeyId } : {}),
+    ...(query.model ? { model: query.model } : {}),
+    ...(query.endpoint ? { endpoint: query.endpoint } : {}),
+    ...(query.environment ? { environment: query.environment } : {}),
+    ...(query.status ? { status: query.status } : {}),
   };
 
   const [total, byEndpoint, byChannel, keyUsage, recent, tokens] = await Promise.all([
@@ -123,7 +167,7 @@ export async function apiDashboardMetrics(
     }),
     prisma.apiUsageRecord.aggregate({
       where,
-      _sum: { tokensIn: true, tokensOut: true, aiCostMicros: true, durationMs: true },
+      _sum: { tokensIn: true, tokensOut: true, aiCostMicros: true, actualCostMicros: true, durationMs: true, toolCalls: true, agentRuns: true, workflowExecutions: true, images: true, audioSeconds: true, storageBytes: true },
       _count: { id: true },
     }),
   ]);
@@ -146,7 +190,7 @@ export async function apiDashboardMetrics(
   }
   const grouped = await prisma.apiUsageRecord.groupBy({
     by: ["createdAt", "status"],
-    where: { organizationId, createdAt: { gte: since } },
+    where,
     _count: { id: true },
   });
   for (const g of grouped as any[]) {
@@ -180,7 +224,14 @@ export async function apiDashboardMetrics(
     totalTokensIn: sum.tokensIn ?? 0,
     totalTokensOut: sum.tokensOut ?? 0,
     // Notional cost estimate at $0.60/M input tokens, $2.40/M output tokens.
-    estimatedCostUsd: ((sum.tokensIn ?? 0) / 1e6) * 0.6 + ((sum.tokensOut ?? 0) / 1e6) * 2.4,
+    estimatedCostUsd: (sum.aiCostMicros ?? 0) / 1e8,
+    actualCostUsd: sum.actualCostMicros === null || sum.actualCostMicros === undefined ? null : sum.actualCostMicros / 1e8,
+    agentRuns: sum.agentRuns ?? 0,
+    toolExecutions: sum.toolCalls ?? 0,
+    workflowExecutions: sum.workflowExecutions ?? 0,
+    images: sum.images ?? 0,
+    audioSeconds: sum.audioSeconds ?? 0,
+    storageBytes: sum.storageBytes ?? 0,
     byEndpoint: byEndpoint
       .map((e: any) => ({ endpoint: e.endpoint, count: e._count.id, success: (e._sum?.status ?? 0) < 400 ? e._count.id : 0 }))
       .sort((a: any, b: any) => b.count - a.count),
@@ -203,6 +254,10 @@ export async function listUsageRecords(
     organizationId,
     ...(query.appId ? { appId: query.appId } : {}),
     ...(query.apiKeyId ? { apiKeyId: query.apiKeyId } : {}),
+    ...(query.model ? { model: query.model } : {}),
+    ...(query.endpoint ? { endpoint: query.endpoint } : {}),
+    ...(query.environment ? { environment: query.environment } : {}),
+    ...(query.status ? { status: query.status } : {}),
     ...(query.days ? { createdAt: { gte: new Date(Date.now() - query.days * 86400000) } } : {}),
   };
   const [items, total] = await Promise.all([

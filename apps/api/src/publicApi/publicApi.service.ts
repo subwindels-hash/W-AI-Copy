@@ -22,7 +22,7 @@ export const UpdateApiKeySchema = AkApiKeyUpdateSchema;
 
 function generateToken(): { plain: string; prefix: string; hash: string } {
   const buf = randomBytes(24);
-  const plain = `wnd_${buf.toString("base64url")}`;
+  const plain = `WND_${buf.toString("base64url")}`;
   const prefix = plain.slice(0, 11);
   const hash = createHash("sha256").update(plain).digest("hex");
   return { plain, prefix, hash };
@@ -41,7 +41,7 @@ function scopesOf(scopes: unknown): AkScope[] {
   return (Array.isArray(scopes) ? scopes : []) as AkScope[];
 }
 
-function serializeKey(key: any): AkApiKeyRow {
+function serializeKey(key: any, usage: AkApiKeyRow["usage"] = { requests: 0, tokensIn: 0, tokensOut: 0, costMicros: 0, errors: 0 }): AkApiKeyRow {
   return {
     id: key.id,
     name: key.name,
@@ -59,7 +59,22 @@ function serializeKey(key: any): AkApiKeyRow {
       id: key.createdBy.id,
       displayName: key.createdBy.profile?.displayName ?? key.createdBy.email,
     },
+    usage,
     createdAt: iso(key.createdAt)!,
+  };
+}
+
+async function usageForKey(apiKeyId: string): Promise<AkApiKeyRow["usage"]> {
+  const [aggregate, errors] = await Promise.all([
+    prisma.apiUsageRecord.aggregate({ where: { apiKeyId }, _count: { id: true }, _sum: { tokensIn: true, tokensOut: true, aiCostMicros: true } }),
+    prisma.apiUsageRecord.count({ where: { apiKeyId, status: { gte: 400 } } }),
+  ]);
+  return {
+    requests: (aggregate as any)._count?.id ?? 0,
+    tokensIn: (aggregate as any)._sum?.tokensIn ?? 0,
+    tokensOut: (aggregate as any)._sum?.tokensOut ?? 0,
+    costMicros: (aggregate as any)._sum?.aiCostMicros ?? 0,
+    errors,
   };
 }
 
@@ -76,7 +91,7 @@ export async function listApiKeys(userId: string, input: AkApiKeyListQuery = { i
     orderBy: { createdAt: "desc" },
     include: { createdBy: { include: { profile: true } } },
   });
-  return keys.map(serializeKey);
+  return Promise.all(keys.map(async (key) => serializeKey(key, await usageForKey(key.id))));
 }
 
 export async function getApiKey(userId: string, id: string): Promise<AkApiKeyRow> {
@@ -86,7 +101,7 @@ export async function getApiKey(userId: string, id: string): Promise<AkApiKeyRow
     include: { createdBy: { include: { profile: true } } },
   });
   if (!key) throw AppError.notFound("API key not found");
-  return serializeKey(key);
+  return serializeKey(key, await usageForKey(key.id));
 }
 
 export async function createApiKey(userId: string, input: z.infer<typeof CreateApiKeySchema>): Promise<AkApiKeyCreated> {
@@ -217,8 +232,34 @@ export async function revokeApiKey(userId: string, id: string): Promise<AkApiKey
   return updateApiKey(userId, id, { revoked: true });
 }
 
+/** Atomically revoke an active key and return one replacement secret exactly once. */
+export async function rotateApiKey(userId: string, id: string, expiresInDays?: number): Promise<AkApiKeyCreated> {
+  const ctx = await resolveUserContext(userId);
+  const existing = await prisma.apiKey.findFirst({ where: { id, organizationId: ctx.organizationId } });
+  if (!existing) throw AppError.notFound("API key not found");
+  if (existing.revokedAt) throw AppError.conflict("Revoked API keys cannot be rotated");
+  const generated = generateToken();
+  const expiresAt = expiresInDays ? new Date(Date.now() + expiresInDays * 86_400_000) : existing.expiresAt;
+  const replacement = await prisma.$transaction(async (tx) => {
+    await tx.apiKey.update({ where: { id: existing.id }, data: { revokedAt: new Date() } });
+    return tx.apiKey.create({ data: {
+      organizationId: existing.organizationId, createdById: userId,
+      name: `${existing.name} (rotated)`, keyPrefix: generated.prefix, keyHash: generated.hash,
+      scopes: existing.scopes, granularScopes: existing.granularScopes,
+      appId: existing.appId, environment: existing.environment,
+      ipRestrictions: existing.ipRestrictions, expiresAt,
+    } });
+  });
+  await audit(ctx.organizationId, userId, "authz.api_key_rotate", replacement.id, { previousKeyId: existing.id, scopes: existing.scopes, granularScopes: existing.granularScopes, environment: existing.environment });
+  return {
+    id: replacement.id, name: replacement.name, key: generated.plain, keyPrefix: generated.prefix,
+    scopes: scopesOf(replacement.scopes), granularScopes: replacement.granularScopes ?? [],
+    environment: replacement.environment ?? "production", expiresAt: iso(replacement.expiresAt), createdAt: iso(replacement.createdAt)!,
+  };
+}
+
 export async function verifyApiKey(token: string) {
-  if (!token?.startsWith("wnd_")) return null;
+  if (!/^wnd_/i.test(token ?? "")) return null;
   const hash = hashToken(token);
   const key = await prisma.apiKey.findUnique({
     where: { keyHash: hash },
