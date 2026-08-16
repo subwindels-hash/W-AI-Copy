@@ -50,6 +50,7 @@ export const PERMISSION_CATEGORIES = {
   developer: [Permission.DEVELOPER_READ, Permission.DEVELOPER_WRITE],
   audit: [Permission.AUDIT_READ],
   nfc: [Permission.NFC_READ, Permission.NFC_WRITE, Permission.NFC_DESTRUCTIVE, Permission.NFC_ADMIN],
+  cloudAndroid: [Permission.CLOUD_ANDROID_READ, Permission.CLOUD_ANDROID_CONTROL, Permission.CLOUD_ANDROID_MANAGE, Permission.CLOUD_ANDROID_APP, Permission.CLOUD_ANDROID_FILE, Permission.CLOUD_ANDROID_SENSITIVE, Permission.CLOUD_ANDROID_ADMIN],
   admin: [Permission.ADMIN_STAR],
 } as const;
 
@@ -122,6 +123,8 @@ export const permissionsModule = {
       billing: [...PERMISSION_CATEGORIES.billing],
       developer: [...PERMISSION_CATEGORIES.developer],
       audit: [...PERMISSION_CATEGORIES.audit],
+      nfc: [...PERMISSION_CATEGORIES.nfc],
+      cloudAndroid: [...PERMISSION_CATEGORIES.cloudAndroid],
       admin: [...PERMISSION_CATEGORIES.admin],
       all: [...ALL_PERMISSIONS],
     };

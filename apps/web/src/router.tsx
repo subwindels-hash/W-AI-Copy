@@ -148,6 +148,7 @@ const MobileOfflinePage = lazy(() => import("./pages/mobile/MobileOfflinePage").
 // Desktop (Session 16)
 const DesktopHomePage = lazy(() => import("./pages/desktop/DesktopHomePage").then((m) => ({ default: m.DesktopHomePage })));
 const NfcCardManagerPage = lazy(() => import("./pages/nfc/NfcCardManagerPage").then((m) => ({ default: m.NfcCardManagerPage })));
+const CloudAndroidPage = lazy(() => import("./pages/cloudAndroid/CloudAndroidPage").then((m) => ({ default: m.CloudAndroidPage })));
 const DesktopLayout = lazy(() => import("./app/desktop/DesktopLayout").then((m) => ({ default: m.DesktopLayout })));
 
 function HomeRedirect() {
@@ -259,6 +260,7 @@ export const router = createBrowserRouter([
       { path: "workflow", element: withSuspense(<WorkflowPage />) },
       { path: "canvas", element: withSuspense(<CanvasPage />) },
       { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
+      { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
     ],
   },
@@ -288,6 +290,7 @@ export const router = createBrowserRouter([
       { path: "profile", element: withSuspense(<MobileProfilePage />) },
       { path: "offline", element: withSuspense(<MobileOfflinePage />) },
       { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
+      { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
     ],
   },
   {
@@ -323,6 +326,7 @@ export const router = createBrowserRouter([
       { path: "mfa-assurance", element: withSuspense(<MfaAssurancePage />) },
       { path: "mobile-devices", element: withSuspense(<MobileDevicesPage />) },
       { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
+      { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
       { path: "opex", element: withSuspense(<OpexAssurancePage />) },
       { path: "prompt-templates", element: withSuspense(<PromptTemplatesPage />) },
       { path: "public-api", element: withSuspense(<PublicApiPage />) },

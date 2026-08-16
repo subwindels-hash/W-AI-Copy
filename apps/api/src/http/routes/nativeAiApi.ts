@@ -15,6 +15,7 @@ import { nativeComplete, nativeEmbed, nativeModelCatalog, selectNativeStreamingM
 import { generateNativeImage, generateNativeSpeech, transcribeNativeAudio } from "../../nativeAi/nativeMedia.service.js";
 import { cancelExternalAgentRun, executeExternalAgent, getExternalAgent, getExternalAgentRun, listExternalAgents } from "../../nativeAi/externalAgent.service.js";
 import { AppError } from "../../utils/result.js";
+import { registerCloudAndroidPublicRoutes } from "./cloudAndroidPublic.js";
 
 function ctx(req: any) { return { organizationId: req.apiOrganization.id as string, userId: req.apiUser.id as string, apiKeyId: req.apiKey.id as string }; }
 function enrich(res: any, data: Record<string, unknown>) { res.locals = { ...(res.locals ?? {}), apiUsage: { ...(res.locals?.apiUsage ?? {}), ...data, productSlug: "native-ai" } }; }
@@ -43,7 +44,8 @@ const AgentRunId = z.object({ agentId: z.string().min(1).max(120), runId: z.stri
 export function registerNativeAiApiRoutes(router: Router) {
   // The OpenAPI document is public; every operation it describes remains API-key protected.
   router.get("/openapi.json", (req, res) => res.type("application/vnd.oai.openapi+json").json(nativeAiOpenApi(`${req.protocol}://${req.get("host")}`)));
-  router.use(apiKeyAuth, nativeAiQuota);
+  router.use(apiKeyAuth);
+  router.use((req, res, next) => req.path.startsWith("/cloud-android") ? next() : nativeAiQuota(req, res, next));
   router.use((req: any, res, next) => {
     let recorded = false;
     const record = (status: number) => { if (recorded) return; recorded = true; void auditService.log({ organizationId: req.apiOrganization.id, userId: req.apiUser.id, apiKeyId: req.apiKey.id, action: "native_api.request", resourceType: "native_ai_request", requestId: req.requestId, metadata: { method: req.method, path: `/v1${req.path}`, status } }); };
@@ -186,5 +188,6 @@ export function registerNativeAiApiRoutes(router: Router) {
   router.get("/agents/:agentId/runs/:runId", requireScope("agents:read"), validate({ params: AgentRunId }), async (req, res, next) => { try { enrich(res, { endpoint: "native.agents.runs.get", channel: "agents", permission: "agents:read" }); res.json(await getExternalAgentRun(ctx(req), req.params.agentId, req.params.runId)); } catch (error) { next(error); } });
   router.post("/agents/:agentId/runs/:runId/cancel", requireScope("agents:execute"), validate({ params: AgentRunId }), async (req, res, next) => { try { enrich(res, { endpoint: "native.agents.runs.cancel", channel: "agents", permission: "agents:execute" }); res.json(await cancelExternalAgentRun(ctx(req), req.params.agentId, req.params.runId)); } catch (error) { next(error); } });
 
+  registerCloudAndroidPublicRoutes(router);
   router.use((req, res) => res.status(404).json({ error: { message: `Route ${req.method} /v1${req.path} not found`, type: "invalid_request_error", code: "not_found", param: null }, request_id: requestId(req) }));
 }

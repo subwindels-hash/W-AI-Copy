@@ -279,6 +279,13 @@ model User {
   platformModulesInstalled  PlatformModule[]        @relation("platform_module_installed_by")
   moduleOperations          PlatformModuleOperation[] @relation("module_operation_requested_by")
   externalAgentRuns         ExternalAgentRun[]        @relation("external_agent_run_requested_by")
+  cloudAndroidDevices       CloudAndroidDevice[]      @relation("cloud_android_device_owner")
+  cloudAndroidTemplates     CloudAndroidTemplate[]    @relation("cloud_android_template_created_by")
+  cloudAndroidImages        CloudAndroidImage[]       @relation("cloud_android_image_created_by")
+  cloudAndroidSessions      CloudAndroidSession[]     @relation("cloud_android_session_user")
+  cloudAndroidActions       CloudAndroidAction[]      @relation("cloud_android_action_user")
+  cloudAndroidGrants        CloudAndroidAgentGrant[]  @relation("cloud_android_grant_assigned_by")
+  cloudAndroidApprovalsDecided CloudAndroidApproval[] @relation("cloud_android_approval_decided_by")
 
   @@index([role])
   @@index([createdAt])
@@ -351,6 +358,15 @@ model Organization {
   nfcProfiles        NfcProfile[]
   nfcOperations      NfcOperation[]
   externalAgentRuns  ExternalAgentRun[]
+  cloudAndroidDevices CloudAndroidDevice[]
+  cloudAndroidTemplates CloudAndroidTemplate[]
+  cloudAndroidImages CloudAndroidImage[]
+  cloudAndroidSessions CloudAndroidSession[]
+  cloudAndroidActions CloudAndroidAction[]
+  cloudAndroidApprovals CloudAndroidApproval[]
+  cloudAndroidSnapshots CloudAndroidSnapshot[]
+  cloudAndroidUsage CloudAndroidUsageRecord[]
+  cloudAndroidGrants CloudAndroidAgentGrant[]
 }
 
 model Workspace {
@@ -463,6 +479,7 @@ model Agent {
   // structured employee profile
   department     String?      @default("General")
   capabilities   String[]     @default([])     // e.g. ["research","summarize","code"]
+  cloudAndroidRequirements Json @default("{}")
   modelId        String?
   temperature    Float        @default(0.7)
   maxTokens      Int          @default(2048)
@@ -484,6 +501,9 @@ model Agent {
   knowledge     AgentKnowledge[]
   events        AgentEvent[]
   externalRuns  ExternalAgentRun[]
+  cloudAndroidGrants CloudAndroidAgentGrant[]
+  cloudAndroidSessions CloudAndroidSession[]
+  cloudAndroidActions CloudAndroidAction[]
   talkMemberships       TalkMember[]
   talkMessages          TalkMessage[]
   meetingParticipations MeetingParticipant[]
@@ -1063,6 +1083,8 @@ model ApiKey {
 
   usage          ApiUsageRecord[]
   externalAgentRuns ExternalAgentRun[]
+  cloudAndroidSessions CloudAndroidSession[]
+  cloudAndroidUsage CloudAndroidUsageRecord[]
   @@index([organizationId])
   @@index([appId])
 }
@@ -1271,6 +1293,13 @@ enum Permission {
   NFC_WRITE
   NFC_DESTRUCTIVE
   NFC_ADMIN
+  CLOUD_ANDROID_READ
+  CLOUD_ANDROID_CONTROL
+  CLOUD_ANDROID_MANAGE
+  CLOUD_ANDROID_APP
+  CLOUD_ANDROID_FILE
+  CLOUD_ANDROID_SENSITIVE
+  CLOUD_ANDROID_ADMIN
   ADMIN_STAR
 }
 
@@ -2902,4 +2931,358 @@ model ExternalAgentMessage {
 
   @@index([runId, createdAt])
   @@map("external_agent_messages")
+}
+
+// ─── WINDELS AI Cloud Android ────────────────────────────────────────────────
+enum CloudAndroidLifecycle {
+  CREATING
+  PROVISIONING
+  STOPPED
+  BOOTING
+  RUNNING
+  SUSPENDING
+  SUSPENDED
+  REBOOTING
+  SNAPSHOTTING
+  RESTORING
+  DEGRADED
+  FAILED
+  DESTROYING
+  DESTROYED
+}
+
+enum CloudAndroidSessionMode {
+  HUMAN
+  AI
+  COLLABORATIVE
+}
+
+enum CloudAndroidSessionStatus {
+  ACTIVE
+  PAUSED_FOR_APPROVAL
+  PAUSED_FOR_TAKEOVER
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum CloudAndroidActionStatus {
+  PREPARING
+  APPROVAL_REQUIRED
+  EXECUTING
+  VERIFYING
+  SUCCEEDED
+  FAILED
+  REJECTED
+  CANCELLED
+}
+
+enum CloudAndroidApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CONSUMED
+}
+
+model CloudAndroidProviderRegistration {
+  id              String   @id @default(cuid())
+  providerKey     String   @unique
+  name            String
+  adapterVersion  String
+  status          String   @default("NOT_CONFIGURED")
+  capabilities    Json     @default("[]")
+  regions         String[] @default([])
+  androidVersions String[] @default([])
+  lastHealthAt    DateTime?
+  lastError       String?
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  devices         CloudAndroidDevice[]
+
+  @@index([status])
+  @@map("cloud_android_providers")
+}
+
+model CloudAndroidTemplate {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation("cloud_android_template_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  name           String
+  description    String?
+  category       String
+  androidVersion String
+  cpuCores       Int
+  ramMb          Int
+  storageGb      Int
+  region         String
+  locale         String
+  timezone       String
+  networkPolicy  Json
+  securityProfile String
+  installedApplications Json @default("[]")
+  imageId        String?
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  devices        CloudAndroidDevice[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, category])
+  @@map("cloud_android_templates")
+}
+
+model CloudAndroidImage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation("cloud_android_image_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  name           String
+  version        String
+  status         String       @default("CREATING")
+  providerImageRef String?
+  androidVersion String
+  configuration  Json         @default("{}")
+  applications   Json         @default("[]")
+  agentConfiguration Json     @default("{}")
+  automationConfiguration Json @default("{}")
+  sizeBytes      BigInt?
+  checksum       String?
+  securityReport Json         @default("{}")
+  sourceDeviceId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  devices        CloudAndroidDevice[]
+
+  @@unique([organizationId, name, version])
+  @@index([organizationId, status])
+  @@map("cloud_android_images")
+}
+
+model CloudAndroidDevice {
+  id             String                @id @default(cuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerId        String
+  owner          User                  @relation("cloud_android_device_owner", fields: [ownerId], references: [id], onDelete: Restrict)
+  providerId     String
+  provider       CloudAndroidProviderRegistration @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerDeviceRef String?             @unique
+  templateId     String?
+  template       CloudAndroidTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  imageId        String?
+  image          CloudAndroidImage?    @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  name           String
+  androidVersion String
+  lifecycle      CloudAndroidLifecycle @default(CREATING)
+  desiredState   String                @default("STOPPED")
+  cpuCores       Int
+  ramMb          Int
+  storageGb      Int
+  region         String
+  locale         String
+  timezone       String
+  networkPolicy  Json
+  securityProfile String
+  metrics        Json                  @default("{}")
+  runtimeState   Json                  @default("{}")
+  securityStatus String                @default("PENDING")
+  activeControllerType String?
+  activeControllerId String?
+  activeSessionId String?
+  controlLockVersion Int               @default(0)
+  controlLockExpiresAt DateTime?
+  lastObservedAt DateTime?
+  lastHealthAt   DateTime?
+  lastError      String?
+  provisionedAt  DateTime?
+  destroyedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  grants         CloudAndroidAgentGrant[]
+  sessions       CloudAndroidSession[]
+  actions        CloudAndroidAction[]
+  snapshots      CloudAndroidSnapshot[]
+  usage          CloudAndroidUsageRecord[]
+
+  @@index([organizationId, lifecycle])
+  @@index([providerId, lifecycle])
+  @@index([activeSessionId])
+  @@map("cloud_android_devices")
+}
+
+model CloudAndroidAgentGrant {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  agentId        String
+  agent           Agent              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  assignedById   String
+  assignedBy     User               @relation("cloud_android_grant_assigned_by", fields: [assignedById], references: [id], onDelete: Restrict)
+  permissions    String[]
+  sensitiveActions String[]          @default([])
+  domainAllowlist String[]           @default([])
+  active         Boolean            @default(true)
+  expiresAt      DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([deviceId, agentId])
+  @@index([organizationId, active])
+  @@index([agentId, active])
+  @@map("cloud_android_agent_grants")
+}
+
+model CloudAndroidSession {
+  id             String                    @id @default(cuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                      @relation("cloud_android_session_user", fields: [userId], references: [id], onDelete: Restrict)
+  agentId        String?
+  agent           Agent?                    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  apiKeyId       String?
+  apiKey         ApiKey?                   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  mode           CloudAndroidSessionMode
+  status         CloudAndroidSessionStatus @default(ACTIVE)
+  controllerType String
+  controllerId   String
+  applicationPackage String?
+  permissions    Json
+  result         Json                      @default("{}")
+  startedAt      DateTime                  @default(now())
+  endedAt        DateTime?
+  lastActivityAt DateTime                  @default(now())
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  actions        CloudAndroidAction[]
+  approvals      CloudAndroidApproval[]
+  usage          CloudAndroidUsageRecord[]
+
+  @@index([organizationId, startedAt])
+  @@index([deviceId, status])
+  @@index([agentId, status])
+  @@map("cloud_android_sessions")
+}
+
+model CloudAndroidAction {
+  id             String                    @id @default(cuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        CloudAndroidSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?                     @relation("cloud_android_action_user", fields: [userId], references: [id], onDelete: SetNull)
+  agentId        String?
+  agent           Agent?                    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  actionType     String
+  payload        Json
+  sensitivity    String                    @default("UNKNOWN")
+  status         CloudAndroidActionStatus  @default(PREPARING)
+  providerOperationId String?
+  preparedTokenHash String?
+  beforeObservationHash String?
+  afterObservationHash String?
+  result         Json                      @default("{}")
+  errorCode      String?
+  errorMessage   String?
+  requestedAt    DateTime                  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+
+  approval       CloudAndroidApproval?
+
+  @@index([organizationId, createdAt])
+  @@index([deviceId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([status])
+  @@map("cloud_android_actions")
+}
+
+model CloudAndroidApproval {
+  id             String                     @id @default(cuid())
+  organizationId String
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actionId       String                     @unique
+  action         CloudAndroidAction         @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        CloudAndroidSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  status         CloudAndroidApprovalStatus @default(PENDING)
+  sensitivity    String
+  description    String
+  target         Json                       @default("{}")
+  requestedByAgentId String?
+  expiresAt      DateTime
+  decidedById    String?
+  decidedBy      User?                      @relation("cloud_android_approval_decided_by", fields: [decidedById], references: [id], onDelete: SetNull)
+  decisionNote   String?
+  decidedAt      DateTime?
+  consumedAt     DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([sessionId, status])
+  @@map("cloud_android_approvals")
+}
+
+model CloudAndroidSnapshot {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  name           String
+  status         String             @default("CREATING")
+  providerSnapshotRef String?
+  sizeBytes      BigInt?
+  checksum       String?
+  createdByType  String
+  createdById    String
+  metadata       Json               @default("{}")
+  createdAt      DateTime           @default(now())
+  completedAt    DateTime?
+
+  @@index([organizationId, createdAt])
+  @@index([deviceId, createdAt])
+  @@map("cloud_android_snapshots")
+}
+
+model CloudAndroidUsageRecord {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  sessionId      String?
+  session        CloudAndroidSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  apiKeyId       String?
+  apiKey         ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  metric         String
+  quantity       BigInt
+  unit           String
+  costMicros     BigInt?
+  source         String
+  measuredAt     DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, measuredAt])
+  @@index([deviceId, measuredAt])
+  @@index([sessionId])
+  @@map("cloud_android_usage")
 }

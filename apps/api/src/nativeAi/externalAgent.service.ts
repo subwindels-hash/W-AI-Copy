@@ -23,8 +23,8 @@ function publicRun(run: any) {
 export async function listExternalAgents(ctx: ExternalAgentContext) {
   return prisma.agent.findMany({
     where: { organizationId: ctx.organizationId }, orderBy: { name: "asc" },
-    select: { id: true, name: true, description: true, role: true, department: true, capabilities: true, status: true, modelId: true, isBuiltIn: true, createdAt: true },
-  }).then((agents) => agents.map((agent) => ({ id: agent.id, object: "agent", name: agent.name, description: agent.description, role: agent.role, department: agent.department, capabilities: agent.capabilities, status: agent.status, model: agent.modelId ? "windels-native" : null, owned_by: "organization", created: Math.floor(agent.createdAt.getTime() / 1000) })));
+    select: { id: true, name: true, description: true, role: true, department: true, capabilities: true, cloudAndroidRequirements: true, status: true, modelId: true, isBuiltIn: true, createdAt: true },
+  }).then((agents) => agents.map((agent) => ({ id: agent.id, object: "agent", name: agent.name, description: agent.description, role: agent.role, department: agent.department, capabilities: agent.capabilities, cloud_android: agent.cloudAndroidRequirements ?? {}, status: agent.status, model: agent.modelId ? "windels-native" : null, owned_by: "organization", created: Math.floor(agent.createdAt.getTime() / 1000) })));
 }
 export async function getExternalAgent(ctx: ExternalAgentContext, id: string) {
   const rows = await listExternalAgents(ctx); const agent = rows.find((item) => item.id === id);

@@ -13,6 +13,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DEVELOPER_READ, Permission.DEVELOPER_WRITE,
     Permission.AUDIT_READ,
     Permission.NFC_READ, Permission.NFC_WRITE, Permission.NFC_DESTRUCTIVE, Permission.NFC_ADMIN,
+    Permission.CLOUD_ANDROID_READ, Permission.CLOUD_ANDROID_CONTROL, Permission.CLOUD_ANDROID_MANAGE, Permission.CLOUD_ANDROID_APP, Permission.CLOUD_ANDROID_FILE, Permission.CLOUD_ANDROID_SENSITIVE, Permission.CLOUD_ANDROID_ADMIN,
     Permission.ADMIN_STAR,
   ],
   ADMIN: [
@@ -25,6 +26,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.DEVELOPER_READ, Permission.DEVELOPER_WRITE,
     Permission.AUDIT_READ,
     Permission.NFC_READ, Permission.NFC_WRITE, Permission.NFC_DESTRUCTIVE, Permission.NFC_ADMIN,
+    Permission.CLOUD_ANDROID_READ, Permission.CLOUD_ANDROID_CONTROL, Permission.CLOUD_ANDROID_MANAGE, Permission.CLOUD_ANDROID_APP, Permission.CLOUD_ANDROID_FILE, Permission.CLOUD_ANDROID_SENSITIVE, Permission.CLOUD_ANDROID_ADMIN,
   ],
   USER: [
     Permission.ORG_READ,
@@ -33,6 +35,7 @@ const ROLE_PERMISSIONS: Record<Role, Permission[]> = {
     Permission.TALK_READ, Permission.TALK_WRITE,
     Permission.CANVAS_READ, Permission.CANVAS_WRITE,
     Permission.NFC_READ, Permission.NFC_WRITE,
+    Permission.CLOUD_ANDROID_READ, Permission.CLOUD_ANDROID_CONTROL, Permission.CLOUD_ANDROID_APP, Permission.CLOUD_ANDROID_FILE,
   ],
 };
 

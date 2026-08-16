@@ -129,6 +129,15 @@ const EnvSchema = z.object({
   WINDELS_IMAGE_MODEL: z.string().max(160).default("gpt-image-1"),
   WINDELS_SPEECH_MODEL: z.string().max(160).default("gpt-4o-mini-tts"),
 
+  // WINDELS AI Cloud Android provider adapter. The public/control APIs fail
+  // closed until a signed, healthy provider is configured and explicitly enabled.
+  CLOUD_ANDROID_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
+  CLOUD_ANDROID_PROVIDER_URL: z.string().url().optional(),
+  CLOUD_ANDROID_PROVIDER_HMAC_SECRET: z.string().min(32).optional(),
+  CLOUD_ANDROID_PROVIDER_ID: z.string().max(100).default("windels-provider"),
+  CLOUD_ANDROID_PROVIDER_NAME: z.string().max(120).default("WINDELS Cloud Android Provider"),
+  CLOUD_ANDROID_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600000).default(120000),
+
   // Encryption (AES-256-GCM) — 64 hex chars. Falls back to deterministic dev key in NODE_ENV=development.
   WINDELS_ENCRYPTION_KEY: z.string().length(64).optional(),
 

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bell, Bot, Calendar, FileText, MessageSquare, Nfc, Plus, Sparkles, Zap } from "lucide-react";
+import { Bell, Bot, Calendar, FileText, MessageSquare, MonitorSmartphone, Nfc, Plus, Sparkles, Zap } from "lucide-react";
 import { MobileTopBar } from "@/app/mobile/MobileTopBar";
 import { MAvatar } from "@/components/mobile/MAvatar";
 import { MButton } from "@/components/mobile/MButton";
@@ -24,6 +24,7 @@ const QUICK_ACTIONS = [
   { to: "/m/talk/meetings", label: "Meetings", icon: Calendar, color: "from-teal-500 to-emerald-500" },
   { to: "/m/files", label: "Files", icon: FileText, color: "from-amber-500 to-orange-500" },
   { to: "/m/nfc", label: "NFC Cards", icon: Nfc, color: "from-sky-500 to-cyan-500" },
+  { to: "/m/cloud-android", label: "Cloud Android", icon: MonitorSmartphone, color: "from-emerald-500 to-teal-500" },
 ];
 
 export function MobileHomePage() {
@@ -76,7 +77,7 @@ export function MobileHomePage() {
 
       <div className="px-4 mt-6">
         <h3 className="text-sm font-semibold text-text-bright px-1 mb-3">Quick actions</h3>
-        <div className="grid grid-cols-5 gap-2">
+        <div className="grid grid-cols-3 gap-3 sm:grid-cols-6">
           {QUICK_ACTIONS.map((a) => (
             <Link key={a.to} to={a.to} className="flex flex-col items-center gap-2 active:scale-95 transition">
               <span className={`h-14 w-14 rounded-2xl bg-gradient-to-br ${a.color} grid place-items-center text-white shadow-lg`}>

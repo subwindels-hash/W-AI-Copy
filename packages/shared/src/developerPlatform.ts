@@ -44,6 +44,12 @@ export const API_SCOPE_CATALOG = [
   "nfc:read",
   "nfc:write",
   "nfc:admin",
+  "cloud-android:read",
+  "cloud-android:control",
+  "cloud-android:manage",
+  "cloud-android:apps",
+  "cloud-android:files",
+  "cloud-android:approve",
 ] as const;
 export type ApiScope = (typeof API_SCOPE_CATALOG)[number];
 
@@ -61,6 +67,7 @@ export const API_SCOPE_GROUPS: Record<string, string[]> = {
   Billing: ["billing:read"],
   Marketplace: ["marketplace:read", "marketplace:write"],
   NFC: ["nfc:read", "nfc:write", "nfc:admin"],
+  "Cloud Android": ["cloud-android:read", "cloud-android:control", "cloud-android:manage", "cloud-android:apps", "cloud-android:files", "cloud-android:approve"],
 };
 
 /** Map a granular scope to the legacy scope it needs for backward-compat

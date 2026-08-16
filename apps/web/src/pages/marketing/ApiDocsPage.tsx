@@ -42,6 +42,8 @@ const ENDPOINTS: Endpoint[] = [
   -d '{"model":"windels-native","messages":[{"role":"user","content":"Hello"}]}'` }] },
   { method: "POST", path: "/v1/responses", scope: "ai:execute", desc: "Create a unified WINDELS response object.", examples: [{ lang: "cURL", code: `curl https://api.windels.ai/v1/responses -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" -d '{"model":"windels-native","input":"Analyze this plan"}'` }] },
   { method: "POST", path: "/v1/embeddings", scope: "ai:execute", desc: "Create real provider-backed embeddings; hash fallback is never exposed.", examples: [{ lang: "cURL", code: `curl https://api.windels.ai/v1/embeddings -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" -d '{"model":"windels-embedding","input":"knowledge"}'` }] },
+  { method: "GET", path: "/v1/cloud-android/devices", scope: "cloud-android:read", desc: "List tenant-scoped provider-backed Cloud Android devices.", examples: [{ lang: "cURL", code: `curl https://api.windels.ai/v1/cloud-android/devices -H "Authorization: Bearer WND_your_key"` }] },
+  { method: "POST", path: "/v1/cloud-android/devices/:id/ui/tap", scope: "cloud-android:control", desc: "Prepare, authorize, execute and verify an Android UI tap through the WINDELS control plane.", examples: [{ lang: "cURL", code: `curl -X POST https://api.windels.ai/v1/cloud-android/devices/device_id/ui/tap -H "Authorization: Bearer WND_your_key" -H "Content-Type: application/json" -d '{"sessionId":"session_id","elementId":"submit"}'` }] },
   { method: "GET", path: "/api/rest/v1", scope: "any key", desc: "Gateway identity + organization.", examples: [
     { lang: "cURL", code: `curl https://api.windels.ai/api/rest/v1 -H "Authorization: Bearer WND_your_key"` },
   ]},
@@ -116,6 +118,12 @@ const SECTIONS: DocSection[] = [
     "Public aliases hide internal provider routing. `windels-native` is listed only when a real chat provider passes health checks; embeddings and multimodal aliases follow the same rule.",
     "The surface follows familiar OpenAI patterns where tested, but WINDELS does not claim complete compatibility. Unsupported combinations return explicit errors.",
     "Download OpenAPI 3.1 from GET /v1/openapi.json.",
+  ]},
+  { id: "cloud-android", title: "AI Cloud Android", body: [
+    "Cloud Android is a human + AI execution environment, not a public emulator endpoint. All control passes through WINDELS authorization and policy.",
+    "The runtime provider is replaceable behind the CloudAndroidProvider contract. Devices are never fabricated when no provider is healthy.",
+    "Agent control uses semantic UI/accessibility inspection first, a single-writer lock, human approval for sensitive actions, and observe-plan-act-observe verification.",
+    "Initial REST endpoints are under /v1/cloud-android. GraphQL, official generated SDK certification and production screen relay require separate target-runtime validation.",
   ]},
   { id: "errors", title: "Errors", body: [
     "401 Unauthorized — missing or invalid API key.",

@@ -32,6 +32,7 @@ export interface AgAgent {
   systemPrompt: string | null;
   department: string | null;
   capabilities: string[];
+  cloudAndroidRequirements: { required?: boolean; recommendedAndroidVersion?: string; requiredApplications?: string[]; requiredPermissions?: string[] };
   modelId: string | null;
   temperature: number;
   maxTokens: number;
@@ -123,6 +124,7 @@ export const AgAgentCreateSchema = z.object({
   systemPrompt: z.string().max(8000).optional(),
   department: z.string().trim().max(64).optional(),
   capabilities: z.array(z.string().trim().min(1).max(80)).max(50).optional(),
+  cloudAndroidRequirements: z.object({ required: z.boolean().default(false), recommendedAndroidVersion: z.enum(["12", "13", "14", "15"]).optional(), requiredApplications: z.array(z.string().max(255)).max(100).default([]), requiredPermissions: z.array(z.string().max(100)).max(100).default([]) }).strict().optional(),
   modelId: z.string().trim().max(160).optional(),
   temperature: z.number().min(0).max(2).optional(),
   maxTokens: z.number().int().min(64).max(64000).optional(),

@@ -204,6 +204,16 @@ export class FakePrisma {
       Agent: { externalRun: "ExternalAgentRun" },
       ExternalAgentRun: { agent: "Agent", apiKey: "ApiKey", requestedBy: "User", message: "ExternalAgentMessage" },
       ExternalAgentMessage: { run: "ExternalAgentRun" },
+      CloudAndroidProviderRegistration: { device: "CloudAndroidDevice" },
+      CloudAndroidTemplate: { device: "CloudAndroidDevice", createdBy: "User" },
+      CloudAndroidImage: { device: "CloudAndroidDevice", createdBy: "User" },
+      CloudAndroidDevice: { provider: "CloudAndroidProviderRegistration", template: "CloudAndroidTemplate", image: "CloudAndroidImage", owner: "User", grant: "CloudAndroidAgentGrant", session: "CloudAndroidSession", action: "CloudAndroidAction", snapshot: "CloudAndroidSnapshot", usage: "CloudAndroidUsageRecord" },
+      CloudAndroidAgentGrant: { device: "CloudAndroidDevice", agent: "Agent", assignedBy: "User" },
+      CloudAndroidSession: { device: "CloudAndroidDevice", user: "User", agent: "Agent", apiKey: "ApiKey", action: "CloudAndroidAction", approval: "CloudAndroidApproval", usage: "CloudAndroidUsageRecord" },
+      CloudAndroidAction: { device: "CloudAndroidDevice", session: "CloudAndroidSession", user: "User", agent: "Agent", approval: "CloudAndroidApproval" },
+      CloudAndroidApproval: { action: "CloudAndroidAction", session: "CloudAndroidSession", decidedBy: "User" },
+      CloudAndroidSnapshot: { device: "CloudAndroidDevice" },
+      CloudAndroidUsageRecord: { device: "CloudAndroidDevice", session: "CloudAndroidSession", apiKey: "ApiKey" },
     };
     if (parentModel && prefixed[parentModel]?.[singular]) {
       return prefixed[parentModel]![singular]!;
@@ -220,7 +230,7 @@ export class FakePrisma {
     // with a known prefix stripped, so both conventions resolve.
     const candidates = [`${model.charAt(0).toLowerCase()}${model.slice(1)}Id`];
     if (model === "PlatformModule") candidates.unshift("moduleRegistryId");
-    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp", "Nfc", "PlatformModule", "ExternalAgent"]) {
+    for (const prefix of ["Talk", "Canvas", "Agent", "Project", "WhatsApp", "Nfc", "PlatformModule", "ExternalAgent", "CloudAndroid"]) {
       if (model.startsWith(prefix) && model.length > prefix.length) {
         const bare = model.slice(prefix.length);
         candidates.push(`${bare.charAt(0).toLowerCase()}${bare.slice(1)}Id`);
@@ -268,7 +278,7 @@ export class FakePrisma {
       // instead of exposing the related row as a one-item array.
       const target = this.relatedModel(field, model);
       const related = this.relatedRows(model, row, field);
-      if (field === "profile" || field === "upload") {
+      if (field === "profile" || field === "upload" || field === "approval") {
         out[field] = related[0] ? this.hydrate(target, related[0], typeof spec === "object" ? spec as Row : {}) : null;
       } else {
         // to-many

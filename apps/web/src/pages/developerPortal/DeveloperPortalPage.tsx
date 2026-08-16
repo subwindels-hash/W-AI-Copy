@@ -325,6 +325,7 @@ const CONSOLE_ENDPOINTS = [
   { method: "POST", path: "/v1/responses", scope: "ai:execute", label: "Native response", body: { model: "windels-native", input: "Create a concise business automation plan." } },
   { method: "POST", path: "/v1/embeddings", scope: "ai:execute", label: "Native embeddings", body: { model: "windels-embedding", input: "WINDELS knowledge retrieval" } },
   { method: "GET", path: "/v1/agents", scope: "agents:read", label: "Native agent list" },
+  { method: "GET", path: "/v1/cloud-android/devices", scope: "cloud-android:read", label: "Cloud Android devices" },
   { method: "GET", path: "/api/rest/v1/agents", scope: "agents:read", label: "Legacy gateway: list agents" },
   { method: "POST", path: "/api/rest/v1/agents/{{id}}/execute", scope: "agents:execute", label: "Execute agent", body: { message: "Analyze this business data" } },
   { method: "POST", path: "/api/rest/v1/ai/complete", scope: "ai:execute", label: "AI completion", body: { messages: [{ role: "user", content: "Hello" }] } },
@@ -453,6 +454,7 @@ function Documentation() {
     { title: "Streaming", body: ["Use `stream: true` on /v1/chat/completions for `text/event-stream` chunks ending in `data: [DONE]`.", "Disconnects abort the provider request and are metered with status 499.", "Streaming tool-call emulation is outside the current tested subset and is rejected explicitly."] },
     { title: "Webhooks", body: ["Agent run started/completed/failed/requires-action events use the existing HMAC-signed webhook system.", "Delivery IDs, timestamps, retries and delivery logs are persisted; failed deliveries use the existing failure event path."] },
     { title: "Errors, limits and security", body: ["Native errors use `{ error: { message, type, code, param }, request_id }`.", "Per-IP and per-key rate limits, product quotas, billing status, prompt guard, validation, request IDs, audit and tenant isolation are enforced.", "A key can never cross its organization boundary for agents, runs, files, workflows, memory or knowledge."] },
+    { title: "AI Cloud Android", body: ["Use /v1/cloud-android to provision and control provider-backed Android devices without learning the virtualization vendor.", "Human, AI and collaborative sessions share one control lock. AI-sensitive actions pause at the approval gateway and execute only after a signed provider prepare/execute/observe verification loop.", "Cloud Android scopes are independent: read, control, manage, apps, files and approve."] },
     { title: "Usage & billing", body: ["Every request records API key, organization, user, endpoint, request ID, model, provider, tokens, duration, tool calls, resources, status, error and cost where available.", "Native API product subscriptions increment the existing monthly usage counter; no separate billing system is created.", "Use dashboard filters for key, model, endpoint, environment, status and date."] },
     { title: "OpenAPI", body: ["Download the production OpenAPI 3.1 document at GET /v1/openapi.json or from the authenticated Developer Platform."] },
   ];

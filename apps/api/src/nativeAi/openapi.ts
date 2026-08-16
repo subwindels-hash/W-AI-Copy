@@ -25,6 +25,11 @@ export function nativeAiOpenApi(origin = "https://api.windels.ai") {
       "/agents/{agent_id}/execute": { post: { summary: "Execute a WINDELS agent", parameters: [{ name: "agent_id", in: "path", required: true, schema: { type: "string" } }], responses: { "200": { description: "Persistent agent run" } } } },
       "/agents/{agent_id}/runs/{run_id}": { get: { summary: "Get a tenant-scoped agent run", parameters: [{ name: "agent_id", in: "path", required: true }, { name: "run_id", in: "path", required: true }], responses: { "200": { description: "Agent run" } } } },
       "/agents/{agent_id}/runs/{run_id}/cancel": { post: { summary: "Cancel an active agent run", responses: { "200": { description: "Cancellation requested" } } } },
+      "/cloud-android/devices": { get: { summary: "List tenant-scoped Cloud Android devices", responses: { "200": { description: "Device list" } } }, post: { summary: "Provision a device through the configured provider", responses: { "201": { description: "Provider-confirmed device" }, "503": { description: "No healthy provider" } } } },
+      "/cloud-android/devices/{id}/screen": { get: { summary: "Capture structured screen, accessibility tree and device state", responses: { "200": { description: "Device observation" } } } },
+      "/cloud-android/devices/{id}/ui/tap": { post: { summary: "Prepare, authorize, execute and verify a tap", responses: { "200": { description: "Action or approval request" } } } },
+      "/cloud-android/sessions": { get: { summary: "List device control sessions", responses: { "200": { description: "Session list" } } } },
+      "/cloud-android/audit": { get: { summary: "List device action audit records", responses: { "200": { description: "Audit list" } } } },
     },
   };
 }

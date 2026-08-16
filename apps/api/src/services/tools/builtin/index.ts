@@ -5,6 +5,7 @@
  * These provide basic capabilities that agents can use immediately.
  */
 import { ToolRegistry, type Tool, type ToolContext, type ToolResult } from "../toolRegistry.js";
+import "../../../cloudAndroid/tools.js";
 
 // ─── Calculator Tool ───────────────────────────────────────────
 

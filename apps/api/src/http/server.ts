@@ -168,6 +168,7 @@ import { registerPublicNfcRoutes } from "./routes/nfcPublic.js";
 import { registerModuleCenterRoutes } from "./routes/moduleCenter.js";
 import { registerModuleRuntimeRoutes } from "./routes/moduleRuntime.js";
 import { registerNativeAiApiRoutes } from "./routes/nativeAiApi.js";
+import { registerCloudAndroidRoutes } from "./routes/cloudAndroid.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
 import { logger } from "../observability/logger.js";
@@ -1321,6 +1322,7 @@ export function createApp() {
   // authenticated runtime registrations/proxy for successfully activated modules.
   registerModuleCenterRoutes(v1);
   registerModuleRuntimeRoutes(v1);
+  registerCloudAndroidRoutes(v1);
 
   // /advertising — AI Advertising Platform (unified multi-mode: standard,
   // smart, performance, autonomous). One module, multiple campaign modes.

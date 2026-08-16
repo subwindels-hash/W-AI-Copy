@@ -148,7 +148,33 @@ export type AuditAction =
   | "native_api.image_generated"
   | "native_api.speech_generated"
   | "native_api.audio_transcribed"
-  | "native_api.agent_executed";
+  | "native_api.agent_executed"
+  // WINDELS AI Cloud Android
+  | "cloud_android.device_created"
+  | "cloud_android.device_create_failed"
+  | "cloud_android.device_start"
+  | "cloud_android.device_stop"
+  | "cloud_android.device_restart"
+  | "cloud_android.device_delete"
+  | "cloud_android.screen_observed"
+  | "cloud_android.agent_assigned"
+  | "cloud_android.session_started"
+  | "cloud_android.session_ended"
+  | "cloud_android.control_takeover"
+  | "cloud_android.action_succeeded"
+  | "cloud_android.action_failed"
+  | "cloud_android.approval_requested"
+  | "cloud_android.approval_approved"
+  | "cloud_android.approval_rejected"
+  | "cloud_android.template_created"
+  | "cloud_android.image_created"
+  | "cloud_android.image_failed"
+  | "cloud_android.snapshot_created"
+  | "cloud_android.snapshot_failed"
+  | "cloud_android.snapshot_restored"
+  | "cloud_android.snapshot_restore_failed"
+  | "cloud_android.fleet_operation"
+  | "cloud_android.fleet_health_reconciled";
 
 export type AuditResourceType =
   | "user"
@@ -181,6 +207,14 @@ export type AuditResourceType =
   | "module_release"
   | "platform_module"
   | "native_ai_request"
+  | "cloud_android_device"
+  | "cloud_android_session"
+  | "cloud_android_action"
+  | "cloud_android_approval"
+  | "cloud_android_template"
+  | "cloud_android_image"
+  | "cloud_android_snapshot"
+  | "cloud_android_fleet"
   | "custom";
 
 export interface AuditLogCreateInput {
