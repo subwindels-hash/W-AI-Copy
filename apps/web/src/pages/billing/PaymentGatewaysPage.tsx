@@ -10,7 +10,7 @@
  *   - empty transaction ledgers state "No transactions recorded"
  */
 import React, { useCallback, useEffect, useState } from "react";
-import { CreditCard, RefreshCw, Send, ShieldCheck, ExternalLink, Coins, Eye, CheckCircle2 } from "lucide-react";
+import { CreditCard, RefreshCw, Send, ShieldCheck, ExternalLink, Coins, Eye, CheckCircle2, FileText } from "lucide-react";
 import type {
   BlockonomicsAsset,
   PaymentProviderConfig,
@@ -19,6 +19,7 @@ import type {
   CryptoNetwork,
 } from "@windels/shared";
 import {
+  getPaymentTransaction,
   listPaymentProviders,
   listPaymentTransactions,
   initiatePaymentCheckout,
@@ -27,8 +28,19 @@ import { getBilling, type BillingInvoice } from "@/lib/billing";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
+import { Modal } from "@/components/ui/Modal";
 import { useAuthStore } from "@/store/auth";
 import { BlockonomicsCheckoutPanel } from "./BlockonomicsCheckoutPanel";
+import { formatBlockonomicsCryptoAmount } from "./blockonomicsCheckout";
+
+function PaymentDetail({ label, value, mono = false }: { label: string; value: React.ReactNode; mono?: boolean }) {
+  return (
+    <div className="rounded-md border border-border bg-background/60 p-3">
+      <div className="text-[11px] uppercase tracking-wide text-text-muted">{label}</div>
+      <div className={`mt-1 break-all text-sm text-text-bright ${mono ? "font-mono" : ""}`}>{value || "—"}</div>
+    </div>
+  );
+}
 
 export function PaymentGatewaysPage() {
   const { user } = useAuthStore();
@@ -36,6 +48,11 @@ export function PaymentGatewaysPage() {
   const [transactions, setTransactions] = useState<PaymentTransaction[]>([]);
   const [invoices, setInvoices] = useState<BillingInvoice[]>([]);
   const [selectedTx, setSelectedTx] = useState<PaymentTransaction | null>(null);
+  const [detailOpen, setDetailOpen] = useState(false);
+  const [detailLoading, setDetailLoading] = useState(false);
+  const [detailError, setDetailError] = useState<string | null>(null);
+  const [historyProvider, setHistoryProvider] = useState<PaymentProvider | "all">("all");
+  const [historyStatus, setHistoryStatus] = useState<PaymentTransaction["status"] | "all">("all");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -63,15 +80,15 @@ export function PaymentGatewaysPage() {
       setProviders(provRes);
       setTransactions(txsRes);
       setInvoices(invoiceRes);
-      if (txsRes.length > 0 && !selectedTx) {
-        setSelectedTx(txsRes[0] ?? null);
+      if (txsRes.length > 0) {
+        setSelectedTx((current) => current ?? txsRes[0] ?? null);
       }
     } catch (err: any) {
       setError(err?.message ?? "Failed to load payment gateways data");
     } finally {
       setLoading(false);
     }
-  }, [selectedTx]);
+  }, []);
 
   useEffect(() => {
     loadData();
@@ -145,6 +162,22 @@ export function PaymentGatewaysPage() {
     });
   }, []);
 
+  const inspectTransaction = useCallback(async (transaction: PaymentTransaction) => {
+    setSelectedTx(transaction);
+    setDetailOpen(true);
+    setDetailLoading(true);
+    setDetailError(null);
+    try {
+      const latest = await getPaymentTransaction(transaction.id);
+      setSelectedTx(latest);
+      setTransactions((current) => current.map((item) => item.id === latest.id ? latest : item));
+    } catch (error: any) {
+      setDetailError(error?.message ?? "Unable to load payment details");
+    } finally {
+      setDetailLoading(false);
+    }
+  }, []);
+
   const completedCount = transactions.filter((t) => t.status === "completed").length;
   const configuredCount = providers.filter((item) => item.active).length;
   const selectedProvider = providers.find((item) => item.provider === provider);
@@ -154,6 +187,15 @@ export function PaymentGatewaysPage() {
   const selectedInvoice = openInvoices.find((invoice) => invoice.id === invoiceId);
   const currencyOptions = selectedProvider?.supportedCurrencies.length ? selectedProvider.supportedCurrencies : ["USD"];
   const invoiceCurrencyUnsupported = !!selectedInvoice && !!selectedProvider && !selectedProvider.supportedCurrencies.includes(selectedInvoice.currency);
+  const visibleTransactions = transactions.filter((transaction) => (
+    (historyProvider === "all" || transaction.provider === historyProvider)
+    && (historyStatus === "all" || transaction.status === historyStatus)
+  ));
+  const verification = selectedTx?.metadata?.verification && typeof selectedTx.metadata.verification === "object"
+    ? selectedTx.metadata.verification as Record<string, unknown>
+    : undefined;
+  const displayedProviderTransactionId = selectedTx?.providerTransactionId
+    ?? (typeof verification?.providerTransactionId === "string" ? verification.providerTransactionId : undefined);
 
   return (
     <div className="space-y-6 p-6">
@@ -436,21 +478,35 @@ export function PaymentGatewaysPage() {
         </Card>
       </div>
 
-      {/* Organization Transactions Ledger Table */}
+      {/* Organization payment history */}
       <Card>
         <CardHeader>
-          <CardTitle className="text-base flex items-center gap-2">
-            <Coins className="h-4 w-4 text-amber-400" />
-            Organization Payment Transactions Ledger (`pay:tx`)
-          </CardTitle>
-          <CardDescription>
-            Audit ledger of checkouts and verifications across Flutterwave, Paystack, PayPal, and Crypto.
-          </CardDescription>
+          <div className="flex flex-col gap-3 lg:flex-row lg:items-end lg:justify-between">
+            <div>
+              <CardTitle className="text-base flex items-center gap-2">
+                <Coins className="h-4 w-4 text-amber-400" />
+                Organization Payment History
+              </CardTitle>
+              <CardDescription>
+                Tenant-scoped provider history, including durable PostgreSQL Blockonomics records and the existing fiat-provider ledger.
+              </CardDescription>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              <select value={historyProvider} onChange={(event) => setHistoryProvider(event.target.value as PaymentProvider | "all")} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-text-bright" aria-label="Filter payment provider">
+                <option value="all">All providers</option>
+                {providers.map((item) => <option key={item.provider} value={item.provider}>{item.provider}</option>)}
+              </select>
+              <select value={historyStatus} onChange={(event) => setHistoryStatus(event.target.value as PaymentTransaction["status"] | "all")} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-text-bright" aria-label="Filter payment status">
+                <option value="all">All statuses</option>
+                {["created", "pending", "detected", "confirming", "confirmed", "completed", "expired", "failed", "cancelled", "under_review", "refunded"].map((status) => <option key={status} value={status}>{status.replace("_", " ")}</option>)}
+              </select>
+            </div>
+          </div>
         </CardHeader>
         <CardContent>
-          {transactions.length === 0 ? (
+          {visibleTransactions.length === 0 ? (
             <div className="text-center py-8 text-sm text-text-muted">
-              No payment transactions recorded in organization ledger.
+              {transactions.length === 0 ? "No payment transactions recorded for this organization." : "No payments match the selected filters."}
             </div>
           ) : (
             <div className="overflow-x-auto">
@@ -467,11 +523,11 @@ export function PaymentGatewaysPage() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-border">
-                  {transactions.map((t) => (
+                  {visibleTransactions.map((t) => (
                     <tr
-                      key={t.id}
+                      key={`${t.provider}:${t.id}`}
                       className="hover:bg-card-hover/40 cursor-pointer"
-                      onClick={() => setSelectedTx(t)}
+                      onClick={() => void inspectTransaction(t)}
                     >
                       <td className="py-3 pr-4">
                         <Badge variant="outline" className="capitalize">
@@ -485,7 +541,7 @@ export function PaymentGatewaysPage() {
                         {t.currency} {t.amount.toFixed(2)}
                         {t.cryptoAmount ? (
                           <div className="text-xs text-text-muted font-normal">
-                            ({t.cryptoAmount} {t.cryptoNetwork?.toUpperCase()})
+                            ({t.provider === "blockonomics" ? formatBlockonomicsCryptoAmount(t) : t.cryptoAmount} {t.cryptoCurrency ?? t.cryptoNetwork?.toUpperCase()})
                           </div>
                         ) : null}
                       </td>
@@ -500,20 +556,20 @@ export function PaymentGatewaysPage() {
                       </td>
                       <td className="py-3 pr-4">
                         <Badge
-                          variant={t.status === "completed" ? "default" : t.status === "failed" ? "danger" : "secondary"}
+                          variant={t.status === "completed" ? "default" : ["failed", "cancelled", "expired", "under_review"].includes(t.status) ? "danger" : "secondary"}
                         >
                           {t.status}
                         </Badge>
                       </td>
                       <td className="py-3 pr-4 text-xs text-text-muted">
-                        {new Date(t.createdAt).toLocaleTimeString()}
+                        {new Date(t.createdAt).toLocaleString()}
                       </td>
                       <td className="py-3 text-right" onClick={(e) => e.stopPropagation()}>
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => setSelectedTx(t)}
-                          title="Inspect Receipt"
+                          onClick={() => void inspectTransaction(t)}
+                          title="Inspect payment details"
                           className="text-xs px-2"
                         >
                           <Eye className="h-3.5 w-3.5" />
@@ -527,6 +583,67 @@ export function PaymentGatewaysPage() {
           )}
         </CardContent>
       </Card>
+
+      <Modal
+        open={detailOpen && !!selectedTx}
+        onClose={() => setDetailOpen(false)}
+        title={selectedTx ? `Payment ${selectedTx.reference}` : "Payment details"}
+        size="lg"
+      >
+        {selectedTx ? (
+          <div className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <Badge variant="outline" className="capitalize">{selectedTx.provider}</Badge>
+                <Badge variant={selectedTx.status === "completed" ? "default" : ["failed", "cancelled", "expired", "under_review"].includes(selectedTx.status) ? "danger" : "secondary"}>
+                  {selectedTx.status.replace("_", " ")}
+                </Badge>
+              </div>
+              {detailLoading ? <span className="text-xs text-text-muted">Refreshing backend details…</span> : null}
+            </div>
+            {detailError ? <div className="rounded-md border border-red-500/30 bg-red-500/10 p-3 text-xs text-red-400">{detailError}</div> : null}
+
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PaymentDetail label="Amount" value={`${selectedTx.currency} ${selectedTx.amount.toFixed(2)}`} />
+              <PaymentDetail label="Reference" value={selectedTx.reference} mono />
+              <PaymentDetail label="Invoice" value={selectedTx.invoiceId ?? "No invoice attached"} mono={!!selectedTx.invoiceId} />
+              <PaymentDetail label="Provider transaction" value={displayedProviderTransactionId ?? "Not recorded yet"} mono={!!displayedProviderTransactionId} />
+              <PaymentDetail label="Created" value={new Date(selectedTx.createdAt).toLocaleString()} />
+              <PaymentDetail label="Completed" value={selectedTx.completedAt ? new Date(selectedTx.completedAt).toLocaleString() : "Not completed"} />
+            </div>
+
+            {selectedTx.provider === "blockonomics" ? (
+              <div className="space-y-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 p-4">
+                <div className="flex items-center gap-2 font-semibold text-text-bright"><Coins className="h-4 w-4 text-emerald-400" /> On-chain evidence</div>
+                <div className="grid gap-3 sm:grid-cols-2">
+                  <PaymentDetail label="Asset / network" value={`${selectedTx.cryptoCurrency ?? "—"} / ${selectedTx.cryptoNetwork ?? "—"}`} />
+                  <PaymentDetail label="Exact expected amount" value={`${formatBlockonomicsCryptoAmount(selectedTx) ?? "—"} ${selectedTx.cryptoCurrency ?? ""}`} mono />
+                  <PaymentDetail label="Confirmations" value={`${selectedTx.confirmations ?? 0} / ${selectedTx.requiredConfirmations ?? 2}`} />
+                  <PaymentDetail label="Reconciliation" value={selectedTx.reconciliationStatus ?? "pending"} />
+                </div>
+                <PaymentDetail label="Payment address" value={selectedTx.cryptoAddress ?? "Not available"} mono />
+                {selectedTx.expiresAt ? <PaymentDetail label="Quote observed expiry" value={new Date(selectedTx.expiresAt).toLocaleString()} /> : null}
+              </div>
+            ) : null}
+
+            <div className="rounded-lg border border-border p-4">
+              <div className="flex items-center gap-2 font-semibold text-text-bright"><FileText className="h-4 w-4 text-blue-400" /> WINDELS receipt</div>
+              {selectedTx.receipt ? (
+                <div className="mt-3 grid gap-3 sm:grid-cols-2">
+                  <PaymentDetail label="Receipt number" value={selectedTx.receipt.number} mono />
+                  <PaymentDetail label="Issued" value={new Date(selectedTx.receipt.issuedAt).toLocaleString()} />
+                </div>
+              ) : (
+                <p className="mt-2 text-xs text-text-muted">A WINDELS receipt is available only after backend verification and atomic billing settlement.</p>
+              )}
+            </div>
+
+            <p className="rounded-md border border-blue-500/20 bg-blue-500/5 p-3 text-xs text-blue-200">
+              These details are read from organization-scoped backend records. Opening this dialog cannot confirm, complete, refund, or alter a payment.
+            </p>
+          </div>
+        ) : null}
+      </Modal>
     </div>
   );
 }

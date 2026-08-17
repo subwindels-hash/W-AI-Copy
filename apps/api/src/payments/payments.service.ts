@@ -309,23 +309,36 @@ export const PaymentGatewaysService = {
 
   async listTransactions(organizationId: string, query?: { provider?: string; status?: string; limit?: number }): Promise<PaymentTransaction[]> {
     const limit = Math.max(1, Math.min(Number(query?.limit ?? 50), 500));
-    let items: PaymentTransaction[] = [];
-    try {
-      const allIds = (await redis.zrange(K.idx(organizationId), 0, -1)).reverse();
-      for (const id of allIds) {
-        const raw = await redis.get(K.item(organizationId, id));
-        if (raw) { try { items.push(JSON.parse(raw)); } catch {} }
+    const includeBlockonomics = !query?.provider || query.provider === "blockonomics";
+    const includeLegacyLedger = query?.provider !== "blockonomics";
+    const durableItems = includeBlockonomics
+      ? await BlockonomicsPaymentService.list(organizationId, Math.min(limit, 200), query?.status)
+      : [];
+    let legacyItems: PaymentTransaction[] = [];
+    if (includeLegacyLedger) {
+      try {
+        const allIds = (await redis.zrange(K.idx(organizationId), 0, -1)).reverse();
+        for (const id of allIds) {
+          const raw = await redis.get(K.item(organizationId, id));
+          if (raw) { try { legacyItems.push(JSON.parse(raw)); } catch {} }
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === "production") throw AppError.serviceUnavailable(`Payment ledger read failed: ${(error as Error).message}`);
+        legacyItems = [...getMemoryLedger(organizationId)];
       }
-    } catch (error) {
-      if (process.env.NODE_ENV === "production") throw AppError.serviceUnavailable(`Payment ledger read failed: ${(error as Error).message}`);
-      items = [...getMemoryLedger(organizationId)];
+      if (query?.provider) legacyItems = legacyItems.filter((item) => item.provider === query.provider);
+      if (query?.status) legacyItems = legacyItems.filter((item) => item.status === query.status);
     }
-    if (query?.provider) items = items.filter((item) => item.provider === query.provider);
-    if (query?.status) items = items.filter((item) => item.status === query.status);
-    return items.slice(0, limit);
+    const merged = new Map<string, PaymentTransaction>();
+    for (const item of [...durableItems, ...legacyItems]) merged.set(`${item.provider}:${item.id}`, item);
+    return [...merged.values()]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
   },
 
   async getTransaction(organizationId: string, id: string): Promise<PaymentTransaction | null> {
+    const durable = await BlockonomicsPaymentService.get(organizationId, id);
+    if (durable) return durable;
     try {
       const raw = await redis.get(K.item(organizationId, id));
       if (raw) {

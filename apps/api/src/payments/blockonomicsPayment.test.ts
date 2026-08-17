@@ -26,7 +26,7 @@ vi.mock("../db/client.js", () => ({
         return state.payments[index];
       }),
       findFirst: vi.fn(async ({ where }: any) => state.payments.find((row) => row.id === where.id && row.organizationId === where.organizationId && row.provider === where.provider) ?? null),
-      findMany: vi.fn(async ({ where, take }: any) => state.payments.filter((row) => row.organizationId === where.organizationId && row.provider === where.provider).slice(0, take)),
+      findMany: vi.fn(async ({ where, take }: any) => state.payments.filter((row) => row.organizationId === where.organizationId && row.provider === where.provider && (!where.status || row.status === where.status)).slice(0, take)),
     },
   },
 }));
@@ -101,5 +101,27 @@ describe("Blockonomics Stage 4 durable payment creation", () => {
     await expect(BlockonomicsPaymentService.get("org-b", created.id)).resolves.toBeNull();
     await expect(BlockonomicsPaymentService.get("org-a", created.id)).resolves.toMatchObject({ id: created.id });
     await expect(BlockonomicsPaymentService.list("org-a")).resolves.toHaveLength(1);
+    await expect(BlockonomicsPaymentService.list("org-a", 50, "completed")).resolves.toEqual([]);
+  });
+
+  it("exposes safe transaction and receipt evidence without leaking stored secrets", async () => {
+    const created = await BlockonomicsPaymentService.create("org-a", "user-a", { amount: 10, currency: "USD", cryptoCurrency: "BTC", invoiceId: undefined });
+    Object.assign(state.payments[0], {
+      status: "completed",
+      completedAt: new Date("2026-08-17T12:30:00.000Z"),
+      providerTransactionId: "provider-tx-verified",
+      metadata: {
+        apiKey: "must-not-leak",
+        callbackSecret: "must-not-leak-either",
+        receipt: { number: "RCT-pay-1", issuedAt: "2026-08-17T12:30:00.000Z", invoiceId: "inv-1" },
+      },
+    });
+    const detail = await BlockonomicsPaymentService.get("org-a", created.id);
+    expect(detail).toMatchObject({
+      providerTransactionId: "provider-tx-verified",
+      receipt: { number: "RCT-pay-1", invoiceId: "inv-1" },
+      status: "completed",
+    });
+    expect(JSON.stringify(detail)).not.toContain("must-not-leak");
   });
 });

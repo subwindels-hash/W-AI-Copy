@@ -6,6 +6,7 @@ import { PaystackService } from "./paystack.service.js";
 import { PayPalService } from "./paypal.service.js";
 import { StripeService } from "./stripe.service.js";
 import { CryptoPaymentsService, CRYPTO_NETWORK_CONFIRMATIONS } from "./crypto.service.js";
+import { BlockonomicsPaymentService } from "./blockonomicsPayment.service.js";
 import * as billing from "../services/billing.service.js";
 
 vi.mock("../db/redis.js", () => {
@@ -249,6 +250,33 @@ describe("settlement invariants", () => {
     const tx = await paystackCheckout("org-indexed");
     expect(await PaymentGatewaysService.resolveProviderTransaction("paystack", tx.reference)).toMatchObject({ id: tx.id, organizationId: "org-indexed" });
     expect(await PaymentGatewaysService.getTransaction("org-other", tx.id)).toBeNull();
+  });
+
+  it("merges durable Blockonomics history with the existing tenant-scoped provider ledger", async () => {
+    const fiat = await paystackCheckout("org-history");
+    const durable: any = {
+      id: "pay-durable", organizationId: "org-history", provider: "blockonomics",
+      reference: "BLK_HISTORY", amount: 60, currency: "USD", status: "completed",
+      cryptoCurrency: "BTC", cryptoNetwork: "btc", createdAt: "2030-01-01T00:00:00.000Z",
+      completedAt: "2030-01-01T00:10:00.000Z",
+    };
+    const listSpy = vi.spyOn(BlockonomicsPaymentService, "list").mockImplementation(async (orgId, _limit, status) => (
+      orgId === "org-history" && (!status || status === durable.status) ? [durable] : []
+    ));
+    const getSpy = vi.spyOn(BlockonomicsPaymentService, "get").mockImplementation(async (orgId, id) => (
+      orgId === "org-history" && id === durable.id ? durable : null
+    ));
+    try {
+      const merged = await PaymentGatewaysService.listTransactions("org-history", { limit: 10 });
+      expect(merged.map((item) => item.id)).toEqual([durable.id, fiat.id]);
+      await expect(PaymentGatewaysService.listTransactions("org-history", { provider: "blockonomics", status: "completed" })).resolves.toEqual([durable]);
+      await expect(PaymentGatewaysService.listTransactions("org-other", { provider: "blockonomics" })).resolves.toEqual([]);
+      await expect(PaymentGatewaysService.getTransaction("org-history", durable.id)).resolves.toEqual(durable);
+      await expect(PaymentGatewaysService.getTransaction("org-other", durable.id)).resolves.toBeNull();
+    } finally {
+      listSpy.mockRestore();
+      getSpy.mockRestore();
+    }
   });
 
   it("retains real confirmation threshold helpers without creating crypto charges", () => {

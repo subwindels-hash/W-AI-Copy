@@ -32,6 +32,11 @@ function callbackHash(input: BlockonomicsCallbackInput): string {
 function isUniqueError(error: unknown): boolean { return (error as any)?.code === "P2002"; }
 
 export function serializeBlockonomicsPayment(row: any): PaymentTransaction {
+  const storedMetadata = row.metadata && typeof row.metadata === "object" ? row.metadata as Record<string, any> : {};
+  const storedReceipt = storedMetadata.receipt;
+  const receipt = storedReceipt && typeof storedReceipt.number === "string" && typeof storedReceipt.issuedAt === "string"
+    ? { number: storedReceipt.number, issuedAt: storedReceipt.issuedAt, invoiceId: typeof storedReceipt.invoiceId === "string" ? storedReceipt.invoiceId : null }
+    : undefined;
   return {
     id: row.id,
     organizationId: row.organizationId,
@@ -48,10 +53,12 @@ export function serializeBlockonomicsPayment(row: any): PaymentTransaction {
     confirmations: row.confirmations ?? 0,
     requiredConfirmations: row.requiredConfirmations ?? 2,
     providerStatus: row.providerStatus ?? undefined,
+    providerTransactionId: row.providerTransactionId ?? undefined,
+    receipt,
     status: row.status,
     invoiceId: row.invoiceId ?? null,
-    description: (row.metadata as any)?.description,
-    customerEmail: (row.metadata as any)?.customerEmail,
+    description: storedMetadata.description,
+    customerEmail: storedMetadata.customerEmail,
     expiresAt: row.expiresAt?.toISOString?.() ?? row.expiresAt ?? null,
     reconciliationStatus: row.reconciliationStatus,
     createdAt: row.createdAt?.toISOString?.() ?? row.createdAt,
@@ -276,8 +283,12 @@ export const BlockonomicsPaymentService = {
     return row ? serializeBlockonomicsPayment(row) : null;
   },
 
-  async list(organizationId: string, limit = 50): Promise<PaymentTransaction[]> {
-    const rows = await prisma.paymentRecord.findMany({ where: { organizationId, provider: "blockonomics" }, orderBy: { createdAt: "desc" }, take: Math.max(1, Math.min(limit, 200)) });
+  async list(organizationId: string, limit = 50, status?: string): Promise<PaymentTransaction[]> {
+    const rows = await prisma.paymentRecord.findMany({
+      where: { organizationId, provider: "blockonomics", ...(status ? { status } : {}) },
+      orderBy: { createdAt: "desc" },
+      take: Math.max(1, Math.min(limit, 200)),
+    });
     return rows.map(serializeBlockonomicsPayment);
   },
 };
