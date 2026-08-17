@@ -2,11 +2,15 @@
  * Routes honour the Fifth Standing Rule — every POST accepts a `label` field which
  * is validated against HealthLabel; if omitted, sensible defaults are applied
  * (manual entries default to `wellness_estimate`, device entries to `clinically_validated`).
+ *
+ * Session 175: all handlers enforce tenant+user isolation via orgOf/userOf — no
+ * fallback to anon, no org-windels default. Dashboard is a pure read (never seeds).
  */
 import { Router } from "express";
 import { z } from "zod";
 import { HealthEcosystemService } from "../../healthEcosystem/healthEcosystem.service.js";
 import { validate } from "../middleware/validate.js";
+import { authenticate } from "../middleware/auth.js";
 import { HEALTH_DISCLAIMER } from "@windels/shared";
 
 const metricBody = z.object({
@@ -107,76 +111,138 @@ const screeningBody = z.object({
   status: z.enum(["up_to_date","due","overdue"]).optional(),
 });
 
+function orgOf(req: any, res: any): string | null {
+  const oid = req.user?.organizationId;
+  if (!oid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+    return null;
+  }
+  return oid;
+}
+function userOf(req: any, res: any): string | null {
+  const uid = req.user?.id;
+  if (!uid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "user context required" } });
+    return null;
+  }
+  return uid;
+}
+
 export function registerHealthEcosystemRoutes(router: Router) {
-  const oid = (req: any) => (req.user as any).organizationId;
-  const uid = (req: any) => (req.user as any).id;
+  router.use(authenticate);
 
   // Dashboard
   router.get("/dashboard/rollup", async (req, res, next) => {
     try {
-      res.json({ ok: true, data: await HealthEcosystemService.dashboard(oid(req), uid(req)), disclaimer: HEALTH_DISCLAIMER });
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.dashboard(oid, uid), disclaimer: HEALTH_DISCLAIMER });
     } catch (e) { next(e); }
   });
 
   // Metrics
   router.get("/metrics", async (req, res, next) => {
     try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
       const kind = (req.query.kind as string) || undefined;
       const limit = parseInt((req.query.limit as string) || "50", 10);
-      res.json({ ok: true, data: await HealthEcosystemService.listMetrics(oid(req), uid(req), kind as any, limit) });
+      res.json({ ok: true, data: await HealthEcosystemService.listMetrics(oid, uid, kind as any, limit) });
     } catch (e) { next(e); }
   });
   router.post("/metrics", validate({ body: metricBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addMetric(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addMetric(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
 
   // Fitness sessions
   router.get("/fitness-sessions", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listSessions(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listSessions(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/fitness-sessions", validate({ body: sessionBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addSession(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addSession(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
 
   // Medications
   router.get("/medications", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listMedications(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listMedications(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/medications", validate({ body: medicationBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addMedication(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addMedication(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
   router.delete("/medications/:id", async (req, res, next) => {
-    try { await HealthEcosystemService.deleteMedication(oid(req), uid(req), req.params.id); res.json({ ok: true }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      await HealthEcosystemService.deleteMedication(oid, uid, req.params.id); res.json({ ok: true });
+    }
     catch (e) { next(e); }
   });
 
   // Notes
   router.get("/notes", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listNotes(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listNotes(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/notes", validate({ body: noteBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addNote(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addNote(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
 
   // Emergency alerts
   router.get("/emergency-alerts", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listAlerts(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listAlerts(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/emergency-alerts", validate({ body: alertBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addAlert(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addAlert(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
   router.post("/emergency-alerts/:id/acknowledge", validate({ body: ackBody }), async (req, res, next) => {
     try {
-      const a = await HealthEcosystemService.ackAlert(oid(req), uid(req), req.params.id);
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      const a = await HealthEcosystemService.ackAlert(oid, uid, req.params.id);
       if (!a) return res.status(404).json({ ok: false, error: "alert_not_found" });
       res.json({ ok: true, data: a });
     } catch (e) { next(e); }
@@ -185,60 +251,115 @@ export function registerHealthEcosystemRoutes(router: Router) {
   // Insights (read) with optional label filter
   router.get("/insights", async (req, res, next) => {
     try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
       const label = req.query.label as any;
-      res.json({ ok: true, data: await HealthEcosystemService.listInsights(oid(req), uid(req), label), disclaimer: HEALTH_DISCLAIMER });
+      res.json({ ok: true, data: await HealthEcosystemService.listInsights(oid, uid, label), disclaimer: HEALTH_DISCLAIMER });
     } catch (e) { next(e); }
   });
 
   // Profile — user-supplied; nothing is inferred or invented.
   router.get("/profile", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.getProfile(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.getProfile(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/profile", validate({ body: profileBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.upsertProfile(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.upsertProfile(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
 
   // Connected devices — registered explicitly, never assumed present.
   router.get("/wearables", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listWearables(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listWearables(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/wearables", validate({ body: wearableBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addWearable(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addWearable(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
   router.get("/medical-devices", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listMedicalDevices(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listMedicalDevices(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/medical-devices", validate({ body: medicalDeviceBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addMedicalDevice(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addMedicalDevice(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
 
   // Preventive care records
   router.get("/vaccinations", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listVaccinations(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listVaccinations(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/vaccinations", validate({ body: vaccinationBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addVaccination(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addVaccination(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
   router.get("/screenings", async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.listScreenings(oid(req), uid(req)) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.listScreenings(oid, uid) });
+    }
     catch (e) { next(e); }
   });
   router.post("/screenings", validate({ body: screeningBody }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await HealthEcosystemService.addScreening(oid(req), uid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HealthEcosystemService.addScreening(oid, uid, req.body) });
+    }
     catch (e) { next(e); }
   });
 
   // Module registry (which sub-modules are enabled, routes to them)
-  router.get("/modules", (_req, res) => res.json({ ok: true, data: HealthEcosystemService.listModules() }));
+  router.get("/modules", async (req, res, next) => {
+    try {
+      // Modules catalog is shared static — but still requires auth to avoid leaking enabled-module list to anonymous callers.
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: HealthEcosystemService.listModules() });
+    } catch (e) { next(e); }
+  });
 
   // Fifth Standing Rule / compliance disclosure
-  router.get("/disclaimer", (_req, res) => res.json({ ok: true, data: { disclaimer: HEALTH_DISCLAIMER, rule: "Fifth Standing Rule — three-bucket health labels" } }));
+  router.get("/disclaimer", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: { disclaimer: HEALTH_DISCLAIMER, rule: "Fifth Standing Rule — three-bucket health labels" } });
+    } catch (e) { next(e); }
+  });
 }

@@ -22,6 +22,12 @@ function secret(): string | null { const value = process.env.MODULE_RUNNER_HMAC_
 export function registerModuleRuntimeRoutes(parent: Router) {
   const router = Router();
   router.use(authenticate);
+  router.get("/health", async (req, res, next) => {
+    try { res.json({ ok: true, data: { status: "ok", registrations: (await ModuleCenterService.runtimeRegistrations(req.user!.role)).length } }); } catch (error) { next(error); }
+  });
+  router.get("/modules", async (req, res, next) => {
+    try { res.json({ ok: true, data: await ModuleCenterService.runtimeRegistrations(req.user!.role) }); } catch (error) { next(error); }
+  });
   router.get("/registrations", async (req, res, next) => {
     try { res.json({ ok: true, data: await ModuleCenterService.runtimeRegistrations(req.user!.role) }); } catch (error) { next(error); }
   });

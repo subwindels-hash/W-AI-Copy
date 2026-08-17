@@ -28,7 +28,12 @@ import {
 import { CognitiveService } from "../../cognitive/cognitive.service.js";
 import { CognitiveWorldModelService } from "../../cognitive/worldModel.service.js";
 
-const orgOf = (req: any): string => req.user!.organizationId!;
+import { AppError } from "../../utils/result.js";
+const orgOf = (req: any): string => {
+  const org = (req.user as any)?.organizationId ?? null;
+  if (!org) throw AppError.forbidden("The cognitive register is organization-scoped and this session carries no organization.");
+  return org;
+};
 const userOf = (req: any): string => req.user!.id;
 const notFound = (res: any, message: string, requestId?: string) =>
   res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message }, meta: { requestId } });

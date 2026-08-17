@@ -471,6 +471,51 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "ind:meta", scope: "org_scoped" },
   { prefix: "ind:adopt:idx", scope: "org_scoped" },
   { prefix: "ind:adopt:i", scope: "org_scoped" },
+  // Session 174 biomedical — imaging registry / pharmacy / telemed / ops / meta
+  // Keys are `bm:<kind>:<org>[:<id>]` → org at index 2 for two-segment prefixes
+  // (bm:img / bm:ph / bm:tl) and at index 2 for bm:ops / bm:meta as well.
+  // Bare `bm` is deliberately never added — it would read the literal kind as org.
+  { prefix: "bm:img", scope: "org_scoped" },
+  { prefix: "bm:imgs", scope: "org_scoped" },
+  { prefix: "bm:ph", scope: "org_scoped" },
+  { prefix: "bm:phs", scope: "org_scoped" },
+  { prefix: "bm:tl", scope: "org_scoped" },
+  { prefix: "bm:tls", scope: "org_scoped" },
+  { prefix: "bm:ops", scope: "org_scoped" },
+  { prefix: "bm:meta", scope: "org_scoped" },
+  // Session 180 benchmarks — result registry. Keys are `bm:<kind>:<org>[:<id>]` — org at index 1 or 2 after two-segment prefix.
+  // Bare `bm` never added — would read kind literal as org. `bm:notes` here is benchmarks' notes (distinct from dr:notes).
+  { prefix: "bm:run", scope: "org_scoped" },
+  { prefix: "bm:runs", scope: "org_scoped" },
+  { prefix: "bm:m", scope: "org_scoped" },
+  { prefix: "bm:area", scope: "org_scoped" },
+  { prefix: "bm:sched", scope: "org_scoped" },
+  { prefix: "bm:scheds", scope: "org_scoped" },
+  { prefix: "bm:notes", scope: "org_scoped" },
+  // Session 175 health ecosystem — per-org+user keys `hec:<kind>:<org>:<uid>`
+  // Org is the segment after `hec:<kind>` (prefix length 2 → org at index 2).
+  // Bare `hec` never added — would read the kind literal as org.
+  { prefix: "hec:meta", scope: "org_scoped" },
+  { prefix: "hec:profile", scope: "org_scoped" },
+  { prefix: "hec:metrics", scope: "org_scoped" },
+  { prefix: "hec:sessions", scope: "org_scoped" },
+  { prefix: "hec:meds", scope: "org_scoped" },
+  { prefix: "hec:notes", scope: "org_scoped" },
+  { prefix: "hec:alerts", scope: "org_scoped" },
+  { prefix: "hec:wearables", scope: "org_scoped" },
+  { prefix: "hec:devices", scope: "org_scoped" },
+  { prefix: "hec:vaccines", scope: "org_scoped" },
+  { prefix: "hec:screenings", scope: "org_scoped" },
+  // Session 179 disaster recovery — active/standby topology, failover events, drills, emergency. Keys are `dr:<kind>:<org>[:<id>]` — org at index 1 or 2 after dr:<kind>.
+  // Bare `dr` never added — would read kind literal as org.
+  { prefix: "dr:active", scope: "org_scoped" },
+  { prefix: "dr:status", scope: "org_scoped" },
+  { prefix: "dr:ev", scope: "org_scoped" },
+  { prefix: "dr:drill", scope: "org_scoped" },
+  { prefix: "dr:drills", scope: "org_scoped" },
+  { prefix: "dr:em", scope: "org_scoped" },
+  { prefix: "dr:m", scope: "org_scoped" },
+  { prefix: "dr:notes", scope: "org_scoped" },
   { prefix: "ext:industry", scope: "shared" },
   { prefix: "google:state", scope: "shared" },
 ];

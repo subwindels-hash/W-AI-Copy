@@ -30,7 +30,8 @@ import { CommandOperationsService } from "./operations.service.js";
 const K = { meta: (oid: string) => `cmd:${oid}:meta` };
 
 export const CommandService = {
-  async ensureBootstrapped(logger?: Logger, oid = "org-windels") {
+  async ensureBootstrapped(logger?: Logger, oid?: string) {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) return;
     if (!(await redis.exists(K.meta(oid)))) { await redis.set(K.meta(oid), "1"); logger?.info({ msg: "[command] operations dashboard initialized", organizationId: oid }); }
     await CommandOperationsService.ensureBootstrapped(logger, oid);
   },
@@ -41,7 +42,7 @@ export const CommandService = {
   },
 
   async dashboard(oid: string): Promise<GlobalCommandDashboard> {
-    await this.ensureBootstrapped(undefined, oid);
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     const since = new Date(Date.now() - 30 * 86_400_000);
     const day = new Date(Date.now() - 86_400_000);
     const [agents, workflows, activeRuns, tasks, openTasks, conversations, users,

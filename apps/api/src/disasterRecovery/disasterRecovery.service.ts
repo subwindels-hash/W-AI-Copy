@@ -3,6 +3,9 @@
  * Session 51 — Enterprise Disaster Recovery & AI Continuity (V8.4 §6).
  * Failover, multi-region, memory/KG/model replication, offline emergency,
  * BCP, DR drills, auto-failback, health monitoring. Keys: dr:*
+ *
+ * Session 179: dashboard is now pure read — activeRegion null until
+ * topology is configured, no na-east seeding on read.
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
@@ -27,6 +30,10 @@ async function emitKernel(kind: string, payload: any) {
   try { const { KernelService } = await import("../kernel/kernel.service.js"); await KernelService.dispatch({ source: "disasterRecovery", kind, payload }); } catch {}
 }
 
+function assertOrg(oid: string) {
+  if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
+}
+
 export const DisasterRecoveryService = {
   /**
    * Register the DR component topology. Components start with `healthy: false`
@@ -37,7 +44,8 @@ export const DisasterRecoveryService = {
    * "passed" drill dated three days ago, complete with RTO/RPO figures — an
    * audit record for a test that never happened.
    */
-  async ensureBootstrapped(logger?: any, oid = "org-windels") {
+  async ensureBootstrapped(logger?: any, oid?: string) {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) return;
     if (await redis.exists(K.activeRegion(oid))) return;
     await redis.set(K.activeRegion(oid), "na-east");
     await redis.set(K.emergency(oid), "0");
@@ -55,44 +63,48 @@ export const DisasterRecoveryService = {
     logger?.info?.("[disaster-recovery] initialized (no synthetic drills; components unverified until tested)");
   },
 
-  async dashboard(oid = "org-windels"): Promise<DrDashboard> {
+  async dashboard(oid: string): Promise<DrDashboard> {
+    assertOrg(oid);
     const comps = await this.getStatus(oid);
-    const active = (await redis.get(K.activeRegion(oid))) || "na-east";
-    const standby = Array.from(new Set(comps.flatMap(c=>c.standbyRegions))).filter(r=>r!==active);
+    const activeRaw = await redis.get(K.activeRegion(oid));
+    const active: string | null = activeRaw || null;
+    const standby = active ? Array.from(new Set(comps.flatMap(c=>c.standbyRegions))).filter(r=>r!==active) : [];
     // Only components that actually reported lag contribute; unsampled
     // components are skipped rather than counted as 0ms.
     const sampledLags = comps.map((c) => c.replicationLagMs).filter((v): v is number => typeof v === "number");
-    const maxLag = sampledLags.length ? Math.max(...sampledLags) : 0;
-    const allHealthy = comps.every(c=>c.healthy);
+    const maxLag: number | null = sampledLags.length ? Math.max(...sampledLags) : null;
+    const allHealthy = comps.length ? comps.every(c=>c.healthy) : false;
     const fo = Number((await redis.hget(K.metrics(oid),"failovers30d")) || "0");
     const em = (await redis.get(K.emergency(oid))) === "1";
     const drills = await this.getDrills(oid, 5);
     const last = drills.find(d=>d.status==="passed"||d.status==="failed");
+    const hasTopology = active !== null && comps.length > 0;
     return {
       overallHealthy: allHealthy, components: comps, activeRegion: active, standbyRegions: standby,
       replicationLagMs: maxLag, failovers30d: fo,
       lastDrillStatus: last?.status==="passed" ? "passed" : last?.status==="failed" ? "failed" : undefined,
       lastDrillAt: last?.completedAt, offlineModeAvailable: true, emergencyModeActive: em,
       upcomingDrills: drills.filter(d=>d.status==="scheduled"),
-    };
+      provenance: {
+        topology: hasTopology ? "configured" : "unconfigured",
+        note: hasTopology ? `Topology configured: active ${active} with ${comps.length} components` : "No topology configured — activeRegion is null until ensureBootstrapped or a failover configures it",
+      },
+    } as DrDashboard;
   },
 
-  async getStatus(oid = "org-windels"): Promise<DrStatus[]> {
+  async getStatus(oid: string): Promise<DrStatus[]> {
+    assertOrg(oid);
     const out: DrStatus[] = [];
     for (const c of DR_COMPONENTS) { const r = await redis.hgetall(K.status(oid,c)); if (r._doc) out.push(JSON.parse(r._doc)); }
     return out;
   },
 
-  async triggerFailover(input: { component: DrComponent; toRegion: string; reason: string; organizationId?: string }): Promise<DrFailoverEvent> {
-    const oid = input.organizationId || "org-windels";
+  async triggerFailover(input: { component: DrComponent; toRegion: string; reason: string; organizationId: string }): Promise<DrFailoverEvent> {
+    const oid = input.organizationId;
+    assertOrg(oid);
     const id = uid("fo-"); const from = (await redis.get(K.activeRegion(oid))) || "na-east";
     const start = Date.now();
     await redis.set(K.activeRegion(oid), input.toRegion);
-    // Measure what actually happened. The previous code invented a 5-30s RTO
-    // and a random RPO after a 25ms sleep, so every failover reported a
-    // plausible recovery time that bore no relation to the work performed.
-    // rpoMs/dataLossMs are left undefined: they require replication telemetry
-    // this service does not have, and undefined is honest where 0 is a claim.
     const durationMs = Date.now() - start;
     const ev: DrFailoverEvent = {
       id, organizationId: oid, component: input.component, fromRegion: from, toRegion: input.toRegion,
@@ -107,12 +119,6 @@ export const DisasterRecoveryService = {
       const s: DrStatus = JSON.parse(r._doc);
       s.activeRegion = input.toRegion;
       s.lastFailoverAt = ev.completedAt;
-      // Do NOT set `healthy = true` here. Recording that a failover was
-      // requested is not evidence that the component came up healthy in the
-      // target region — nothing in this method probes it — and `healthy` feeds
-      // the dashboard's `allHealthy` roll-up, so a failover would turn a
-      // previously-unhealthy component green by assertion. It is only set from
-      // a measured result in `recordDrillResult`.
       await redis.hset(K.status(oid, input.component), "_doc", s2(s));
     }
     await redis.hincrby(K.metrics(oid),"failovers30d",1);
@@ -120,8 +126,9 @@ export const DisasterRecoveryService = {
     return ev;
   },
 
-  async scheduleDrill(input: { component: DrComponent; scheduledAt: string; organizationId?: string }): Promise<DrDrill> {
-    const oid = input.organizationId || "org-windels";
+  async scheduleDrill(input: { component: DrComponent; scheduledAt: string; organizationId: string }): Promise<DrDrill> {
+    const oid = input.organizationId;
+    assertOrg(oid);
     const id = uid("drill-");
     const d: DrDrill = { id, organizationId: oid, component: input.component, scheduledAt: input.scheduledAt, status: "scheduled" };
     await redis.hset(K.drill(oid,id), "_doc", s2(d));
@@ -132,13 +139,9 @@ export const DisasterRecoveryService = {
   /**
    * Start a scheduled drill. The drill moves to `running` and stays there until
    * an operator records the measured outcome via `recordDrillResult`.
-   *
-   * This previously fabricated the entire result: `passed = a random draw above 0.1`
-   * with a random RTO (8-38s) and RPO, then wrote `healthy` onto the component
-   * status. A disaster-recovery drill that grades itself by coin flip is
-   * compliance theatre — it produces an audit trail of tests that never ran.
    */
-  async runDrill(id: string, oid = "org-windels"): Promise<DrDrill> {
+  async runDrill(id: string, oid: string): Promise<DrDrill> {
+    assertOrg(oid);
     const r = await redis.hgetall(K.drill(oid, id));
     if (!r._doc) throw Object.assign(new Error("drill not found"), { status: 404 });
     const base: DrDrill = JSON.parse(r._doc);
@@ -156,8 +159,9 @@ export const DisasterRecoveryService = {
   async recordDrillResult(
     id: string,
     input: { passed: boolean; rtoAchievedMs: number; rpoAchievedMs: number; issues?: string[]; recordedBy: string },
-    oid = "org-windels",
+    oid: string,
   ): Promise<DrDrill> {
+    assertOrg(oid);
     const r = await redis.hgetall(K.drill(oid, id));
     if (!r._doc) throw Object.assign(new Error("drill not found"), { status: 404 });
     const base: DrDrill = JSON.parse(r._doc);
@@ -184,18 +188,21 @@ export const DisasterRecoveryService = {
     return d;
   },
 
-  async setEmergencyMode(enabled: boolean, oid = "org-windels") {
+  async setEmergencyMode(enabled: boolean, oid: string) {
+    assertOrg(oid);
     await redis.set(K.emergency(oid), enabled ? "1" : "0");
     emitKernel("dr.emergency_mode", { organizationId: oid, enabled });
     return { enabled };
   },
 
-  async getEvents(oid = "org-windels", limit = 50): Promise<DrFailoverEvent[]> {
+  async getEvents(oid: string, limit = 50): Promise<DrFailoverEvent[]> {
+    assertOrg(oid);
     const rows = await redis.zrange(K.events(oid), -limit, -1, "REV");
     return rows.map(r=>JSON.parse(r) as DrFailoverEvent);
   },
 
-  async getDrills(oid = "org-windels", limit = 20): Promise<DrDrill[]> {
+  async getDrills(oid: string, limit = 20): Promise<DrDrill[]> {
+    assertOrg(oid);
     const ids = await redis.zrange(K.drills(oid), -limit, -1, "REV");
     const out: DrDrill[] = [];
     for (const id of ids) { const r = await redis.hgetall(K.drill(oid,id)); if (r._doc) out.push(JSON.parse(r._doc)); }

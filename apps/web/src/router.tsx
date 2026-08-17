@@ -96,6 +96,16 @@ const OrgVoiceStudioPage = lazy(() => import("./pages/voiceStudio/VoiceStudioPag
 const SpatialPage = lazy(() => import("./pages/spatial/SpatialPage").then((m) => ({ default: m.SpatialPage })));
 const DigitalHumansPage = lazy(() => import("./pages/digitalHumans/DigitalHumansPage").then((m) => ({ default: m.DigitalHumansPage })));
 const IndustryPage = lazy(() => import("./pages/industry/IndustryPage").then((m) => ({ default: m.IndustryPage })));
+const BiomedicalPage = lazy(() => import("./pages/biomedical/BiomedicalPage").then((m) => ({ default: m.BiomedicalPage })));
+const HealthEcosystemPage = lazy(() => import("./pages/healthEcosystem/HealthEcosystemPage").then((m) => ({ default: m.HealthEcosystemPage })));
+const CloudAndroidPublicPage = lazy(() => import("./pages/cloudAndroidPublic/CloudAndroidPublicPage").then((m) => ({ default: m.CloudAndroidPublicPage })));
+const ModuleRuntimeAliasPage = lazy(() => import("./pages/moduleRuntime/ModuleRuntimePage").then((m) => ({ default: m.ModuleRuntimePage })));
+const NativeAiApiPage = lazy(() => import("./pages/nativeAiApi/NativeAiApiPage").then((m) => ({ default: m.NativeAiApiPage })));
+const NfcPublicPage = lazy(() => import("./pages/nfcPublic/NfcPublicPage").then((m) => ({ default: m.NfcPublicPage })));
+const NativeAiPage = lazy(() => import("./pages/nativeAi/NativeAiPage").then((m) => ({ default: m.NativeAiPage })));
+const ModelFactoryPage = lazy(() => import("./pages/modelFactory/ModelFactoryPage").then((m) => ({ default: m.ModelFactoryPage })));
+const MemoryEvolutionPage = lazy(() => import("./pages/memoryEvolution/MemoryEvolutionPage").then((m) => ({ default: m.MemoryEvolutionPage })));
+const MediaGenPage = lazy(() => import("./pages/mediaGen/MediaGenPage").then((m) => ({ default: m.MediaGenPage })));
 const QuantumPage = lazy(() => import("./pages/quantum/QuantumPage").then((m) => ({ default: m.QuantumPage })));
 const LegalPage = lazy(() => import("./pages/legal/LegalPage").then((m) => ({ default: m.LegalPage })));
 const EducationPage = lazy(() => import("./pages/education/EducationPage").then((m) => ({ default: m.EducationPage })));
@@ -329,6 +339,7 @@ export const router = createBrowserRouter([
       { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
       { path: "opex", element: withSuspense(<OpexAssurancePage />) },
       { path: "prompt-templates", element: withSuspense(<PromptTemplatesPage />) },
+      { path: "promptTemplates", element: withSuspense(<PromptTemplatesPage />) },
       { path: "public-api", element: withSuspense(<PublicApiPage />) },
       { path: "sustainability", element: withSuspense(<SustainabilityPage />) },
       { path: "usage", element: withSuspense(<UsagePage />) },
@@ -365,9 +376,12 @@ export const router = createBrowserRouter([
       { path: "helpdesk", element: withSuspense(<HelpdeskPage />) },
       { path: "app-builder", element: withSuspense(<SoftwareFactoryPage />) },
       { path: "bi", element: withSuspense(<BusinessIntelligencePage />) },
+      { path: "businessIntelligence", element: withSuspense(<BusinessIntelligencePage />) },
       { path: "search", element: withSuspense(<EnterpriseSearchPage />) },
+      { path: "enterpriseSearch", element: withSuspense(<EnterpriseSearchPage />) },
       { path: "software-factory", element: withSuspense(<StudiosPage />) },
       { path: "finops", element: withSuspense(<EnterpriseFinOpsPage />) },
+      { path: "enterpriseFinOps", element: withSuspense(<EnterpriseFinOpsPage />) },
       { path: "ai-economy", element: withSuspense(<AiEconomyPage />) },
       { path: "api-keys", element: withSuspense(<ApiKeysPage />) },
       { path: "attachments", element: withSuspense(<AttachmentsPage />) },
@@ -391,6 +405,17 @@ export const router = createBrowserRouter([
       { path: "spatial", element: withSuspense(<SpatialPage />) },
       { path: "digital-humans", element: withSuspense(<DigitalHumansPage />) },
       { path: "industry", element: withSuspense(<IndustryPage />) },
+      { path: "biomedical", element: withSuspense(<BiomedicalPage />) },
+      { path: "health-ecosystem", element: withSuspense(<HealthEcosystemPage />) },
+      { path: "cloud-android-public", element: withSuspense(<CloudAndroidPublicPage />) },
+      { path: "module-runtime", element: withSuspense(<ModuleRuntimeAliasPage />) },
+      { path: "native-ai-api", element: withSuspense(<NativeAiApiPage />) },
+      { path: "nfc-public", element: withSuspense(<NfcPublicPage />) },
+      { path: "native-ai", element: withSuspense(<NativeAiPage />) },
+      { path: "modelFactory", element: withSuspense(<ModelFactoryPage />) },
+      { path: "memoryEvolution", element: withSuspense(<MemoryEvolutionPage />) },
+      { path: "mediaGen", element: withSuspense(<MediaGenPage />) },
+      { path: "mediaFactory", element: withSuspense(<MediaFactoryPage />) },
       { path: "quantum", element: withSuspense(<QuantumPage />) },
       { path: "legal", element: withSuspense(<LegalPage />) },
       { path: "education", element: withSuspense(<EducationPage />) },

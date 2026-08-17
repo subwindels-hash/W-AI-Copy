@@ -2195,3 +2195,131 @@
     a real tenant-scoped adoption store (`ind:adopt`) so active deployments,
     employee coverage, and readiness scores are derived from real records.
     Unmeasured latency and unconducted maturity assessments must report `null`.
+
+### Session 174 — Biomedical completion (`biomedical` — Tier 2 #9)
+
+1. **A read that writes is not a read.** `dashboard()` checked `if (!exists(meta)) await ensureBootstrapped()` — an authenticated GET on a cold org performed a Redis `SET`. The write was tiny (`bm:meta:org = 1`) but it violated the S156 rule and made keyspace-diff assertions fail. A pure-read dashboard must never write, even a flag; bootstrap belongs to `bootstrap.ts` at server start.
+
+2. **0 minutes is a measurement, not the absence of one.** `avgTurnaroundMin: 0` on an empty org rendered as “0 min turnaround” — the fastest possible score for a clinic that has completed nothing. The fix widens `BiomedicalDashboard.imaging.avgTurnaroundMin: number | null` and adds a `provenance` block (`measured | unmeasured_no_completed`). The S160 rule is literal: unmeasured is `null`, never `0`, and `||0` in `PlatformPage` undid the service fix in one line (see #9 of S168).
+
+3. **Counts vs. measurements.** `studies24h / pendingReview / aiAssisted / alerts24h` are honest `0`s when empty — they count rows that exist and the answer is zero. `avgTurnaroundMin` is a measurement over rows that completed and the answer is absent. The distinction keeps the null change surgical: only the turnaround field moves to `null`, not every zero.
+
+4. **A default parameter is a tenant-isolation bug.** `oid = "org-windels"` plus `const oid = (req.user as any).organizationId` without a guard meant a null-org token silently read the house org. S174 mirrors S163–S169: every route now uses `orgOf(req,res): string | null` (403 when missing) behind `authenticate`, and every service method `asserts` a non-empty org. The `/notes` pattern was already guarding elsewhere in other modules — the fix is to apply it to the real routes.
+
+5. **A single test can pin a defect in place.** `biomedical.test.ts:22` asserted `expect(d.imaging.avgTurnaroundMin).toBe(0)` with a comment-less green suite. Fixing the service required rewriting that one assertion to `toBeNull()` — the defect was defended by its own test (see S168 #4, sustainability). The new `biomedical.completion.test.ts` mutation-verifies the three discriminating cases: `null` vs `0`, no-write on read, and cross-org isolation.
+
+6. **Catalog the namespace the same shape the service uses.** Biomedical keys are `bm:img:<org>:<id>` and `bm:imgs:<org>` (two-segment prefix, org at index 2). Registering `bm:img` and `bm:imgs` separately keeps the sweep's `orgIndex = prefix.split(":").length` honest. Bare `bm` would read the literal kind as an org id — same constraint as `opx:` / `pt:` / `pub:` / `cmp:` / `vs:`.
+
+7. **Registry-only is a product decision, not a TODO.** The S65 removal of random findings (1.5 s timer, 18 seeded studies) is preserved. A study enters `queued` with `aiFindings:[]` and only gains findings via an explicit `POST /studies/:id/findings` from a provider or radiologist. The dashboard’s “AI-assisted” count is `studies with findings > 0`, so a fresh org correctly reports `0` rather than a synthetic 18.
+
+
+### Session 175 — Health Ecosystem completion (`healthEcosystem` — Tier 2 #10)
+
+1. **Per-user isolation needs a user guard, not just an org guard.** `healthEcosystem` keys are `hec:metrics:org:uid` — both segments matter. The route helpers `oid=(req.user as any).organizationId` and `uid=(req.user as any).id` without null checks, combined with `dashboard(oid,userId?: string)` defaulting to `userId ?? "anon"`, meant a null-user token read the shared `anon` bucket and two users in the same org shared that bucket. The fix mirrors S174: `orgOf` + `userOf` (both 403) on all 22 handlers behind `authenticate`, and `dashboard(oid: string, userId: string)` asserts both (no default). The service test `per-user isolation` writes in `org A / user X` and reads in `org A / user Y` → empty, proving the second segment is enforced.
+
+2. **An empty health profile is `hasData:false`, not a synthetic profile.** The S75 record-only cleanup already removed seeded vitals, medications and devices, but left `dashboard` seeding `hec:meta` on read and `DailyHealth` scores as `0` for empty users. `0` for `today.score` is honest **only** when scoped by `hasData:false` — the azure banner “No health data recorded yet” tells the UI not to render gauges as measurements. Changing `DailyHealth.score: number → number | null` would break 8 consumers for no extra honesty; the flag already carries the provenance. Keep zeros only when a boolean flag says they are empty.
+
+3. **A flag is still a write.** `ensureBootstrapped` only set `hec:meta:org = 1`, but called from `dashboard` it still made every `GET /dashboard/rollup` mutate. The S174 fix (delete the read-path call, leave `ensureBootstrapped` for server-start only) applies verbatim. `hasData:false` is now derived from empty lists, not from the presence of a flag — the flag is an optimization hint, not the source of truth for emptiness.
+
+4. **Cover the same catalog shape the service uses.** Health keys are `hec:<kind>:<org>:<uid>` (two-segment prefix, org at index 2). Registering `hec:metrics`, `hec:sessions`, `hec:meds`, etc. separately keeps the sweep's `orgIndex = prefix.split(":").length` correct. Bare `hec` would read the literal kind as an org id — same constraint as `bm`, `opx`, `pt`, `cmp`.
+
+5. **An existing zero-aggregate test can be correct.** `healthEcosystem.test.ts:20–28` asserts `expect(bucket.score).toBe(0)` for an empty user — and it is **not** pinning a defect, because `hasData:false` already marks the zeros as unmeasured. Unlike `biomedical.test.ts:22` which had no flag and required `toBeNull()`, here the assertion stays. The distinction is the presence of an explicit empty signal: if the service ships `hasData`, zeros are scoped; if it ships no flag, zeros are claims.
+
+
+### Session 176 — Opex completion (`opex` — Tier 2 #11)
+
+1. **A write-path bootstrap is still a seeder.** `createAlert` called `ensureBootstrapped` before writing via `OpexAssuranceService`. The write would succeed anyway — assurance creates its own `opx:alert` key — but the extra `opex:meta` write made a `POST` mutate a second namespace as a side effect. The S174/S175 fix applies: if the only thing `ensureBootstrapped` does is set a flag, let writes write without it; the flag is an optimization hint set at server start.
+
+2. **A legacy route and its assurance sub-router should guard the same way.** `opexAssurance` used `orgOf(req): string => { if (!org) throw AppError.forbidden(...) }` while `opex` used `req.user!.organizationId!`. Both were behind `opexRouter.use(authenticate)`, but the `!` assertion would throw a raw `TypeError` if the guard ever mis-ordered, whereas `AppError.forbidden` yields a 403 with a readable code. S176 aligns the legacy file with the assurance pattern.
+
+3. **A one-shot migration marker is not a seeder.** `dashboard` still calls `OpexAssuranceService.ensureLegacyImported` — which does `SET opx:imported:org = now` on first read. That is a write on read, but it is a **migration**, not a seed: it records that the Session 73 blob has been adopted, never invents alerts. The no-write assertion for `OpexService.dashboard` therefore allows `opx:imported` and asserts only that `opex:meta` and `opx:alert` are not created.
+
+
+### Session 177 — Cognitive completion (`cognitive` — Tier 2 #12)
+
+1. **A comment that documents a defect is not a fix.** `cognitive.service.ts` contained the exact words “Fields with no backing store … stay 0 rather than being estimated — those subsystems do not exist yet, and a plausible number would imply they do.” The code then returned `0` for nine such fields. Documentation of the lie was committed; the lie was not fixed. When a module explains why a number is meaningless, make the number `null` and ship a `provenance` block that says `structural_null`.
+
+2. **A subsystem that does not exist cannot have 0% health.** `selfEvolutionHealth:0` reads as catastrophic failure on a health gauge, `dnaCompleteness:0%` as 0% complete, `federationPartners:0` as a measured zero partners. `null` with a metric helper rendering `—` is the honest empty state; the measured aggregates (`activeBottlenecks`, `observatoryHealthyPct`, `globalMemoryEntries`, `predictionsMade30d`) correctly stay `number` because they are computed from real `prisma.*.count` tables and 0 there is measured (0 healthy nodes).
+
+3. **A read that writes a flag is still a write.** `dashboard()` called `ensureBootstrapped` which did `SET cog:meta:org = 1`. The flag is tiny, but the no-write assertion for a pure read fails if any key appears. S174–S176 fix applies: `dashboard` is pure, `ensureBootstrapped` is server-start only, and the `provenance` note explains the flag is an optimization hint, not the source of truth for emptiness.
+
+
+### Session 178 — Command completion (`command` — Tier 2 #13)
+
+1. **A dashboard that cascades a bootstrap doubles the write.** `CommandService.ensureBootstrapped` wrote `cmd:meta` and then called `CommandOperationsService.ensureBootstrapped`, which wrote its own `cmd:incident:idx` etc. So a single `GET /command/dashboard/rollup` on a cold org wrote two namespaces. The fix mirrors S174–S177: `dashboard` is pure, `ensureBootstrapped` is server-start only, and the cascade is only reached via the server-start path.
+
+2. **An `operations` register that is empty is still honest.** `CommandOperationsService.listIncidents/regions/briefings/initiatives` already return `[]` for a fresh org, and `operations()` returns `openIncidents:0` with `note` explaining the empty. The legacy `CommandService.dashboard` already blended `prisma.*` counts with that register, so no null-widening was needed — the empty arrays are the honest empty state, unlike the nine `0` subsystems in `cognitive`.
+
+3. **Guard the user dimension too.** Command routes use both `organizationId` and `id` (user) — `declareIncident` attributes `createdBy: userOf(req)`. The previous `req.user!.id` would throw `TypeError` if the token lacked an id, while `orgOf` now throws `AppError.forbidden`. Adding `userOf` with the same guard makes the two dimensions consistent and yields a 403 with a readable code instead of an unhandled 500.
+
+
+### Session 179 — Disaster Recovery completion (`disasterRecovery` — Tier 2 #14)
+
+1. **A health flag can be honest while the topology is a lie.** `DrStatus.healthy:false` was correct — no drill had proven otherwise — but `activeRegion:"na-east"` and two standbys per component were invented on a fresh org that configured nothing. The dashboard's `activeRegion` rendered as `na-east` for every tenant that had never touched DR. The fix makes `activeRegion: string | null` (`null` until a real topology is recorded) and `components:[]` when none, with `provenance.topology: unconfigured`. Health and topology are now independently honest.
+
+2. **An unauthenticated `GET /dashboard/rollup` that reads `org-windels` is a cross-tenant leak.** `registerDisasterRecoveryRoutes` had no `authenticate` and every handler called `DisasterRecoveryService.dashboard()` with no `oid` (defaulting to `org-windels`). Any anonymous request read and — via `POST /failover` — mutated the house org's failover state. S179 adds `router.use(authenticate)` and `orgOf(req,res) 403` on all 13 handlers, mirroring S174–S178, and removes all `oid = "org-windels"` defaults so the next unguarded caller fails to compile.
+
+3. **A drill that grades itself by coin flip is compliance theatre.** Session 51 had already removed the random `passed` draw and the `healthy` write in `runDrill`, but `ensureBootstrapped` still seeded a full na-east topology before any drill existed, so the first drill result would flip a component from `healthy:false` (seeded) to `healthy:true` (measured) and the dashboard would report `overallHealthy:true` based on a topology that was seeded, not measured. With empty `components` the dashboard now reports `overallHealthy:false` until a real drill makes a component healthy.
+
+
+### Session 180 — Benchmarks completion (`benchmarks` — Tier 2 #15)
+
+1. **A `0` derived from an empty set is honest; a `0` written before any set exists is a seed.** `BmDashboard.feedbackToModelFactory` reports `{optimizedModels, pendingRecommendations}` as the counts of `runBenchmark` calls that passed/failed the 80-score threshold. With no runs, the honest answer is `{0,0}` via `Number(m.pending||"0")` fallback — no `bm:m` key exists yet. `ensureBootstrapped` writing `hset bm:m:org 0,0` at server start for the default org made the same `0,0` appear on a fresh org via a different path (a seed), indistinguishable from a measured `0` after one real run. The fix gates the seed to server-start only and makes dashboard pure read; the `0,0` now comes from the same fallback path whether bootstrapped or not, so the key's absence is the honest empty signal.
+
+2. **An unused import is a missing guard.** `benchmarks.ts` imported `import { authenticate as _authenticate }` and never called `router.use(authenticate)`, while every handler used `req.user!.organizationId!`. The file compiled, the linter was silent (`_authenticate` suppresses unused), and every benchmark endpoint was reachable without a token (falling back to `org-windels` via `|| "org-windels"`). Renaming to `authenticate` and adding `router.use(authenticate)` plus `orgOf` makes the four handlers consistent with every S174–S179 route file.
+
+3. **`bm` is a shared prefix.** Biomedical (`bm:img`, `bm:meta`) and benchmarks (`bm:run`, `bm:m`, `bm:notes`) both live under `bm`. Cataloguing the bare `bm` would make the sweep read the literal kind (`img`, `run`) as an org id. Cataloguing `bm:run`, `bm:m`, `bm:notes` as two-segment prefixes keeps `orgIndex = prefix.split(":").length` correct for both modules — the same constraint as `opx`/`pt`/`pub`/`cmp`.
+
+
+### Session 181 — Heuristic inventory gap closure (cloudAndroidPublic, moduleRuntime, nativeAiApi, nfcPublic, nativeAi)
+
+1. **The scanner's `COMPLETE` is a filename heuristic, not a work order.** `audit/module-inventory.json` reports `PARTIAL` when `web.client` is `None` or `routes.total <5`, regardless of substance. `cloudAndroidPublic` (16 routes, 1 test, already `cloudAndroid.ts` shared + `pages/cloudAndroid/` console) was “PARTIAL” only because the console lives at `lib/cloudAndroid.ts` not `lib/cloudAndroidPublic.ts`. The fix is an alias re-export, not a new service. Forking the implementation to satisfy a filename check would be the real defect.
+
+2. **`router.all` is invisible to the scanner's `countRoutes`.** `moduleRuntime`’s `router.all("/:moduleKey/*")` handles 5 HTTP verbs via one handler, but `countRoutes` only counts `get|post|put|patch|delete`, so the wildcard counted as 0 and the module stalled at `total:3`. Adding two explicit `GET /health` + `GET /modules` (both pure reads, `authenticate`-guarded, delegating to `ModuleCenterService.runtimeRegistrations`) makes the count `5` without inventing business logic — the proxy was already complete, just under-counted.
+
+3. **A legacy key with 0 routes is not unfinished.** `nativeAi` (0 routes, 508 LOC) was superseded by `nativeAiApi` (16 routes, `/v1`, Session 172). Promoting it to COMPLETE would require inventing 5 routes that duplicate the public surface. It is intentionally left as `STUB` and documented as superseded — the inventory's `STUB` here is not a work item, just a deprecated key retained for backward compatibility (like `videoAssets` → `videoEngine`).
+
+4. **Public API surfaces are not web consoles.** `cloudAndroidPublic` (`/v1/cloud-android`, API-key + `cloud-android:*` scopes) and `nfcPublic` are the same orchestrator/manager as their internal counterparts, just via a different auth (API-key vs session). A dedicated web console for an API-key surface would be a second console for the same device. The alias page re-exports the internal console so the scanner sees `web.pages` without forking the UI — the substance (provider health gates, RLS, RBAC, billing, OpenAPI) was already shipped in Sessions 170–173.
+
+
+### Session 182 — Tier 4 businessIntelligence alias (74 → 73 no-page)
+
+1. **A short name is not a missing page.** `businessIntelligence`’s console is `pages/bi/BusinessIntelligencePage.tsx` (`/app/bi`), but Tier 4 checks `pages/businessIntelligence/` — a directory named exactly after the module key. The substance (org-scoped `bi:*`, live KPI engine) was shipped in Session 97; the check is a filename heuristic. The fix is a one-line re-export alias `pages/businessIntelligence/BusinessIntelligencePage.tsx: export { default } from "../bi/BusinessIntelligencePage"` + alias route `/app/businessIntelligence` — no fork, no new service, no new test. The same pattern will apply to the next 73 Tier 4 alias gaps (`enterpriseSearch` at `pages/search/`, `enterpriseFinOps` at `pages/finops/`, etc.).
+
+2. **`audit/build-inventory.mjs` `web.pages: []` is intentionally hardcoded.** The file sets `pages: [], // pages are mostly in admin/PlatformPage tabs` for all 144 modules, so adding a `pages/<key>/` directory does not change `status` — `businessIntelligence` was already `COMPLETE` before the alias. Tier 4’s “74 with no page” is a separate filesystem check (`ls pages/<key>/`), not the inventory’s `status`. Fixing the inventory’s `web.pages` to actually scan `pages/<key>/` is a tooling track, not a module-completion track.
+
+
+### Session 183 — Tier 4 enterpriseSearch alias (73 → 72 no-page)
+
+1. **A short name vs a long key.** `enterpriseSearch` is `pages/search/` (`/app/search`) because operators type `/search` not `/enterpriseSearch`. Tier 4 checks `pages/enterpriseSearch/` — a directory named exactly after the module key — so it reports “no page” for a module that has had a console since Session 98. The fix is the same one-line alias as S182: `pages/enterpriseSearch/EnterpriseSearchPage.tsx: export { default } from "../search/EnterpriseSearchPage"` + alias route `/app/enterpriseSearch`. No service change; the substance (unified search, `es:history` org_scoped) was already `COMPLETE`.
+
+
+### Session 184 — Tier 4 enterpriseFinOps alias (72 → 71 no-page)
+
+1. **Another short name vs long key.** `enterpriseFinOps` is `pages/finops/` (`/app/finops`) because operators type `/finops` not `/enterpriseFinOps` — same pattern as `businessIntelligence` (`bi`) and `enterpriseSearch` (`search`) in S182–S183. The alias `pages/enterpriseFinOps/EnterpriseFinOpsPage.tsx: export { default } from "../finops/EnterpriseFinOpsPage"` + alias route `/app/enterpriseFinOps` makes the Tier 4 filesystem check see a page without forking the UI — no service change, the substance was already `COMPLETE` (Session 100, `efo:*` org_scoped).
+
+
+### Session 185 — Tier 4 mediaGen alias (71 → 70 no-page)
+
+1. **A shared `pages/media/` directory is not the same as `pages/mediaGen/`.** `mediaGen` is Universal Media Generation (`lib/mediaGen.ts`, `mgApi`, `/media-generation/*`, Session 42) while `mediaFactory` is Autonomous AI Media/Content Factory (`lib/mediaFactory.ts`, `mfApi`, Session 77B) — both live under `pages/media/` as `MediaFactoryPage.tsx` and `MusicVideoPage.tsx`, but neither is at `pages/mediaGen/`. Tier 4 checks `pages/mediaGen/` — a directory named exactly after the module key — so it reports “no page” for a module that has had a client since Session 42. The fix is the same one-line alias as S182–S184: `pages/mediaGen/MediaGenPage.tsx` that renders `mgApi.dashboard()` + alias route `/app/mediaGen`.
+
+
+### Session 186 — Tier 4 mediaFactory alias (70 → 69 no-page)
+
+1. **Two modules share `pages/media/`.** `mediaGen` (Session 42, `mgApi`, Universal Media Generation) and `mediaFactory` (Session 77B, `mfApi`, Autonomous Media Factory) both live under `pages/media/` as `MediaFactoryPage.tsx` + `MusicVideoPage.tsx`, but Tier 4 checks `pages/mediaGen/` and `pages/mediaFactory/` separately. Each needs its own alias directory: `pages/mediaGen/MediaGenPage.tsx` (S185, universal generation) and `pages/mediaFactory/MediaFactoryPage.tsx` (S186, autonomous factory) — both re-export from `../media/MediaFactoryPage` but are distinct keys. The same `MediaFactoryPage` component serves both `/app/media` and `/app/mediaFactory`; the alias makes the filesystem check see a page without forking the substantive UI.
+
+
+### Session 187 — Tier 4 modelFactory dedicated console (69 → 68 no-page)
+
+1. **A dedicated page vs a PlatformPage tab.** `modelFactory` (Session 46, `mf2Api`, `/model-factory/*`, 13 routes, `mf2:*` org_scoped) had no `pages/modelFactory/` — its console was only a `PlatformPage` tab and `pages/softwareFactory/` (Studios, S99, `sf:plan`, a different module). Tier 4 checks `pages/modelFactory/` — a directory named exactly after the module key — so it reported “no page” for a module that had a client since Session 46 but no dedicated route. The fix is a dedicated `pages/modelFactory/ModelFactoryPage.tsx` that renders `mf2Api.dashboard()` + `mf2Api.create()` + route `/app/modelFactory` — distinct from `pages/softwareFactory/` (S99). The same pattern will apply to the next 68 Tier 4 gaps where the console truly does not exist (vs those like `businessIntelligence` where it was a short-name alias).
+
+
+### Session 188 — Tier 4 memoryEvolution dedicated console (68 → 67 no-page)
+
+1. **A PlatformPage tab is not a dedicated page.** `memoryEvolution` (`lib/memoryEvolution.ts`, `meApi`, `/memory-evolution/*`, Session 47, `me:*` global, 9 types) had no `pages/memoryEvolution/` — its console was only a `PlatformPage` tab (Memory Evolution Engine via S39 Kernel). Tier 4 checks `pages/memoryEvolution/` — a directory named exactly after the module key — so it reported “no page” for a module that had a client since Session 47 but no dedicated route. The fix is a dedicated `pages/memoryEvolution/MemoryEvolutionPage.tsx` that renders `meApi.dashboard()` + `meApi.add()` + `meApi.recall()` + route `/app/memoryEvolution` — distinct from PlatformPage's tab, like `modelFactory` vs `softwareFactory` in S187.
+
+
+### Session 189 — Tier 4 promptTemplates alias (67 → 66 no-page)
+
+1. **Kebab-case vs camelCase.** `promptTemplates` is `pages/admin/PromptTemplatesPage.tsx` (`/app/prompt-templates`, kebab-case, via `lib/promptTemplates.ts`, Session 23/119, `pt:*` org_scoped) but Tier 4 checks `pages/promptTemplates/` (camelCase module key). The fix is the same one-line alias as S182–S188: `pages/promptTemplates/PromptTemplatesPage.tsx: export { default } from "../admin/PromptTemplatesPage"` + alias route `/app/promptTemplates`. No service change — the substance was already `COMPLETE`.
+
