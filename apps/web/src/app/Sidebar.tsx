@@ -80,6 +80,7 @@ import {
   ShieldAlert,
   Component as ComponentIcon,
   Boxes,
+  Cpu,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -165,6 +166,7 @@ const navItems = [
   { to: "/app/disaster-recovery", icon: ShieldAlert, label: "Disaster Recovery" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },
+  { to: "/app/hybrid-execution", icon: Cpu, label: "Hybrid Execution" },
   { to: "/app/composer", icon: Blocks, label: "Composer" },
   { to: "/app/global-currency", icon: GlobeIcon, label: "Global Currency" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },

@@ -551,6 +551,26 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "arch:esi", scope: "org_scoped" },
   { prefix: "arch:imported", scope: "org_scoped" },
   { prefix: "arch:notes", scope: "org_scoped" },
+  // Session 194 hybridExec: every key is per-org
+  // (`hx:models:<org>`, `hx:model:<org>:<id>`, `hx:nodes:<org>`,
+  // `hx:node:<org>:<id>`, `hx:routes:<org>`, `hx:route:<org>:<id>`,
+  // `hx:m:req:<org>`, `hx:m:rb:<org>`, `hx:mode:<org>`,
+  // `hx:flags:<org>`, `hx:imported:<org>`, `hx:notes:<org>`). The
+  // Session 43 global keys (`hx:models`, `hx:nodes`, `hx:routes`,
+  // `hx:m:req`, `hx:m:rb`) are left in place after adoption for
+  // rollback safety, but the service no longer reads them.
+  { prefix: "hx:models", scope: "org_scoped" },
+  { prefix: "hx:model", scope: "org_scoped" },
+  { prefix: "hx:nodes", scope: "org_scoped" },
+  { prefix: "hx:node", scope: "org_scoped" },
+  { prefix: "hx:routes", scope: "org_scoped" },
+  { prefix: "hx:route", scope: "org_scoped" },
+  { prefix: "hx:m:req", scope: "org_scoped" },
+  { prefix: "hx:m:rb", scope: "org_scoped" },
+  { prefix: "hx:mode", scope: "org_scoped" },
+  { prefix: "hx:flags", scope: "org_scoped" },
+  { prefix: "hx:imported", scope: "org_scoped" },
+  { prefix: "hx:notes", scope: "org_scoped" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {

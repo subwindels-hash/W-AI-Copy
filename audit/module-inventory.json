@@ -6805,13 +6805,14 @@
       "serviceFile": {
         "file": "hybridExec.service.ts",
         "path": "/home/user/WIN/apps/api/src/hybridExec/hybridExec.service.ts",
-        "sloc": 162,
+        "sloc": 393,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 331,
+      "serviceTotalSloc": 953,
       "serviceFiles": [
         "bootstrap.ts",
+        "hybridExec.completion.test.ts",
         "hybridExec.service.ts",
         "hybridExec/hybridExec.service.ts"
       ],
@@ -6823,12 +6824,12 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/hybridExec.ts",
-        "sloc": 89,
+        "sloc": 147,
         "counts": {
-          "total": 11,
+          "total": 13,
           "GET": 4,
           "POST": 5,
-          "PUT": 0,
+          "PUT": 2,
           "PATCH": 1,
           "DELETE": 1
         },
@@ -6840,6 +6841,8 @@
           "POST /models/:id/rollback",
           "GET /nodes",
           "POST /route",
+          "PUT /mode",
+          "PUT /flags",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -6849,8 +6852,10 @@
     ],
     "sharedTypes": "packages/shared/src/hybridExec.ts (58 LOC)",
     "web": {
-      "client": "apps/web/src/lib/hybridExec.ts (17 LOC)",
-      "pages": []
+      "client": "apps/web/src/lib/hybridExec.ts (25 LOC)",
+      "pages": [
+        "apps/web/src/pages/hybridExec/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6862,7 +6867,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions42-47.spec.ts"
+      "sessions42-47.spec.ts",
+      "hybridExec/hybridExec.completion.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],
@@ -11910,11 +11916,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 804,
+        "sloc": 824,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1784,
+      "serviceTotalSloc": 1824,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
