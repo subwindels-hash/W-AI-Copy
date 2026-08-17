@@ -4,6 +4,8 @@ import type {
   BlockonomicsAdminDashboard,
   BlockonomicsAdminHealthResult,
   BlockonomicsAdminPublicConfig,
+  BlockonomicsReconciliationResult,
+  BlockonomicsReconciliationTimeframe,
 } from "@windels/shared/payments";
 
 const base = "/admin/payments/blockonomics";
@@ -16,4 +18,6 @@ export const blockonomicsAdmin = {
   setEnabled: (enabled: boolean) =>
     api<BlockonomicsAdminPublicConfig>(`${base}/enabled`, { method: "PATCH", json: { enabled } }),
   checkHealth: () => api<BlockonomicsAdminHealthResult>(`${base}/health`, { method: "POST" }),
+  reconcile: (timeframe: BlockonomicsReconciliationTimeframe) =>
+    api<BlockonomicsReconciliationResult>(`${base}/reconcile`, { method: "POST", json: { timeframe } }),
 };

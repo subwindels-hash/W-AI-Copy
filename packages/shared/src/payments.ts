@@ -185,6 +185,15 @@ export interface BlockonomicsAdminDashboard {
     attempts: number;
     receivedAt: string;
   }>;
+  recentReconciliationRuns: Array<{
+    id: string;
+    trigger: string;
+    timeframe: string;
+    matched: number;
+    settled: number;
+    issueCount: number;
+    createdAt: string;
+  }>;
 }
 
 export interface BlockonomicsAdminHealthResult {
@@ -193,4 +202,41 @@ export interface BlockonomicsAdminHealthResult {
   checkedAt: string;
   healthStatus: string;
   error?: string;
+}
+
+export const BLOCKONOMICS_RECONCILIATION_TIMEFRAMES = ["1W", "2W", "1M", "3M", "6M", "1Y"] as const;
+export const BlockonomicsReconciliationRequestSchema = z.object({
+  timeframe: z.enum(BLOCKONOMICS_RECONCILIATION_TIMEFRAMES).default("1M"),
+});
+export type BlockonomicsReconciliationTimeframe = (typeof BLOCKONOMICS_RECONCILIATION_TIMEFRAMES)[number];
+export type BlockonomicsReconciliationIssueKind =
+  | "provider_payment_missing"
+  | "orphan_provider_payment"
+  | "duplicate_provider_transaction"
+  | "ambiguous_provider_match"
+  | "amount_mismatch"
+  | "address_mismatch"
+  | "asset_mismatch"
+  | "late_payment"
+  | "settlement_failed";
+
+export interface BlockonomicsReconciliationIssue {
+  kind: BlockonomicsReconciliationIssueKind;
+  paymentId?: string;
+  providerTransactionId?: string;
+  detail: string;
+}
+
+export interface BlockonomicsReconciliationResult {
+  runId: string;
+  trigger: "manual" | "scheduled";
+  timeframe: BlockonomicsReconciliationTimeframe;
+  startedAt: string;
+  completedAt: string;
+  localPaymentsScanned: number;
+  providerPaymentsScanned: number;
+  matched: number;
+  settled: number;
+  unchanged: number;
+  issues: BlockonomicsReconciliationIssue[];
 }

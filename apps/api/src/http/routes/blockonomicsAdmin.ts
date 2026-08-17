@@ -2,9 +2,10 @@
 import { Router } from "express";
 import { authenticate, requireSuperAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
-import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema } from "@windels/shared/payments";
+import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
 import { BlockonomicsConfigService } from "../../payments/blockonomics.service.js";
 import { BlockonomicsAdminService } from "../../payments/blockonomicsAdmin.service.js";
+import { BlockonomicsReconciliationService } from "../../payments/blockonomicsReconciliation.service.js";
 
 export function registerBlockonomicsAdminRoutes(router: Router) {
   const admin = Router();
@@ -40,6 +41,17 @@ export function registerBlockonomicsAdminRoutes(router: Router) {
   admin.get("/dashboard", async (req, res, next) => {
     try {
       res.json({ ok: true, data: await BlockonomicsAdminService.dashboard(), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  admin.post("/reconcile", validate({ body: BlockonomicsReconciliationRequestSchema }), async (req, res, next) => {
+    try {
+      const result = await BlockonomicsReconciliationService.reconcile({
+        trigger: "manual",
+        timeframe: req.body.timeframe,
+        actorId: req.user!.id,
+      });
+      res.json({ ok: true, data: result, meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 

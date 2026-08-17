@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Activity, AlertTriangle, Bitcoin, KeyRound, RefreshCw, Save, ShieldCheck, TestTube2, Webhook } from "lucide-react";
-import type { BlockonomicsAdminDashboard, BlockonomicsAdminPublicConfig, BlockonomicsAsset } from "@windels/shared/payments";
+import type { BlockonomicsAdminDashboard, BlockonomicsAdminPublicConfig, BlockonomicsAsset, BlockonomicsReconciliationResult, BlockonomicsReconciliationTimeframe } from "@windels/shared/payments";
 import { blockonomicsAdmin } from "@/lib/blockonomicsAdmin";
 import { toast } from "@/lib/toast";
 import { Badge } from "@/components/ui/Badge";
@@ -44,6 +44,9 @@ export function BlockonomicsAdminPage() {
   const [saving, setSaving] = useState(false);
   const [probing, setProbing] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [reconciling, setReconciling] = useState(false);
+  const [reconciliationTimeframe, setReconciliationTimeframe] = useState<BlockonomicsReconciliationTimeframe>("1M");
+  const [reconciliationResult, setReconciliationResult] = useState<BlockonomicsReconciliationResult | null>(null);
   const [error, setError] = useState<string | null>(null);
 
   const load = useCallback(async () => {
@@ -117,6 +120,22 @@ export function BlockonomicsAdminPage() {
     }
   };
 
+  const reconcile = async () => {
+    setReconciling(true);
+    try {
+      const result = await blockonomicsAdmin.reconcile(reconciliationTimeframe);
+      setReconciliationResult(result);
+      result.issues.length
+        ? toast.error(`Reconciliation completed with ${result.issues.length} review issue(s).`)
+        : toast.success(`Reconciliation matched ${result.matched} payment(s).`);
+      await load();
+    } catch (cause: any) {
+      toast.error(cause?.message ?? "Reconciliation failed");
+    } finally {
+      setReconciling(false);
+    }
+  };
+
   const setAsset = (asset: BlockonomicsAsset, checked: boolean) => {
     if (!form) return;
     setForm({ ...form, supportedAssets: checked ? [...new Set([...form.supportedAssets, asset])] : form.supportedAssets.filter((item) => item !== asset) });
@@ -136,6 +155,10 @@ export function BlockonomicsAdminPage() {
           <p className="mt-1 max-w-3xl text-sm text-text-muted">Encrypted provider credentials, enablement, read-only health probes, payment posture, callback failures, and reconciliation visibility.</p>
         </div>
         <div className="flex flex-wrap gap-2">
+          <select value={reconciliationTimeframe} onChange={(event) => setReconciliationTimeframe(event.target.value as BlockonomicsReconciliationTimeframe)} className="rounded-md border border-border bg-background px-3 py-1.5 text-xs text-text-bright" aria-label="Reconciliation timeframe">
+            {(["1W", "2W", "1M", "3M", "6M", "1Y"] as const).map((value) => <option key={value} value={value}>{value}</option>)}
+          </select>
+          <Button variant="outline" size="sm" onClick={() => void reconcile()} loading={reconciling}><RefreshCw className="h-4 w-4" />Run reconciliation</Button>
           <Button variant="outline" size="sm" onClick={() => void checkHealth()} loading={probing}><Activity className="h-4 w-4" />Check provider health</Button>
           <Button variant="outline" size="sm" onClick={() => void load()} loading={loading}><RefreshCw className="h-4 w-4" />Refresh</Button>
         </div>
@@ -153,6 +176,22 @@ export function BlockonomicsAdminPage() {
           </div>
 
           {config.lastError ? <div className="flex gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 p-4 text-sm text-amber-200"><AlertTriangle className="h-5 w-5 shrink-0" /><span>{config.lastError}</span></div> : null}
+
+          {reconciliationResult ? (
+            <Card>
+              <CardHeader><CardTitle>Latest manual reconciliation</CardTitle><CardDescription>Run {reconciliationResult.runId} · {reconciliationResult.timeframe} · completed {new Date(reconciliationResult.completedAt).toLocaleString()}</CardDescription></CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+                  <Stat label="Local scanned" value={String(reconciliationResult.localPaymentsScanned)} hint="durable records" />
+                  <Stat label="Provider scanned" value={String(reconciliationResult.providerPaymentsScanned)} hint="authenticated history" />
+                  <Stat label="Matched" value={String(reconciliationResult.matched)} hint="exact evidence" />
+                  <Stat label="Settled" value={String(reconciliationResult.settled)} hint="atomic billing" />
+                  <Stat label="Issues" value={String(reconciliationResult.issues.length)} hint="manual review" />
+                </div>
+                {reconciliationResult.issues.length ? <div className="max-h-64 space-y-2 overflow-auto">{reconciliationResult.issues.map((issue, index) => <div key={`${issue.kind}:${issue.paymentId ?? issue.providerTransactionId ?? index}`} className="rounded-md border border-amber-500/20 bg-amber-500/5 p-3 text-xs"><div className="font-medium text-amber-300">{issue.kind.replaceAll("_", " ")}</div><div className="mt-1 text-text-main">{issue.detail}</div>{issue.paymentId ? <div className="mt-1 font-mono text-text-muted">Payment {issue.paymentId}</div> : null}{issue.providerTransactionId ? <div className="mt-1 break-all font-mono text-text-muted">Transaction {issue.providerTransactionId}</div> : null}</div>)}</div> : <p className="text-sm text-emerald-300">No discrepancies were found.</p>}
+              </CardContent>
+            </Card>
+          ) : null}
 
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)]">
             <Card>
@@ -197,6 +236,13 @@ export function BlockonomicsAdminPage() {
             <Card><CardHeader><CardTitle className="flex items-center gap-2"><Webhook className="h-4 w-4" />Callback processing</CardTitle></CardHeader><CardContent><CountRows rows={dashboard.webhooksByStatus} empty="No callback events recorded." /></CardContent></Card>
             <Card><CardHeader><CardTitle>Payments by asset</CardTitle></CardHeader><CardContent><CountRows rows={dashboard.paymentsByAsset.map((row) => ({ status: row.asset, count: row.count }))} empty="No asset usage recorded." /></CardContent></Card>
           </div>
+
+          <Card>
+            <CardHeader><CardTitle>Reconciliation run history</CardTitle><CardDescription>Durable audit evidence for manual and scheduled comparisons. No run silently adjusts balances.</CardDescription></CardHeader>
+            <CardContent className="space-y-2">
+              {dashboard.recentReconciliationRuns.length ? dashboard.recentReconciliationRuns.map((run) => <div key={run.id} className="flex flex-wrap items-center justify-between gap-2 rounded-md border border-border p-3 text-xs"><div><span className="font-medium text-text-bright">{run.trigger} · {run.timeframe}</span><div className="text-text-muted">{new Date(run.createdAt).toLocaleString()}</div></div><div className="flex gap-2"><Badge variant="outline">{run.matched} matched</Badge><Badge variant="outline">{run.settled} settled</Badge><Badge variant={run.issueCount ? "danger" : "default"}>{run.issueCount} issues</Badge></div></div>) : <p className="text-sm text-text-muted">No reconciliation runs recorded.</p>}
+            </CardContent>
+          </Card>
 
           <Card>
             <CardHeader><CardTitle>Recent durable payments</CardTitle><CardDescription>Read-only platform view. Organization IDs are shown for operational triage; customer email and provider secrets are omitted.</CardDescription></CardHeader>

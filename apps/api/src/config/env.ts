@@ -317,6 +317,8 @@ const EnvSchema = z.object({
   BLOCKONOMICS_SUPPORTED_ASSETS: z.string().default("BTC"),
   BLOCKONOMICS_QUOTE_EXPIRY_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
   BLOCKONOMICS_TEST_MODE: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
+  BLOCKONOMICS_RECONCILIATION_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(true),
+  BLOCKONOMICS_RECONCILIATION_INTERVAL_MINUTES: z.coerce.number().int().min(5).max(1440).default(15),
 
   WINDELS_CRYPTO_HTTP_TIMEOUT_MS: z.preprocess(
     (v) => {

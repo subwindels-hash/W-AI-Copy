@@ -60,7 +60,14 @@ vi.mock("../db/client.js", () => ({
         attempts: 2, receivedAt: new Date("2026-08-17T12:00:00.000Z"),
       }]),
     },
-    auditLog: { create: auditCreate },
+    auditLog: {
+      create: auditCreate,
+      findMany: vi.fn(async () => [{
+        id: "run-1",
+        metadata: { trigger: "manual", timeframe: "1M", matched: 2, settled: 1, issues: [{ kind: "provider_payment_missing" }] },
+        createdAt: new Date("2026-08-17T12:00:00.000Z"),
+      }]),
+    },
   },
 }));
 
@@ -97,6 +104,7 @@ describe("Blockonomics Super Admin control plane", () => {
     expect(dashboard.reconciliationByStatus).toContainEqual({ status: "matched", count: 3 });
     expect(dashboard.paymentsByAsset).toContainEqual({ asset: "USDT", count: 2 });
     expect(dashboard.recentWebhookErrors[0]).toMatchObject({ errorCode: "UPSTREAM", attempts: 2 });
+    expect(dashboard.recentReconciliationRuns[0]).toMatchObject({ trigger: "manual", matched: 2, settled: 1, issueCount: 1 });
     expect(JSON.stringify(dashboard)).not.toContain("never-return-this");
   });
 

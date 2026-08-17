@@ -300,9 +300,11 @@ export class BlockonomicsClient {
     const body = await this.request<any>("list_payments", `v2/payments?${query}`, { method: "GET" });
     if (!Array.isArray(body.data)) throw AppError.upstream("Blockonomics list_payments returned an invalid response", { code: "BLOCKONOMICS_INVALID_RESPONSE" });
     return body.data.flatMap((item: any) => {
-      if (!Number.isInteger(Number(item.id)) || !Number.isInteger(Number(item.amount)) || Number(item.amount) <= 0 || typeof item.address !== "string" || typeof item.txid !== "string") return [];
+      const timestamp = Number(item.timestamp);
+      const crypto = String(item.crypto);
+      if (!Number.isInteger(Number(item.id)) || !Number.isInteger(Number(item.amount)) || Number(item.amount) <= 0 || !Number.isFinite(timestamp) || timestamp < 0 || !["BTC", "USDT", "BCH"].includes(crypto) || typeof item.address !== "string" || typeof item.txid !== "string") return [];
       return [{
-        id: Number(item.id), timestamp: Number(item.timestamp), crypto: String(item.crypto) as "BTC" | "USDT" | "BCH",
+        id: Number(item.id), timestamp, crypto: crypto as "BTC" | "USDT" | "BCH",
         amount: Number(item.amount), address: item.address, txid: item.txid,
         store_name: item.store_name, store_url: item.store_url,
         fiat_value: item.fiat_value === undefined ? undefined : Number(item.fiat_value),

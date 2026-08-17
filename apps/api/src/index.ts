@@ -14,6 +14,7 @@ import { Metrics } from "./observability/metrics.js";
 let workflowTicker: NodeJS.Timeout | null = null;
 let retentionTicker: NodeJS.Timeout | null = null;
 let summarizationTicker: NodeJS.Timeout | null = null;
+let blockonomicsReconciliationTicker: NodeJS.Timeout | null = null;
 let stopWhatsAppWorker: (() => void) | null = null;
 
 async function main() {
@@ -663,6 +664,21 @@ async function main() {
     summarizationTicker = setInterval(() => {
       autoSummarizeConversations(10, 40).catch((e) => logger.warn("auto-summarization failed", { err: e }));
     }, 15 * 60_000);
+    // Periodically reconcile durable local records against authenticated
+    // Blockonomics provider history. A distributed lock in the service prevents
+    // duplicate runs across replicas.
+    if (env.BLOCKONOMICS_RECONCILIATION_ENABLED) {
+      blockonomicsReconciliationTicker = setInterval(() => {
+        void (async () => {
+          const { BlockonomicsConfigService } = await import("./payments/blockonomics.service.js");
+          const config = await BlockonomicsConfigService.public();
+          if (!config.configured || !config.enabled) return;
+          const { BlockonomicsReconciliationService } = await import("./payments/blockonomicsReconciliation.service.js");
+          await BlockonomicsReconciliationService.reconcile({ trigger: "scheduled", timeframe: "1M" });
+        })().catch((e) => logger.warn("Blockonomics scheduled reconciliation failed", { err: e }));
+      }, env.BLOCKONOMICS_RECONCILIATION_INTERVAL_MINUTES * 60_000);
+      blockonomicsReconciliationTicker.unref?.();
+    }
     // Start alert engine (subscribes to EventBus).
     startAlertEngine();
 
@@ -693,6 +709,7 @@ async function main() {
     if (workflowTicker) clearInterval(workflowTicker);
     if (retentionTicker) clearInterval(retentionTicker);
     if (summarizationTicker) clearInterval(summarizationTicker);
+    if (blockonomicsReconciliationTicker) clearInterval(blockonomicsReconciliationTicker);
     if (stopWhatsAppWorker) stopWhatsAppWorker();
 
     // Stop accepting new connections and drain in-flight requests

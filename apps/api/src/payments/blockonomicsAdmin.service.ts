@@ -20,6 +20,7 @@ export const BlockonomicsAdminService = {
       webhookStatusGroups,
       recentPayments,
       recentWebhookErrors,
+      recentReconciliationRuns,
     ] = await Promise.all([
       BlockonomicsConfigService.public(),
       prisma.paymentRecord.count({ where: { provider: "blockonomics" } }),
@@ -48,6 +49,12 @@ export const BlockonomicsAdminService = {
           id: true, paymentId: true, errorCode: true, errorMessage: true,
           attempts: true, receivedAt: true,
         },
+      }),
+      prisma.auditLog.findMany({
+        where: { action: "payment_provider.reconciliation_completed", resourceId: "blockonomics" },
+        orderBy: { createdAt: "desc" },
+        take: 10,
+        select: { id: true, metadata: true, createdAt: true },
       }),
     ]);
 
@@ -81,6 +88,18 @@ export const BlockonomicsAdminService = {
         attempts: event.attempts,
         receivedAt: event.receivedAt.toISOString(),
       })),
+      recentReconciliationRuns: recentReconciliationRuns.map((run) => {
+        const metadata = run.metadata && typeof run.metadata === "object" ? run.metadata as Record<string, any> : {};
+        return {
+          id: run.id,
+          trigger: typeof metadata.trigger === "string" ? metadata.trigger : "unknown",
+          timeframe: typeof metadata.timeframe === "string" ? metadata.timeframe : "unknown",
+          matched: Number(metadata.matched ?? 0),
+          settled: Number(metadata.settled ?? 0),
+          issueCount: Array.isArray(metadata.issues) ? metadata.issues.length : 0,
+          createdAt: run.createdAt.toISOString(),
+        };
+      }),
     };
   },
 
