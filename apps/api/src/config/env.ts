@@ -312,7 +312,7 @@ const EnvSchema = z.object({
   // configuration takes precedence once created; secrets remain encrypted.
   BLOCKONOMICS_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
   BLOCKONOMICS_API_KEY: z.string().min(8).optional(),
-  BLOCKONOMICS_CALLBACK_SECRET: z.string().min(16).optional(),
+  BLOCKONOMICS_CALLBACK_SECRET: z.string().min(32).optional(),
   BLOCKONOMICS_MATCH_CALLBACK: z.string().max(300).optional(),
   BLOCKONOMICS_SUPPORTED_ASSETS: z.string().default("BTC"),
   BLOCKONOMICS_QUOTE_EXPIRY_MINUTES: z.coerce.number().int().min(5).max(60).default(15),

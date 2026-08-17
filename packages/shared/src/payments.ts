@@ -114,7 +114,7 @@ export const BlockonomicsMonitorTransactionSchema = z.object({
 export type BlockonomicsMonitorTransactionInput = z.infer<typeof BlockonomicsMonitorTransactionSchema>;
 
 export const BlockonomicsCallbackSchema = z.object({
-  secret: z.string().min(16).max(500),
+  secret: z.string().min(32).max(500),
   addr: z.string().min(20).max(200),
   crypto: z.enum(BLOCKONOMICS_ASSETS).default("BTC"),
   status: z.coerce.number().int().min(0).max(2),

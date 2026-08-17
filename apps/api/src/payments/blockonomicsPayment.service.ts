@@ -107,17 +107,34 @@ export const BlockonomicsPaymentService = {
 
     const now = new Date();
     const internalReference = `BLK_${Date.now()}_${randomUUID().replace(/-/g, "").slice(0, 12)}`;
-    let row = await prisma.paymentRecord.create({
-      data: {
-        organizationId, requestedById, invoiceId: invoice?.id ?? null,
-        subscriptionId: invoice?.subscriptionId ?? null,
-        provider: "blockonomics", internalReference,
-        status: "created", amountCents: Math.round(input.amount * 100),
-        currency: input.currency.toUpperCase(), cryptoCurrency: input.cryptoCurrency,
-        cryptoNetwork: network(input.cryptoCurrency), requiredConfirmations: 2,
-        reconciliationStatus: "pending",
-        metadata: { description: input.description ?? null, customerEmail: input.customerEmail ?? null } as Prisma.InputJsonValue,
-      },
+    let row = await prisma.$transaction(async (tx) => {
+      const payment = await tx.paymentRecord.create({
+        data: {
+          organizationId, requestedById, invoiceId: invoice?.id ?? null,
+          subscriptionId: invoice?.subscriptionId ?? null,
+          provider: "blockonomics", internalReference,
+          status: "created", amountCents: Math.round(input.amount * 100),
+          currency: input.currency.toUpperCase(), cryptoCurrency: input.cryptoCurrency,
+          cryptoNetwork: network(input.cryptoCurrency), requiredConfirmations: 2,
+          reconciliationStatus: "pending",
+          metadata: { description: input.description ?? null, customerEmail: input.customerEmail ?? null } as Prisma.InputJsonValue,
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId,
+          userId: requestedById,
+          action: "payment.blockonomics.creation_requested",
+          resourceType: "PaymentRecord",
+          resourceId: payment.id,
+          metadata: {
+            provider: "blockonomics", invoiceId: invoice?.id ?? null,
+            amountCents: payment.amountCents, currency: payment.currency,
+            cryptoCurrency: input.cryptoCurrency,
+          },
+        },
+      });
+      return payment;
     });
 
     const client = new BlockonomicsClient(cfg, fetchImpl);
@@ -163,16 +180,29 @@ export const BlockonomicsPaymentService = {
     const client = await configuredBlockonomicsClient(fetchImpl);
     const providerStatus = await client.monitorUsdtTransaction(txhash);
     const status = providerStatus < 0 ? "failed" : providerStatus === 0 ? "detected" : "confirming";
-    row = await prisma.paymentRecord.update({
-      where: { id: row.id },
-      data: {
-        providerTransactionId: txhash,
-        providerStatus: String(providerStatus),
-        status,
-        detectedAt: row.detectedAt ?? new Date(),
-        confirmations: Math.max(0, providerStatus),
-        reconciliationStatus: providerStatus >= 2 ? "required" : "pending",
-      },
+    row = await prisma.$transaction(async (tx) => {
+      const updated = await tx.paymentRecord.update({
+        where: { id: row.id },
+        data: {
+          providerTransactionId: txhash,
+          providerStatus: String(providerStatus),
+          status,
+          detectedAt: row.detectedAt ?? new Date(),
+          confirmations: Math.max(0, providerStatus),
+          reconciliationStatus: providerStatus >= 2 ? "required" : "pending",
+        },
+      });
+      await tx.auditLog.create({
+        data: {
+          organizationId,
+          userId: requestedById,
+          action: "payment.blockonomics.monitor_requested",
+          resourceType: "PaymentRecord",
+          resourceId: row.id,
+          metadata: { provider: "blockonomics", providerTransactionId: txhash, providerStatus },
+        },
+      });
+      return updated;
     });
     // A browser-submitted tx hash can never complete payment. Even if monitor_tx
     // reports final, the callback/reconciliation path must independently match it.

@@ -55,17 +55,25 @@ describe("Blockonomics encrypted provider configuration", () => {
     await expect(configuredBlockonomicsClient()).rejects.toMatchObject({ status: 503 });
   });
 
+  it("rejects weak environment callback secrets as unconfigured", async () => {
+    process.env.BLOCKONOMICS_API_KEY = "environment-api-key";
+    process.env.BLOCKONOMICS_CALLBACK_SECRET = "too-short";
+    process.env.BLOCKONOMICS_ENABLED = "true";
+    await expect(BlockonomicsConfigService.public()).resolves.toMatchObject({ configured: false, callbackSecretConfigured: false });
+    await expect(BlockonomicsConfigService.secret()).resolves.toBeNull();
+  });
+
   it("stores API key and callback secret only as encrypted envelopes", async () => {
-    const out = await BlockonomicsConfigService.upsert({ apiKey: "block-api-key-secret", callbackSecret: "callback-secret-value", settings }, "super-admin");
+    const out = await BlockonomicsConfigService.upsert({ apiKey: "block-api-key-secret", callbackSecret: "callback-secret-value-at-least-32-chars", settings }, "super-admin");
     expect(out).toMatchObject({ configured: true, enabled: true, testMode: true, source: "database", version: 1 });
     expect(JSON.stringify(state.row)).not.toContain("block-api-key-secret");
-    expect(JSON.stringify(state.row)).not.toContain("callback-secret-value");
+    expect(JSON.stringify(state.row)).not.toContain("callback-secret-value-at-least-32-chars");
     expect(state.row.apiKeyEnc).toMatchObject({ v: "enc.v1", kid: "blockonomics-test" });
-    await expect(BlockonomicsConfigService.secret()).resolves.toMatchObject({ apiKey: "block-api-key-secret", callbackSecret: "callback-secret-value", source: "database" });
+    await expect(BlockonomicsConfigService.secret()).resolves.toMatchObject({ apiKey: "block-api-key-secret", callbackSecret: "callback-secret-value-at-least-32-chars", source: "database" });
   });
 
   it("allows Super Admin disable without deleting encrypted credentials", async () => {
-    await BlockonomicsConfigService.upsert({ apiKey: "block-api-key-secret", callbackSecret: "callback-secret-value", settings }, "admin");
+    await BlockonomicsConfigService.upsert({ apiKey: "block-api-key-secret", callbackSecret: "callback-secret-value-at-least-32-chars", settings }, "admin");
     const disabled = await BlockonomicsConfigService.upsert({ settings: { ...settings, enabled: false } }, "admin");
     expect(disabled).toMatchObject({ enabled: false, configured: true, version: 2 });
     await expect(configuredBlockonomicsClient()).rejects.toMatchObject({ status: 503 });
@@ -73,12 +81,12 @@ describe("Blockonomics encrypted provider configuration", () => {
 
   it("adopts environment bootstrap credentials into encrypted DB storage on first control-plane mutation", async () => {
     process.env.BLOCKONOMICS_API_KEY = "environment-api-key-secret";
-    process.env.BLOCKONOMICS_CALLBACK_SECRET = "environment-callback-secret-value";
+    process.env.BLOCKONOMICS_CALLBACK_SECRET = "environment-callback-secret-value-at-least-32-chars";
     process.env.BLOCKONOMICS_ENABLED = "true";
     const disabled = await BlockonomicsConfigService.setEnabled(false, "super-admin");
     expect(disabled).toMatchObject({ source: "database", configured: true, enabled: false });
     expect(JSON.stringify(state.row)).not.toContain("environment-api-key-secret");
-    expect(JSON.stringify(state.row)).not.toContain("environment-callback-secret-value");
+    expect(JSON.stringify(state.row)).not.toContain("environment-callback-secret-value-at-least-32-chars");
     expect(state.row.settings).not.toHaveProperty("apiKey");
     expect(state.row.settings).not.toHaveProperty("callbackSecret");
   });

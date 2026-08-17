@@ -174,7 +174,7 @@ import { registerCloudAndroidRoutes } from "./routes/cloudAndroid.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
 import { logger } from "../observability/logger.js";
-import { observabilityMiddleware } from "./middleware/observability.js";
+import { observabilityMiddleware, redactSensitiveUrl } from "./middleware/observability.js";
 import { rateLimit } from "./middleware/rateLimit.js";
 import { csrfMiddleware } from "../security/csrf.js";
 import { orgScope } from "./middleware/orgScope.js";
@@ -226,6 +226,9 @@ export function createApp() {
   app.use("/api", rateLimit("apiGlobal"));
   // CSRF double-submit for all cookie-authed routes.
   app.use(csrfMiddleware());
+  // Morgan's built-in formats use the `url` token. Override it once so GET
+  // callback secrets and other query credentials never enter access logs.
+  morgan.token("url", (req: any) => redactSensitiveUrl(req.originalUrl ?? req.url ?? ""));
   app.use(
     morgan(env.NODE_ENV === "production" ? "combined" : "dev", {
       stream: { write: (msg) => logger.debug(msg.trimEnd()) },

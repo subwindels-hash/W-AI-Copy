@@ -82,7 +82,7 @@ beforeEach(() => {
 
 describe("Blockonomics Super Admin control plane", () => {
   it("requires the existing Super Admin guard on every control-plane route", async () => {
-    expect(routeSource).toContain("admin.use(authenticate, requireSuperAdmin)");
+    expect(routeSource).toContain("admin.use(authenticate, requireSuperAdmin, rateLimit");
     expect(serverSource).toContain("registerBlockonomicsAdminRoutes(v1)");
     const invoke = (role: "admin" | "super_admin") => new Promise<any>((resolveNext) => {
       requireSuperAdmin({ user: { id: "actor", email: "actor@example.test", role, organizationId: null } } as any, {} as any, (error?: any) => resolveNext(error));

@@ -3,6 +3,8 @@ import { createHash } from "node:crypto";
 import { Router, type Request } from "express";
 import { z } from "zod";
 import { validate } from "../middleware/validate.js";
+import { rateLimit } from "../middleware/rateLimit.js";
+import { authenticate } from "../middleware/auth.js";
 import { PaymentGatewaysService, type VerifiedPaymentEvidence } from "../../payments/payments.service.js";
 import { FlutterwaveService } from "../../payments/flutterwave.service.js";
 import { PaystackService } from "../../payments/paystack.service.js";
@@ -35,6 +37,7 @@ const TransactionQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).optional(),
 });
 const CaptureSchema = z.object({ orderId: z.string().trim().min(1).max(200) });
+const paymentRateKey = (req: Request) => req.user?.id ?? req.ip ?? "unknown";
 
 function organization(req: Request): { id: string; userId: string; email: string } {
   if (!req.user) throw AppError.unauthorized();
@@ -68,19 +71,19 @@ async function applyForIndexedReference(evidence: VerifiedPaymentEvidence) {
 export function registerPaymentsRoutes(router: Router) {
   const payments = Router();
 
-  payments.get("/providers", async (req, res, next) => {
+  payments.get("/providers", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
     try { res.json({ ok: true, data: await PaymentGatewaysService.listProviders(), meta: { requestId: req.requestId } }); }
     catch (error) { next(error); }
   });
 
-  payments.get("/transactions", validate({ query: TransactionQuerySchema }), async (req, res, next) => {
+  payments.get("/transactions", authenticate, rateLimit("paymentStatus", paymentRateKey), validate({ query: TransactionQuerySchema }), async (req, res, next) => {
     try {
       const org = organization(req);
       res.json({ ok: true, data: await PaymentGatewaysService.listTransactions(org.id, req.query as any), meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 
-  payments.get("/transactions/:id", async (req, res, next) => {
+  payments.get("/transactions/:id", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
     try {
       const org = organization(req);
       const tx = await PaymentGatewaysService.getTransaction(org.id, req.params.id);
@@ -89,7 +92,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/checkout", validate({ body: PaymentCheckoutRequestSchema }), async (req, res, next) => {
+  payments.post("/checkout", authenticate, rateLimit("payment", paymentRateKey), validate({ body: PaymentCheckoutRequestSchema }), async (req, res, next) => {
     try {
       const org = organization(req);
       const tx = await PaymentGatewaysService.initiateCheckout(org.id, { ...req.body, customerEmail: req.body.customerEmail || org.email }, org.userId);
@@ -98,6 +101,8 @@ export function registerPaymentsRoutes(router: Router) {
   });
 
   const initialize = (provider: Exclude<PaymentProvider, "crypto">) => [
+    authenticate,
+    rateLimit("payment", paymentRateKey),
     validate({ body: GatewayCheckoutSchema }),
     async (req: Request, res: any, next: any) => {
       try {
@@ -112,21 +117,21 @@ export function registerPaymentsRoutes(router: Router) {
   payments.post("/stripe/initialize", ...initialize("stripe"));
   payments.post("/paypal/create-order", ...initialize("paypal"));
 
-  payments.get("/flutterwave/verify/:reference", async (req, res, next) => {
+  payments.get("/flutterwave/verify/:reference", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
     try {
       const result = await FlutterwaveService.verifyPayment(req.params.reference, req.query.transaction_id as string | undefined);
       res.json({ ok: true, data: await applyForAuthenticatedOrg(req, { ...result, verificationSource: "provider_api" }), meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 
-  payments.get("/paystack/verify/:reference", async (req, res, next) => {
+  payments.get("/paystack/verify/:reference", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
     try {
       const result = await PaystackService.verifyPayment(req.params.reference);
       res.json({ ok: true, data: await applyForAuthenticatedOrg(req, { ...result, verificationSource: "provider_api" }), meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 
-  payments.get("/stripe/verify/:reference", async (req, res, next) => {
+  payments.get("/stripe/verify/:reference", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
     try {
       const org = organization(req);
       const tx = await PaymentGatewaysService.getTransactionByRef(org.id, req.params.reference);
@@ -137,14 +142,14 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/paypal/capture-order", validate({ body: CaptureSchema }), async (req, res, next) => {
+  payments.post("/paypal/capture-order", authenticate, rateLimit("payment", paymentRateKey), validate({ body: CaptureSchema }), async (req, res, next) => {
     try {
       const result = await PayPalService.captureOrder(req.body.orderId);
       res.json({ ok: true, data: await applyForAuthenticatedOrg(req, { ...result, verificationSource: "provider_api" }), meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 
-  payments.post("/flutterwave/webhook", async (req, res, next) => {
+  payments.post("/flutterwave/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
     try {
       if (!FlutterwaveService.verifyWebhookSignature(req.headers["verif-hash"] as string | undefined)) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid Flutterwave webhook signature" } });
       const reference = String(req.body?.data?.tx_ref ?? req.body?.tx_ref ?? "");
@@ -159,7 +164,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/paystack/webhook", async (req, res, next) => {
+  payments.post("/paystack/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
     try {
       if (!PaystackService.verifyWebhookSignature(req.headers["x-paystack-signature"] as string | undefined, rawBody(req))) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid Paystack webhook signature" } });
       const reference = String(req.body?.data?.reference ?? "");
@@ -173,7 +178,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/stripe/webhook", async (req, res, next) => {
+  payments.post("/stripe/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
     try {
       if (!StripeService.verifyWebhookSignature(req.headers["stripe-signature"] as string | undefined, rawBody(req))) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid Stripe webhook signature" } });
       const eventId = webhookEventId("stripe", req, req.body?.id);
@@ -189,7 +194,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/paypal/webhook", async (req, res, next) => {
+  payments.post("/paypal/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
     try {
       const valid = await PayPalService.verifyWebhookSignature({
         authAlgo: req.headers["paypal-auth-algo"] as string | undefined,
@@ -226,14 +231,14 @@ export function registerPaymentsRoutes(router: Router) {
   // Public provider callback. Blockonomics documents an HTTP GET callback with
   // query parameters; secret verification and durable idempotency occur in the
   // service before any payment state changes.
-  payments.get("/blockonomics/webhook", validate({ query: BlockonomicsCallbackSchema }), async (req, res, next) => {
+  payments.get("/blockonomics/webhook", rateLimit("webhookIngest"), validate({ query: BlockonomicsCallbackSchema }), async (req, res, next) => {
     try {
       const result = await BlockonomicsPaymentService.processCallback(req.query as any);
       res.status(200).json({ ok: true, data: { received: true, duplicate: result.duplicate, ignored: result.ignored } });
     } catch (error) { next(error); }
   });
 
-  payments.post("/blockonomics/create", validate({ body: BlockonomicsCreatePaymentSchema }), async (req, res, next) => {
+  payments.post("/blockonomics/create", authenticate, rateLimit("payment", paymentRateKey), validate({ body: BlockonomicsCreatePaymentSchema }), async (req, res, next) => {
     try {
       const org = organization(req);
       const payment = await PaymentGatewaysService.initiateCheckout(org.id, { provider: "blockonomics", ...req.body }, org.userId);
@@ -241,7 +246,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/blockonomics/payments/:id/monitor", validate({ params: z.object({ id: z.string().min(1).max(100) }), body: BlockonomicsMonitorTransactionSchema }), async (req, res, next) => {
+  payments.post("/blockonomics/payments/:id/monitor", authenticate, rateLimit("payment", paymentRateKey), validate({ params: z.object({ id: z.string().min(1).max(100) }), body: BlockonomicsMonitorTransactionSchema }), async (req, res, next) => {
     try {
       const org = organization(req);
       const payment = await BlockonomicsPaymentService.monitorUsdtTransaction(org.id, org.userId, req.params.id, req.body.txhash);
@@ -249,7 +254,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.get("/blockonomics/payments/:id", validate({ params: z.object({ id: z.string().min(1).max(100) }) }), async (req, res, next) => {
+  payments.get("/blockonomics/payments/:id", authenticate, rateLimit("paymentStatus", paymentRateKey), validate({ params: z.object({ id: z.string().min(1).max(100) }) }), async (req, res, next) => {
     try {
       const org = organization(req);
       const payment = await BlockonomicsPaymentService.get(org.id, req.params.id);
@@ -258,7 +263,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/crypto/create-charge", validate({ body: CryptoAddressRequestSchema }), async (req, res, next) => {
+  payments.post("/crypto/create-charge", authenticate, rateLimit("payment", paymentRateKey), validate({ body: CryptoAddressRequestSchema }), async (req, res, next) => {
     try {
       const org = organization(req);
       await PaymentGatewaysService.initiateCheckout(org.id, { provider: "crypto", amount: req.body.amount, currency: req.body.currency, invoiceId: req.body.invoiceId, description: req.body.description, cryptoNetwork: req.body.network });
@@ -266,7 +271,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.get("/crypto/charge/:id", async (req, res, next) => {
+  payments.get("/crypto/charge/:id", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
     try {
       const org = organization(req);
       const tx = await PaymentGatewaysService.getTransaction(org.id, req.params.id);
@@ -275,7 +280,7 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
-  payments.post("/crypto/callback", async (_req, _res, next) => {
+  payments.post("/crypto/callback", rateLimit("webhookIngest"), async (_req, _res, next) => {
     next(new AppError("SERVICE_UNAVAILABLE", "Crypto callbacks are disabled until an on-chain verifier is implemented", 503, { code: "PAYMENT_PROVIDER_BLOCKED", provider: "crypto" }));
   });
 

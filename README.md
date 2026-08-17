@@ -115,6 +115,7 @@ tests/e2e/                # Playwright specs
 | [docs/BLOCKONOMICS_STAGE9_PAYMENT_HISTORY.md](./docs/BLOCKONOMICS_STAGE9_PAYMENT_HISTORY.md) | Unified organization history over durable Blockonomics and existing fiat records, safe detail evidence, receipt display, filters, and tenant isolation |
 | [docs/BLOCKONOMICS_STAGE10_SUPER_ADMIN.md](./docs/BLOCKONOMICS_STAGE10_SUPER_ADMIN.md) | Super Admin-only encrypted provider configuration, enablement, health probe, audit evidence, operational dashboard, and safe UI |
 | [docs/BLOCKONOMICS_STAGE11_RECONCILIATION.md](./docs/BLOCKONOMICS_STAGE11_RECONCILIATION.md) | Scheduled/manual authenticated provider-history reconciliation, discrepancy review, distributed lock, audit runs, and atomic recovery settlement |
+| [docs/BLOCKONOMICS_STAGE12_SECURITY_AI.md](./docs/BLOCKONOMICS_STAGE12_SECURITY_AI.md) | Payment authentication/rate limits, callback secret and log hardening, durable audits, and organization-scoped read-only AI tools |
 | [docs/PRODUCTION_FIX_PLAN.md](./docs/PRODUCTION_FIX_PLAN.md) | Ordered remediation checklist and completion gates for production blockers |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |

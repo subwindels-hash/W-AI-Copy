@@ -26,7 +26,8 @@ export function observabilityMiddleware() {
     res.on("close", () => setCtx(null));
 
     const method = req.method;
-    const route = normalizeRoute(req.originalUrl);
+    const safeUrl = redactSensitiveUrl(req.originalUrl);
+    const route = normalizeRoute(safeUrl);
 
     const t = Metrics.startTimer("http.request.duration_ms", { method, route });
     Metrics.increment("http.request.count", 1, { method, route });
@@ -36,7 +37,7 @@ export function observabilityMiddleware() {
     const span = startSpan(`HTTP ${method} ${route}`, {
       kind: "server",
       attrs: {
-        "http.method": method, "http.url": req.originalUrl, "http.route": route,
+        "http.method": method, "http.url": safeUrl, "http.route": route,
         "http.user_agent": req.header("user-agent") ?? "", "requestId": requestId,
       },
     });
@@ -53,9 +54,9 @@ export function observabilityMiddleware() {
       span.setAttrs({ "http.status_code": status, "http.duration_ms": Math.round(duration) });
       span.end(status < 500 ? "ok" : "error");
       if (status >= 500) {
-        logger.error(`${method} ${req.originalUrl} ${status} ${Math.round(duration)}ms`, { method, url: req.originalUrl, status, durationMs: Math.round(duration), ip: req.ip, traceId, requestId });
+        logger.error(`${method} ${safeUrl} ${status} ${Math.round(duration)}ms`, { method, url: safeUrl, status, durationMs: Math.round(duration), ip: req.ip, traceId, requestId });
       } else if (envDebug() || status >= 400) {
-        logger[status >= 400 ? "warn" : "debug"](`${method} ${req.originalUrl} ${status} ${Math.round(duration)}ms`, { method, url: req.originalUrl, status, durationMs: Math.round(duration), traceId, requestId });
+        logger[status >= 400 ? "warn" : "debug"](`${method} ${safeUrl} ${status} ${Math.round(duration)}ms`, { method, url: safeUrl, status, durationMs: Math.round(duration), traceId, requestId });
       }
     });
 
@@ -66,6 +67,20 @@ export function observabilityMiddleware() {
 }
 
 function envDebug() { return process.env.DEBUG_HTTP === "1" || process.env.NODE_ENV !== "production"; }
+
+const SENSITIVE_QUERY_KEYS = new Set(["secret", "callback_secret", "token", "access_token", "refresh_token", "api_key", "key", "code"]);
+
+export function redactSensitiveUrl(value: string): string {
+  try {
+    const url = new URL(value, "http://windels.local");
+    for (const key of [...url.searchParams.keys()]) {
+      if (SENSITIVE_QUERY_KEYS.has(key.toLowerCase())) url.searchParams.set(key, "[REDACTED]");
+    }
+    return `${url.pathname}${url.search}`;
+  } catch {
+    return value.replace(/([?&](?:secret|callback_secret|token|access_token|refresh_token|api_key|key|code)=)[^&]*/gi, "$1[REDACTED]");
+  }
+}
 
 function normalizeRoute(url: string) {
   const p = url.split("?")[0];

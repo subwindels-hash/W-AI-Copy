@@ -73,7 +73,7 @@ describe("payment providers fail closed", () => {
 
   it("advertises Blockonomics as ready only when its complete configuration is enabled", async () => {
     process.env.BLOCKONOMICS_API_KEY = "blockonomics-api-key";
-    process.env.BLOCKONOMICS_CALLBACK_SECRET = "high-entropy-callback-secret";
+    process.env.BLOCKONOMICS_CALLBACK_SECRET = "high-entropy-callback-secret-at-least-32";
     process.env.BLOCKONOMICS_ENABLED = "true";
     process.env.BLOCKONOMICS_SUPPORTED_ASSETS = "BTC,USDT";
     const providers = await PaymentGatewaysService.listProviders();

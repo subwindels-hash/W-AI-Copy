@@ -6,10 +6,11 @@ const state = vi.hoisted(() => ({
   failAddress: false,
   price: 50_000,
   address: "bc1q" + "z".repeat(38), allocatedCents: 0,
+  audits: [] as any[],
 }));
 
-vi.mock("../db/client.js", () => ({
-  prisma: {
+vi.mock("../db/client.js", () => {
+  const prisma: any = {
     invoice: { findFirst: vi.fn(async ({ where }: any) => {
       const invoice = state.invoices.get(where.id);
       return invoice?.organizationId === where.organizationId ? invoice : null;
@@ -28,8 +29,11 @@ vi.mock("../db/client.js", () => ({
       findFirst: vi.fn(async ({ where }: any) => state.payments.find((row) => row.id === where.id && row.organizationId === where.organizationId && row.provider === where.provider) ?? null),
       findMany: vi.fn(async ({ where, take }: any) => state.payments.filter((row) => row.organizationId === where.organizationId && row.provider === where.provider && (!where.status || row.status === where.status)).slice(0, take)),
     },
-  },
-}));
+    auditLog: { create: vi.fn(async ({ data }: any) => { state.audits.push(data); return { id: `audit-${state.audits.length}`, ...data }; }) },
+  };
+  prisma.$transaction = vi.fn(async (work: any) => work(prisma));
+  return { prisma };
+});
 
 vi.mock("./blockonomics.service.js", () => ({
   BlockonomicsConfigService: {
@@ -49,6 +53,7 @@ const { BlockonomicsPaymentService } = await import("./blockonomicsPayment.servi
 
 beforeEach(() => {
   state.payments.length = 0;
+  state.audits.length = 0;
   state.invoices.clear();
   state.failAddress = false;
   state.price = 50_000;
@@ -65,6 +70,7 @@ describe("Blockonomics Stage 4 durable payment creation", () => {
     expect(payment.requiredConfirmations).toBe(2);
     expect(payment.expiresAt).toBeTruthy();
     expect(state.payments[0]).toMatchObject({ status: "pending", quoteSource: "blockonomics:/price", requestedById: "user-a" });
+    expect(state.audits).toContainEqual(expect.objectContaining({ action: "payment.blockonomics.creation_requested", resourceId: payment.id, userId: "user-a" }));
   });
 
   it("uses six-decimal base units for USDT ERC-20", async () => {

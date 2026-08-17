@@ -1,11 +1,11 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
 const state = vi.hoisted(() => ({
-  payments: [] as any[], events: [] as any[], providerPayments: [] as any[], monitorStatus: 0,
+  payments: [] as any[], events: [] as any[], providerPayments: [] as any[], monitorStatus: 0, audits: [] as any[],
 }));
 
-vi.mock("../db/client.js", () => ({
-  prisma: {
+vi.mock("../db/client.js", () => {
+  const prisma: any = {
     paymentWebhookEvent: {
       findUnique: vi.fn(async ({ where }: any) => state.events.find((event) => event.eventKey === where.eventKey) ?? null),
       create: vi.fn(async ({ data }: any) => {
@@ -45,8 +45,11 @@ vi.mock("../db/client.js", () => ({
         return state.payments[index];
       }),
     },
-  },
-}));
+  };
+  prisma.auditLog = { create: vi.fn(async ({ data }: any) => { state.audits.push(data); return { id: `audit-${state.audits.length}`, ...data }; }) };
+  prisma.$transaction = vi.fn(async (work: any) => work(prisma));
+  return { prisma };
+});
 
 vi.mock("../services/billing.service.js", () => ({
   settleConfirmedBlockonomicsPayment: vi.fn(async (paymentId: string) => {
@@ -62,7 +65,7 @@ vi.mock("./blockonomics.service.js", () => {
     async monitorUsdtTransaction() { return state.monitorStatus; }
   }
   return {
-    BlockonomicsConfigService: { secret: vi.fn(async () => ({ enabled: true, testMode: true, matchCallback: "payments.example.test", supportedAssets: ["BTC", "USDT"], quoteExpiryMinutes: 15, requiredConfirmations: 2, apiKey: "key", callbackSecret: "callback-secret-value", source: "database", version: 1 })) },
+    BlockonomicsConfigService: { secret: vi.fn(async () => ({ enabled: true, testMode: true, matchCallback: "payments.example.test", supportedAssets: ["BTC", "USDT"], quoteExpiryMinutes: 15, requiredConfirmations: 2, apiKey: "key", callbackSecret: "callback-secret-value-at-least-32-chars", source: "database", version: 1 })) },
     BlockonomicsClient: Client,
     configuredBlockonomicsClient: vi.fn(async () => new Client()),
   };
@@ -87,12 +90,12 @@ function payment(overrides: Record<string, unknown> = {}) {
 }
 function callback(row: any, overrides: Record<string, unknown> = {}) {
   return {
-    secret: "callback-secret-value", addr: row.paymentAddress, crypto: row.cryptoCurrency,
+    secret: "callback-secret-value-at-least-32-chars", addr: row.paymentAddress, crypto: row.cryptoCurrency,
     status: 0, value: 200000n, txid: "f".repeat(64), ...overrides,
   } as any;
 }
 
-beforeEach(() => { state.payments.length = 0; state.events.length = 0; state.providerPayments.length = 0; state.monitorStatus = 0; });
+beforeEach(() => { state.payments.length = 0; state.events.length = 0; state.providerPayments.length = 0; state.audits.length = 0; state.monitorStatus = 0; });
 
 describe("Blockonomics Stage 5 callback processing", () => {
   it("rejects an invalid callback secret before persistence", async () => {
@@ -137,7 +140,7 @@ describe("Blockonomics Stage 5 callback processing", () => {
   });
 
   it("records unknown callbacks as ignored for administration", async () => {
-    const result = await BlockonomicsPaymentService.processCallback({ secret: "callback-secret-value", addr: "bc1q" + "u".repeat(38), crypto: "BTC", status: 2, value: 1n, txid: "c".repeat(64) } as any);
+    const result = await BlockonomicsPaymentService.processCallback({ secret: "callback-secret-value-at-least-32-chars", addr: "bc1q" + "u".repeat(38), crypto: "BTC", status: 2, value: 1n, txid: "c".repeat(64) } as any);
     expect(result).toMatchObject({ ignored: true, payment: null });
     expect(state.events[0]).toMatchObject({ processingStatus: "ignored", errorCode: "PAYMENT_NOT_RESOLVED" });
   });
@@ -158,6 +161,7 @@ describe("Blockonomics USDT transaction monitoring", () => {
     const result = await BlockonomicsPaymentService.monitorUsdtTransaction("org-a", "user-a", row.id, txhash);
     expect(result).toMatchObject({ status: "confirming", providerStatus: "2", reconciliationStatus: "required" });
     expect(state.payments[0].completedAt).toBeNull();
+    expect(state.audits).toContainEqual(expect.objectContaining({ action: "payment.blockonomics.monitor_requested", resourceId: row.id, userId: "user-a" }));
   });
 
   it("enforces organization, requester, asset, and tx-hash uniqueness", async () => {

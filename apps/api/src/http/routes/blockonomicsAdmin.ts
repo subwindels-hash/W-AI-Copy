@@ -2,6 +2,7 @@
 import { Router } from "express";
 import { authenticate, requireSuperAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
+import { rateLimit } from "../middleware/rateLimit.js";
 import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
 import { BlockonomicsConfigService } from "../../payments/blockonomics.service.js";
 import { BlockonomicsAdminService } from "../../payments/blockonomicsAdmin.service.js";
@@ -9,7 +10,7 @@ import { BlockonomicsReconciliationService } from "../../payments/blockonomicsRe
 
 export function registerBlockonomicsAdminRoutes(router: Router) {
   const admin = Router();
-  admin.use(authenticate, requireSuperAdmin);
+  admin.use(authenticate, requireSuperAdmin, rateLimit("admin", (req) => req.user?.id ?? req.ip ?? "unknown"));
 
   admin.get("/config", async (req, res, next) => {
     try {

@@ -41,6 +41,9 @@ export interface BlockonomicsPublicConfig extends BlockonomicsProviderSettings {
 function decryptSecret(value: unknown): string | null {
   return isEncryptedBlob(value) ? decryptString(value as EncryptedBlob) : null;
 }
+function validCallbackSecret(value: string | null | undefined): value is string {
+  return typeof value === "string" && value.length >= 32;
+}
 function envBool(name: string, fallback = false): boolean {
   const value = process.env[name]?.trim().toLowerCase();
   return value === undefined || value === "" ? fallback : value === "true";
@@ -69,12 +72,12 @@ export const BlockonomicsConfigService = {
       const apiKey = decryptSecret(row.apiKeyEnc);
       const callbackSecret = decryptSecret(row.callbackSecretEnc);
       const settings = BlockonomicsProviderSettingsSchema.parse({ ...(row.settings as any), enabled: row.enabled, testMode: row.testMode });
-      if (!apiKey || !callbackSecret) return null;
+      if (!apiKey || !validCallbackSecret(callbackSecret)) return null;
       return { ...settings, apiKey, callbackSecret, source: "database", version: row.version };
     }
     const apiKey = process.env.BLOCKONOMICS_API_KEY?.trim();
     const callbackSecret = process.env.BLOCKONOMICS_CALLBACK_SECRET?.trim();
-    if (!apiKey || !callbackSecret) return null;
+    if (!apiKey || !validCallbackSecret(callbackSecret)) return null;
     return { ...environmentSettings(), apiKey, callbackSecret, source: "environment", version: 1 };
   },
 
@@ -84,9 +87,9 @@ export const BlockonomicsConfigService = {
       const settings = BlockonomicsProviderSettingsSchema.parse({ ...(row.settings as any), enabled: row.enabled, testMode: row.testMode });
       return {
         provider: PROVIDER, ...settings,
-        configured: !!decryptSecret(row.apiKeyEnc) && !!decryptSecret(row.callbackSecretEnc),
+        configured: !!decryptSecret(row.apiKeyEnc) && validCallbackSecret(decryptSecret(row.callbackSecretEnc)),
         apiKeyConfigured: !!decryptSecret(row.apiKeyEnc),
-        callbackSecretConfigured: !!decryptSecret(row.callbackSecretEnc),
+        callbackSecretConfigured: validCallbackSecret(decryptSecret(row.callbackSecretEnc)),
         source: "database", version: row.version,
         healthStatus: row.healthStatus,
         lastHealthAt: row.lastHealthAt?.toISOString() ?? null,
@@ -95,7 +98,7 @@ export const BlockonomicsConfigService = {
     }
     const settings = environmentSettings();
     const api = !!process.env.BLOCKONOMICS_API_KEY?.trim();
-    const callback = !!process.env.BLOCKONOMICS_CALLBACK_SECRET?.trim();
+    const callback = validCallbackSecret(process.env.BLOCKONOMICS_CALLBACK_SECRET?.trim());
     return {
       provider: PROVIDER, ...settings,
       configured: api && callback,
@@ -120,8 +123,8 @@ export const BlockonomicsConfigService = {
     const previousCallback = current ? decryptSecret(current.callbackSecretEnc) : process.env.BLOCKONOMICS_CALLBACK_SECRET?.trim() || null;
     const apiKey = input.apiKey?.trim() || previousApi;
     const callbackSecret = input.callbackSecret?.trim() || previousCallback;
-    if (input.settings.enabled && (!apiKey || !callbackSecret)) {
-      throw AppError.badRequest("Blockonomics cannot be enabled without API key and callback secret");
+    if (input.settings.enabled && (!apiKey || !validCallbackSecret(callbackSecret))) {
+      throw AppError.badRequest("Blockonomics cannot be enabled without an API key and a callback secret of at least 32 characters");
     }
     const settings = BlockonomicsProviderSettingsSchema.parse(input.settings);
     await prisma.paymentProviderConfiguration.upsert({
