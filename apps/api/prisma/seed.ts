@@ -63,7 +63,7 @@ async function seedOrgStarterData(orgId: string, workspaceId: string, creatorId:
         description: a.description,
         systemPrompt: a.systemPrompt,
         department: a.department,
-        capabilities: a.capabilities,
+        capabilities: [...a.capabilities],
         isBuiltIn: true,
         status: "ONLINE",
         modelId: "windels-assistant",
@@ -122,30 +122,46 @@ async function main() {
           create: { name: "Default Workspace", slug: "default", description: "Default workspace seeded at bootstrap" },
         },
       },
-      include: { workspaces: true },
     });
-    const existingMember = await prisma.membership.findFirst({
-      where: { userId: admin.id, organizationId: org.id },
-    });
-    if (!existingMember) {
-      await prisma.membership.create({
-        data: {
-          userId: admin.id,
-          organizationId: org.id,
-          workspaceId: org.workspaces[0]!.id,
-          role: MembershipRole.OWNER,
-        },
-      });
-    }
   }
 
-  const defaultWs =
-    org.workspaces?.[0] ??
-    (await prisma.workspace.findFirst({ where: { organizationId: org.id } }))!;
+  // Reconcile each bootstrap relation independently. This keeps the seed
+  // idempotent even when it is rerun against a partially initialized database.
+  let defaultWs = await prisma.workspace.findFirst({ where: { organizationId: org.id, slug: "default" } });
+  if (!defaultWs) {
+    defaultWs = await prisma.workspace.create({
+      data: {
+        organizationId: org.id,
+        name: "Default Workspace",
+        slug: "default",
+        description: "Default workspace seeded at bootstrap",
+      },
+    });
+  }
+
+  const existingMember = await prisma.membership.findFirst({
+    where: { userId: admin.id, organizationId: org.id },
+  });
+  if (!existingMember) {
+    await prisma.membership.create({
+      data: {
+        userId: admin.id,
+        organizationId: org.id,
+        workspaceId: defaultWs.id,
+        role: MembershipRole.OWNER,
+      },
+    });
+  }
+
   await seedOrgStarterData(org.id, defaultWs.id, admin.id);
 
   console.log(`\n✔ Bootstrap complete.`);
-  console.log(`  Super admin: ${email} / ${password}`);
+  console.log(`  Super admin: ${email}`);
+  if (process.env.NODE_ENV !== "production") {
+    console.log(`  Password:    ${password}`);
+  } else {
+    console.log("  Password:    configured from BOOTSTRAP_SUPERADMIN_PASSWORD (not printed)");
+  }
   console.log(`  Org:          ${org.slug}`);
   console.log(`  Workspace:    ${defaultWs.slug}\n`);
 }

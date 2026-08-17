@@ -296,10 +296,14 @@ export const GiftCardsService = {
       await redis.incrby(K.metrics.redeemed24, 1);
       await redis.incrbyfloat(K.metrics.volume24, redeemed);
 
-      // Store idempotency record (24h TTL) so duplicate orderId replays return the same result.
+      // Invoice redemptions are financial allocation evidence and retain their
+      // idempotency record for the invoice lifetime. Other ephemeral order
+      // replays keep the existing 24-hour retention policy.
       if (orderId) {
         const idemKey = `gc:idem:${id}:${orderId}`;
-        await redis.set(idemKey, JSON.stringify({ card: c, redeemed, txn: t }), "EX", 60*60*24);
+        const result = JSON.stringify({ card: c, redeemed, txn: t });
+        if (orderId.startsWith("inv-")) await redis.set(idemKey, result);
+        else await redis.set(idemKey, result, "EX", 60 * 60 * 24);
       }
 
       await emitKernel("card.redeemed", { cardId: id, amount: redeemed, remainingBalance: c.balance, orderId });
@@ -403,40 +407,73 @@ export const GiftCardsService = {
 
   listAgents() { return AI_AGENTS; },
 
-  async applyToInvoice(cardId: string, invoiceId: string, pin?: string): Promise<any> {
-    const inv = await prisma.invoice.findUnique({ where: { id: invoiceId } });
-    if (!inv) throw AppError.notFound("Invoice not found");
-    if (inv.status === "paid") throw AppError.badRequest("Invoice already paid");
-
+  async applyToInvoice(
+    cardId: string,
+    invoiceId: string,
+    pin?: string,
+    requestedAmount?: number,
+    organizationId?: string,
+  ): Promise<any> {
+    const inv = organizationId
+      ? await prisma.invoice.findFirst({ where: { id: invoiceId, organizationId } })
+      : await prisma.invoice.findUnique({ where: { id: invoiceId } });
+    if (!inv) throw AppError.notFound("Invoice not found in organization");
     const card = await this.getCard(cardId);
     if (!card) throw AppError.notFound("Gift card not found");
+    if (card.currency.toUpperCase() !== inv.currency.toUpperCase()) throw AppError.badRequest("Gift card currency does not match invoice currency");
 
-    const amountToCharge = inv.amountCents / 100;
-    const redemption = await this.redeem(cardId, amountToCharge, pin, `inv-${invoiceId}`);
-
-    const ledgerEntry = await prisma.billingLedgerEntry.create({
-      data: {
-        organizationId: inv.organizationId,
-        invoiceId: inv.id,
-        giftCardId: cardId,
-        amountCents: Math.round(redemption.redeemed * 100),
-        debitAccount: "accounts_receivable",
-        creditAccount: "gift_card_liability",
-      },
+    const existing = await prisma.invoicePaymentAllocation.findFirst({
+      where: { invoiceId, sourceKind: "gift_card", sourceId: cardId },
     });
+    if (existing?.status === "applied") {
+      const [ledgerEntry, allocated] = await Promise.all([
+        prisma.billingLedgerEntry.findUnique({ where: { journalKey: `gift-card:${cardId}:invoice:${inv.id}` } }),
+        prisma.invoicePaymentAllocation.aggregate({ where: { invoiceId, status: "applied", currency: inv.currency }, _sum: { amountCents: true } }),
+      ]);
+      const remainingCents = Math.max(0, inv.amountCents - Number(allocated._sum.amountCents ?? 0));
+      return { success: true, card, redeemedCents: existing.amountCents, invoice: inv, ledgerEntry, idempotent: true, remainingCents };
+    }
+    if (inv.status === "paid") throw AppError.badRequest("Invoice already paid");
+    const allocated = await prisma.invoicePaymentAllocation.aggregate({ where: { invoiceId, status: "applied", currency: inv.currency }, _sum: { amountCents: true } });
+    const remainingCents = inv.amountCents - Number(allocated._sum.amountCents ?? 0);
+    if (remainingCents <= 0) throw AppError.badRequest("Invoice has no remaining balance");
+    const requestedCents = requestedAmount === undefined ? remainingCents : Math.round(requestedAmount * 100);
+    if (requestedCents <= 0 || requestedCents > remainingCents) throw AppError.badRequest("Gift card contribution exceeds invoice remaining balance");
 
-    const updatedInvoice = await prisma.invoice.update({
-      where: { id: inv.id },
-      data: { status: "paid", paidAt: new Date() },
+    // Redis redemption is idempotent by this stable order id. If the following
+    // database transaction fails, a retry reuses the same redemption and safely
+    // completes the durable allocation/journal.
+    const redemption = await this.redeem(cardId, requestedCents / 100, pin, `inv-${invoiceId}-gift-${cardId}`);
+    const redeemedCents = Math.round(redemption.redeemed * 100);
+    return prisma.$transaction(async (tx) => {
+      const allocation = await tx.invoicePaymentAllocation.upsert({
+        where: { invoiceId_sourceKind_sourceId: { invoiceId, sourceKind: "gift_card", sourceId: cardId } },
+        create: {
+          organizationId: inv.organizationId, invoiceId, sourceKind: "gift_card", sourceId: cardId,
+          amountCents: redeemedCents, currency: inv.currency, status: "applied", appliedAt: new Date(),
+          metadata: { giftCardTransactionId: redemption.txn.id },
+        },
+        update: {},
+      });
+      const journalKey = `gift-card:${cardId}:invoice:${inv.id}`;
+      const ledgerEntry = await tx.billingLedgerEntry.upsert({
+        where: { journalKey },
+        create: {
+          organizationId: inv.organizationId, invoiceId: inv.id, giftCardId: cardId,
+          sourceKind: "gift_card", journalKey, amountCents: redeemedCents,
+          debitAccount: "gift_card_liability", creditAccount: "accounts_receivable",
+          metadata: { giftCardTransactionId: redemption.txn.id },
+        },
+        update: {},
+      });
+      const all = await tx.invoicePaymentAllocation.findMany({ where: { invoiceId, status: "applied", currency: inv.currency } });
+      const totalApplied = all.reduce((sum, item) => sum + item.amountCents, 0);
+      if (totalApplied > inv.amountCents) throw new Error("Applied payment allocations exceed invoice amount");
+      const updatedInvoice = totalApplied === inv.amountCents
+        ? await tx.invoice.update({ where: { id: inv.id }, data: { status: "paid", paidAt: new Date() } })
+        : inv;
+      return { success: true, card: redemption.card, redeemedCents, invoice: updatedInvoice, allocation, ledgerEntry, idempotent: false, remainingCents: inv.amountCents - totalApplied };
     });
-
-    return {
-      success: true,
-      card: redemption.card,
-      redeemedCents: Math.round(redemption.redeemed * 100),
-      invoice: updatedInvoice,
-      ledgerEntry,
-    };
   },
 
   /** Payment Method Registration: exposes a descriptor that the existing Payment Gateway can consume.

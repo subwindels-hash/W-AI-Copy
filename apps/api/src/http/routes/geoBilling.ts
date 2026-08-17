@@ -154,7 +154,7 @@ export function registerGeoBillingRoutes(router: Router) {
       const checkout = await GeoBillingService.initiateGeoCheckout(orgId, {
         ...req.body,
         customerEmail: req.body.customerEmail || user.email,
-      });
+      }, user.id);
 
       res.status(201).json({ ok: true, data: checkout, meta: { requestId: req.requestId } });
     } catch (e) {

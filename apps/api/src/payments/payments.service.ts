@@ -1,19 +1,10 @@
 /**
- * Universal Payment Gateways Service — Session 128
+ * Fail-closed multi-provider payment orchestration.
  *
- * Orchestrates multi-provider checkouts across:
- *   1. Flutterwave (NGN, GHS, KES, ZAR, USD)
- *   2. Paystack (NGN, GHS, ZAR, KES)
- *   3. PayPal (Global USD/international)
- *   4. Blockonomics / Multi-Chain Crypto (BTC, Tron TRC-20, ETH ERC-20, BNB Chain)
- *
- * Manages organization-scoped transaction persistence (`pay:tx`),
- * universal checkout routing, EventBus dispatch, and automatic invoice
- * settlement via `billing.markInvoicePaid(orgId, invoiceId)`.
- *
- * Keys:
- *   pay:tx:idx:<org>   (Redis Sorted Set of transaction IDs ordered by timestamp)
- *   pay:tx:i:<org>:<id>  (Redis string storing JSON serialized PaymentTransaction)
+ * A transaction can become completed only from a typed, provider-verified
+ * result whose provider, reference, amount, and currency match the recorded
+ * checkout. Webhook events are indexed globally by opaque provider reference,
+ * while every transaction remains organization-scoped.
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
@@ -25,6 +16,10 @@ import { PaystackService } from "./paystack.service.js";
 import { PayPalService } from "./paypal.service.js";
 import { StripeService } from "./stripe.service.js";
 import { CryptoPaymentsService } from "./crypto.service.js";
+import { BlockonomicsConfigService } from "./blockonomics.service.js";
+import { BlockonomicsPaymentService } from "./blockonomicsPayment.service.js";
+import { AppError } from "../utils/result.js";
+import { sameMoney } from "./paymentConfig.js";
 import type {
   PaymentProviderConfig,
   PaymentTransaction,
@@ -36,337 +31,330 @@ import type {
 const K = {
   idx: (oid: string) => `pay:tx:idx:${oid}`,
   item: (oid: string, id: string) => `pay:tx:i:${oid}:${id}`,
+  reference: (provider: string, reference: string) => `pay:ref:${provider}:${reference}`,
+  webhook: (provider: string, eventId: string) => `pay:webhook:${provider}:${eventId}`,
+  probe: (id: string) => `pay:probe:${id}`,
 };
 
 const MAX_TRANSACTION_LIMIT = 500;
 const memoryLedger = new Map<string, PaymentTransaction[]>();
 
+type VerificationSource = "provider_api" | "verified_webhook";
+export interface VerifiedPaymentEvidence {
+  verified: true;
+  provider: Exclude<PaymentProvider, "crypto">;
+  reference: string;
+  status: PaymentTransactionStatus;
+  amount: number;
+  currency: string;
+  providerTransactionId: string;
+  verificationSource?: VerificationSource;
+  eventId?: string;
+  verifiedAt?: string;
+  details?: Record<string, unknown>;
+}
+
 function getMemoryLedger(orgId: string): PaymentTransaction[] {
   let list = memoryLedger.get(orgId);
-  if (!list) {
-    list = [];
-    memoryLedger.set(orgId, list);
-  }
+  if (!list) { list = []; memoryLedger.set(orgId, list); }
   return list;
 }
 
+function providerConfig(provider: PaymentProvider) {
+  if (provider === "flutterwave") return FlutterwaveService.configuration();
+  if (provider === "paystack") return PaystackService.configuration();
+  if (provider === "stripe") return StripeService.configuration();
+  if (provider === "paypal") return PayPalService.configuration();
+  return CryptoPaymentsService.configuration();
+}
+
+const PROVIDERS: Array<Omit<PaymentProviderConfig, "active" | "configured" | "status" | "configurationIssue" | "testMode">> = [
+  { provider: "flutterwave", supportedCurrencies: ["NGN", "GHS", "KES", "ZAR", "USD"], displayName: "Flutterwave (African & Global Card/Mobile Money)" },
+  { provider: "paystack", supportedCurrencies: ["NGN", "GHS", "ZAR", "KES"], displayName: "Paystack (African Card & Bank Transfer)" },
+  { provider: "stripe", supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "NGN", "ZAR"], displayName: "Stripe (Global Card, Wallets & Bank Methods)" },
+  { provider: "paypal", supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD"], displayName: "PayPal (Global Checkout Orders)" },
+  { provider: "crypto", supportedCurrencies: [], supportedNetworks: [], displayName: "Crypto payments (disabled pending chain verification)" },
+  { provider: "blockonomics", supportedCurrencies: ["USD", "EUR", "GBP", "NGN", "GHS", "KES", "ZAR", "CAD", "AUD", "JPY", "CNY", "AED", "SAR", "BRL"], supportedNetworks: ["btc", "eth_erc20"], displayName: "Blockonomics (BTC & USDT ERC-20)" },
+];
+
 export const PaymentGatewaysService = {
-  /**
-   * List configured payment providers and their active status.
-   */
   async listProviders(): Promise<PaymentProviderConfig[]> {
-    return [
-      {
-        provider: "flutterwave",
-        active: true,
-        testMode: process.env.NODE_ENV !== "production" || !process.env.FLUTTERWAVE_SECRET_KEY,
-        supportedCurrencies: ["NGN", "GHS", "KES", "ZAR", "USD"],
-        displayName: "Flutterwave (African & Global Card/Mobile Money)",
-      },
-      {
-        provider: "paystack",
-        active: true,
-        testMode: process.env.NODE_ENV !== "production" || !process.env.PAYSTACK_SECRET_KEY,
-        supportedCurrencies: ["NGN", "GHS", "ZAR", "KES"],
-        displayName: "Paystack (African Card & Bank Transfer)",
-      },
-      {
-        provider: "stripe",
-        active: true,
-        testMode: process.env.NODE_ENV !== "production" || !process.env.STRIPE_SECRET_KEY,
-        supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "NGN", "ZAR"],
-        displayName: "Stripe (Global Card, Apple Pay, Google Pay, SEPA)",
-      },
-      {
-        provider: "paypal",
-        active: true,
-        testMode: process.env.NODE_ENV !== "production" || !process.env.PAYPAL_CLIENT_ID,
-        supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD"],
-        displayName: "PayPal (Global Checkout Orders)",
-      },
-      {
-        provider: "crypto",
-        active: true,
-        testMode: process.env.NODE_ENV !== "production" || !process.env.BLOCKONOMICS_API_KEY,
-        supportedCurrencies: ["USD", "EUR"],
-        supportedNetworks: ["btc", "tron_trc20", "eth_erc20", "bnb_chain"],
-        displayName: "Blockonomics & Multi-Chain Crypto (BTC, TRC-20, ERC-20, BNB)",
-      },
-    ];
+    return Promise.all(PROVIDERS.map(async (base) => {
+      if (base.provider === "blockonomics") {
+        const cfg = await BlockonomicsConfigService.public();
+        return {
+          ...base,
+          active: cfg.configured && cfg.enabled,
+          configured: cfg.configured,
+          status: !cfg.configured ? "not_configured" as const : !cfg.enabled ? "disabled" as const : "ready" as const,
+          supportedAssets: cfg.supportedAssets,
+          configurationIssue: cfg.configured
+            ? cfg.enabled ? undefined : "Disabled by Super Admin"
+            : "API key and callback secret are required",
+          testMode: cfg.testMode,
+        };
+      }
+      const cfg = providerConfig(base.provider);
+      const blocked = base.provider === "crypto";
+      return {
+        ...base,
+        active: cfg.configured && !blocked,
+        configured: cfg.configured,
+        status: blocked ? "blocked" as const : cfg.configured ? "ready" as const : "not_configured" as const,
+        configurationIssue: cfg.issue,
+        testMode: cfg.testMode,
+      };
+    }));
   },
 
-  /**
-   * Record a payment transaction in the organization ledger (`pay:tx`).
-   */
+  async assertLedgerAvailable(): Promise<void> {
+    const key = K.probe(randomUUID());
+    try {
+      await redis.set(key, "1", "EX", 10);
+      await redis.del(key);
+    } catch (error) {
+      throw AppError.serviceUnavailable(`Payment ledger is unavailable: ${(error as Error).message}`);
+    }
+  },
+
   async recordTransaction(tx: PaymentTransaction): Promise<void> {
     const orgId = tx.organizationId;
     const nowTs = new Date(tx.createdAt).getTime();
-
-    // Memory buffer
-    const mem = getMemoryLedger(orgId);
-    const idx = mem.findIndex((i) => i.id === tx.id || i.reference === tx.reference);
-    if (idx !== -1) {
-      mem[idx] = tx;
-    } else {
-      mem.unshift(tx);
-      if (mem.length > MAX_TRANSACTION_LIMIT) mem.splice(MAX_TRANSACTION_LIMIT);
-    }
-
-    // Redis sorted set + hash
     try {
       const idxKey = K.idx(orgId);
       const itemKey = K.item(orgId, tx.id);
-      await redis.set(itemKey, JSON.stringify(tx));
-      await redis.zadd(idxKey, String(nowTs), tx.id);
-
+      const multi = typeof (redis as any).multi === "function" ? (redis as any).multi() : null;
+      if (multi) {
+        multi.set(itemKey, JSON.stringify(tx));
+        multi.zadd(idxKey, String(nowTs), tx.id);
+        multi.set(K.reference(tx.provider, tx.reference), JSON.stringify({ organizationId: orgId, transactionId: tx.id }), "EX", 366 * 86400);
+        await multi.exec();
+      } else {
+        await redis.set(itemKey, JSON.stringify(tx));
+        await redis.zadd(idxKey, String(nowTs), tx.id);
+        await redis.set(K.reference(tx.provider, tx.reference), JSON.stringify({ organizationId: orgId, transactionId: tx.id }), "EX", 366 * 86400);
+      }
       const count = await redis.zcard(idxKey);
       if (count > MAX_TRANSACTION_LIMIT) {
-        const excess = count - MAX_TRANSACTION_LIMIT;
-        const oldIds = await redis.zrange(idxKey, 0, excess - 1);
-        if (oldIds.length > 0) {
+        const oldIds = await redis.zrange(idxKey, 0, count - MAX_TRANSACTION_LIMIT - 1);
+        if (oldIds.length) {
           await redis.zrem(idxKey, ...oldIds);
-          for (const oldId of oldIds) {
-            await redis.del(K.item(orgId, oldId));
-          }
+          for (const oldId of oldIds) await redis.del(K.item(orgId, oldId));
         }
       }
-    } catch (e: any) {
-      logger.debug("PaymentGatewaysService.recordTransaction: Redis unreachable, relying on memory ledger", { error: e?.message });
+    } catch (error) {
+      if (process.env.NODE_ENV === "production") {
+        throw AppError.serviceUnavailable(`Payment ledger write failed: ${(error as Error).message}`);
+      }
+      logger.warn("payment ledger write failed; using test/development memory ledger", { error: (error as Error).message });
     }
+
+    const mem = getMemoryLedger(orgId);
+    const idx = mem.findIndex((item) => item.id === tx.id || (item.provider === tx.provider && item.reference === tx.reference));
+    if (idx >= 0) mem[idx] = structuredClone(tx);
+    else { mem.unshift(structuredClone(tx)); if (mem.length > MAX_TRANSACTION_LIMIT) mem.length = MAX_TRANSACTION_LIMIT; }
   },
 
-  /**
-   * Universal checkout initiator: routes to Flutterwave, Paystack, PayPal, or Crypto.
-   */
-  async initiateCheckout(
-    organizationId: string,
-    input: PaymentCheckoutRequestInput
-  ): Promise<PaymentTransaction> {
+  async initiateCheckout(organizationId: string, input: PaymentCheckoutRequestInput, requestedById?: string): Promise<PaymentTransaction> {
+    if (!organizationId) throw AppError.badRequest("Organization is required for payment checkout");
+    await this.assertLedgerAvailable();
     const provider = input.provider;
-    const amount = input.amount;
-    const currency = input.currency || "USD";
+    if (provider === "blockonomics") {
+      if (!requestedById) throw AppError.forbidden("An authenticated requester is required for Blockonomics checkout");
+      return BlockonomicsPaymentService.create(organizationId, requestedById, {
+        amount: Number(input.amount), currency: String(input.currency || "USD"),
+        cryptoCurrency: input.cryptoCurrency ?? "BTC", invoiceId: input.invoiceId,
+        description: input.description, customerEmail: input.customerEmail,
+      });
+    }
+    const cfg = providerConfig(provider);
+    if (!cfg.configured || provider === "crypto") {
+      throw new AppError("SERVICE_UNAVAILABLE", `${provider} payment provider is unavailable`, 503, {
+        provider,
+        code: provider === "crypto" ? "PAYMENT_PROVIDER_BLOCKED" : "PAYMENT_PROVIDER_NOT_CONFIGURED",
+        issue: cfg.issue,
+      });
+    }
+
+    const amount = Number(input.amount);
+    const currency = String(input.currency || "USD").toUpperCase();
     const nowIso = new Date().toISOString();
     const id = `tx_${Date.now()}_${randomUUID().slice(0, 8)}`;
-
-    let reference = id;
-    let checkoutUrl = "";
-    let cryptoAmount: number | undefined;
-    let cryptoAddress: string | undefined;
-    let confirmations: number | undefined;
-    let requiredConfirmations: number | undefined;
+    let reference: string;
+    let checkoutUrl: string;
+    let adapterMetadata: Record<string, unknown> = {};
 
     if (provider === "flutterwave") {
-      const flw = await FlutterwaveService.initializePayment({
-        amount,
-        currency,
-        customerEmail: input.customerEmail,
-        description: input.description,
-        invoiceId: input.invoiceId,
-      });
-      reference = flw.reference;
-      checkoutUrl = flw.checkoutUrl;
+      const result = await FlutterwaveService.initializePayment({ amount, currency, customerEmail: input.customerEmail, description: input.description, invoiceId: input.invoiceId });
+      reference = result.reference; checkoutUrl = result.checkoutUrl;
     } else if (provider === "paystack") {
-      const pys = await PaystackService.initializePayment({
-        amount,
-        currency,
-        customerEmail: input.customerEmail,
-        description: input.description,
-        invoiceId: input.invoiceId,
-      });
-      reference = pys.reference;
-      checkoutUrl = pys.checkoutUrl;
+      const result = await PaystackService.initializePayment({ amount, currency, customerEmail: input.customerEmail, description: input.description, invoiceId: input.invoiceId });
+      reference = result.reference; checkoutUrl = result.checkoutUrl; adapterMetadata = { accessCode: result.accessCode };
     } else if (provider === "stripe") {
-      const str = await StripeService.createCheckoutSession({
-        amount,
-        currency,
-        customerEmail: input.customerEmail,
-        description: input.description,
-        invoiceId: input.invoiceId,
-      });
-      reference = str.reference;
-      checkoutUrl = str.checkoutUrl;
+      const result = await StripeService.createCheckoutSession({ amount, currency, customerEmail: input.customerEmail, description: input.description, invoiceId: input.invoiceId });
+      reference = result.reference; checkoutUrl = result.checkoutUrl; adapterMetadata = { sessionId: result.sessionId };
     } else if (provider === "paypal") {
-      const ppl = await PayPalService.createOrder({
-        amount,
-        currency,
-        description: input.description,
-        invoiceId: input.invoiceId,
-      });
-      reference = ppl.orderId;
-      checkoutUrl = ppl.approvalUrl;
+      const result = await PayPalService.createOrder({ amount, currency, description: input.description, invoiceId: input.invoiceId });
+      reference = result.orderId; checkoutUrl = result.approvalUrl; adapterMetadata = { clientReference: result.clientReference };
     } else {
-      // crypto
-      const cry = await CryptoPaymentsService.createCharge({
-        network: input.cryptoNetwork || "tron_trc20",
-        amount,
-        currency,
-        invoiceId: input.invoiceId,
-        description: input.description,
-      });
-      reference = cry.chargeId;
-      checkoutUrl = cry.checkoutUrl;
-      cryptoAmount = cry.cryptoAmount;
-      cryptoAddress = cry.cryptoAddress;
-      confirmations = 0;
-      requiredConfirmations = cry.requiredConfirmations;
+      throw new AppError("SERVICE_UNAVAILABLE", "Crypto payments are disabled", 503);
     }
 
     const tx: PaymentTransaction = {
-      id,
-      organizationId,
-      provider,
-      reference,
-      amount,
-      currency,
-      cryptoAmount,
-      cryptoNetwork: input.cryptoNetwork,
-      cryptoAddress,
-      confirmations,
-      requiredConfirmations,
-      status: "pending",
-      invoiceId: input.invoiceId || null,
-      description: input.description,
-      customerEmail: input.customerEmail,
-      checkoutUrl,
-      createdAt: nowIso,
-      completedAt: null,
-      metadata: { initiatedBy: "PaymentGatewaysService" },
+      id, organizationId, provider, reference, amount, currency,
+      status: "pending", invoiceId: input.invoiceId || null,
+      description: input.description, customerEmail: input.customerEmail,
+      checkoutUrl, createdAt: nowIso, completedAt: null,
+      metadata: { initiatedBy: "PaymentGatewaysService", ...adapterMetadata },
     };
-
     await this.recordTransaction(tx);
-
-    try {
-      await EventBus.emit("payment.pending", {
-        transactionId: id,
-        organizationId,
-        provider,
-        reference,
-        amount,
-        currency,
-      });
-    } catch {}
-
+    await EventBus.emit("payment.pending", { transactionId: id, organizationId, provider, reference, amount, currency }).catch(() => {});
     return tx;
   },
 
-  /**
-   * Settle a transaction: update status, emit EventBus, and settle Billing Invoice.
-   */
-  async settleTransaction(
-    organizationId: string,
-    referenceOrId: string,
-    status: PaymentTransactionStatus,
-    metadata?: Record<string, unknown>
-  ): Promise<PaymentTransaction | null> {
+  async applyVerifiedResult(organizationId: string, referenceOrId: string, evidence: VerifiedPaymentEvidence): Promise<PaymentTransaction> {
+    if (evidence?.verified !== true) throw AppError.forbidden("Unverified payment evidence cannot settle a transaction");
     let tx = await this.getTransactionByRef(organizationId, referenceOrId);
-    if (!tx) {
-      // Try finding by id
-      tx = await this.getTransaction(organizationId, referenceOrId);
+    if (!tx) tx = await this.getTransaction(organizationId, referenceOrId);
+    if (!tx) throw AppError.notFound("Payment transaction not found in organization");
+    if (tx.provider !== evidence.provider) throw AppError.conflict("Payment provider does not match the recorded transaction");
+    if (tx.reference !== evidence.reference) throw AppError.conflict("Payment reference does not match the recorded transaction");
+    if (!sameMoney(Number(evidence.amount), tx.amount)) {
+      throw AppError.conflict(`Verified payment amount ${evidence.amount} does not match expected amount ${tx.amount}`);
     }
-    if (!tx) return null;
+    if (String(evidence.currency).toUpperCase() !== tx.currency.toUpperCase()) {
+      throw AppError.conflict(`Verified payment currency ${evidence.currency} does not match expected currency ${tx.currency}`);
+    }
+    if (!evidence.providerTransactionId) throw AppError.conflict("Provider transaction identifier is required");
 
-    tx.status = status;
-    if (status === "completed") {
-      tx.completedAt = new Date().toISOString();
-    }
-    if (metadata) {
-      tx.metadata = { ...tx.metadata, ...metadata };
+    const previousProof = (tx.metadata as any)?.verification;
+    if (tx.status === "completed") {
+      if (evidence.status === "completed" && previousProof?.providerTransactionId === evidence.providerTransactionId) return tx;
+      if (evidence.status !== "refunded") throw AppError.conflict("Completed payment cannot transition to another state or provider transaction");
+    } else if (evidence.status === "refunded") {
+      throw AppError.conflict("Only a completed payment can be refunded");
     }
 
+    tx.status = evidence.status;
+    tx.completedAt = evidence.status === "completed" ? new Date().toISOString() : tx.completedAt ?? null;
+    tx.metadata = {
+      ...(tx.metadata ?? {}),
+      verification: {
+        providerTransactionId: evidence.providerTransactionId,
+        source: evidence.verificationSource ?? "provider_api",
+        eventId: evidence.eventId,
+        verifiedAt: evidence.verifiedAt ?? new Date().toISOString(),
+        details: evidence.details ?? {},
+      },
+    };
     await this.recordTransaction(tx);
 
-    // EventBus emission
-    try {
-      await EventBus.emit(status === "completed" ? "payment.succeeded" : `payment.${status}`, {
-        transactionId: tx.id,
-        organizationId,
-        provider: tx.provider,
-        reference: tx.reference,
-        amount: tx.amount,
-        currency: tx.currency,
-      });
-    } catch {}
+    await EventBus.emit(evidence.status === "completed" ? "payment.succeeded" : `payment.${evidence.status}`, {
+      transactionId: tx.id, organizationId, provider: tx.provider,
+      reference: tx.reference, amount: tx.amount, currency: tx.currency,
+      providerTransactionId: evidence.providerTransactionId,
+    }).catch(() => {});
 
-    // Invoice settlement integration with billing module
-    if (status === "completed" && tx.invoiceId) {
+    if (evidence.status === "completed" && tx.invoiceId) {
       try {
-        await billing.markInvoicePaid(organizationId, tx.invoiceId);
-        logger.info("PaymentGatewaysService: automatically marked billing invoice paid", {
-          invoiceId: tx.invoiceId,
-          transactionId: tx.id,
-          organizationId,
+        await billing.markInvoicePaidForOrganization(organizationId, tx.invoiceId, {
+          source: tx.provider,
+          paymentId: tx.id,
+          providerTransactionId: evidence.providerTransactionId,
         });
-      } catch (err: any) {
-        logger.warn("PaymentGatewaysService: invoice settlement failed or invoice already paid", {
-          invoiceId: tx.invoiceId,
-          error: err?.message,
-        });
+        tx.metadata = { ...(tx.metadata ?? {}), invoiceSettlement: { status: "completed", at: new Date().toISOString() } };
+      } catch (error) {
+        tx.metadata = { ...(tx.metadata ?? {}), invoiceSettlement: { status: "failed", at: new Date().toISOString(), error: (error as Error).message } };
+        logger.error("payment verified but invoice settlement failed; reconciliation required", { transactionId: tx.id, invoiceId: tx.invoiceId, organizationId, err: error });
       }
+      await this.recordTransaction(tx);
     }
-
     return tx;
   },
 
-  /**
-   * Get paginated transactions for an organization.
-   */
-  async listTransactions(
-    organizationId: string,
-    query?: { provider?: string; status?: string; limit?: number }
-  ): Promise<PaymentTransaction[]> {
-    const limit = query?.limit ?? 50;
-    const providerFilter = query?.provider;
-    const statusFilter = query?.status;
-
-    let items: PaymentTransaction[] = [];
+  async resolveProviderTransaction(provider: PaymentProvider, reference: string): Promise<PaymentTransaction | null> {
     try {
-      const idxKey = K.idx(organizationId);
-      const allIds = (await redis.zrange(idxKey, 0, -1)).reverse();
-      for (const id of allIds) {
-        const raw = await redis.get(K.item(organizationId, id));
-        if (raw) {
-          try {
-            items.push(JSON.parse(raw));
-          } catch {}
-        }
+      const raw = await redis.get(K.reference(provider, reference));
+      if (raw) {
+        const index = JSON.parse(raw) as { organizationId: string; transactionId: string };
+        const tx = await this.getTransaction(index.organizationId, index.transactionId);
+        if (tx?.provider === provider && tx.reference === reference) return tx;
       }
-    } catch {
-      items = [...getMemoryLedger(organizationId)];
+    } catch (error) {
+      if (process.env.NODE_ENV === "production") throw AppError.serviceUnavailable(`Payment reference index unavailable: ${(error as Error).message}`);
     }
-
-    if (providerFilter) {
-      items = items.filter((x) => x.provider === providerFilter);
+    if (process.env.NODE_ENV !== "production") {
+      for (const items of memoryLedger.values()) {
+        const tx = items.find((item) => item.provider === provider && item.reference === reference);
+        if (tx) return structuredClone(tx);
+      }
     }
-    if (statusFilter) {
-      items = items.filter((x) => x.status === statusFilter);
-    }
-
-    return items.slice(0, limit);
+    return null;
   },
 
-  /**
-   * Get single transaction by ID, asserting organization scope.
-   */
+  async claimWebhookEvent(provider: PaymentProvider, eventId: string): Promise<boolean> {
+    if (!eventId) throw AppError.badRequest("Payment webhook event ID is required");
+    try {
+      const result = await (redis as any).set(K.webhook(provider, eventId), "processing", "NX", "EX", 31 * 86400);
+      return result !== null;
+    } catch (error) {
+      if (process.env.NODE_ENV === "production") throw AppError.serviceUnavailable(`Payment webhook idempotency store unavailable: ${(error as Error).message}`);
+      return true;
+    }
+  },
+
+  async releaseWebhookEvent(provider: PaymentProvider, eventId: string): Promise<void> {
+    await redis.del(K.webhook(provider, eventId)).catch(() => {});
+  },
+
+  async listTransactions(organizationId: string, query?: { provider?: string; status?: string; limit?: number }): Promise<PaymentTransaction[]> {
+    const limit = Math.max(1, Math.min(Number(query?.limit ?? 50), 500));
+    const includeBlockonomics = !query?.provider || query.provider === "blockonomics";
+    const includeLegacyLedger = query?.provider !== "blockonomics";
+    const durableItems = includeBlockonomics
+      ? await BlockonomicsPaymentService.list(organizationId, Math.min(limit, 200), query?.status)
+      : [];
+    let legacyItems: PaymentTransaction[] = [];
+    if (includeLegacyLedger) {
+      try {
+        const allIds = (await redis.zrange(K.idx(organizationId), 0, -1)).reverse();
+        for (const id of allIds) {
+          const raw = await redis.get(K.item(organizationId, id));
+          if (raw) { try { legacyItems.push(JSON.parse(raw)); } catch {} }
+        }
+      } catch (error) {
+        if (process.env.NODE_ENV === "production") throw AppError.serviceUnavailable(`Payment ledger read failed: ${(error as Error).message}`);
+        legacyItems = [...getMemoryLedger(organizationId)];
+      }
+      if (query?.provider) legacyItems = legacyItems.filter((item) => item.provider === query.provider);
+      if (query?.status) legacyItems = legacyItems.filter((item) => item.status === query.status);
+    }
+    const merged = new Map<string, PaymentTransaction>();
+    for (const item of [...durableItems, ...legacyItems]) merged.set(`${item.provider}:${item.id}`, item);
+    return [...merged.values()]
+      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+      .slice(0, limit);
+  },
+
   async getTransaction(organizationId: string, id: string): Promise<PaymentTransaction | null> {
+    const durable = await BlockonomicsPaymentService.get(organizationId, id);
+    if (durable) return durable;
     try {
       const raw = await redis.get(K.item(organizationId, id));
       if (raw) {
         const parsed = JSON.parse(raw) as PaymentTransaction;
         if (parsed.organizationId === organizationId) return parsed;
       }
-    } catch {
-      const mem = getMemoryLedger(organizationId);
-      const found = mem.find((i) => i.id === id);
-      if (found && found.organizationId === organizationId) return found;
+    } catch (error) {
+      if (process.env.NODE_ENV === "production") throw AppError.serviceUnavailable(`Payment ledger read failed: ${(error as Error).message}`);
     }
-    return null;
+    if (process.env.NODE_ENV === "production") return null;
+    const found = getMemoryLedger(organizationId).find((item) => item.id === id);
+    return found?.organizationId === organizationId ? structuredClone(found) : null;
   },
 
-  /**
-   * Get single transaction by provider reference.
-   */
   async getTransactionByRef(organizationId: string, reference: string): Promise<PaymentTransaction | null> {
     const all = await this.listTransactions(organizationId, { limit: 500 });
-    return all.find((x) => x.reference === reference) || null;
+    return all.find((item) => item.reference === reference) ?? null;
   },
 };

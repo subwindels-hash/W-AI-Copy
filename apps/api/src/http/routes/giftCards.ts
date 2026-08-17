@@ -55,8 +55,8 @@ export function registerGiftCardsRoutes(router: Router) {
   router.post("/cards/:id/unfreeze", async (req, res, next) => {
     try { res.json({ ok: true, data: await GiftCardsService.unfreeze(req.params.id) }); } catch (e) { next(e); }
   });
-  router.post("/cards/:id/apply-invoice", validate({ body: z.object({ invoiceId: z.string().cuid(), pin: z.string().optional() }) }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await GiftCardsService.applyToInvoice(req.params.id, req.body.invoiceId, req.body.pin) }); } catch (e) { next(e); }
+  router.post("/cards/:id/apply-invoice", validate({ body: z.object({ invoiceId: z.string().cuid(), pin: z.string().optional(), amount: z.number().positive().optional() }) }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await GiftCardsService.applyToInvoice(req.params.id, req.body.invoiceId, req.body.pin, req.body.amount, req.user?.organizationId) }); } catch (e) { next(e); }
   });
   router.get("/transactions", async (req, res, next) => {
     try { res.json({ ok: true, data: await GiftCardsService.listTransactions(req.query.cardId as any) }); } catch (e) { next(e); }

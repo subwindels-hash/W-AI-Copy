@@ -6,6 +6,7 @@
  */
 import { ToolRegistry, type Tool, type ToolContext, type ToolResult } from "../toolRegistry.js";
 import "../../../cloudAndroid/tools.js";
+import "../../../payments/blockonomicsAi.tools.js";
 
 // ─── Calculator Tool ───────────────────────────────────────────
 

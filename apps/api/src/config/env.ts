@@ -138,8 +138,12 @@ const EnvSchema = z.object({
   CLOUD_ANDROID_PROVIDER_NAME: z.string().max(120).default("WINDELS Cloud Android Provider"),
   CLOUD_ANDROID_PROVIDER_TIMEOUT_MS: z.coerce.number().int().min(1000).max(600000).default(120000),
 
-  // Encryption (AES-256-GCM) — 64 hex chars. Falls back to deterministic dev key in NODE_ENV=development.
-  WINDELS_ENCRYPTION_KEY: z.string().length(64).optional(),
+  // Encryption (AES-256-GCM). Production requires the primary key. To rotate,
+  // change the key id/key and keep old id->key entries in the JSON keyring
+  // until all stored envelopes have been re-encrypted.
+  WINDELS_ENCRYPTION_KEY: z.string().regex(/^[0-9a-fA-F]{64}$/).optional(),
+  WINDELS_ENCRYPTION_KEY_ID: z.string().regex(/^[A-Za-z0-9._-]{1,64}$/).default("k1"),
+  WINDELS_ENCRYPTION_KEYRING: z.string().optional(),
 
   /**
    * Opt-in synthetic seed data.
@@ -304,6 +308,18 @@ const EnvSchema = z.object({
     .transform((v) => (typeof v === "boolean" ? v : v === "true"))
     .default(false),
   /** Per-request REST timeout for crypto HTTP clients. */
+  // Blockonomics bootstrap configuration. A persisted Super Admin provider
+  // configuration takes precedence once created; secrets remain encrypted.
+  BLOCKONOMICS_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
+  BLOCKONOMICS_API_KEY: z.string().min(8).optional(),
+  BLOCKONOMICS_CALLBACK_SECRET: z.string().min(32).optional(),
+  BLOCKONOMICS_MATCH_CALLBACK: z.string().max(300).optional(),
+  BLOCKONOMICS_SUPPORTED_ASSETS: z.string().default("BTC"),
+  BLOCKONOMICS_QUOTE_EXPIRY_MINUTES: z.coerce.number().int().min(5).max(60).default(15),
+  BLOCKONOMICS_TEST_MODE: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(false),
+  BLOCKONOMICS_RECONCILIATION_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(true),
+  BLOCKONOMICS_RECONCILIATION_INTERVAL_MINUTES: z.coerce.number().int().min(5).max(1440).default(15),
+
   WINDELS_CRYPTO_HTTP_TIMEOUT_MS: z.preprocess(
     (v) => {
       if (v === undefined || v === "" || v === null) return 10000;

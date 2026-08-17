@@ -51,6 +51,10 @@ export function BrokerCommandCenterPage() {
   const [login, setLogin] = useState("");
   const [server, setServer] = useState("");
   const [password, setPassword] = useState("");
+  const [passphrase, setPassphrase] = useState("");
+  const [subAccount, setSubAccount] = useState("");
+  const [walletKey, setWalletKey] = useState("");
+  const [metaapiToken, setMetaapiToken] = useState("");
   const [mode, setMode] = useState<TradingMode>("analysis_only");
 
   // trade form
@@ -101,11 +105,35 @@ export function BrokerCommandCenterPage() {
   const addAccount = useCallback(async () => {
     if (!name.trim() || !login.trim() || !server.trim() || !password) { setErr("Name, login, server and password are required."); return; }
     await run("addAccount", async () => {
-      const a = await brokerApi.createAccount({ name: name.trim(), broker, login: login.trim(), server: server.trim(), password, mode });
+      const a = await brokerApi.createAccount({
+        name: name.trim(), broker, login: login.trim(), server: server.trim(), password, mode,
+        ...(passphrase ? { passphrase } : {}),
+        ...(subAccount ? { subAccount } : {}),
+        ...(walletKey ? { walletKey } : {}),
+        ...(metaapiToken ? { connectorConfig: { metaapiToken } } : {}),
+      });
       setCreating(false); setName(""); setLogin(""); setServer(""); setPassword("");
+      setPassphrase(""); setSubAccount(""); setWalletKey(""); setMetaapiToken("");
       return `Broker account "${a.name}" added (${a.brokerLabel}). ${a.status === "requires_config" ? "Add the live connector to connect." : ""}`;
     });
-  }, [name, broker, login, server, password, mode, run]);
+  }, [name, broker, login, server, password, passphrase, subAccount, walletKey, metaapiToken, mode, run]);
+
+  const rotateAccountCredential = useCallback(async (accountId: string) => {
+    const replacement = window.prompt("Enter the replacement password/API secret. It will be verified on the next connection attempt.");
+    if (!replacement) return;
+    await run(`rotate-${accountId}`, async () => {
+      await brokerApi.rotateCredentials(accountId, { password: replacement });
+      return "Credential rotated; the account was disconnected so the next connection uses the new secret.";
+    });
+  }, [run]);
+
+  const revokeAccountCredential = useCallback(async (accountId: string) => {
+    if (!window.confirm("Revoke this account's stored credentials and disconnect it?")) return;
+    await run(`revoke-${accountId}`, async () => {
+      await brokerApi.revokeCredentials(accountId);
+      return "Credentials revoked. A full login and password/API secret are required to reconnect.";
+    });
+  }, [run]);
 
   const submitTrade = useCallback(async () => {
     if (!cc?.accounts.length) { setErr("Add a broker account first."); return; }
@@ -193,13 +221,23 @@ export function BrokerCommandCenterPage() {
               <div className="space-y-1"><label className="text-xs text-text-muted">Broker</label><Select value={broker} onChange={(e) => setBroker(e.target.value as BrokerType)}>{BROKER_TYPES.map((b) => <option key={b.value} value={b.value}>{b.label}</option>)}</Select></div>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-1"><label className="text-xs text-text-muted">Login</label><Input value={login} onChange={(e) => setLogin(e.target.value)} /></div>
-              <div className="space-y-1"><label className="text-xs text-text-muted">Server</label><Input value={server} onChange={(e) => setServer(e.target.value)} placeholder="BrokerServer" /></div>
+              <div className="space-y-1"><label className="text-xs text-text-muted">{["mt4", "mt5"].includes(broker) ? "Login" : "API key"}</label><Input value={login} onChange={(e) => setLogin(e.target.value)} /></div>
+              <div className="space-y-1"><label className="text-xs text-text-muted">Server / account endpoint</label><Input value={server} onChange={(e) => setServer(e.target.value)} placeholder="BrokerServer or exchange account" /></div>
             </div>
             <div className="grid sm:grid-cols-2 gap-3">
-              <div className="space-y-1"><label className="text-xs text-text-muted">Password (encrypted)</label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
+              <div className="space-y-1"><label className="text-xs text-text-muted">{["mt4", "mt5"].includes(broker) ? "Password" : "API secret"} (encrypted)</label><Input type="password" value={password} onChange={(e) => setPassword(e.target.value)} /></div>
               <div className="space-y-1"><label className="text-xs text-text-muted">Trading mode</label><Select value={mode} onChange={(e) => setMode(e.target.value as TradingMode)}>{TRADING_MODES.map((m) => <option key={m.value} value={m.value}>{m.label}</option>)}</Select></div>
             </div>
+            {!["mt4", "mt5"].includes(broker) ? (
+              <div className="grid sm:grid-cols-3 gap-3">
+                <div className="space-y-1"><label className="text-xs text-text-muted">Passphrase (if required)</label><Input type="password" value={passphrase} onChange={(e) => setPassphrase(e.target.value)} /></div>
+                <div className="space-y-1"><label className="text-xs text-text-muted">Sub-account (optional)</label><Input value={subAccount} onChange={(e) => setSubAccount(e.target.value)} /></div>
+                <div className="space-y-1"><label className="text-xs text-text-muted">Wallet signing key (if required)</label><Input type="password" value={walletKey} onChange={(e) => setWalletKey(e.target.value)} /></div>
+              </div>
+            ) : (
+              <div className="space-y-1"><label className="text-xs text-text-muted">MetaApi token (optional alternative to a local bridge)</label><Input type="password" value={metaapiToken} onChange={(e) => setMetaapiToken(e.target.value)} /></div>
+            )}
+            <p className="text-[11px] text-text-muted">Login/API key, secret, passphrase, sub-account, wallet key and MetaApi token are stored in one AES-256-GCM envelope. Only a masked identifier is returned.</p>
             <Button onClick={addAccount} disabled={busy === "addAccount"}>{busy === "addAccount" ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Plus className="h-4 w-4 mr-2" />} Connect</Button>
           </CardContent>
         </Card>
@@ -299,6 +337,13 @@ export function BrokerCommandCenterPage() {
                   <div><span className="text-text-muted">Equity</span><div className="text-text-bright font-medium">{usd(a.account.equity)}</div></div>
                   <div><span className="text-text-muted">Free margin</span><div className="text-text-bright font-medium">{usd(a.account.freeMargin)}</div></div>
                   <div><span className="text-text-muted">PnL</span><div className={`font-medium ${a.account.profit >= 0 ? "text-emerald-300" : "text-rose-300"}`}>{usd(a.account.profit)}</div></div>
+                </div>
+                <div className="mt-2 flex items-center justify-between gap-2 text-[11px] text-text-muted">
+                  <span>Credential v{a.credentialVersion ?? "?"} · {a.credentialsConfigured === false ? "revoked/unavailable" : "encrypted"}</span>
+                  <div className="flex gap-2">
+                    <Button size="sm" variant="outline" onClick={() => void rotateAccountCredential(a.id)} disabled={busy === `rotate-${a.id}`}>Rotate secret</Button>
+                    <Button size="sm" variant="outline" onClick={() => void revokeAccountCredential(a.id)} disabled={busy === `revoke-${a.id}`}>Revoke</Button>
+                  </div>
                 </div>
                 {a.error && <div className="mt-1 text-[11px] text-amber-300">{a.error}</div>}
               </div>

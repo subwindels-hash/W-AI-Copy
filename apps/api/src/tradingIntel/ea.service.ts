@@ -119,7 +119,8 @@ export const EaService = {
     const acct = await B.getAccount(oid, registration.brokerAccountId);
     if (!acct) throw new AppError("NOT_FOUND", `Broker account ${registration.brokerAccountId} not found`, 404);
     if (acct.broker !== "mt5") throw new AppError("BAD_REQUEST", "EA is currently supported only for MT5 accounts", 400);
-    if (acct.login !== registration.mt5Login) {
+    const credential = await B.loadCredentials(oid, acct.id);
+    if (credential.login !== registration.mt5Login) {
       throw new AppError("BAD_REQUEST", "MT5 login does not match broker account on record", 400);
     }
 
@@ -149,7 +150,7 @@ export const EaService = {
     await tx.exec();
 
     const limits = this.hardLimitsFrom(acct, await B.getRiskControls(oid));
-    logger.info(`[ea] registered ${eaId} for account ${acct.id} (login=${acct.login} magic=0x${magic.toString(16)})`, { eaId, brokerAccountId: acct.id });
+    logger.info(`[ea] registered ${eaId} for account ${acct.id} (login=${acct.loginMasked ?? acct.login} magic=0x${magic.toString(16)})`, { eaId, brokerAccountId: acct.id });
     await Mt5Monitor.audit(oid, acct.id, "connect", { phase: "ea-registered", eaId, terminal: registration.terminalName }).catch(() => {});
     return {
       token, expiresAt, eaId, mode: acct.mode, hardLimits: limits,
@@ -393,7 +394,8 @@ export const EaService = {
       const connected = !!(lastHb && Date.now() - Date.parse(lastHb) < 15_000);
       out.push({
         eaId: s.eaId, brokerAccountId: s.brokerAccountId, magic: s.magic,
-        terminalName: s.terminalName, mt5Login: s.mt5Login,
+        terminalName: s.terminalName,
+        mt5Login: s.mt5Login.length <= 4 ? "****" : `${s.mt5Login.slice(0, 2)}…${s.mt5Login.slice(-2)}`,
         createdAt: s.createdAt, lastPollAt: s.lastPollAt, connected,
       });
     }

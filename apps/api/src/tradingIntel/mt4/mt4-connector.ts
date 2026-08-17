@@ -191,10 +191,10 @@ export class Mt4Connector implements IBrokerConnector {
       const interval = opts.config?.syncIntervalMs ?? 5_000;
       runtime.syncTimer = setInterval(() => { this.sync(accountId, { account: true, positions: true, orders: true, symbols: false, history: false }).catch((e) => logger.warn("[mt4] periodic sync failed", { err: e, accountId })); }, interval);
       this.emitState(runtime, "connected");
-      logger.info("[mt4] account connected", { accountId, login: creds.login, server: creds.server, transport });
+      logger.info("[mt4] account connected", { accountId, server: creds.server, transport });
       return { ok: true, transport, endpoint: res.endpoint, terminalPath: opts.config?.terminalPath, snapshot: res, latencyMs: handle.latencyMs?.() ?? undefined };
     } catch (e) {
-      logger.error("[mt4] connect failed", { err: e, accountId, login: creds.login, server: creds.server, transport });
+      logger.error("[mt4] connect failed", { err: e, accountId, server: creds.server, transport });
       const rt: AccountRuntime = {
         creds, opts, transport, transportHandle: handle,
         state: { accountId, status: "error", lastError: (e as Error).message, consecutiveErrors: 1, reconnectAttempts: 1, symbolsCount: 0, positionsCount: 0, ordersCount: 0, deals24h: 0 },

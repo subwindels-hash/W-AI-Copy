@@ -18,6 +18,7 @@ const kv = new FakeKv();
 vi.mock("../db/redis.js", () => ({ redis: kv, redisCmd: kv, redisSub: kv }));
 
 const { BrokerIntegrationService, CONNECTOR_CATALOG } = await import("./brokerIntegration.service.js");
+const { encryptString } = await import("../security/encryption.js");
 
 const ORG = "org-bri";
 const OTHER = "org-other";
@@ -41,16 +42,78 @@ describe("broker accounts", () => {
   it("stores credentials encrypted and never returns them", async () => {
     const a = await BrokerIntegrationService.createAccount(ORG, USER, accInput);
     expect(a.status).toBe("disconnected"); // honest — created but not yet connected (no bridge in sandbox)
-    // The returned account has no password field at all.
     expect((a as any).password).toBeUndefined();
-    // Stored credentials are an encrypted blob, not plaintext.
+    expect(a.login).toBe("12…45");
+    expect(a.loginMasked).toBe("12…45");
     const stored = await kv.get(`bri:${ORG}:creds:${a.id}`);
     expect(stored).toBeTruthy();
     expect(stored).not.toContain("supersecret");
-    // Verify can decrypt.
+    expect(stored).not.toContain("12345");
+    const loaded = await BrokerIntegrationService.loadCredentials(ORG, a.id);
+    expect(loaded).toMatchObject({ login: "12345", password: "supersecret", server: "ICMarkets" });
     const v = await BrokerIntegrationService.verifyCredentials(ORG, a.id);
-    expect(v.valid).toBe(true);
-    expect(v.login).toBe("12345");
+    expect(v).toMatchObject({ valid: true, loginMasked: "12…45", credentialVersion: 1 });
+  });
+
+  it("stores every crypto credential field in one encrypted envelope", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, {
+      name: "OKX", broker: "okx", login: "api-key-visible-only-to-connector", server: "okx",
+      password: "api-secret", passphrase: "exchange-passphrase", subAccount: "desk-a", walletKey: "wallet-private-key",
+      mode: "analysis_only", environment: "sandbox",
+    });
+    const raw = await kv.get(`bri:${ORG}:creds:${a.id}`);
+    for (const secret of ["api-key-visible-only-to-connector", "api-secret", "exchange-passphrase", "desk-a", "wallet-private-key"]) {
+      expect(raw).not.toContain(secret);
+    }
+    const loaded = await BrokerIntegrationService.loadCredentials(ORG, a.id);
+    expect(loaded.login).toBe("api-key-visible-only-to-connector");
+    expect(loaded.password).toBe("api-secret");
+    expect(loaded.extra).toMatchObject({ passphrase: "exchange-passphrase", subAccount: "desk-a", walletKey: "wallet-private-key" });
+  });
+
+  it("adopts legacy password-only envelopes and removes plaintext login/MetaApi token", async () => {
+    const id = "legacy-account";
+    const timestamp = new Date().toISOString();
+    await kv.set(`bri:${ORG}:acct:${id}`, JSON.stringify({
+      id, organizationId: ORG, name: "Legacy", broker: "mt5", brokerLabel: "MetaTrader 5",
+      login: "legacy-login", server: "legacy-server", mode: "analysis_only", status: "disconnected",
+      connectorConfig: { metaapiToken: "legacy-metaapi-token", readOnly: true }, currency: "USD", leverage: 100,
+      account: { balance: 0, equity: 0, margin: 0, freeMargin: 0, profit: 0, dailyPnl: 0 },
+      createdAt: timestamp, updatedAt: timestamp,
+    }));
+    await kv.set(`bri:${ORG}:creds:${id}`, JSON.stringify(encryptString("legacy-password")));
+    await kv.sadd(`bri:${ORG}:accounts`, id);
+    const migrated = await BrokerIntegrationService.getAccount(ORG, id);
+    expect(migrated?.login).toBe("lega…ogin");
+    expect(migrated?.connectorConfig).toEqual({ readOnly: true });
+    const accountRaw = await kv.get(`bri:${ORG}:acct:${id}`);
+    const credentialRaw = await kv.get(`bri:${ORG}:creds:${id}`);
+    expect(accountRaw).not.toContain("legacy-login");
+    expect(accountRaw).not.toContain("legacy-metaapi-token");
+    expect(credentialRaw).not.toContain("legacy-password");
+    expect(credentialRaw).not.toContain("legacy-login");
+    const loaded = await BrokerIntegrationService.loadCredentials(ORG, id);
+    expect(loaded).toMatchObject({ login: "legacy-login", password: "legacy-password" });
+    expect(loaded.extra).toMatchObject({ metaapiToken: "legacy-metaapi-token" });
+  });
+
+  it("rotates and revokes credentials without exposing replacements", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, accInput);
+    const rotated = await BrokerIntegrationService.rotateCredentials(ORG, a.id, { password: "replacement-secret", passphrase: "new-passphrase" }, "admin-2");
+    expect(rotated.credentialVersion).toBe(2);
+    const raw = await kv.get(`bri:${ORG}:creds:${a.id}`);
+    expect(raw).not.toContain("replacement-secret");
+    expect(raw).not.toContain("new-passphrase");
+    expect((await BrokerIntegrationService.loadCredentials(ORG, a.id)).password).toBe("replacement-secret");
+    const revoked = await BrokerIntegrationService.revokeCredentials(ORG, a.id, "admin-2");
+    expect(revoked).toMatchObject({ credentialsConfigured: false, status: "requires_config" });
+    expect(await kv.get(`bri:${ORG}:creds:${a.id}`)).toBeNull();
+    expect((await BrokerIntegrationService.verifyCredentials(ORG, a.id)).valid).toBe(false);
+    const reconnected = await BrokerIntegrationService.rotateCredentials(ORG, a.id, {
+      login: "67890", server: "NewServer", password: "new-full-secret",
+    }, "admin-3");
+    expect(reconnected).toMatchObject({ credentialsConfigured: true, credentialVersion: 3, login: "67…90", server: "NewServer" });
+    expect((await BrokerIntegrationService.loadCredentials(ORG, a.id)).login).toBe("67890");
   });
 
   it("is org-scoped", async () => {

@@ -11,8 +11,8 @@
  *   - every generated artefact (plans, patches, summaries) carries
  *     `aiGenerated` or `basis: "heuristic"` — nothing is presented as
  *     measured unless it is;
- *   - GitHub connections store their token only inside the org-scoped
- *     store; every read returns `tokenMasked`, never the token;
+ *   - GitHub connections store an AES-256-GCM token envelope only inside the
+ *     org-scoped store; every read returns `tokenMasked`, never the token;
  *   - repository intelligence nodes state their basis (`observed` from real
  *     scanning vs `heuristic` from pattern matching) and their
  *     `confidence`;
@@ -73,6 +73,10 @@ export interface AiEngineeringConnection {
   tokenMasked: string;
   status: "connected" | "unverified" | "failed";
   addedBy: string;
+  /** Monotonic credential replacement counter; no secret material. */
+  credentialVersion: number;
+  credentialsUpdatedAt: string;
+  credentialsRotatedBy?: string;
   createdAt: string;
   updatedAt: string;
 }
@@ -286,6 +290,11 @@ export const AewConnectSchema = z.object({
   token: z.string().trim().min(8).max(500),
 });
 export type AewConnectInput = z.infer<typeof AewConnectSchema>;
+
+export const AewRotateCredentialSchema = z.object({
+  token: z.string().trim().min(8).max(500),
+});
+export type AewRotateCredentialInput = z.infer<typeof AewRotateCredentialSchema>;
 
 export const AewAddRepoSchema = z.object({
   connectionId: z.string().min(1).max(64).optional(),

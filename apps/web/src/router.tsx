@@ -57,6 +57,7 @@ const GovernancePage = lazy(() => import("./pages/admin/GovernancePage"));
 const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
 const AdminApiControlPage = lazy(() => import("./pages/admin/AdminApiControlPage"));
+const BlockonomicsAdminPage = lazy(() => import("./pages/admin/BlockonomicsAdminPage"));
 const ModuleCenterPage = lazy(() => import("./pages/admin/ModuleCenterPage").then((m) => ({ default: m.ModuleCenterPage })));
 const ModuleRuntimePage = lazy(() => import("./pages/modules/ModuleRuntimePage").then((m) => ({ default: m.ModuleRuntimePage })));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
@@ -481,7 +482,10 @@ export const router = createBrowserRouter([
         <AppShell />
       </ProtectedRoute>
     ),
-    children: [{ index: true, element: withSuspense(<SuperAdminDashboard />) }],
+    children: [
+      { index: true, element: withSuspense(<SuperAdminDashboard />) },
+      { path: "blockonomics", element: withSuspense(<BlockonomicsAdminPage />) },
+    ],
   },
   { path: "*", element: withSuspense(<NotFoundPage />) },
 ]);

@@ -46,7 +46,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Nigeria",
     currency: "NGN",
     currencySymbol: "₦",
-    supportedPaymentMethods: ["wmpc-gift-card", "paystack", "flutterwave", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "paystack", "flutterwave", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.075, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -58,7 +58,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "United States",
     currency: "USD",
     currencySymbol: "$",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "Sales Tax", rate: 0.08, included: false, exemptible: true },
     numberFormat: "#,##0.00",
@@ -70,7 +70,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "United Kingdom",
     currency: "GBP",
     currencySymbol: "£",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.20, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -82,7 +82,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Germany",
     currency: "EUR",
     currencySymbol: "€",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "sepa", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "sepa", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.19, included: true, exemptible: true },
     numberFormat: "#.##0,00",
@@ -94,7 +94,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "France",
     currency: "EUR",
     currencySymbol: "€",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "sepa", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "sepa", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.20, included: true, exemptible: true },
     numberFormat: "# ##0,00",
@@ -106,7 +106,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Japan",
     currency: "JPY",
     currencySymbol: "¥",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "GST", rate: 0.10, included: true, exemptible: true },
     numberFormat: "#,##0",
@@ -118,7 +118,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "China",
     currency: "CNY",
     currencySymbol: "¥",
-    supportedPaymentMethods: ["wmpc-gift-card", "bank-transfer"],
+    supportedPaymentMethods: ["wmpc-gift-card", "bank-transfer", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.13, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -130,7 +130,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Ghana",
     currency: "GHS",
     currencySymbol: "₵",
-    supportedPaymentMethods: ["wmpc-gift-card", "paystack", "flutterwave"],
+    supportedPaymentMethods: ["wmpc-gift-card", "paystack", "flutterwave", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.15, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -142,7 +142,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Kenya",
     currency: "KES",
     currencySymbol: "KSh",
-    supportedPaymentMethods: ["wmpc-gift-card", "flutterwave", "paystack"],
+    supportedPaymentMethods: ["wmpc-gift-card", "flutterwave", "paystack", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.16, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -154,7 +154,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "South Africa",
     currency: "ZAR",
     currencySymbol: "R",
-    supportedPaymentMethods: ["wmpc-gift-card", "paystack", "flutterwave", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "paystack", "flutterwave", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.15, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -166,7 +166,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "United Arab Emirates",
     currency: "AED",
     currencySymbol: "AED",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.05, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -178,7 +178,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Saudi Arabia",
     currency: "SAR",
     currencySymbol: "SAR",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "VAT", rate: 0.15, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -190,7 +190,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Brazil",
     currency: "BRL",
     currencySymbol: "R$",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "DST", rate: 0.05, included: true, exemptible: true },
     numberFormat: "#.##0,00",
@@ -202,7 +202,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Canada",
     currency: "CAD",
     currencySymbol: "C$",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "GST", rate: 0.05, included: false, exemptible: true },
     numberFormat: "#,##0.00",
@@ -214,7 +214,7 @@ const DEFAULT_COUNTRY_PROFILES: Record<string, CountryPaymentProfile> = {
     countryName: "Australia",
     currency: "AUD",
     currencySymbol: "A$",
-    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto"],
+    supportedPaymentMethods: ["wmpc-gift-card", "stripe", "paypal", "crypto", "blockonomics"],
     defaultPaymentMethod: "wmpc-gift-card",
     taxRule: { type: "GST", rate: 0.10, included: true, exemptible: true },
     numberFormat: "#,##0.00",
@@ -371,10 +371,15 @@ export const GeoBillingService = {
     let localFormatted = `${profile.currencySymbol}${localAmount.toFixed(2)}`;
     try {
       const loc = await GlobalCurrencyService.localizePrice(input.amount, input.currency || "USD", profile.currency, country);
+      if (!loc.usableForBilling) throw new Error(`Currency rate ${loc.sourceRate} is not approved for billing`);
       localAmount = loc.amount;
       localCurrency = loc.currency;
       localFormatted = loc.formatted;
-    } catch {}
+    } catch (error) {
+      // Never silently route a financial checkout through a synthetic/offline
+      // conversion. Same-currency checkout needs no conversion.
+      if ((input.currency || "USD").toUpperCase() !== profile.currency.toUpperCase()) throw error;
+    }
 
     const taxCalc = await this.calculateTax({ amount: localAmount, country });
     const totalWithTax = taxCalc.grossAmount;
@@ -385,30 +390,43 @@ export const GeoBillingService = {
     let remainingAmountForGateway = totalWithTax;
 
     if (input.useGiftCardBalance) {
+      let activeCards: Awaited<ReturnType<typeof GiftCardsService.listCards>> = [];
       try {
-        const activeCards = await GiftCardsService.listCards("active");
-        const availableCard = input.giftCardId ? activeCards.find((c) => c.id === input.giftCardId) : activeCards[0];
-
-        if (availableCard && availableCard.balance > 0) {
-          wmpcGiftCardApplied = true;
-          // Calculate how much local currency the gift card covers
-          giftCardRedeemedAmount = Math.min(totalWithTax, availableCard.balance);
-          remainingAmountForGateway = Number((totalWithTax - giftCardRedeemedAmount).toFixed(2));
-        }
+        activeCards = await GiftCardsService.listCards("active");
       } catch (e: any) {
-        logger.debug("GeoBillingService.routePayment: gift card check fallback", { error: e?.message });
+        logger.debug("GeoBillingService.routePayment: gift card lookup unavailable", { error: e?.message });
+      }
+
+      const requestedCard = input.giftCardId
+        ? activeCards.find((card) => card.id === input.giftCardId)
+        : undefined;
+      if (requestedCard && requestedCard.currency.toUpperCase() !== localCurrency.toUpperCase()) {
+        throw new Error(`WMPC Gift Card currency ${requestedCard.currency} does not match checkout currency ${localCurrency}`);
+      }
+      const availableCard = requestedCard
+        ?? (!input.giftCardId ? activeCards.find((card) => card.currency.toUpperCase() === localCurrency.toUpperCase()) : undefined);
+      if (availableCard && availableCard.balance > 0) {
+        wmpcGiftCardApplied = true;
+        // Gift-card value is never implicitly converted. Mixed tender shares
+        // the invoice currency and the provider funds the exact remainder.
+        giftCardRedeemedAmount = Math.min(totalWithTax, availableCard.balance);
+        remainingAmountForGateway = Number((totalWithTax - giftCardRedeemedAmount).toFixed(2));
       }
     }
 
-    // Determine gateway failover order (excluding wmpc-gift-card from gateway list)
-    const availableGateways = profile.supportedPaymentMethods.filter((m) => m !== "wmpc-gift-card");
-    let selectedProvider = input.preferredProvider || availableGateways[0] || "paystack";
-
-    if (!availableGateways.includes(selectedProvider)) {
-      selectedProvider = availableGateways[0] || "paystack";
-    }
-
-    const fallbackProviders = availableGateways.filter((p) => p !== selectedProvider);
+    // Determine failover only from providers that are region-eligible,
+    // configured/enabled, and declare support for the localized invoice
+    // currency. Static country profiles never imply live credentials.
+    const providers = await PaymentGatewaysService.listProviders();
+    const liveProviders = providers
+      .filter((provider) => provider.active && provider.supportedCurrencies.includes(localCurrency.toUpperCase()))
+      .map((provider) => provider.provider);
+    const availableGateways = profile.supportedPaymentMethods.filter((method) => method !== "wmpc-gift-card" && liveProviders.includes(method as any));
+    let selectedProvider = input.preferredProvider || availableGateways[0];
+    if (!selectedProvider || !availableGateways.includes(selectedProvider)) selectedProvider = availableGateways[0];
+    if (!selectedProvider && remainingAmountForGateway > 0) throw new Error(`No configured payment provider is available for ${profile.countryCode}`);
+    selectedProvider = selectedProvider ?? "wmpc-gift-card";
+    const fallbackProviders = availableGateways.filter((provider) => provider !== selectedProvider);
 
     return {
       selectedProvider,
@@ -515,7 +533,7 @@ export const GeoBillingService = {
   /**
    * Dynamic Geo-Checkout initiator combining Gift Cards, Taxes, Currency, and Gateway Failover.
    */
-  async initiateGeoCheckout(organizationId: string, input: GeoCheckoutRequestInput): Promise<{
+  async initiateGeoCheckout(organizationId: string, input: GeoCheckoutRequestInput, requestedById?: string): Promise<{
     routingPlan: PaymentRoutingPlan;
     giftCardRedeemed: boolean;
     gatewayTransaction?: any;
@@ -533,15 +551,15 @@ export const GeoBillingService = {
     let giftCardRedeemed = false;
     if (plan.wmpcGiftCardApplied && plan.giftCardRedeemedAmount > 0 && input.giftCardId) {
       try {
-        await GiftCardsService.redeem(
-          input.giftCardId,
-          plan.giftCardRedeemedAmount,
-          input.giftCardPin,
-          input.invoiceId || `geotx_${Date.now()}`
-        );
+        if (input.invoiceId) {
+          await GiftCardsService.applyToInvoice(input.giftCardId, input.invoiceId, input.giftCardPin, plan.giftCardRedeemedAmount, organizationId);
+        } else {
+          await GiftCardsService.redeem(input.giftCardId, plan.giftCardRedeemedAmount, input.giftCardPin, `geotx_${Date.now()}`);
+        }
         giftCardRedeemed = true;
       } catch (err: any) {
         logger.warn("GeoBillingService.initiateGeoCheckout: gift card redemption failed", { error: err?.message });
+        throw err;
       }
     }
 
@@ -559,7 +577,8 @@ export const GeoBillingService = {
           description: input.description,
           customerEmail: input.customerEmail,
           cryptoNetwork: input.cryptoNetwork as any,
-        });
+          cryptoCurrency: plan.selectedProvider === "blockonomics" ? (input.cryptoNetwork === "eth_erc20" ? "USDT" : "BTC") : undefined,
+        }, requestedById);
       } catch (e: any) {
         logger.warn("GeoBillingService.initiateGeoCheckout: primary provider failed, failing over to fallback", { error: e?.message });
         if (plan.fallbackProviders.length > 0) {
@@ -570,7 +589,10 @@ export const GeoBillingService = {
             invoiceId: input.invoiceId,
             description: input.description,
             customerEmail: input.customerEmail,
-          });
+            cryptoCurrency: plan.fallbackProviders[0] === "blockonomics" ? "BTC" : undefined,
+          }, requestedById);
+        } else {
+          throw e;
         }
       }
     }

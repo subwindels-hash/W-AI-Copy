@@ -106,6 +106,34 @@ describe("gift card PIN security", () => {
   });
 });
 
+describe("gift card invoice allocations", () => {
+  it("applies a partial gift-card contribution without falsely paying the invoice", async () => {
+    const card = await issueCard({ amount: 100 });
+    await svc.GiftCardsService.activate(card.id);
+    db.seed("Invoice", [{ id: "inv-split", organizationId: "org-a", subscriptionId: null, number: "INV-SPLIT", amountCents: 10000, currency: "USD", status: "open", lines: [], createdAt: new Date(), updatedAt: new Date() }]);
+    const result = await svc.GiftCardsService.applyToInvoice(card.id, "inv-split", undefined, 40);
+    expect(result).toMatchObject({ redeemedCents: 4000, remainingCents: 6000, idempotent: false });
+    expect(result.invoice.status).toBe("open");
+    expect(result.ledgerEntry).toMatchObject({ debitAccount: "gift_card_liability", creditAccount: "accounts_receivable", amountCents: 4000 });
+    const retry = await svc.GiftCardsService.applyToInvoice(card.id, "inv-split", undefined, 40);
+    expect(retry).toMatchObject({ idempotent: true, remainingCents: 6000 });
+    expect((await svc.GiftCardsService.getCard(card.id))?.balance).toBe(60);
+  });
+
+  it("rejects invoice currency and organization mismatches before debiting value", async () => {
+    const card = await issueCard({ amount: 100 });
+    await svc.GiftCardsService.activate(card.id);
+    db.seed("Invoice", [
+      { id: "inv-ngn", organizationId: "org-a", subscriptionId: null, number: "INV-NGN", amountCents: 10000, currency: "NGN", status: "open", lines: [], createdAt: new Date(), updatedAt: new Date() },
+      { id: "inv-usd", organizationId: "org-a", subscriptionId: null, number: "INV-USD", amountCents: 10000, currency: "USD", status: "open", lines: [], createdAt: new Date(), updatedAt: new Date() },
+    ]);
+
+    await expect(svc.GiftCardsService.applyToInvoice(card.id, "inv-ngn", undefined, 40, "org-a")).rejects.toThrow("currency does not match");
+    await expect(svc.GiftCardsService.applyToInvoice(card.id, "inv-usd", undefined, 40, "org-b")).rejects.toThrow("not found in organization");
+    expect((await svc.GiftCardsService.getCard(card.id))?.balance).toBe(100);
+  });
+});
+
 describe("gift card redemption idempotency & fraud", () => {
   it("is idempotent for the same orderId", async () => {
     const c = await issueCard();

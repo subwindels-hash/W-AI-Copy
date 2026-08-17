@@ -18,16 +18,40 @@ interface KeyDef { id: string; key: Buffer; createdAt: Date }
 const keys: KeyDef[] = [];
 let primaryKeyId: string | null = null;
 
+function decodeKey(id: string, hex: string): KeyDef {
+  if (!/^[0-9a-f]{64}$/i.test(hex)) throw new Error(`Encryption key ${id} must be exactly 64 hexadecimal characters`);
+  return { id, key: Buffer.from(hex, "hex"), createdAt: new Date() };
+}
+
 function loadKeys() {
   if (keys.length) return;
-  // Primary from env.
-  const hex = env.WINDELS_ENCRYPTION_KEY || fallbackDevKey();
-  const buf = Buffer.from(hex, "hex");
-  if (buf.length !== 32) {
-    logger.warn("WINDELS_ENCRYPTION_KEY must be 64 hex chars (32 bytes AES-256); using dev fallback", {});
+  const primaryId = process.env.WINDELS_ENCRYPTION_KEY_ID?.trim() || "k1";
+  const primaryHex = env.WINDELS_ENCRYPTION_KEY;
+  if (!primaryHex && env.NODE_ENV === "production") {
+    throw new Error("WINDELS_ENCRYPTION_KEY is required in production; refusing the deterministic development fallback");
   }
-  keys.push({ id: "k1", key: buf.length === 32 ? buf : Buffer.alloc(32, "dev-fallback-key"), createdAt: new Date() });
-  primaryKeyId = "k1";
+
+  // Previous keys allow online envelope rotation: keep old key IDs here until
+  // every credential has been re-encrypted with the new primary key.
+  const ringRaw = process.env.WINDELS_ENCRYPTION_KEYRING?.trim();
+  if (ringRaw) {
+    let ring: unknown;
+    try { ring = JSON.parse(ringRaw); }
+    catch { throw new Error("WINDELS_ENCRYPTION_KEYRING must be a JSON object of key-id to 64-hex key"); }
+    if (!ring || typeof ring !== "object" || Array.isArray(ring)) throw new Error("WINDELS_ENCRYPTION_KEYRING must be a JSON object");
+    for (const [id, hex] of Object.entries(ring as Record<string, unknown>)) {
+      if (!id.trim() || typeof hex !== "string") throw new Error("WINDELS_ENCRYPTION_KEYRING contains an invalid entry");
+      keys.push(decodeKey(id, hex));
+    }
+  }
+
+  const selectedHex = primaryHex || fallbackDevKey();
+  const primary = decodeKey(primaryId, selectedHex);
+  const existing = keys.findIndex((key) => key.id === primaryId);
+  if (existing >= 0) keys.splice(existing, 1);
+  keys.push(primary);
+  primaryKeyId = primaryId;
+  if (!primaryHex) logger.warn("using deterministic development encryption key; never use this outside development/test", {});
 }
 
 function fallbackDevKey(): string {
@@ -53,16 +77,22 @@ export function encryptString(plaintext: string): EncryptedBlob {
 }
 
 export function decryptString(blob: EncryptedBlob | null | undefined): string | null {
-  if (!blob) return null;
+  if (!blob || !isEncryptedBlob(blob)) return null;
   loadKeys();
-  const k = keys.find((x) => x.id === blob.kid) ?? keys[0];
-  const buf = Buffer.from(blob.data, "base64");
-  const nonce = buf.subarray(0, 12);
-  const tag = buf.subarray(buf.length - 16);
-  const ct = buf.subarray(12, buf.length - 16);
-  const dec = createDecipheriv("aes-256-gcm", k.key, nonce);
-  dec.setAuthTag(tag);
-  return Buffer.concat([dec.update(ct), dec.final()]).toString("utf8");
+  const key = keys.find((item) => item.id === blob.kid);
+  if (!key) return null; // fail closed: never try an unrelated key
+  try {
+    const buf = Buffer.from(blob.data, "base64");
+    if (buf.length < 29) return null; // 12-byte nonce + at least 1 byte + 16-byte tag
+    const nonce = buf.subarray(0, 12);
+    const tag = buf.subarray(buf.length - 16);
+    const ct = buf.subarray(12, buf.length - 16);
+    const dec = createDecipheriv("aes-256-gcm", key.key, nonce);
+    dec.setAuthTag(tag);
+    return Buffer.concat([dec.update(ct), dec.final()]).toString("utf8");
+  } catch {
+    return null;
+  }
 }
 
 /** Convenience: encrypt JSON-serializable values. */
@@ -87,15 +117,22 @@ export function maskSecret(s: string | null | undefined): string {
   return `${s.slice(0, 3)}***${s.slice(-2)}`;
 }
 
-/** Rotation stub: register a new key; new writes use it, old keys still decrypt. */
+/** Register an additional in-process key; new writes use it after setPrimaryKey. */
 export function registerKey(id: string, keyHex: string) {
-  const buf = Buffer.from(keyHex, "hex");
-  if (buf.length !== 32) throw new Error("Key must be 32 bytes (64 hex)");
-  keys.push({ id, key: buf, createdAt: new Date() });
+  loadKeys();
+  const next = decodeKey(id, keyHex);
+  const existing = keys.findIndex((key) => key.id === id);
+  if (existing >= 0) keys.splice(existing, 1);
+  keys.push(next);
 }
 export function setPrimaryKey(id: string) {
+  loadKeys();
   if (!keys.find((k) => k.id === id)) throw new Error(`Unknown key ${id}`);
   primaryKeyId = id;
+}
+export function currentEncryptionKeyId(): string {
+  loadKeys();
+  return primaryKeyId!;
 }
 export function listKeyInfo() {
   loadKeys();

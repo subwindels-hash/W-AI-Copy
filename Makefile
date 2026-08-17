@@ -4,7 +4,7 @@
 SHELL := /bin/bash
 PNPM  := pnpm
 COMPOSE := docker compose -f docker-compose.yml
-COMPOSE_PROD := $(COMPOSE) -f infra/docker/docker-compose.prod.yml
+COMPOSE_PROD := docker compose --env-file .env.server -f infra/docker/docker-compose.prod.yml
 K8S := infra/k8s
 KUSTOMIZE := kubectl
 
@@ -78,8 +78,9 @@ docker-build: ## Build production images
 docker-dev: ## Start local PG + redis via docker
 	$(COMPOSE) up -d postgres redis
 
-docker-up: ## Start full production stack (api + web + traefik + PG + redis)
-	$(COMPOSE_PROD) up -d
+docker-up: ## Build and start the single-server production stack
+	@test -f .env.server || (echo "Copy .env.server.example to .env.server and configure it first" >&2; exit 1)
+	$(COMPOSE_PROD) up -d --build
 
 docker-down: ## Stop production stack
 	$(COMPOSE_PROD) down

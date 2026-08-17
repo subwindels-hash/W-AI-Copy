@@ -1,381 +1,287 @@
-/**
- * Multi-Provider Payment Gateways & Crypto Routes — Session 128
- *
- * Implements endpoints for:
- *   - Universal Checkout (`POST /checkout`) & Config (`GET /providers`)
- *   - Flutterwave (`/flutterwave/initialize`, `/verify/:reference`, `/webhook`)
- *   - Paystack (`/paystack/initialize`, `/verify/:reference`, `/webhook`)
- *   - PayPal (`/paypal/create-order`, `/capture-order`, `/webhook`)
- *   - Blockonomics / Crypto (`/crypto/create-charge`, `/charge/:id`, `/callback`)
- *   - Organization Transactions Ledger (`GET /transactions`, `GET /transactions/:id`)
- */
-import { Router } from "express";
+/** Fail-closed multi-provider payment routes. */
+import { createHash } from "node:crypto";
+import { Router, type Request } from "express";
 import { z } from "zod";
 import { validate } from "../middleware/validate.js";
-import { PaymentGatewaysService } from "../../payments/payments.service.js";
+import { rateLimit } from "../middleware/rateLimit.js";
+import { authenticate } from "../middleware/auth.js";
+import { PaymentGatewaysService, type VerifiedPaymentEvidence } from "../../payments/payments.service.js";
 import { FlutterwaveService } from "../../payments/flutterwave.service.js";
 import { PaystackService } from "../../payments/paystack.service.js";
 import { StripeService } from "../../payments/stripe.service.js";
 import { PayPalService } from "../../payments/paypal.service.js";
-import { CryptoPaymentsService, CRYPTO_NETWORK_CONFIRMATIONS } from "../../payments/crypto.service.js";
+import { CryptoPaymentsService } from "../../payments/crypto.service.js";
+import { BlockonomicsPaymentService } from "../../payments/blockonomicsPayment.service.js";
+import { AppError } from "../../utils/result.js";
 import {
   PaymentCheckoutRequestSchema,
   CryptoAddressRequestSchema,
+  BlockonomicsCreatePaymentSchema,
+  BlockonomicsMonitorTransactionSchema,
+  BlockonomicsCallbackSchema,
+  PAYMENT_PROVIDERS,
+  PAYMENT_TRANSACTION_STATUSES,
   type PaymentProvider,
-  type CryptoNetwork,
 } from "@windels/shared";
+
+const GatewayCheckoutSchema = z.object({
+  amount: z.number().positive(),
+  currency: z.string().trim().min(3).max(3),
+  invoiceId: z.string().trim().min(1).max(200).optional(),
+  description: z.string().max(500).optional(),
+  customerEmail: z.string().email().optional(),
+});
+const TransactionQuerySchema = z.object({
+  provider: z.enum(PAYMENT_PROVIDERS).optional(),
+  status: z.enum(PAYMENT_TRANSACTION_STATUSES).optional(),
+  limit: z.coerce.number().int().min(1).max(500).optional(),
+});
+const CaptureSchema = z.object({ orderId: z.string().trim().min(1).max(200) });
+const paymentRateKey = (req: Request) => req.user?.id ?? req.ip ?? "unknown";
+
+function organization(req: Request): { id: string; userId: string; email: string } {
+  if (!req.user) throw AppError.unauthorized();
+  if (!req.user.organizationId) throw AppError.forbidden("An organization context is required for payments");
+  return { id: req.user.organizationId, userId: req.user.id, email: req.user.email };
+}
+function rawBody(req: Request): Buffer {
+  return (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
+}
+function webhookEventId(provider: string, req: Request, candidate?: unknown): string {
+  const supplied = typeof candidate === "string" || typeof candidate === "number" ? String(candidate) : "";
+  if (supplied) return `${provider}:${supplied}`;
+  return `${provider}:sha256:${createHash("sha256").update(rawBody(req)).digest("hex")}`;
+}
+async function once(provider: PaymentProvider, eventId: string, work: () => Promise<void>): Promise<boolean> {
+  const claimed = await PaymentGatewaysService.claimWebhookEvent(provider, eventId);
+  if (!claimed) return false;
+  try { await work(); return true; }
+  catch (error) { await PaymentGatewaysService.releaseWebhookEvent(provider, eventId); throw error; }
+}
+async function applyForAuthenticatedOrg(req: Request, evidence: VerifiedPaymentEvidence) {
+  const org = organization(req);
+  return PaymentGatewaysService.applyVerifiedResult(org.id, evidence.reference, evidence);
+}
+async function applyForIndexedReference(evidence: VerifiedPaymentEvidence) {
+  const tx = await PaymentGatewaysService.resolveProviderTransaction(evidence.provider, evidence.reference);
+  if (!tx) return null;
+  return PaymentGatewaysService.applyVerifiedResult(tx.organizationId, tx.reference, evidence);
+}
 
 export function registerPaymentsRoutes(router: Router) {
   const payments = Router();
 
-  // 1. Configured Providers & Status
-  payments.get("/providers", async (req, res, next) => {
-    try {
-      const providers = await PaymentGatewaysService.listProviders();
-      res.json({ ok: true, data: providers, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+  payments.get("/providers", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
+    try { res.json({ ok: true, data: await PaymentGatewaysService.listProviders(), meta: { requestId: req.requestId } }); }
+    catch (error) { next(error); }
   });
 
-  // 2. Organization Transactions Ledger
-  payments.get("/transactions", async (req, res, next) => {
+  payments.get("/transactions", authenticate, rateLimit("paymentStatus", paymentRateKey), validate({ query: TransactionQuerySchema }), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const txs = await PaymentGatewaysService.listTransactions(orgId, req.query as any);
-      res.json({ ok: true, data: txs, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+      const org = organization(req);
+      res.json({ ok: true, data: await PaymentGatewaysService.listTransactions(org.id, req.query as any), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
   });
 
-  // 3. Single Transaction Detail
-  payments.get("/transactions/:id", async (req, res, next) => {
+  payments.get("/transactions/:id", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const tx = await PaymentGatewaysService.getTransaction(orgId, req.params.id);
-      if (!tx) {
-        return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Transaction not found in organization" } });
-      }
-
+      const org = organization(req);
+      const tx = await PaymentGatewaysService.getTransaction(org.id, req.params.id);
+      if (!tx) throw AppError.notFound("Transaction not found in organization");
       res.json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+    } catch (error) { next(error); }
   });
 
-  // 4. Universal Checkout Initiator
-  payments.post("/checkout", validate({ body: PaymentCheckoutRequestSchema }), async (req, res, next) => {
+  payments.post("/checkout", authenticate, rateLimit("payment", paymentRateKey), validate({ body: PaymentCheckoutRequestSchema }), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const tx = await PaymentGatewaysService.initiateCheckout(orgId, {
-        ...req.body,
-        customerEmail: req.body.customerEmail || user.email,
-      });
-
+      const org = organization(req);
+      const tx = await PaymentGatewaysService.initiateCheckout(org.id, { ...req.body, customerEmail: req.body.customerEmail || org.email }, org.userId);
       res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+    } catch (error) { next(error); }
   });
 
-  // ─── Flutterwave Gateways ──────────────────────────────────────────────────
-  payments.post("/flutterwave/initialize", async (req, res, next) => {
-    try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
+  const initialize = (provider: Exclude<PaymentProvider, "crypto">) => [
+    authenticate,
+    rateLimit("payment", paymentRateKey),
+    validate({ body: GatewayCheckoutSchema }),
+    async (req: Request, res: any, next: any) => {
+      try {
+        const org = organization(req);
+        const tx = await PaymentGatewaysService.initiateCheckout(org.id, { ...req.body, provider, customerEmail: req.body.customerEmail || org.email });
+        res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
+      } catch (error) { next(error); }
+    },
+  ] as const;
+  payments.post("/flutterwave/initialize", ...initialize("flutterwave"));
+  payments.post("/paystack/initialize", ...initialize("paystack"));
+  payments.post("/stripe/initialize", ...initialize("stripe"));
+  payments.post("/paypal/create-order", ...initialize("paypal"));
 
-      const tx = await PaymentGatewaysService.initiateCheckout(orgId, {
-        provider: "flutterwave",
-        amount: Number(req.body.amount || 100),
-        currency: req.body.currency || "NGN",
-        invoiceId: req.body.invoiceId,
-        description: req.body.description,
-        customerEmail: req.body.customerEmail || user.email,
+  payments.get("/flutterwave/verify/:reference", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
+    try {
+      const result = await FlutterwaveService.verifyPayment(req.params.reference, req.query.transaction_id as string | undefined);
+      res.json({ ok: true, data: await applyForAuthenticatedOrg(req, { ...result, verificationSource: "provider_api" }), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  payments.get("/paystack/verify/:reference", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
+    try {
+      const result = await PaystackService.verifyPayment(req.params.reference);
+      res.json({ ok: true, data: await applyForAuthenticatedOrg(req, { ...result, verificationSource: "provider_api" }), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  payments.get("/stripe/verify/:reference", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
+    try {
+      const org = organization(req);
+      const tx = await PaymentGatewaysService.getTransactionByRef(org.id, req.params.reference);
+      if (!tx || tx.provider !== "stripe") throw AppError.notFound("Stripe transaction not found in organization");
+      const sessionId = (req.query.session_id as string | undefined) || String((tx.metadata as any)?.sessionId ?? "") || undefined;
+      const result = await StripeService.verifyPayment(req.params.reference, sessionId);
+      res.json({ ok: true, data: await PaymentGatewaysService.applyVerifiedResult(org.id, req.params.reference, { ...result, verificationSource: "provider_api" }), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  payments.post("/paypal/capture-order", authenticate, rateLimit("payment", paymentRateKey), validate({ body: CaptureSchema }), async (req, res, next) => {
+    try {
+      const result = await PayPalService.captureOrder(req.body.orderId);
+      res.json({ ok: true, data: await applyForAuthenticatedOrg(req, { ...result, verificationSource: "provider_api" }), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  payments.post("/flutterwave/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
+    try {
+      if (!FlutterwaveService.verifyWebhookSignature(req.headers["verif-hash"] as string | undefined)) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid Flutterwave webhook signature" } });
+      const reference = String(req.body?.data?.tx_ref ?? req.body?.tx_ref ?? "");
+      const transactionId = String(req.body?.data?.id ?? req.body?.id ?? "");
+      if (!reference || !transactionId) throw AppError.badRequest("Flutterwave webhook is missing transaction ID or reference");
+      const eventId = webhookEventId("flutterwave", req, req.body?.id ?? `${transactionId}:${req.body?.data?.status ?? "update"}`);
+      const processed = await once("flutterwave", eventId, async () => {
+        const result = await FlutterwaveService.verifyPayment(reference, transactionId);
+        await applyForIndexedReference({ ...result, verificationSource: "provider_api", eventId });
       });
-      res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+      res.json({ ok: true, data: { received: true, duplicate: !processed } });
+    } catch (error) { next(error); }
   });
 
-  payments.get("/flutterwave/verify/:reference", async (req, res, next) => {
+  payments.post("/paystack/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const flw = await FlutterwaveService.verifyPayment(req.params.reference, req.query.transaction_id as string);
-      const settled = await PaymentGatewaysService.settleTransaction(orgId, req.params.reference, flw.status, flw as any);
-      res.json({ ok: true, data: settled || flw, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  payments.post("/flutterwave/webhook", async (req, res, next) => {
-    try {
-      const hash = req.headers["verif-hash"] as string | undefined;
-      if (!FlutterwaveService.verifyWebhookSignature(hash)) {
-        return res.status(401).json({ ok: false, error: "Invalid Flutterwave webhook signature" });
-      }
-
-      const txRef = req.body?.data?.tx_ref || req.body?.tx_ref;
-      const status = req.body?.data?.status === "successful" ? "completed" : "failed";
-      if (txRef) {
-        // Resolve orgId from reference or default
-        await PaymentGatewaysService.settleTransaction("org-payments-default", txRef, status, req.body);
-      }
-      res.json({ ok: true, data: { received: true } });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  // ─── Paystack Gateways ─────────────────────────────────────────────────────
-  payments.post("/paystack/initialize", async (req, res, next) => {
-    try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const tx = await PaymentGatewaysService.initiateCheckout(orgId, {
-        provider: "paystack",
-        amount: Number(req.body.amount || 100),
-        currency: req.body.currency || "NGN",
-        invoiceId: req.body.invoiceId,
-        description: req.body.description,
-        customerEmail: req.body.customerEmail || user.email,
+      if (!PaystackService.verifyWebhookSignature(req.headers["x-paystack-signature"] as string | undefined, rawBody(req))) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid Paystack webhook signature" } });
+      const reference = String(req.body?.data?.reference ?? "");
+      if (!reference) throw AppError.badRequest("Paystack webhook is missing a reference");
+      const eventId = webhookEventId("paystack", req, `${req.body?.event ?? "event"}:${req.body?.data?.id ?? reference}`);
+      const processed = await once("paystack", eventId, async () => {
+        const result = await PaystackService.verifyPayment(reference);
+        await applyForIndexedReference({ ...result, verificationSource: "provider_api", eventId });
       });
-      res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+      res.json({ ok: true, data: { received: true, duplicate: !processed } });
+    } catch (error) { next(error); }
   });
 
-  payments.get("/paystack/verify/:reference", async (req, res, next) => {
+  payments.post("/stripe/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const pys = await PaystackService.verifyPayment(req.params.reference);
-      const settled = await PaymentGatewaysService.settleTransaction(orgId, req.params.reference, pys.status, pys as any);
-      res.json({ ok: true, data: settled || pys, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  payments.post("/paystack/webhook", async (req, res, next) => {
-    try {
-      const signature = req.headers["x-paystack-signature"] as string | undefined;
-      const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
-      if (!PaystackService.verifyWebhookSignature(signature, rawBody)) {
-        return res.status(401).json({ ok: false, error: "Invalid Paystack webhook signature" });
-      }
-
-      const ref = req.body?.data?.reference;
-      const status = req.body?.event === "charge.success" ? "completed" : "failed";
-      if (ref) {
-        await PaymentGatewaysService.settleTransaction("org-payments-default", ref, status, req.body);
-      }
-      res.json({ ok: true, data: { received: true } });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  // ─── Stripe Gateways ───────────────────────────────────────────────────────
-  payments.post("/stripe/initialize", async (req, res, next) => {
-    try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const tx = await PaymentGatewaysService.initiateCheckout(orgId, {
-        provider: "stripe",
-        amount: Number(req.body.amount || 100),
-        currency: req.body.currency || "USD",
-        invoiceId: req.body.invoiceId,
-        description: req.body.description,
-        customerEmail: req.body.customerEmail || user.email,
+      if (!StripeService.verifyWebhookSignature(req.headers["stripe-signature"] as string | undefined, rawBody(req))) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid Stripe webhook signature" } });
+      const eventId = webhookEventId("stripe", req, req.body?.id);
+      const processed = await once("stripe", eventId, async () => {
+        const object = req.body?.data?.object;
+        const reference = String(object?.client_reference_id ?? "");
+        const sessionId = String(object?.id ?? "");
+        if (!reference || !sessionId) throw AppError.badRequest("Stripe webhook is missing session or reference");
+        const result = await StripeService.verifyPayment(reference, sessionId);
+        await applyForIndexedReference({ ...result, verificationSource: "provider_api", eventId });
       });
-      res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+      res.json({ ok: true, data: { received: true, duplicate: !processed } });
+    } catch (error) { next(error); }
   });
 
-  payments.get("/stripe/verify/:reference", async (req, res, next) => {
+  payments.post("/paypal/webhook", rateLimit("webhookIngest"), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const str = await StripeService.verifyPayment(req.params.reference, req.query.session_id as string);
-      const settled = await PaymentGatewaysService.settleTransaction(orgId, req.params.reference, str.status, str as any);
-      res.json({ ok: true, data: settled || str, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  payments.post("/stripe/webhook", async (req, res, next) => {
-    try {
-      const signature = req.headers["stripe-signature"] as string | undefined;
-      const rawBody = typeof req.body === "string" ? req.body : JSON.stringify(req.body);
-      if (!StripeService.verifyWebhookSignature(signature, rawBody)) {
-        return res.status(401).json({ ok: false, error: "Invalid Stripe webhook signature" });
-      }
-
-      const ref = req.body?.data?.object?.client_reference_id;
-      const status = req.body?.type === "checkout.session.completed" ? "completed" : "failed";
-      if (ref) {
-        await PaymentGatewaysService.settleTransaction("org-payments-default", ref, status, req.body);
-      }
-      res.json({ ok: true, data: { received: true } });
-    } catch (e) {
-      next(e);
-    }
-  });
-
-  // ─── PayPal Gateways ───────────────────────────────────────────────────────
-  payments.post("/paypal/create-order", async (req, res, next) => {
-    try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const tx = await PaymentGatewaysService.initiateCheckout(orgId, {
-        provider: "paypal",
-        amount: Number(req.body.amount || 10),
-        currency: req.body.currency || "USD",
-        invoiceId: req.body.invoiceId,
-        description: req.body.description,
+      const valid = await PayPalService.verifyWebhookSignature({
+        authAlgo: req.headers["paypal-auth-algo"] as string | undefined,
+        certUrl: req.headers["paypal-cert-url"] as string | undefined,
+        transmissionId: req.headers["paypal-transmission-id"] as string | undefined,
+        transmissionSig: req.headers["paypal-transmission-sig"] as string | undefined,
+        transmissionTime: req.headers["paypal-transmission-time"] as string | undefined,
+      }, req.body);
+      if (!valid) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED", message: "Invalid PayPal webhook signature" } });
+      const eventId = webhookEventId("paypal", req, req.body?.id);
+      const processed = await once("paypal", eventId, async () => {
+        const eventType = String(req.body?.event_type ?? "");
+        if (eventType !== "PAYMENT.CAPTURE.COMPLETED" && eventType !== "PAYMENT.CAPTURE.DENIED") return;
+        const resource = req.body?.resource ?? {};
+        const orderId = String(resource?.supplementary_data?.related_ids?.order_id ?? "");
+        if (!orderId) throw AppError.badRequest("PayPal webhook is missing related order ID");
+        const evidence: VerifiedPaymentEvidence = {
+          verified: true,
+          provider: "paypal",
+          reference: orderId,
+          status: eventType === "PAYMENT.CAPTURE.COMPLETED" ? "completed" : "failed",
+          amount: Number(resource?.amount?.value),
+          currency: String(resource?.amount?.currency_code ?? "").toUpperCase(),
+          providerTransactionId: String(resource?.id ?? ""),
+          verificationSource: "verified_webhook",
+          eventId,
+        };
+        await applyForIndexedReference(evidence);
       });
-      res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+      res.json({ ok: true, data: { received: true, duplicate: !processed } });
+    } catch (error) { next(error); }
   });
 
-  payments.post("/paypal/capture-order", async (req, res, next) => {
+  // Public provider callback. Blockonomics documents an HTTP GET callback with
+  // query parameters; secret verification and durable idempotency occur in the
+  // service before any payment state changes.
+  payments.get("/blockonomics/webhook", rateLimit("webhookIngest"), validate({ query: BlockonomicsCallbackSchema }), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const orderId = req.body.orderId;
-      const cap = await PayPalService.captureOrder(orderId);
-      const settled = await PaymentGatewaysService.settleTransaction(orgId, orderId, cap.status, cap as any);
-      res.json({ ok: true, data: settled || cap, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+      const result = await BlockonomicsPaymentService.processCallback(req.query as any);
+      res.status(200).json({ ok: true, data: { received: true, duplicate: result.duplicate, ignored: result.ignored } });
+    } catch (error) { next(error); }
   });
 
-  payments.post("/paypal/webhook", async (req, res, next) => {
+  payments.post("/blockonomics/create", authenticate, rateLimit("payment", paymentRateKey), validate({ body: BlockonomicsCreatePaymentSchema }), async (req, res, next) => {
     try {
-      const sig = req.headers["paypal-transmission-sig"] as string | undefined;
-      const id = req.headers["paypal-transmission-id"] as string | undefined;
-      const time = req.headers["paypal-transmission-time"] as string | undefined;
-      const cert = req.headers["paypal-cert-url"] as string | undefined;
-      const algo = req.headers["paypal-auth-algo"] as string | undefined;
-
-      if (!PayPalService.verifyWebhookSignature(algo, cert, id, sig, time)) {
-        return res.status(401).json({ ok: false, error: "Invalid PayPal webhook signature" });
-      }
-
-      const orderId = req.body?.resource?.id;
-      const eventType = req.body?.event_type;
-      const status = eventType === "CHECKOUT.ORDER.APPROVED" || eventType === "PAYMENT.CAPTURE.COMPLETED" ? "completed" : "failed";
-      if (orderId) {
-        await PaymentGatewaysService.settleTransaction("org-payments-default", orderId, status, req.body);
-      }
-      res.json({ ok: true, data: { received: true } });
-    } catch (e) {
-      next(e);
-    }
+      const org = organization(req);
+      const payment = await PaymentGatewaysService.initiateCheckout(org.id, { provider: "blockonomics", ...req.body }, org.userId);
+      res.status(201).json({ ok: true, data: payment, meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
   });
 
-  // ─── Blockonomics / Multi-Chain Crypto Gateways ─────────────────────────────
-  payments.post("/crypto/create-charge", validate({ body: CryptoAddressRequestSchema }), async (req, res, next) => {
+  payments.post("/blockonomics/payments/:id/monitor", authenticate, rateLimit("payment", paymentRateKey), validate({ params: z.object({ id: z.string().min(1).max(100) }), body: BlockonomicsMonitorTransactionSchema }), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
-
-      const tx = await PaymentGatewaysService.initiateCheckout(orgId, {
-        provider: "crypto",
-        amount: Number(req.body.amount || 50),
-        currency: req.body.currency || "USD",
-        invoiceId: req.body.invoiceId,
-        description: req.body.description,
-        cryptoNetwork: req.body.network as CryptoNetwork,
-      });
-
-      res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+      const org = organization(req);
+      const payment = await BlockonomicsPaymentService.monitorUsdtTransaction(org.id, org.userId, req.params.id, req.body.txhash);
+      res.json({ ok: true, data: payment, meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
   });
 
-  payments.get("/crypto/charge/:id", async (req, res, next) => {
+  payments.get("/blockonomics/payments/:id", authenticate, rateLimit("paymentStatus", paymentRateKey), validate({ params: z.object({ id: z.string().min(1).max(100) }) }), async (req, res, next) => {
     try {
-      const user = req.user;
-      if (!user) return res.status(401).json({ ok: false, error: { code: "UNAUTHORIZED" } });
-      const orgId = user.organizationId ?? "org-payments-default";
+      const org = organization(req);
+      const payment = await BlockonomicsPaymentService.get(org.id, req.params.id);
+      if (!payment) throw AppError.notFound("Blockonomics payment not found");
+      res.json({ ok: true, data: payment, meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
 
-      const tx = await PaymentGatewaysService.getTransaction(orgId, req.params.id);
-      if (!tx || tx.provider !== "crypto") {
-        return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Crypto charge not found" } });
-      }
+  payments.post("/crypto/create-charge", authenticate, rateLimit("payment", paymentRateKey), validate({ body: CryptoAddressRequestSchema }), async (req, res, next) => {
+    try {
+      const org = organization(req);
+      await PaymentGatewaysService.initiateCheckout(org.id, { provider: "crypto", amount: req.body.amount, currency: req.body.currency, invoiceId: req.body.invoiceId, description: req.body.description, cryptoNetwork: req.body.network });
+      throw AppError.internal("Crypto safety gate did not refuse checkout");
+    } catch (error) { next(error); }
+  });
 
+  payments.get("/crypto/charge/:id", authenticate, rateLimit("paymentStatus", paymentRateKey), async (req, res, next) => {
+    try {
+      const org = organization(req);
+      const tx = await PaymentGatewaysService.getTransaction(org.id, req.params.id);
+      if (!tx || tx.provider !== "crypto") throw AppError.notFound("Crypto charge not found");
       res.json({ ok: true, data: tx, meta: { requestId: req.requestId } });
-    } catch (e) {
-      next(e);
-    }
+    } catch (error) { next(error); }
   });
 
-  payments.post("/crypto/callback", async (req, res, next) => {
-    try {
-      const secret = (req.query.secret || req.body?.secret || req.headers["x-blockonomics-secret"]) as string | undefined;
-      if (!CryptoPaymentsService.verifyCallbackSecret(secret)) {
-        return res.status(401).json({ ok: false, error: "Invalid Blockonomics callback secret" });
-      }
-
-      const txid = req.query.txid || req.body?.txid;
-      const confirmations = Number(req.query.confirmations || req.body?.confirmations || 0);
-      const addr = req.query.addr || req.body?.addr;
-
-      // Find matching crypto transaction by cryptoAddress
-      const all = await PaymentGatewaysService.listTransactions("org-payments-default", { provider: "crypto", limit: 200 });
-      const match = all.find((x) => x.cryptoAddress === addr || x.id === txid);
-
-      if (match) {
-        const reqConfs = match.requiredConfirmations || CRYPTO_NETWORK_CONFIRMATIONS[match.cryptoNetwork || "btc"] || 1;
-        const status = CryptoPaymentsService.isConfirmed(confirmations, reqConfs) ? "completed" : "pending";
-        await PaymentGatewaysService.settleTransaction(match.organizationId, match.id, status, {
-          confirmations,
-          txid,
-        });
-      }
-
-      res.json({ ok: true, data: { received: true, confirmations } });
-    } catch (e) {
-      next(e);
-    }
+  payments.post("/crypto/callback", rateLimit("webhookIngest"), async (_req, _res, next) => {
+    next(new AppError("SERVICE_UNAVAILABLE", "Crypto callbacks are disabled until an on-chain verifier is implemented", 503, { code: "PAYMENT_PROVIDER_BLOCKED", provider: "crypto" }));
   });
 
   router.use("/payments", payments);

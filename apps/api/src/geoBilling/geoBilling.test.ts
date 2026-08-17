@@ -4,6 +4,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { GeoBillingService } from "./geoBilling.service.js";
 import { GiftCardsService } from "../giftCards/giftCards.service.js";
+import { GlobalCurrencyService } from "../globalCurrency/globalCurrency.service.js";
+import { PaymentGatewaysService } from "../payments/payments.service.js";
 
 vi.mock("../db/redis.js", () => {
   const store = new Map<string, string>();
@@ -46,9 +48,10 @@ vi.mock("../db/redis.js", () => {
 vi.mock("../giftCards/giftCards.service.js", () => ({
   GiftCardsService: {
     listCards: vi.fn().mockResolvedValue([
-      { id: "gc-test-1", balance: 40, currency: "USD", status: "active" },
+      { id: "gc-test-1", balance: 40, currency: "NGN", status: "active" },
     ]),
     redeem: vi.fn().mockResolvedValue({ redeemed: 40 }),
+    applyToInvoice: vi.fn().mockResolvedValue({ redeemedCents: 4_000, remainingCents: 6_000 }),
   },
 }));
 
@@ -56,7 +59,16 @@ describe("GeoBillingService (Global Currency, Payment Orchestration & Geo-Billin
   const orgA = "org-geob-test-a";
 
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.clearAllMocks();
+    vi.mocked(GiftCardsService.listCards).mockResolvedValue([
+      { id: "gc-test-1", balance: 40, currency: "NGN", status: "active" } as any,
+    ]);
+    vi.mocked(GiftCardsService.redeem).mockResolvedValue({ redeemed: 40 } as any);
+    vi.mocked(GiftCardsService.applyToInvoice).mockResolvedValue({ redeemedCents: 4_000, remainingCents: 6_000 } as any);
+    process.env.PAYSTACK_SECRET_KEY = "sk_test_geo";
+    process.env.FLUTTERWAVE_SECRET_KEY = "FLWSECK_TEST-geo";
+    process.env.FLUTTERWAVE_SECRET_HASH = "geo-webhook-secret";
   });
 
   it("lists default regional country payment profiles across global markets", async () => {
@@ -104,6 +116,7 @@ describe("GeoBillingService (Global Currency, Payment Orchestration & Geo-Billin
   it("prioritizes WMPC Gift Card balance (#1 priority) and calculates gateway failover order", async () => {
     const plan = await GeoBillingService.routePayment(orgA, {
       amount: 100,
+      currency: "NGN",
       country: "NG",
       useGiftCardBalance: true,
     });
@@ -114,7 +127,100 @@ describe("GeoBillingService (Global Currency, Payment Orchestration & Geo-Billin
     expect(plan.remainingAmountForGateway).toBeLessThan(plan.totalWithTax);
     expect(plan.selectedProvider).toBe("paystack");
     expect(plan.fallbackProviders).toContain("flutterwave");
-    expect(plan.fallbackProviders).toContain("crypto");
+    expect(plan.fallbackProviders).not.toContain("crypto");
+  });
+
+  it.each([
+    { sourceRate: "synthetic", rateStaleness: "fresh" },
+    { sourceRate: "cache", rateStaleness: "stale" },
+  ] as const)("refuses $sourceRate/$rateStaleness non-billable FX for cross-currency checkout", async ({ sourceRate, rateStaleness }) => {
+    vi.spyOn(GlobalCurrencyService, "localizePrice").mockResolvedValue({
+      amount: 152_000,
+      currency: "NGN",
+      formatted: "₦152,000.00",
+      exchangeRate: 1_520,
+      sourceRate,
+      rateStaleness,
+      rateDerived: false,
+      usableForBilling: false,
+    });
+
+    await expect(GeoBillingService.routePayment(orgA, {
+      amount: 100,
+      currency: "USD",
+      country: "NG",
+      useGiftCardBalance: false,
+    })).rejects.toThrow("not approved for billing");
+  });
+
+  it("routes only through configured regional providers that support the invoice currency", async () => {
+    vi.spyOn(PaymentGatewaysService, "listProviders").mockResolvedValue([
+      { provider: "stripe", active: true, configured: true, status: "ready", supportedCurrencies: ["USD"], displayName: "Stripe" },
+      { provider: "paystack", active: true, configured: true, status: "ready", supportedCurrencies: ["NGN"], displayName: "Paystack" },
+      { provider: "blockonomics", active: false, configured: true, status: "disabled", supportedCurrencies: ["NGN"], displayName: "Blockonomics" },
+    ] as any);
+
+    const plan = await GeoBillingService.routePayment(orgA, {
+      amount: 100,
+      currency: "NGN",
+      country: "NG",
+      preferredProvider: "blockonomics",
+      useGiftCardBalance: false,
+    });
+
+    expect(plan.selectedProvider).toBe("paystack");
+    expect(plan.fallbackProviders).toEqual([]);
+  });
+
+  it("creates Blockonomics only for the remainder after a durable WMPC invoice allocation", async () => {
+    vi.mocked(GiftCardsService.listCards).mockResolvedValueOnce([
+      { id: "gc-usd", balance: 40, currency: "USD", status: "active" } as any,
+    ]);
+    vi.spyOn(PaymentGatewaysService, "listProviders").mockResolvedValue([
+      { provider: "blockonomics", active: true, configured: true, status: "ready", supportedCurrencies: ["USD"], displayName: "Blockonomics" },
+    ] as any);
+    const checkout = vi.spyOn(PaymentGatewaysService, "initiateCheckout").mockResolvedValue({ id: "pay-remainder", status: "pending" } as any);
+
+    const result = await GeoBillingService.initiateGeoCheckout(orgA, {
+      amount: 100,
+      currency: "USD",
+      country: "US",
+      preferredProvider: "blockonomics",
+      useGiftCardBalance: true,
+      giftCardId: "gc-usd",
+      invoiceId: "inv-split",
+      cryptoNetwork: "eth_erc20",
+    }, "user-a");
+
+    // US sales tax is added by the existing profile: $108 total, $40 gift
+    // allocation, and exactly $68 delegated to Blockonomics.
+    expect(GiftCardsService.applyToInvoice).toHaveBeenCalledWith("gc-usd", "inv-split", undefined, 40, orgA);
+    expect(checkout).toHaveBeenCalledWith(orgA, expect.objectContaining({
+      provider: "blockonomics",
+      amount: 68,
+      currency: "USD",
+      invoiceId: "inv-split",
+      cryptoCurrency: "USDT",
+    }), "user-a");
+    expect(result).toMatchObject({ giftCardRedeemed: true, checkoutStatus: "pending_gateway" });
+  });
+
+  it("does not debit a gift card when no provider is available for its remainder", async () => {
+    vi.mocked(GiftCardsService.listCards).mockResolvedValueOnce([
+      { id: "gc-usd", balance: 40, currency: "USD", status: "active" } as any,
+    ]);
+    vi.spyOn(PaymentGatewaysService, "listProviders").mockResolvedValue([]);
+
+    await expect(GeoBillingService.initiateGeoCheckout(orgA, {
+      amount: 100,
+      currency: "USD",
+      country: "US",
+      useGiftCardBalance: true,
+      giftCardId: "gc-usd",
+      invoiceId: "inv-no-provider",
+    }, "user-a")).rejects.toThrow("No configured payment provider");
+    expect(GiftCardsService.applyToInvoice).not.toHaveBeenCalled();
+    expect(GiftCardsService.redeem).not.toHaveBeenCalled();
   });
 
   it("normalizes provider webhooks into a standard UnifiedPaymentEvent", async () => {

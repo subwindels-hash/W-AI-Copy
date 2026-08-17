@@ -1,20 +1,28 @@
 import { z } from "zod";
 
-export const PAYMENT_PROVIDERS = ["flutterwave", "paystack", "stripe", "paypal", "crypto"] as const;
+export const PAYMENT_PROVIDERS = ["flutterwave", "paystack", "stripe", "paypal", "crypto", "blockonomics"] as const;
 export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 export const CRYPTO_NETWORKS = ["btc", "tron_trc20", "eth_erc20", "bnb_chain"] as const;
 export type CryptoNetwork = (typeof CRYPTO_NETWORKS)[number];
 
-export const PAYMENT_TRANSACTION_STATUSES = ["pending", "completed", "failed", "refunded", "expired"] as const;
+export const PAYMENT_TRANSACTION_STATUSES = [
+  "created", "pending", "detected", "confirming", "confirmed", "completed",
+  "expired", "failed", "cancelled", "under_review", "refunded",
+] as const;
 export type PaymentTransactionStatus = (typeof PAYMENT_TRANSACTION_STATUSES)[number];
 
 export const PaymentProviderConfigSchema = z.object({
   provider: z.enum(PAYMENT_PROVIDERS),
+  /** True only when the complete credential set is present and the adapter is enabled. */
   active: z.boolean(),
+  configured: z.boolean(),
+  status: z.enum(["ready", "disabled", "not_configured", "blocked"]),
+  configurationIssue: z.string().optional(),
   testMode: z.boolean(),
   supportedCurrencies: z.array(z.string()),
   supportedNetworks: z.array(z.enum(CRYPTO_NETWORKS)).optional(),
+  supportedAssets: z.array(z.enum(["BTC", "USDT"])).optional(),
   displayName: z.string(),
 });
 
@@ -32,6 +40,18 @@ export const PaymentTransactionSchema = z.object({
   cryptoAddress: z.string().optional(),
   confirmations: z.number().int().nonnegative().optional(),
   requiredConfirmations: z.number().int().nonnegative().optional(),
+  cryptoCurrency: z.enum(["BTC", "USDT"]).optional(),
+  expectedCryptoUnits: z.string().regex(/^\d+$/).optional(),
+  receivedCryptoUnits: z.string().regex(/^\d+$/).optional(),
+  providerStatus: z.string().optional(),
+  providerTransactionId: z.string().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+  reconciliationStatus: z.string().optional(),
+  receipt: z.object({
+    number: z.string(),
+    issuedAt: z.string(),
+    invoiceId: z.string().nullable().optional(),
+  }).optional(),
   status: z.enum(PAYMENT_TRANSACTION_STATUSES),
   invoiceId: z.string().nullable().optional(),
   description: z.string().optional(),
@@ -52,6 +72,7 @@ export const PaymentCheckoutRequestSchema = z.object({
   description: z.string().max(500).optional(),
   customerEmail: z.string().email().optional(),
   cryptoNetwork: z.enum(CRYPTO_NETWORKS).optional(),
+  cryptoCurrency: z.enum(["BTC", "USDT"]).optional(),
 });
 
 export type PaymentCheckoutRequestInput = z.input<typeof PaymentCheckoutRequestSchema>;
@@ -73,3 +94,149 @@ export const CryptoAddressRequestSchema = z.object({
 });
 
 export type CryptoAddressRequestInput = z.input<typeof CryptoAddressRequestSchema>;
+
+export const BLOCKONOMICS_ASSETS = ["BTC", "USDT"] as const;
+export type BlockonomicsAsset = (typeof BLOCKONOMICS_ASSETS)[number];
+
+export const BlockonomicsCreatePaymentSchema = z.object({
+  amount: z.number().positive().refine((value) => Number.isSafeInteger(Math.round(value * 100)) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7, "Amount must have at most two decimal places"),
+  currency: z.string().trim().length(3).transform((value) => value.toUpperCase()),
+  cryptoCurrency: z.enum(BLOCKONOMICS_ASSETS),
+  invoiceId: z.string().min(1).max(200).optional(),
+  description: z.string().max(500).optional(),
+  customerEmail: z.string().email().optional(),
+});
+export type BlockonomicsCreatePaymentInput = z.infer<typeof BlockonomicsCreatePaymentSchema>;
+
+export const BlockonomicsMonitorTransactionSchema = z.object({
+  txhash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+});
+export type BlockonomicsMonitorTransactionInput = z.infer<typeof BlockonomicsMonitorTransactionSchema>;
+
+export const BlockonomicsCallbackSchema = z.object({
+  secret: z.string().min(32).max(500),
+  addr: z.string().min(20).max(200),
+  crypto: z.enum(BLOCKONOMICS_ASSETS).default("BTC"),
+  status: z.coerce.number().int().min(0).max(2),
+  value: z.coerce.bigint().positive(),
+  txid: z.string().min(16).max(200),
+  rbf: z.coerce.number().int().optional(),
+});
+export type BlockonomicsCallbackInput = z.infer<typeof BlockonomicsCallbackSchema>;
+
+export const BlockonomicsProviderSettingsSchema = z.object({
+  enabled: z.boolean(),
+  testMode: z.boolean().default(false),
+  matchCallback: z.string().trim().min(3).max(300),
+  supportedAssets: z.array(z.enum(BLOCKONOMICS_ASSETS)).min(1).default(["BTC"]),
+  quoteExpiryMinutes: z.number().int().min(5).max(60).default(15),
+  requiredConfirmations: z.literal(2).default(2),
+});
+export type BlockonomicsProviderSettings = z.infer<typeof BlockonomicsProviderSettingsSchema>;
+
+export const BlockonomicsAdminConfigUpdateSchema = z.object({
+  apiKey: z.string().trim().min(10).max(500).optional(),
+  callbackSecret: z.string().trim().min(32).max(500).optional(),
+  settings: BlockonomicsProviderSettingsSchema,
+});
+export type BlockonomicsAdminConfigUpdateInput = z.infer<typeof BlockonomicsAdminConfigUpdateSchema>;
+
+export const BlockonomicsAdminToggleSchema = z.object({ enabled: z.boolean() });
+
+export interface BlockonomicsAdminPublicConfig extends BlockonomicsProviderSettings {
+  provider: "blockonomics";
+  configured: boolean;
+  apiKeyConfigured: boolean;
+  callbackSecretConfigured: boolean;
+  source: "database" | "environment" | "none";
+  version: number;
+  healthStatus: string;
+  lastHealthAt: string | null;
+  lastError: string | null;
+}
+
+export interface BlockonomicsAdminDashboard {
+  generatedAt: string;
+  configuration: BlockonomicsAdminPublicConfig;
+  totals: { payments: number; webhookEvents: number; failedWebhookEvents: number };
+  paymentsByStatus: Array<{ status: string; count: number }>;
+  reconciliationByStatus: Array<{ status: string; count: number }>;
+  paymentsByAsset: Array<{ asset: string; count: number }>;
+  webhooksByStatus: Array<{ status: string; count: number }>;
+  recentPayments: Array<{
+    id: string;
+    organizationId: string;
+    reference: string;
+    status: string;
+    amountCents: number;
+    currency: string;
+    cryptoCurrency: string | null;
+    confirmations: number;
+    requiredConfirmations: number;
+    reconciliationStatus: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  recentWebhookErrors: Array<{
+    id: string;
+    paymentId: string | null;
+    errorCode: string | null;
+    errorMessage: string | null;
+    attempts: number;
+    receivedAt: string;
+  }>;
+  recentReconciliationRuns: Array<{
+    id: string;
+    trigger: string;
+    timeframe: string;
+    matched: number;
+    settled: number;
+    issueCount: number;
+    createdAt: string;
+  }>;
+}
+
+export interface BlockonomicsAdminHealthResult {
+  healthy: boolean;
+  latencyMs: number;
+  checkedAt: string;
+  healthStatus: string;
+  error?: string;
+}
+
+export const BLOCKONOMICS_RECONCILIATION_TIMEFRAMES = ["1W", "2W", "1M", "3M", "6M", "1Y"] as const;
+export const BlockonomicsReconciliationRequestSchema = z.object({
+  timeframe: z.enum(BLOCKONOMICS_RECONCILIATION_TIMEFRAMES).default("1M"),
+});
+export type BlockonomicsReconciliationTimeframe = (typeof BLOCKONOMICS_RECONCILIATION_TIMEFRAMES)[number];
+export type BlockonomicsReconciliationIssueKind =
+  | "provider_payment_missing"
+  | "orphan_provider_payment"
+  | "duplicate_provider_transaction"
+  | "ambiguous_provider_match"
+  | "amount_mismatch"
+  | "address_mismatch"
+  | "asset_mismatch"
+  | "late_payment"
+  | "settlement_failed";
+
+export interface BlockonomicsReconciliationIssue {
+  kind: BlockonomicsReconciliationIssueKind;
+  paymentId?: string;
+  providerTransactionId?: string;
+  detail: string;
+}
+
+export interface BlockonomicsReconciliationResult {
+  runId: string;
+  trigger: "manual" | "scheduled";
+  timeframe: BlockonomicsReconciliationTimeframe;
+  startedAt: string;
+  completedAt: string;
+  localPaymentsScanned: number;
+  providerPaymentsScanned: number;
+  matched: number;
+  settled: number;
+  unchanged: number;
+  issues: BlockonomicsReconciliationIssue[];
+}

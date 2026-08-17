@@ -44,7 +44,7 @@ npm i -g pnpm@10.34.5
 pnpm install
 
 # 3. Start Postgres 17 + Redis (local install or Docker)
-#    See docs/DEPLOYMENT_ARCHITECTURE.md §Prerequisites for distro packages.
+#    `docker compose up -d` starts both on host-loopback ports.
 cp .env.example .env
 # edit .env — set JWT_SECRET and WINDELS_ENCRYPTION_KEY
 
@@ -63,7 +63,7 @@ cd apps/web && npx vite --host
 - API health: http://localhost:4000/healthz
 - Web app:    http://localhost:5173
 - Default admin after first registration: `admin@windels.ai` / first registered password (or `W1ndels!Admin#2026` per spec)
-- Full deployment guide (systemd + nginx + backups): **[docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md)**
+- Single-server production deployment (Docker, HTTPS, migrations, backups): **[docs/WINDELS-AI-OS-Deployment-Guide.md](./docs/WINDELS-AI-OS-Deployment-Guide.md)**
 
 ## Stack
 
@@ -102,7 +102,25 @@ tests/e2e/                # Playwright specs
 | [docs/MODULE_PLUGIN_CENTER.md](./docs/MODULE_PLUGIN_CENTER.md) | Signed `.wmod` format, fail-closed verification, isolated Module Runner contract, Super Admin lifecycle, runtime registration, rollback, and production validation |
 | [docs/NATIVE_AI_API.md](./docs/NATIVE_AI_API.md) | Native `/v1` AI provider API, WND keys, truthful model routing, SSE, external tool/agent loops, multimodal adapters, metering, billing, OpenAPI and production acceptance |
 | [docs/CLOUD_ANDROID.md](./docs/CLOUD_ANDROID.md) | Vendor-neutral Human + AI Cloud Android control plane, signed provider contract, agent permissions, collaboration locks, approvals, verification, fleet API and production checklist |
-| [docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md) | Install, build, systemd/nginx deploy, backup, troubleshooting |
+| [docs/WINDELS-AI-OS-Deployment-Guide.md](./docs/WINDELS-AI-OS-Deployment-Guide.md) | Single-server Docker/HTTPS deployment, verification, upgrades, backups |
+| [docs/EXTERNAL_API_INTEGRATION_CATALOG.md](./docs/EXTERNAL_API_INTEGRATION_CATALOG.md) | External API/provider inventory, why each is needed, configuration, implementation status, blockers and rollout order |
+| [docs/BLOCKONOMICS_STAGE1_ARCHITECTURE_AUDIT.md](./docs/BLOCKONOMICS_STAGE1_ARCHITECTURE_AUDIT.md) | Official-provider contract audit, current billing/ledger gaps, additive target design, and 15-stage acceptance gates |
+| [docs/BLOCKONOMICS_STAGE2_PAYMENT_FOUNDATION.md](./docs/BLOCKONOMICS_STAGE2_PAYMENT_FOUNDATION.md) | Additive durable payment/provider/webhook/allocation models, generalized ledger migration, and Stage 2 verification |
+| [docs/BLOCKONOMICS_STAGE3_PROVIDER_ADAPTER.md](./docs/BLOCKONOMICS_STAGE3_PROVIDER_ADAPTER.md) | Encrypted provider configuration and official fail-closed Blockonomics HTTP client |
+| [docs/BLOCKONOMICS_STAGE4_PAYMENT_CREATION.md](./docs/BLOCKONOMICS_STAGE4_PAYMENT_CREATION.md) | Durable pre-provider payment creation, live quote/address allocation, exact crypto units, and safe instructions |
+| [docs/BLOCKONOMICS_STAGE5_WEBHOOK_MONITORING.md](./docs/BLOCKONOMICS_STAGE5_WEBHOOK_MONITORING.md) | Durable GET callback inbox, exact status/amount matching, provider reconciliation, and USDT monitoring |
+| [docs/BLOCKONOMICS_STAGE6_BILLING_SETTLEMENT.md](./docs/BLOCKONOMICS_STAGE6_BILLING_SETTLEMENT.md) | Atomic allocation, existing-ledger journal, invoice/subscription settlement, receipt, audit, and idempotency |
+| [docs/BLOCKONOMICS_STAGE7_CURRENCY_GIFTCARD.md](./docs/BLOCKONOMICS_STAGE7_CURRENCY_GIFTCARD.md) | Fail-closed billable FX routing, provider currency eligibility, and durable WMPC Gift Card plus Blockonomics split tender |
+| [docs/BLOCKONOMICS_STAGE8_CHECKOUT_UI.md](./docs/BLOCKONOMICS_STAGE8_CHECKOUT_UI.md) | Existing checkout-page extension with invoice remainder, BTC/USDT selection, QR instructions, backend polling, confirmations, quote timer, and USDT monitoring |
+| [docs/BLOCKONOMICS_STAGE9_PAYMENT_HISTORY.md](./docs/BLOCKONOMICS_STAGE9_PAYMENT_HISTORY.md) | Unified organization history over durable Blockonomics and existing fiat records, safe detail evidence, receipt display, filters, and tenant isolation |
+| [docs/BLOCKONOMICS_STAGE10_SUPER_ADMIN.md](./docs/BLOCKONOMICS_STAGE10_SUPER_ADMIN.md) | Super Admin-only encrypted provider configuration, enablement, health probe, audit evidence, operational dashboard, and safe UI |
+| [docs/BLOCKONOMICS_STAGE11_RECONCILIATION.md](./docs/BLOCKONOMICS_STAGE11_RECONCILIATION.md) | Scheduled/manual authenticated provider-history reconciliation, discrepancy review, distributed lock, audit runs, and atomic recovery settlement |
+| [docs/BLOCKONOMICS_STAGE12_SECURITY_AI.md](./docs/BLOCKONOMICS_STAGE12_SECURITY_AI.md) | Payment authentication/rate limits, callback secret and log hardening, durable audits, and organization-scoped read-only AI tools |
+| [docs/BLOCKONOMICS_STAGE13_TEST_CERTIFICATION.md](./docs/BLOCKONOMICS_STAGE13_TEST_CERTIFICATION.md) | Full API/web test counts, recursive build/typecheck/lint evidence, offline Prisma validation, and explicit environment blockers |
+| [docs/BLOCKONOMICS_STAGE14_DOCUMENTATION.md](./docs/BLOCKONOMICS_STAGE14_DOCUMENTATION.md) | Documentation gate and truthfulness review for API/setup/deployment/operations coverage |
+| [docs/BLOCKONOMICS_API_SETUP_DEPLOYMENT.md](./docs/BLOCKONOMICS_API_SETUP_DEPLOYMENT.md) | Consolidated provider setup, API reference, callback contract, deployment, operations, troubleshooting, and Stage 15 acceptance checklist |
+| [docs/BLOCKONOMICS_STAGE15_TARGET_RUNTIME_VALIDATION.md](./docs/BLOCKONOMICS_STAGE15_TARGET_RUNTIME_VALIDATION.md) | Measured target-runtime attempt, absent dependency/network evidence, non-destructive preflight, and exact unblock procedure; validation remains blocked |
+| [docs/PRODUCTION_FIX_PLAN.md](./docs/PRODUCTION_FIX_PLAN.md) | Ordered remediation checklist and completion gates for production blockers |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |
 | [docs/SESSION_89_SPECIFICATION.md](./docs/SESSION_89_SPECIFICATION.md) | Session 89 — Tenant Isolation & Cross-Tenant Data Governance (per-org isolation policies, namespace audit, cross-tenant self-tests, export gate) |
@@ -162,7 +180,7 @@ tests/e2e/                # Playwright specs
 | [docs/SESSION_127_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_127_RUNTIME_VALIDATION_CHECKLIST.md) | Session 127 runtime validation (quantum readiness and connector demo gating, 100% complete module inventory audit over production builds, and full target-environment runtime validation sequence for Sessions 1–127) |
 | [docs/SESSION_197_SPECIFICATION.md](./docs/SESSION_197_SPECIFICATION.md) | Session 197 — Native AI Studio completion (the final `nativeAi` inventory STUB is now a session-authenticated Studio with health-gated real-only chat/embeddings, organization-scoped quota and usage, an explicit no-demo availability state, dedicated shared contract/client/console, and no leakage of internal provider identities; **144 COMPLETE / 0 PARTIAL / 0 STUB**) |
 | [docs/SESSION_197_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_197_RUNTIME_VALIDATION_CHECKLIST.md) | Session 197 runtime validation (disabled/provider-accepted paths, real-only chat/embeddings, tenant/billing/quota boundaries, durable ledger entries, Studio vs API-key `/v1` separation, and inventory verification) |
-| [docs/SESSION_128_SPECIFICATION.md](./docs/SESSION_128_SPECIFICATION.md) | Session 128 — Multi-Provider Payment Gateways (Flutterwave, Paystack, PayPal & Crypto/Blockonomics) (new additive `payments` module supporting African and global checkouts alongside sovereign on-chain crypto checkouts across Bitcoin BTC, Tron TRC-20, Ethereum ERC-20, and BNB Chain; connects paid checkouts to `billing.markInvoicePaid` for automated invoice settlement; 109 COMPLETE / 0 PARTIAL / 0 STUB / 0 DEMO DATA) |
+| [docs/SESSION_128_SPECIFICATION.md](./docs/SESSION_128_SPECIFICATION.md) | Historical Session 128 payment specification. Fiat adapters remain available; generic crypto is fail-closed. Blockonomics implementation status and provider-supported network truth are governed by the Stage 1 audit above, not the historical completion claim. |
 | [docs/SESSION_128_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_128_RUNTIME_VALIDATION_CHECKLIST.md) | Session 128 runtime validation (provider initialization, HMAC signature verifications, crypto confirmation thresholds across BTC/TRC-20/ERC-20/BNB Chain, and billing invoice settlement) |
 | [docs/SESSION_117_SPECIFICATION.md](./docs/SESSION_117_SPECIFICATION.md) | Session 117 — Mobile App / PWA completion (a durable offline queue that stores and never executes, per-action receipts with `retainLocally`, replay ordered by server receipt time, expiry reported as expiry, device-ownership assertion with secret-free views, a per-device PIN throttle and PIN removal, push health by endpoint host with retirement recorded, an advisory organization policy, an eighteen-kind ledger, and the client-side fix that stops IndexedDB deleting work the server never took) |
 | [docs/SESSION_117_RUNTIME_VALIDATION_CHECKLIST.md](./docs/SESSION_117_RUNTIME_VALIDATION_CHECKLIST.md) | Session 117 runtime validation (Session 21 endpoint compatibility and the still-public `/mobile/config`, a real handset losing and regaining signal, queue semantics and cross-instance durability, replay ordering against a deliberately wrong device clock, `mob:*` isolation, PIN lockout over real Redis TTLs, push retirement against a real push service, the committed VAPID pair as a production blocker) |

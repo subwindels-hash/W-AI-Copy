@@ -5,8 +5,8 @@
  * whole department. This service owns:
  *
  *   - connections: multiple accounts/orgs per organization, token verified
- *     against the GitHub API at connect time and stored only in the
- *     org-scoped store (every read returns `tokenMasked`);
+ *     against the GitHub API at connect time and stored as an AES-256-GCM
+ *     envelope in the org-scoped store (every read returns `tokenMasked`);
  *   - repositories: list/create, structure reading (recursive contents),
  *     branches (list/create), commits;
  *   - pull requests: list/get/create/merge/review (approve)/close;
@@ -27,6 +27,7 @@ import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
 import { logger } from "../config/logger.js";
+import { currentEncryptionKeyId, decryptString, encryptString, isEncryptedBlob, maskSecret, type EncryptedBlob } from "../security/encryption.js";
 import type {
   AiEngineeringCheckRun,
   AiEngineeringConnection,
@@ -44,9 +45,6 @@ const K = {
 
 const API = "https://api.github.com";
 const MAX_CONNECTIONS = 20;
-const j = <T>(s: string | null): T | null => (s ? (JSON.parse(s) as T) : null);
-
-const mask = (token: string) => `${token.slice(0, 8)}…${token.length > 12 ? token.slice(-2) : ""}`;
 
 interface GhJson { [k: string]: any }
 
@@ -308,72 +306,137 @@ export class GithubClient {
   }
 }
 
+interface StoredGithubConnection extends AiEngineeringConnection {
+  tokenEnc?: EncryptedBlob;
+  /** Legacy plaintext field. Adopted and removed on the next read. */
+  token?: string;
+}
+
+function publicConnection(record: StoredGithubConnection): AiEngineeringConnection {
+  const { token: _legacy, tokenEnc: _encrypted, ...safe } = record;
+  return safe;
+}
+
+async function loadStoredConnection(oid: string, id: string): Promise<{ connection: AiEngineeringConnection; token: string } | null> {
+  const raw = await redis.hget(K.conn(oid, id), "doc");
+  if (!raw) return null;
+  let record: StoredGithubConnection;
+  try { record = JSON.parse(raw) as StoredGithubConnection; }
+  catch { throw AppError.internal("Stored GitHub connection is invalid"); }
+
+  let token: string | null = null;
+  if (record.tokenEnc && isEncryptedBlob(record.tokenEnc)) {
+    token = decryptString(record.tokenEnc);
+    if (token && record.tokenEnc.kid !== currentEncryptionKeyId()) {
+      record = { ...publicConnection(record), tokenEnc: encryptString(token), updatedAt: new Date().toISOString() };
+      await redis.hset(K.conn(oid, id), "doc", JSON.stringify(record));
+    }
+  } else if (typeof record.token === "string" && record.token) {
+    // One-shot adoption of records created before encrypted credential storage.
+    token = record.token;
+    const migrated: StoredGithubConnection = {
+      ...publicConnection(record),
+      tokenEnc: encryptString(token),
+      tokenMasked: maskSecret(token),
+      credentialVersion: Math.max(1, record.credentialVersion ?? 1),
+      credentialsUpdatedAt: record.credentialsUpdatedAt ?? new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    };
+    await redis.hset(K.conn(oid, id), "doc", JSON.stringify(migrated));
+    record = migrated;
+  }
+  if (!token) throw AppError.internal("GitHub credential cannot be decrypted; reconnect this account");
+  return { connection: publicConnection(record), token };
+}
+
 export const GithubService = {
   async connect(oid: string, input: { accountLabel: string; token: string; addedBy: string }, fetchFn: typeof fetch = fetch): Promise<AiEngineeringConnection> {
     const existing = await redis.lrange(K.connidx(oid), 0, -1);
     if (existing.length >= MAX_CONNECTIONS) throw AppError.badRequest("Connection limit reached");
-    const client = new GithubClient(input.token, fetchFn);
-    let orgs: string[] = [];
-    let status: AiEngineeringConnection["status"] = "connected";
-    try {
-      const v = await client.verify();
-      orgs = v.orgs;
-    } catch (err) {
-      status = (err as AppError).status === 401 ? "failed" : "unverified";
-      logger.warn("[ai-engineering] github verify failed", { err: (err as Error).message });
+    let verified: { login: string; orgs: string[] };
+    try { verified = await new GithubClient(input.token, fetchFn).verify(); }
+    catch (error) {
+      logger.warn("[ai-engineering] GitHub credential verification failed", { status: (error as AppError).status });
+      if ((error as AppError).status === 401) throw AppError.unauthorized("GitHub rejected the supplied credential");
+      throw error;
     }
-    const conn: AiEngineeringConnection = {
+    const timestamp = new Date().toISOString();
+    const connection: AiEngineeringConnection = {
       id: `aewc-${randomUUID().slice(0, 8)}`,
       provider: "github",
       accountLabel: input.accountLabel,
-      organizations: orgs,
-      tokenMasked: mask(input.token),
-      status,
+      organizations: verified.orgs,
+      tokenMasked: maskSecret(input.token),
+      status: "connected",
       addedBy: input.addedBy,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
+      credentialVersion: 1,
+      credentialsUpdatedAt: timestamp,
+      createdAt: timestamp,
+      updatedAt: timestamp,
     };
-    // The token itself lives only in the org-scoped store (never returned).
-    await redis.hset(K.conn(oid, conn.id), "doc", JSON.stringify({ ...conn, token: input.token }));
-    await redis.lpush(K.connidx(oid), conn.id);
+    const stored: StoredGithubConnection = { ...connection, tokenEnc: encryptString(input.token) };
+    await redis.hset(K.conn(oid, connection.id), "doc", JSON.stringify(stored));
+    await redis.lpush(K.connidx(oid), connection.id);
     await redis.ltrim(K.connidx(oid), 0, MAX_CONNECTIONS - 1);
-    return conn;
+    logger.info("[ai-engineering] GitHub credential connected", { organizationId: oid, connectionId: connection.id, addedBy: input.addedBy, credentialVersion: 1 });
+    return connection;
   },
 
   async list(oid: string): Promise<AiEngineeringConnection[]> {
     const ids = await redis.lrange(K.connidx(oid), 0, -1);
     const out: AiEngineeringConnection[] = [];
     for (const id of ids) {
-      const raw = await redis.hget(K.conn(oid, id), "doc");
-      if (!raw) continue;
-      const rec = JSON.parse(raw) as AiEngineeringConnection & { token?: string };
-      const { token: _token, ...rest } = rec;
-      out.push(rest);
+      const loaded = await loadStoredConnection(oid, id);
+      if (loaded) out.push(loaded.connection);
     }
     return out;
   },
 
-  async get(oid: string, id: string): Promise<(AiEngineeringConnection & { token: string }) | null> {
-    const raw = await redis.hget(K.conn(oid, id), "doc");
-    if (!raw) return null;
-    const rec = JSON.parse(raw) as AiEngineeringConnection & { token?: string };
-    if (!rec.token) return null;
-    return rec as AiEngineeringConnection & { token: string };
+  /** Public connection metadata only; decrypted credentials never leave this module. */
+  async get(oid: string, id: string): Promise<AiEngineeringConnection | null> {
+    return (await loadStoredConnection(oid, id))?.connection ?? null;
+  },
+
+  async rotateCredential(oid: string, id: string, token: string, actorId: string, fetchFn: typeof fetch = fetch): Promise<AiEngineeringConnection> {
+    const current = await loadStoredConnection(oid, id);
+    if (!current) throw AppError.notFound("GitHub connection not found");
+    let verified: { login: string; orgs: string[] };
+    try { verified = await new GithubClient(token, fetchFn).verify(); }
+    catch (error) {
+      logger.warn("[ai-engineering] GitHub credential rotation verification failed", { connectionId: id, status: (error as AppError).status });
+      if ((error as AppError).status === 401) throw AppError.unauthorized("GitHub rejected the replacement credential");
+      throw error;
+    }
+    const timestamp = new Date().toISOString();
+    const next: StoredGithubConnection = {
+      ...current.connection,
+      organizations: verified.orgs,
+      tokenMasked: maskSecret(token),
+      status: "connected",
+      credentialVersion: (current.connection.credentialVersion ?? 1) + 1,
+      credentialsUpdatedAt: timestamp,
+      credentialsRotatedBy: actorId,
+      updatedAt: timestamp,
+      tokenEnc: encryptString(token),
+    };
+    await redis.hset(K.conn(oid, id), "doc", JSON.stringify(next));
+    logger.info("[ai-engineering] GitHub credential rotated", { organizationId: oid, connectionId: id, actorId, credentialVersion: next.credentialVersion });
+    return publicConnection(next);
   },
 
   async remove(oid: string, id: string): Promise<boolean> {
-    const conn = await this.get(oid, id);
-    if (!conn) return false;
+    if (!(await redis.hget(K.conn(oid, id), "doc"))) return false;
     await redis.del(K.conn(oid, id));
     await redis.lrem(K.connidx(oid), 0, id);
+    logger.info("[ai-engineering] GitHub credential revoked", { organizationId: oid, connectionId: id });
     return true;
   },
 
-  /** Resolve a connection to a client, or throw an honest "not connected". */
+  /** Resolve a connection to a client without exposing its token to callers. */
   async client(oid: string, connectionId?: string): Promise<{ client: GithubClient; conn: AiEngineeringConnection }> {
     if (!connectionId) throw AppError.badRequest("This repository has no GitHub connection configured");
-    const rec = await this.get(oid, connectionId);
-    if (!rec) throw AppError.badRequest("GitHub connection not found");
-    return { client: new GithubClient(rec.token), conn: rec };
+    const loaded = await loadStoredConnection(oid, connectionId);
+    if (!loaded) throw AppError.badRequest("GitHub connection not found");
+    return { client: new GithubClient(loaded.token), conn: loaded.connection };
   },
 };

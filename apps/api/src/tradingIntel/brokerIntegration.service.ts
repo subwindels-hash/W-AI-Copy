@@ -25,7 +25,7 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
-import { encryptString, decryptString } from "../security/encryption.js";
+import { currentEncryptionKeyId, encryptJson, decryptString, isEncryptedBlob, type EncryptedBlob } from "../security/encryption.js";
 import { logger } from "../config/logger.js";
 import { env } from "../config/env.js";
 import type {
@@ -33,7 +33,7 @@ import type {
   BrokerCandle, BrokerTick, BrokerSyncState, BrokerConnectionStatus, TradingMode,
   TradeSignalInput, TradeExecution, TradingStrategy, BrokerRiskControls,
   PortfolioIntelligence, TradingCommandCenter, BrokerTradingAgent, BrokerAgentKey,
-  CreateBrokerAccountInput, UpdateBrokerAccountInput, CreateStrategyInput,
+  CreateBrokerAccountInput, UpdateBrokerAccountInput, RotateBrokerCredentialsInput, CreateStrategyInput,
   UpdateRiskControlsInput, ConnectorHealth, ConnectorTransport, BrokerOrderRequest,
   HistoryQuerySchema, CandleQuerySchema,
 } from "@windels/shared/brokerIntegration";
@@ -94,6 +94,94 @@ const BROKER_LABEL: Record<string, string> = {
   oanda: "OANDA", ig: "IG",
 };
 
+interface BrokerCredentialRecord {
+  v: 2;
+  login: string;
+  password: string;
+  server: string;
+  passphrase?: string;
+  subAccount?: string;
+  walletKey?: string;
+  metaapiToken?: string;
+  version: number;
+  updatedAt: string;
+  rotatedBy?: string;
+}
+
+function maskIdentifier(value: string): string {
+  if (value.length <= 4) return "****";
+  if (value.length <= 8) return `${value.slice(0, 2)}…${value.slice(-2)}`;
+  return `${value.slice(0, 4)}…${value.slice(-4)}`;
+}
+
+function publicConnectorConfig(config: BrokerAccount["connectorConfig"]): BrokerAccount["connectorConfig"] {
+  if (!config) return undefined;
+  const { metaapiToken: _secret, ...safe } = config;
+  return Object.keys(safe).length ? safe : undefined;
+}
+
+function publicAccount(account: BrokerAccount, credential?: BrokerCredentialRecord): BrokerAccount {
+  const loginMasked = credential ? maskIdentifier(credential.login) : (account.loginMasked || maskIdentifier(account.login));
+  return {
+    ...account,
+    login: loginMasked,
+    loginMasked,
+    credentialsConfigured: credential ? true : account.credentialsConfigured === true,
+    credentialVersion: credential?.version ?? account.credentialVersion ?? 1,
+    credentialsUpdatedAt: credential?.updatedAt ?? account.credentialsUpdatedAt ?? account.updatedAt,
+    connectorConfig: publicConnectorConfig(account.connectorConfig),
+  };
+}
+
+async function loadBrokerCredential(oid: string, account: BrokerAccount): Promise<BrokerCredentialRecord> {
+  const raw = await redis.get(K.creds(oid, account.id));
+  if (!raw) throw new AppError("INTERNAL_ERROR", "broker credentials are missing or revoked", 500);
+  let blob: unknown;
+  try { blob = JSON.parse(raw); } catch { throw new AppError("INTERNAL_ERROR", "stored broker credential is invalid", 500); }
+  if (!isEncryptedBlob(blob)) throw new AppError("INTERNAL_ERROR", "stored broker credential is not encrypted", 500);
+  const envelopeNeedsRotation = blob.kid !== currentEncryptionKeyId();
+  const plaintext = decryptString(blob as EncryptedBlob);
+  if (!plaintext) throw new AppError("INTERNAL_ERROR", "could not decrypt broker credentials; rotate or reconnect the account", 500);
+
+  let credential: BrokerCredentialRecord;
+  let legacy = false;
+  try {
+    const parsed = JSON.parse(plaintext) as Partial<BrokerCredentialRecord>;
+    if (parsed.v !== 2 || !parsed.login || !parsed.password) throw new Error("legacy");
+    credential = {
+      v: 2, login: parsed.login, password: parsed.password,
+      server: parsed.server || account.server,
+      passphrase: parsed.passphrase, subAccount: parsed.subAccount,
+      walletKey: parsed.walletKey, metaapiToken: parsed.metaapiToken,
+      version: Math.max(1, Number(parsed.version ?? account.credentialVersion ?? 1)),
+      updatedAt: parsed.updatedAt || account.credentialsUpdatedAt || account.updatedAt,
+      rotatedBy: parsed.rotatedBy,
+    };
+  } catch {
+    // Legacy format encrypted only the password; login and MetaApi token were
+    // left in the public account document. Adopt them exactly once.
+    legacy = true;
+    credential = {
+      v: 2,
+      login: account.login,
+      password: plaintext,
+      server: account.server,
+      metaapiToken: account.connectorConfig?.metaapiToken,
+      version: Math.max(1, account.credentialVersion ?? 1),
+      updatedAt: account.credentialsUpdatedAt || account.updatedAt || now(),
+    };
+  }
+
+  const safe = publicAccount(account, credential);
+  const accountNeedsRewrite = account.login !== safe.login
+    || account.loginMasked !== safe.loginMasked
+    || account.credentialsConfigured !== true
+    || !!account.connectorConfig?.metaapiToken;
+  if (legacy || envelopeNeedsRotation) await redis.set(K.creds(oid, account.id), s2(encryptJson(credential)));
+  if (legacy || accountNeedsRewrite) await redis.set(K.account(oid, account.id), s2(safe));
+  return credential;
+}
+
 /** Broker connector registry entry (exported for diagnostics/UI). */
 export const CONNECTOR_CATALOG = [
   { broker: "mt5", name: "MetaTrader 5", protocol: "native Python bridge (ZMQ/HTTP) or MetaApi cloud; use MT5 demo accounts for paper trading", requiresConfig: false },
@@ -147,14 +235,30 @@ export const BrokerIntegrationService = {
     const ids = (await redis.smembers(K.accounts(oid))) ?? [];
     const out: BrokerAccount[] = [];
     for (const id of ids) {
-      const rec = j<BrokerAccount>(await redis.get(K.account(oid, id)));
-      if (rec) out.push(rec);
+      const account = await this.getAccount(oid, id);
+      if (account) out.push(account);
     }
     return out.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
   async getAccount(oid: string, id: string): Promise<BrokerAccount | null> {
-    return j<BrokerAccount>(await redis.get(K.account(oid, id)));
+    const account = j<BrokerAccount>(await redis.get(K.account(oid, id)));
+    if (!account) return null;
+    try {
+      return publicAccount(account, await loadBrokerCredential(oid, account));
+    } catch (error) {
+      // Keep account metadata visible for recovery, but make it explicitly
+      // non-connectable and never return a potentially plaintext identifier.
+      const safe = {
+        ...publicAccount(account),
+        credentialsConfigured: false,
+        status: "requires_config" as const,
+        error: "Credentials are missing, revoked, or cannot be decrypted",
+      };
+      await redis.set(K.account(oid, id), s2(safe));
+      logger.warn("broker credential unavailable", { organizationId: oid, accountId: id, err: (error as Error).message });
+      return safe;
+    }
   },
 
   async mustGetAccount(oid: string, id: string): Promise<BrokerAccount> {
@@ -166,49 +270,129 @@ export const BrokerIntegrationService = {
   async createAccount(oid: string, userId: string, input: CreateBrokerAccountInput): Promise<BrokerAccount> {
     const id = randomUUID();
     const nowIso = now();
-    // Store credentials encrypted at rest; never return them.
-    await redis.set(K.creds(oid, id), s2(encryptString(input.password)));
+    const credential: BrokerCredentialRecord = {
+      v: 2,
+      login: input.login,
+      password: input.password,
+      server: input.server,
+      passphrase: input.passphrase,
+      subAccount: input.subAccount,
+      walletKey: input.walletKey,
+      metaapiToken: input.connectorConfig?.metaapiToken,
+      version: 1,
+      updatedAt: nowIso,
+      rotatedBy: userId,
+    };
+    await redis.set(K.creds(oid, id), s2(encryptJson(credential)));
     const mode: TradingMode = input.mode ?? "analysis_only";
     const currency = input.currency ?? "USD";
     const leverage = input.leverage ?? 100;
     const environment = input.environment ?? "demo";
+    const loginMasked = maskIdentifier(input.login);
     const account: BrokerAccount = {
       id, organizationId: oid, name: input.name, broker: input.broker,
       brokerLabel: BROKER_LABEL[input.broker] ?? input.broker,
-      login: input.login, server: input.server, mode,
+      login: loginMasked, loginMasked, credentialsConfigured: true,
+      credentialVersion: 1, credentialsUpdatedAt: nowIso,
+      server: input.server, mode,
       status: "disconnected",
       environment,
-      connectorConfig: input.connectorConfig ?? undefined,
+      connectorConfig: publicConnectorConfig(input.connectorConfig ?? undefined),
       currency, leverage,
       account: { balance: 0, equity: 0, margin: 0, freeMargin: 0, profit: 0, dailyPnl: 0 },
       createdAt: nowIso, updatedAt: nowIso,
     };
     await redis.set(K.account(oid, id), s2(account));
     await redis.sadd(K.accounts(oid), id);
-    await Mt5Monitor.audit(oid, id, "connect", { phase: "created", broker: input.broker, environment });
+    await Mt5Monitor.audit(oid, id, "connect", { phase: "created", broker: input.broker, environment, credentialVersion: 1 });
     try { Metrics.counter("bri.accounts.created", { broker: input.broker }).incr(); } catch {}
     return account;
   },
 
   async updateAccount(oid: string, id: string, patch: UpdateBrokerAccountInput): Promise<BrokerAccount> {
-    const rec = await this.mustGetAccount(oid, id);
+    let rec = await this.mustGetAccount(oid, id);
+    if (patch.connectorConfig?.metaapiToken) {
+      rec = await this.rotateCredentials(oid, id, { metaapiToken: patch.connectorConfig.metaapiToken }, "legacy-config-update");
+    }
     if (patch.name) rec.name = patch.name;
     if (patch.mode) rec.mode = patch.mode;
-    if (patch.connectorConfig) rec.connectorConfig = { ...rec.connectorConfig, ...patch.connectorConfig };
+    if (patch.connectorConfig) rec.connectorConfig = {
+      ...rec.connectorConfig,
+      ...publicConnectorConfig(patch.connectorConfig),
+    };
     rec.updatedAt = now();
-    await redis.set(K.account(oid, id), s2(rec));
-    // Propagate connectorConfig changes (e.g. readOnly toggle) into any live
-    // connector session so the change takes effect without requiring a manual
-    // reconnect. Connectors that care (BaseCryptoConnector, Mt5Connector)
-    // read opts.config on every sendOrder; patching the object reference
-    // makes the next call see the new value.
+    await redis.set(K.account(oid, id), s2(publicAccount(rec)));
     try {
       const conn = connectorRegistry.get(rec.broker);
       if (conn && typeof (conn as any)._patchSessionConfig === "function") {
         (conn as any)._patchSessionConfig(id, rec.connectorConfig ?? {});
       }
     } catch (e) { logger.warn("[bri] live session config patch failed", { err: (e as Error).message }); }
-    return rec;
+    return publicAccount(rec);
+  },
+
+  async rotateCredentials(oid: string, id: string, patch: RotateBrokerCredentialsInput, actorId: string): Promise<BrokerAccount> {
+    const account = await this.mustGetAccount(oid, id);
+    let current: BrokerCredentialRecord;
+    try { current = await loadBrokerCredential(oid, account); }
+    catch {
+      if (!patch.login || !patch.password) throw AppError.badRequest("Reconnecting a revoked credential requires login and password/API secret");
+      current = {
+        v: 2, login: patch.login, password: patch.password,
+        server: patch.server ?? account.server,
+        version: Math.max(0, account.credentialVersion ?? 0),
+        updatedAt: account.credentialsUpdatedAt ?? account.updatedAt,
+      };
+    }
+    const connector = connectorRegistry.get(account.broker);
+    if (connector?.isConnected(id)) await connector.disconnect(id).catch(() => {});
+    const timestamp = now();
+    const next: BrokerCredentialRecord = {
+      ...current,
+      login: patch.login ?? current.login,
+      server: patch.server ?? current.server,
+      password: patch.password ?? current.password,
+      passphrase: patch.passphrase === null ? undefined : patch.passphrase ?? current.passphrase,
+      subAccount: patch.subAccount === null ? undefined : patch.subAccount ?? current.subAccount,
+      walletKey: patch.walletKey === null ? undefined : patch.walletKey ?? current.walletKey,
+      metaapiToken: patch.metaapiToken === null ? undefined : patch.metaapiToken ?? current.metaapiToken,
+      version: current.version + 1,
+      updatedAt: timestamp,
+      rotatedBy: actorId,
+    };
+    await redis.set(K.creds(oid, id), s2(encryptJson(next)));
+    const safe = publicAccount({
+      ...account,
+      login: maskIdentifier(next.login),
+      loginMasked: maskIdentifier(next.login),
+      server: next.server,
+      status: "disconnected",
+      error: undefined,
+      credentialVersion: next.version,
+      credentialsUpdatedAt: timestamp,
+      credentialsConfigured: true,
+      updatedAt: timestamp,
+    }, next);
+    await redis.set(K.account(oid, id), s2(safe));
+    await Mt5Monitor.audit(oid, id, "connect", { phase: "credentials-rotated", credentialVersion: next.version, actorId });
+    return safe;
+  },
+
+  async revokeCredentials(oid: string, id: string, actorId: string): Promise<BrokerAccount> {
+    const account = await this.mustGetAccount(oid, id);
+    const connector = connectorRegistry.get(account.broker);
+    if (connector?.isConnected(id)) await connector.disconnect(id).catch(() => {});
+    await redis.del(K.creds(oid, id));
+    const safe: BrokerAccount = {
+      ...publicAccount(account),
+      credentialsConfigured: false,
+      status: "requires_config",
+      error: "Credentials revoked",
+      updatedAt: now(),
+    };
+    await redis.set(K.account(oid, id), s2(safe));
+    await Mt5Monitor.audit(oid, id, "disconnect", { phase: "credentials-revoked", actorId });
+    return safe;
   },
 
   async removeAccount(oid: string, id: string): Promise<void> {
@@ -230,11 +414,15 @@ export const BrokerIntegrationService = {
     await Mt5Monitor.audit(oid, id, "disconnect", { phase: "removed" });
   },
 
-  async verifyCredentials(oid: string, id: string): Promise<{ valid: boolean; login: string }> {
-    const rec = await this.mustGetAccount(oid, id);
-    const blob = j<ReturnType<typeof encryptString>>(await redis.get(K.creds(oid, id)));
-    const plain = decryptString(blob);
-    return { valid: plain !== null && plain.length > 0, login: rec.login };
+  async verifyCredentials(oid: string, id: string): Promise<{ valid: boolean; loginMasked: string; credentialVersion: number; fields: string[] }> {
+    const account = await this.mustGetAccount(oid, id);
+    try {
+      const credential = await loadBrokerCredential(oid, account);
+      const fields = ["login", "password", "server", credential.passphrase && "passphrase", credential.subAccount && "subAccount", credential.walletKey && "walletKey", credential.metaapiToken && "metaapiToken"].filter(Boolean) as string[];
+      return { valid: !!credential.login && !!credential.password, loginMasked: maskIdentifier(credential.login), credentialVersion: credential.version, fields };
+    } catch {
+      return { valid: false, loginMasked: account.loginMasked ?? account.login, credentialVersion: account.credentialVersion ?? 0, fields: [] };
+    }
   },
 
   /* ── Connect / disconnect / sync (real connector path) ──── */
@@ -247,8 +435,13 @@ export const BrokerIntegrationService = {
     rec.status = "connecting"; rec.error = undefined; rec.updatedAt = now();
     await redis.set(K.account(oid, id), s2(rec));
     const transport = opts?.transport ?? rec.connectorConfig?.bridgeEndpoint ? "native_python_zmq" : undefined;
-    // Piggyback orgId on connector config so connectors can emit org-scoped events.
-    const configWithOid: any = { ...(rec.connectorConfig ?? {}), _oid: oid };
+    // Secret connector options are injected only for the in-memory connection
+    // call; they are never copied back into the public account document.
+    const configWithOid: any = {
+      ...(rec.connectorConfig ?? {}),
+      ...(creds.extra?.metaapiToken ? { metaapiToken: creds.extra.metaapiToken } : {}),
+      _oid: oid,
+    };
     const result = await connector.connect(id, creds, {
       name: rec.name, environment: rec.environment,
       transport, config: configWithOid,
@@ -1257,11 +1450,20 @@ export const BrokerIntegrationService = {
   /* ── Internal persistence helpers ─────────────────────────── */
 
   async loadCredentials(oid: string, id: string): Promise<{ login: string; password: string; server: string; extra?: Record<string, string> }> {
-    const rec = await this.mustGetAccount(oid, id);
-    const blob = j<ReturnType<typeof encryptString>>(await redis.get(K.creds(oid, id)));
-    const plain = decryptString(blob);
-    if (!plain) throw new AppError("INTERNAL_ERROR", "could not decrypt broker credentials", 500);
-    return { login: rec.login, password: plain, server: rec.server };
+    const account = await this.mustGetAccount(oid, id);
+    const credential = await loadBrokerCredential(oid, account);
+    const extra = Object.fromEntries(Object.entries({
+      passphrase: credential.passphrase,
+      subAccount: credential.subAccount,
+      walletKey: credential.walletKey,
+      metaapiToken: credential.metaapiToken,
+    }).filter(([, value]) => typeof value === "string" && value.length > 0)) as Record<string, string>;
+    return {
+      login: credential.login,
+      password: credential.password,
+      server: credential.server,
+      ...(Object.keys(extra).length ? { extra } : {}),
+    };
   },
 
   async persistPositions(oid: string, accountId: string, positions: BrokerPosition[]): Promise<void> {

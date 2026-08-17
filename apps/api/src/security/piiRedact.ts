@@ -36,7 +36,8 @@ const SENSITIVE_KEYS = new Set([
   "password", "token", "accesstoken", "refreshtoken", "secret", "apikey",
   "authorization", "auth", "cookie", "set-cookie", "pin", "ssn",
   "creditcard", "cvv", "cardnumber", "medicalrecord", "phi", "email",
-  "phone", "mfasecret", "otp", "recoverycodes",
+  "phone", "mfasecret", "otp", "recoverycodes", "passphrase", "walletkey",
+  "privatekey", "metaapitoken", "clientsecret", "signingkey", "bottokenenc", "subaccount",
 ]);
 
 /**

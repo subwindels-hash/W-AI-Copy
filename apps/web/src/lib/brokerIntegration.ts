@@ -19,7 +19,12 @@ export interface BrokerAccount {
   name: string;
   broker: BrokerType;
   brokerLabel: string;
+  /** Masked login/API key only. */
   login: string;
+  loginMasked?: string;
+  credentialsConfigured?: boolean;
+  credentialVersion?: number;
+  credentialsUpdatedAt?: string;
   server: string;
   mode: TradingMode;
   status: BrokerConnectionStatus;
@@ -199,12 +204,15 @@ export const TRADING_MODES: { value: TradingMode; label: string; blurb: string }
 export const brokerApi = {
   connectors: () => api<{ catalog: any[]; live: { broker: string; label: string; transports: string[]; available: boolean; reason?: string }[] }>("/brokers/connectors"),
   accounts: () => api<BrokerAccount[]>("/brokers/accounts"),
-  createAccount: (input: { name: string; broker: BrokerType; login: string; server: string; password: string; mode?: TradingMode; currency?: string; leverage?: number; environment?: "demo" | "live" | "contest" | "sandbox" }) =>
+  createAccount: (input: { name: string; broker: BrokerType; login: string; server: string; password: string; passphrase?: string; subAccount?: string; walletKey?: string; mode?: TradingMode; currency?: string; leverage?: number; environment?: "demo" | "live" | "contest" | "sandbox"; connectorConfig?: { metaapiToken?: string; readOnly?: boolean } }) =>
     api<BrokerAccount>("/brokers/accounts", { method: "POST", json: input }),
   updateAccount: (id: string, patch: { name?: string; mode?: TradingMode; connectorConfig?: { readOnly?: boolean; allowedSymbols?: string[]; deniedSymbols?: string[] } }) =>
     api<BrokerAccount>(`/brokers/accounts/${id}`, { method: "PATCH", json: patch }),
   removeAccount: (id: string) => api<void>(`/brokers/accounts/${id}`, { method: "DELETE" }),
-  verify: (id: string) => api<{ valid: boolean; login: string }>(`/brokers/accounts/${id}/verify`, { method: "POST" }),
+  verify: (id: string) => api<{ valid: boolean; loginMasked: string; credentialVersion: number; fields: string[] }>(`/brokers/accounts/${id}/verify`, { method: "POST" }),
+  rotateCredentials: (id: string, patch: { login?: string; server?: string; password?: string; passphrase?: string | null; subAccount?: string | null; walletKey?: string | null; metaapiToken?: string | null }) =>
+    api<BrokerAccount>(`/brokers/accounts/${id}/credentials`, { method: "PATCH", json: patch }),
+  revokeCredentials: (id: string) => api<BrokerAccount>(`/brokers/accounts/${id}/credentials`, { method: "DELETE" }),
   connect: (id: string, opts: { force?: boolean; transport?: ConnectorTransport } = {}) =>
     api<BrokerAccount>(`/brokers/accounts/${id}/connect`, { method: "POST", json: opts }),
   disconnect: (id: string) => api<BrokerAccount>(`/brokers/accounts/${id}/disconnect`, { method: "POST" }),

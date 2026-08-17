@@ -1,179 +1,278 @@
-# WINDELS AI OS — Server Deployment Guide
+# WINDELS AI OS — Single-Server Deployment Guide
 
-## Key Deployment Options
+WINDELS AI OS can run on a Linux server. The supported single-server path is the
+standalone Docker Compose stack in `infra/docker/docker-compose.prod.yml`.
 
-There are four primary ways to run WINDELS AI OS on a server.
+The stack contains:
 
-### 1. Docker Compose (Recommended for Single Server / VPS)
+- React web application served by Nginx
+- Node/Express API on a private container network
+- PostgreSQL 17 with a separate, non-superuser API login
+- Redis 8 with authentication and persistent append-only storage
+- a one-shot database-role, migration, and bootstrap sequence
+- Traefik with automatic Let's Encrypt HTTPS
+- persistent volumes for PostgreSQL, Redis, uploaded files, generated media,
+  module packages, and TLS state
 
-The repository includes production Docker and Compose configurations in `docker-compose.yml` and `infra/docker/`.
+> **Scope:** this is an appropriate starting point for a VPS, staging system, or
+> small production installation. It does not by itself provide multi-node high
+> availability. Modules requiring external providers, GPUs, Android
+> virtualization, trading bridges, payment credentials, or physical hardware
+> remain unavailable until those providers are separately configured and
+> accepted in the target environment.
 
-**Quick Docker Launch:**
+## 1. Server requirements
 
-```bash
-# 1. Clone the repository
-git clone <repo-url> /opt/windels && cd /opt/windels
+### Minimum for evaluation or a small team
 
-# 2. Configure environment variables
-cp .env.example .env
-# Set secure values for JWT_SECRET, POSTGRES_PASSWORD, REDIS_PASSWORD, etc.
+- Ubuntu 22.04/24.04, Debian 12, or another supported Docker host
+- 4 vCPU
+- 8 GB RAM (16 GB recommended)
+- 50 GB SSD (100 GB recommended when storing media)
+- Docker Engine 26+ with Docker Compose v2
+- a public DNS name whose A/AAAA record points to the server
+- inbound TCP ports 80 and 443 open
 
-# 3. Launch the full production stack (API + Web + PostgreSQL + Redis + Traefik/Nginx)
-DOMAIN=windels.yourdomain.com ACME_EMAIL=ops@yourdomain.com \
-docker compose -f docker-compose.yml -f infra/docker/docker-compose.prod.yml up -d
+The server does **not** need Node.js or pnpm when using Docker.
 
-# 4. Run database migrations
-docker compose -f docker-compose.yml -f infra/docker/docker-compose.prod.yml --profile migrate up migrate
-```
-
-**Services launched in containers:**
-
-| Service | Role |
-|---|---|
-| API Service (`windels-api`) | Express backend with Prisma ORM (internal port 4000) |
-| Web Frontend (`windels-web`) | React 19 + Vite compiled SPA served via lightweight Nginx |
-| Database (`windels-postgres`) | PostgreSQL 17 (supporting pgvector) |
-| Cache & Event Bus (`windels-redis`) | Redis 8.0 (Pub/Sub & session cache) |
-| Reverse Proxy / TLS (`windels-traefik` / `windels-nginx`) | Automated SSL certificates (Let's Encrypt) and routing |
-
----
-
-### 2. Bare-Metal / Virtual Machine (Ubuntu / Debian / RHEL / Rocky Linux)
-
-Run WINDELS AI OS directly on a Linux server using Node.js and PM2 / systemd.
-
-**Prerequisites:**
-- OS: Ubuntu 22.04/24.04 LTS, Debian 12, or RHEL 9 / Rocky Linux 9
-- Runtime: Node.js >= 20.11 and pnpm >= 10
-- Services: PostgreSQL 17 & Redis 8 installed locally or accessible via cloud managed services (AWS RDS, ElastiCache, etc.)
-
-**Step-by-Step Installation:**
+## 2. Prepare the server
 
 ```bash
-# 1. Install dependencies & build packages
-pnpm install
-pnpm build
-
-# 2. Set up database schema
-pnpm --filter @windels/api exec prisma migrate deploy
-# Optional: Seed initial admin & demo data
-pnpm --filter @windels/api exec tsx prisma/seed.ts
-
-# 3. Run the API service (e.g. via PM2 or systemd)
-DATABASE_URL="postgresql://user:pass@localhost:5432/windels" \
-REDIS_URL="redis://localhost:6379" \
-JWT_SECRET="your-secure-jwt-secret" \
-NODE_ENV="production" \
-node apps/api/dist/index.js
-
-# 4. Serve the Web App (apps/web/dist) via Nginx or Caddy pointing to API on port 4000
+git clone <repository-url> /opt/windels
+cd /opt/windels
+cp .env.server.example .env.server
+chmod 600 .env.server
 ```
 
----
-
-### 3. Kubernetes (Multi-Node / Enterprise Cluster)
-
-For high-availability enterprise environments, the repo includes ready-to-use Kubernetes manifests in `infra/k8s/`:
+Generate independent secrets. Hex output is deliberately used for the database,
+Redis, and JWT values because it is safe inside connection URLs:
 
 ```bash
-# Deploy all manifests (API, Web, Redis, Postgres, Ingress, and HPA)
-make k8s-apply
-# or: kubectl apply -k infra/k8s
+openssl rand -hex 32   # POSTGRES_PASSWORD
+openssl rand -hex 32   # POSTGRES_APP_PASSWORD
+openssl rand -hex 32   # REDIS_PASSWORD
+openssl rand -hex 32   # JWT_SECRET
+openssl rand -hex 32   # WEBHOOK_SECRET
+openssl rand -hex 32   # WINDELS_ENCRYPTION_KEY (must be exactly 64 hex chars)
 ```
 
-- Includes Horizontal Pod Autoscaling (HPA) for dynamic scaling under load.
-- Supports external managed database configurations (AWS RDS, Cloud SQL) by configuring `windels-secrets`.
-
----
-
-### 4. Cloud Infrastructure as Code (Terraform)
-
-If provisioning cloud infrastructure on AWS, pre-configured Terraform modules exist in `infra/terraform/` for VPC, RDS PostgreSQL, and ElastiCache Redis.
-
----
-
-## Minimum & Recommended Server Requirements
-
-| Component | Minimum (Staging / Small Team) | Production Standard |
-|---|---|---|
-| CPU | 2 vCPUs | 4–8 vCPUs |
-| RAM | 4 GB | 16–32 GB |
-| Disk | 30 GB SSD | 100+ GB NVMe |
-| Database | PostgreSQL 17 + pgvector | Managed PostgreSQL (RDS / Cloud SQL) |
-| Cache / Queue | Redis 7+ / 8.0 | Managed Redis (ElastiCache / MemoryDB) |
-
----
-
-## Built-in Server Observability & Health Checks
-
-Once deployed, WINDELS AI OS exposes built-in monitoring:
-
-- **Liveness check:** `GET /api/v1/health` (or `/healthz`)
-- **Deep readiness check:** `GET /api/v1/health/deep` (checks Postgres, Redis, memory, and uptime)
-- **Prometheus Metrics:** `GET /api/v1/metrics`
-- **Grafana & Loki:** Ready-to-use monitoring stack via `make monitoring-up` (Prometheus `:9090`, Grafana `:3000`, Alertmanager `:9093`)
-
----
-
-## Google Places API — Lead Discovery Setup
-
-To connect and enable Lead Discovery in WINDELS AI OS, configure the Google Places API. WINDELS AI OS uses the Google Places Text Search engine to discover real-world business listings, verify company metadata, manage lead pipelines, detect duplicates, and export sanitized lead datasets.
-
-### Step 1: Obtain a Google Places API Key
-
-1. Go to the [Google Cloud Console](https://console.cloud.google.com/).
-2. Create a new Google Cloud project or select an existing project.
-3. In the sidebar, navigate to **APIs & Services → Library**.
-4. Search for and enable **Places API** (or Places API / Maps JavaScript API).
-5. Go to **APIs & Services → Credentials**.
-6. Click **+ Create Credentials → API Key**.
-7. *(Recommended for Security)* Restrict the API Key: under **API restrictions**, select **Restrict key** and choose **Places API**.
-
-### Step 2: Configure the Environment Variable
-
-Add your API key to your server's `.env` file:
-
-```env
-# Google Places API for AI Lead Discovery
-GOOGLE_PLACES_API_KEY=AIzaSyYourActualGooglePlacesAPIKeyHere
-```
-
-- **Docker Compose:** pass `GOOGLE_PLACES_API_KEY` into your `docker-compose.yml` / `infra/docker/docker-compose.prod.yml` under the `api` service environment.
-- **Kubernetes:** add `GOOGLE_PLACES_API_KEY` to the `windels-secrets` Secret object.
-
-### Step 3: Restart the API Backend
+Generate a unique Web Push VAPID pair on an administrator workstation:
 
 ```bash
-# If running locally / dev:
-pnpm dev
-
-# If running via Docker Compose:
-docker compose restart api
-
-# If running via systemd/PM2:
-pm2 restart windels-api
+npx web-push generate-vapid-keys
 ```
 
-### Step 4: Using Lead Discovery in the Web App
+Edit `.env.server` and set every blank required value, especially:
 
-Once the key is set, the UI activates automatically:
+- `DOMAIN` and `ACME_EMAIL`
+- both PostgreSQL passwords and the Redis password
+- JWT, webhook, and encryption secrets
+- bootstrap administrator email/password
+- VAPID public/private keys and subject
 
-- **Lead Search** (`/app/leads` or Sidebar → Lead Discovery): enter natural language queries (e.g., "Coffee shops in Austin, TX", "Logistics warehouses in Rotterdam", "Fintech startups in London"). The platform fetches verified business records, addresses, categories, and Google Place IDs.
-- **Collections & Segmentation:** create custom collections (e.g., "Q3 Outreach - Tech") and group relevant leads.
-- **Pipeline Management** (`/app/leads/pipeline`): track lead stages (New → Contacted → Qualified → Disqualified). Add internal team notes and review search logs.
-- **Automated Deduplication:** the system automatically identifies duplicate Place IDs across repeated searches and flags them so exports remain clean.
-- **Sanitized Export:** export selected leads as CSV or JSON with built-in spreadsheet formula-injection protection.
+Do not use the example values from `.env.example` in production. Do not commit
+`.env.server`.
 
-### Step 5: Direct REST API Endpoints
+## 3. Configure DNS and firewall
 
-You can also search and manage leads programmatically:
+Create an A record (and AAAA record when applicable) for `DOMAIN` pointing to the
+server. Confirm it resolves before launching, then allow HTTP and HTTPS:
 
-| Method | Endpoint | Description | Request Body Example |
-|---|---|---|---|
-| POST | `/api/v1/lead-discovery/search` | Discovers businesses via Google Places | `{"query": "Solar panel installers in Munich"}` |
-| GET | `/api/v1/lead-discovery/leads` | Lists all discovered leads in the organization | — |
-| GET | `/api/v1/lead-discovery/collections` | Lists lead collections | — |
-| POST | `/api/v1/lead-discovery/collections` | Creates a new collection | `{"name": "EU Expansion"}` |
-| POST | `/api/v1/lead-discovery/collections/:id/leads` | Adds a lead to a collection | `{"leadId": "lead-uuid"}` |
-| POST | `/api/v1/lead-discovery/export` | Exports selected leads (CSV / JSON) | `{"leadIds": ["..."], "format": "csv"}` |
-| GET | `/api/v1/lead-discovery/pipeline/summary` | Retrieves pipeline metrics & duplicate counts | — |
+```bash
+sudo ufw allow 80/tcp
+sudo ufw allow 443/tcp
+```
+
+PostgreSQL, Redis, and the API are intentionally not published on host ports.
+Only Traefik publishes ports 80 and 443.
+
+## 4. Build and start
+
+From the repository root:
+
+```bash
+docker compose --env-file .env.server \
+  -f infra/docker/docker-compose.prod.yml \
+  up -d --build
+```
+
+Equivalent convenience commands are:
+
+```bash
+make docker-up
+# or
+pnpm docker:up
+```
+
+Startup is ordered as follows:
+
+1. PostgreSQL and Redis become healthy.
+2. `database-role` creates/reconciles the `windels_app` login and grants it only
+   application data privileges.
+3. `bootstrap` runs all committed Prisma migrations as the schema owner and then
+   runs the idempotent initial-admin seed.
+4. The API starts as an unprivileged Linux user and must pass its database/Redis
+   health check.
+5. Nginx and Traefik begin serving the site over HTTPS.
+
+If a migration or seed fails, the API does not start. This avoids running new
+application code against an old schema.
+
+## 5. Verify the deployment
+
+```bash
+COMPOSE="docker compose --env-file .env.server -f infra/docker/docker-compose.prod.yml"
+$COMPOSE ps
+curl -fsS "https://${DOMAIN}/healthz"
+curl -fsS "https://${DOMAIN}/api/v1/health"
+curl -fsS "https://${DOMAIN}/api/v1/health/deep"
+```
+
+Expected results:
+
+- all long-running services show `Up`/`healthy`
+- `database-role` and `bootstrap` show exit code 0
+- `/healthz` returns `ok`
+- `/api/v1/health` returns HTTP 200 with database and cache checks equal to `ok`
+
+View startup or failure details with:
+
+```bash
+$COMPOSE logs --tail=200 bootstrap api web traefik
+$COMPOSE logs -f api
+```
+
+## 6. AI and integration availability
+
+The operating system and non-AI modules can start without an AI provider. In
+production, AI calls fail closed rather than returning fake provider output.
+Configure at least one real provider in `.env.server`, for example
+`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, `GEMINI_API_KEY`, or a reachable
+`OLLAMA_BASE_URL`, and restart the API:
+
+```bash
+$COMPOSE up -d --no-deps --force-recreate api
+```
+
+Keep `WINDELS_NATIVE_API_ENABLED=false` until real-provider inference,
+streaming, tenant isolation, quota, metering, and billing acceptance tests pass
+for this specific installation.
+
+Likewise, optional modules report not-configured/unavailable until their real
+provider credentials and infrastructure are present. `WINDELS_DEMO_DATA` and
+`WINDELS_ALLOW_MOCK_DB_FALLBACK` are forced off by the production Compose file.
+
+### 6.1 Credential and master-key rotation
+
+GitHub and broker/exchange credentials can be rotated or revoked from their
+administrative consoles. Rotation verifies GitHub replacements before commit;
+broker replacements disconnect the active session so the next connection uses
+the new encrypted credential.
+
+For an AES master-key rotation:
+
+1. Keep the old `key-id -> 64-hex key` in `WINDELS_ENCRYPTION_KEYRING`.
+2. Set a new `WINDELS_ENCRYPTION_KEY_ID` and `WINDELS_ENCRYPTION_KEY`.
+3. Restart the API. Credential reads automatically re-encrypt old envelopes
+   with the new primary key.
+4. Exercise/list all credential-bearing connections and verify recovery before
+   removing the old key from the keyring.
+5. Back up the old key securely until rollback and restoration tests pass.
+
+Never replace the primary key without retaining the prior key in the keyring;
+those envelopes will correctly fail closed and require reconnection.
+
+### 6.2 Blockonomics payment deployment
+
+Blockonomics is a separate additive provider; the generic `crypto` safety gate
+remains disabled. Before enabling Blockonomics:
+
+1. Apply the committed Prisma migrations with the bootstrap/migrator container.
+2. Configure a Blockonomics store for BTC and/or USDT on Ethereum ERC-20.
+3. Generate a random callback secret of at least 32 characters and configure the
+   provider callback as:
+   `https://${DOMAIN}/api/v1/payments/blockonomics/webhook?secret=<secret>`.
+4. Keep provider and WINDELS Test Mode enabled during qualification.
+5. Configure credentials through `/platform/blockonomics` as Super Admin, or use
+   the `BLOCKONOMICS_*` environment bootstrap values in `.env.server`.
+6. Run the read-only provider health probe, create real Test Mode BTC and USDT
+   payments, deliver status 0/1/2 callbacks, verify invoice/ledger settlement,
+   and run reconciliation.
+7. Enable the provider only after all checks pass. Test Mode in WINDELS does not
+   turn on Test Mode in the Blockonomics store; both must be configured.
+
+Set `BLOCKONOMICS_RECONCILIATION_ENABLED=true` and choose an interval from 5 to
+1440 minutes. The default is 15 minutes. Redis must be persistent and available
+for the distributed reconciliation lock; PostgreSQL remains the payment source
+of truth.
+
+The complete setup, API, callback, operations, and acceptance procedure is in
+[`BLOCKONOMICS_API_SETUP_DEPLOYMENT.md`](./BLOCKONOMICS_API_SETUP_DEPLOYMENT.md).
+Do not use live funds until that document's Stage 15 evidence is captured.
+
+## 7. Upgrade
+
+Take a backup first, pull the desired release, then rebuild:
+
+```bash
+cd /opt/windels
+git pull --ff-only
+docker compose --env-file .env.server \
+  -f infra/docker/docker-compose.prod.yml \
+  up -d --build
+```
+
+The one-shot bootstrap service applies pending migrations before the replacement
+API becomes healthy. Review its logs after every upgrade.
+
+Pin production deployments to reviewed commits or release tags; do not blindly
+track a moving branch.
+
+## 8. Backup and restore
+
+### PostgreSQL backup
+
+```bash
+mkdir -p backups
+COMPOSE="docker compose --env-file .env.server -f infra/docker/docker-compose.prod.yml"
+$COMPOSE exec -T postgres sh -c \
+  'pg_dump -U "$POSTGRES_USER" -d "$POSTGRES_DB" --format=custom' \
+  > "backups/windels-$(date -u +%Y%m%dT%H%M%SZ).dump"
+```
+
+### Runtime files
+
+Back up the named volume `windels_runtime-data` as well as PostgreSQL. Database
+rows for attachments are not sufficient without their corresponding files.
+Redis persistence should also be backed up when queued jobs or ephemeral ledgers
+must survive disaster recovery.
+
+Test restoration regularly on a separate server. A backup that has never been
+restored is not a verified backup.
+
+## 9. Stop or remove
+
+Stop containers while retaining data:
+
+```bash
+make docker-down
+```
+
+Never add `--volumes` unless you intentionally want to destroy the PostgreSQL,
+Redis, runtime-file, and certificate volumes.
+
+## 10. Operational cautions
+
+Before handling real users, money, medical data, or other sensitive content:
+
+- complete the repository's production-readiness and runtime-validation checks
+- place backups in encrypted off-host storage
+- add host monitoring, log collection, alerting, and disk-capacity alerts
+- configure a secret manager and a documented key-rotation procedure
+- qualify every external provider used by enabled modules
+- test restore, upgrade, rollback, and incident-response procedures
+- use managed PostgreSQL/Redis or Kubernetes for stronger high availability
+
+Kubernetes manifests under `infra/k8s/` are deployment templates, not a substitute
+for target-cluster validation, secret provisioning, ingress/cert-manager setup,
+and a migration job.

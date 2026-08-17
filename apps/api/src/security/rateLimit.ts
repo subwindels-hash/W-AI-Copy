@@ -72,14 +72,16 @@ export async function takeToken(limit: Limit, identifier: string, cost = 1) {
       tokens = tokens - cost
       local retry = 0
       local blockedUntil = 0
+      local allowed = 1
       if tokens < 0 then
+        allowed = 0
         retry = math.ceil((-tokens) / refill) * 1000
         if blockSec > 0 then blockedUntil = now + blockSec * 1000 end
         tokens = 0
       end
       redis.call('HMSET', KEYS[1], 't', tostring(tokens), 'r', tostring(last), 'b', tostring(blockedUntil))
       redis.call('EXPIRE', KEYS[1], 3600)
-      return tokens < 0 and {0, 0, tostring(retry)} or {1, tostring(math.floor(tokens)), '0'}
+      return {allowed, tostring(math.floor(tokens)), tostring(retry)}
     `;
     const res = (await redis.eval(lua, 1, key, String(Date.now()), String(limit.max), String(limit.refillPerSec), String(cost), String(limit.blockSeconds ?? 0))) as any[];
     return { allowed: res[0] === 1, remaining: Number(res[1]), retryAfterMs: Number(res[2]) };
@@ -108,6 +110,8 @@ export const Limits = {
   mfa: { key: "rl:mfa:ip:", max: 10, refillPerSec: 1 / 6, blockSeconds: 300 },                 // Same as login — MFA is part of auth
   contact: { key: "rl:contact:ip:", max: 10, refillPerSec: 1 / 60, blockSeconds: 600 },        // Contact form / AI chat anti-spam
   contactAdmin: { key: "rl:contactadmin:user:", max: 200, refillPerSec: 10, blockSeconds: 30 },
+  payment: { key: "rl:payment:user:", max: 30, refillPerSec: 0.5, blockSeconds: 60 },       // payment creation/monitor mutations
+  paymentStatus: { key: "rl:paymentstatus:user:", max: 120, refillPerSec: 2, blockSeconds: 30 },
 } satisfies Record<string, Limit>;
 
 export type LimitName = keyof typeof Limits;

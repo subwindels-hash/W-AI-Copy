@@ -334,6 +334,9 @@ model Organization {
   webhooks        WebhookEndpoint[]
   subscription    BillingSubscription?
   invoices        Invoice[]
+  paymentRecords  PaymentRecord[]
+  paymentAllocations InvoicePaymentAllocation[]
+  paymentWebhookEvents PaymentWebhookEvent[]
   modelRegistry   ModelRegistry[]
   aiRequests      AiRequest[]
   plugins         Plugin[]
@@ -1140,6 +1143,7 @@ model BillingSubscription {
   customerEmail      String?
   externalId         String?
   invoices           Invoice[]
+  payments           PaymentRecord[]
   createdAt          DateTime  @default(now())
   updatedAt          DateTime  @updatedAt
 }
@@ -1159,10 +1163,138 @@ model Invoice {
   hostedUrl       String?
   pdfUrl          String?
   lines           Json                @default("[]")
+  payments        PaymentRecord[]
+  paymentAllocations InvoicePaymentAllocation[]
+  ledgerEntries   BillingLedgerEntry[]
   createdAt       DateTime            @default(now())
   updatedAt       DateTime            @updatedAt
 
   @@index([organizationId])
+}
+
+// ─── Payment provider control plane + durable payment register ─────────────
+model PaymentProviderConfiguration {
+  id                    String   @id @default(cuid())
+  provider              String   @unique
+  enabled               Boolean  @default(false)
+  testMode              Boolean  @default(false)
+  apiKeyEnc             Json?
+  callbackSecretEnc     Json?
+  settings              Json     @default("{}")
+  version               Int      @default(1)
+  updatedById           String?
+  healthStatus          String   @default("NOT_CONFIGURED")
+  lastHealthAt          DateTime?
+  lastError             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([enabled, healthStatus])
+  @@map("payment_provider_configurations")
+}
+
+model PaymentRecord {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedById         String?
+  invoiceId             String?
+  invoice               Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscriptionId        String?
+  subscription          BillingSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  provider              String
+  internalReference     String
+  providerPaymentId     String?
+  providerTransactionId String?
+  providerStatus        String?
+  status                String   @default("created")
+  amountCents           Int
+  currency              String
+  cryptoCurrency        String?
+  cryptoNetwork         String?
+  paymentAddress        String?
+  expectedCryptoUnits   BigInt?
+  receivedCryptoUnits   BigInt?
+  quotePrice            Decimal? @db.Decimal(36, 18)
+  quoteSource           String?
+  quoteObservedAt       DateTime?
+  confirmations         Int      @default(0)
+  requiredConfirmations Int      @default(2)
+  expiresAt             DateTime?
+  detectedAt            DateTime?
+  confirmedAt           DateTime?
+  completedAt           DateTime?
+  reconciliationStatus  String   @default("pending")
+  lastReconciledAt      DateTime?
+  metadata              Json     @default("{}")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  webhookEvents         PaymentWebhookEvent[]
+  allocations           InvoicePaymentAllocation[]
+  ledgerEntries         BillingLedgerEntry[]
+
+  @@unique([provider, internalReference])
+  @@unique([provider, providerTransactionId])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status, createdAt])
+  @@index([provider, paymentAddress])
+  @@index([invoiceId, status])
+  @@index([reconciliationStatus, updatedAt])
+  @@map("payment_records")
+}
+
+model PaymentWebhookEvent {
+  id                    String   @id @default(cuid())
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  paymentId             String?
+  payment               PaymentRecord? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  provider              String
+  eventKey              String   @unique
+  payloadHash           String
+  providerTransactionId String?
+  providerStatus        String?
+  processingStatus      String   @default("received")
+  attempts              Int      @default(0)
+  errorCode             String?
+  errorMessage          String?
+  receivedAt            DateTime @default(now())
+  processedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([provider, receivedAt])
+  @@index([organizationId, receivedAt])
+  @@index([paymentId, receivedAt])
+  @@index([processingStatus, receivedAt])
+  @@map("payment_webhook_events")
+}
+
+model InvoicePaymentAllocation {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoiceId      String
+  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paymentId      String?
+  payment        PaymentRecord? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  sourceKind     String
+  sourceId       String
+  amountCents    Int
+  currency       String
+  status         String   @default("reserved")
+  appliedAt      DateTime?
+  reversedAt     DateTime?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([invoiceId, sourceKind, sourceId])
+  @@index([organizationId, createdAt])
+  @@index([invoiceId, status])
+  @@index([paymentId])
+  @@map("invoice_payment_allocations")
 }
 
 // ─── Session 10 — Enterprise Engineering ──────────────────────
@@ -1826,15 +1958,24 @@ model BillingLedgerEntry {
   id             String   @id @default(cuid())
   organizationId String
   invoiceId      String
-  giftCardId     String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  giftCardId     String?
+  paymentId      String?
+  payment        PaymentRecord? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  sourceKind     String   @default("gift_card")
+  journalKey     String   @unique
   amountCents    Int
-  debitAccount   String   // e.g. "accounts_receivable"
-  creditAccount  String   // e.g. "gift_card_liability"
+  debitAccount   String   // e.g. "crypto_clearing:blockonomics"
+  creditAccount  String   // e.g. "accounts_receivable"
+  reversalOfId   String?
+  metadata       Json     @default("{}")
   createdAt      DateTime @default(now())
 
   @@index([organizationId])
   @@index([invoiceId])
   @@index([giftCardId])
+  @@index([paymentId])
+  @@index([sourceKind, createdAt])
 }
 
 // ═══════════════════════════════════════════════════════════════════════════
