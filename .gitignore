@@ -70,3 +70,13 @@ music-video-cache/
 video-cache/
 video-transform-cache/
 cinematic-cache/
+
+# Local sandbox deployment scaffolding (runtime artifacts only — keep docs/scripts)
+.deploy/node_modules/
+.deploy/pgdata/
+.deploy/redis-server
+.deploy/redis-cli
+.deploy/dump.rdb
+.deploy/appendonlydir/
+.deploy/*.rdb
+.deploy/appendonly.aof*
