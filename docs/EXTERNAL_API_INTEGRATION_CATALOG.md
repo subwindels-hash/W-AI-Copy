@@ -216,7 +216,7 @@ Stripe or PayPal can provide broader international coverage.
 | Flutterwave | African/global cards, bank transfer, and mobile money | `FLUTTERWAVE_SECRET_KEY`, `FLUTTERWAVE_SECRET_HASH` | Fail-closed initialize/verify and webhook hash verification are implemented. Requires real sandbox qualification. |
 | Stripe | Global cards, wallets, and selected local methods | `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Fail-closed Checkout/verify and timestamp-bounded exact-body signatures are implemented. Requires real Stripe test-mode qualification. |
 | PayPal | International PayPal checkout | `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, `PAYPAL_WEBHOOK_ID`, `PAYPAL_ENVIRONMENT` | Fail-closed create/capture plus PayPal's official webhook-verification endpoint are implemented. Requires sandbox qualification. |
-| Blockonomics | BTC address generation/callbacks | `BLOCKONOMICS_API_KEY`, `BLOCKONOMICS_CALLBACK_SECRET` | **Blocked.** Crypto checkout is now disabled rather than generating fallback addresses or fixed prices. |
+| Blockonomics | BTC and USDT Ethereum/ERC-20 merchant receiving, callbacks, monitoring, and reconciliation | Encrypted Super Admin config or `BLOCKONOMICS_API_KEY`, 32+ character `BLOCKONOMICS_CALLBACK_SECRET`, match host, assets, Test Mode and reconciliation settings | Implemented fail-closed with durable PostgreSQL records, exact live provider quotes, callback/provider-history verification, atomic invoice settlement, split tender, history, Super Admin controls and reconciliation. **Target-runtime PostgreSQL and real Blockonomics Test Mode qualification are still required before live enablement.** |
 | TRON, Ethereum, and BNB-chain RPC/indexer APIs | Verify TRC-20/ERC-20/BEP-20 deposits and confirmation counts | No complete RPC/indexer config contract | **Not implemented.** Current code refuses these checkouts. |
 
 ## Payment safety state
@@ -224,7 +224,10 @@ Stripe or PayPal can provide broader international coverage.
 The code now refuses missing/incomplete provider configuration, upstream errors,
 reference/amount/currency mismatches, unverified settlements, duplicate webhook
 events, and cross-tenant reference lookups. Callback URLs derive from
-`WINDELS_PUBLIC_API_ORIGIN`; crypto checkout remains blocked.
+`WINDELS_PUBLIC_API_ORIGIN`. The generic `crypto` provider and unverified
+TRON/BNB/Ethereum-native checkouts remain blocked; the separate `blockonomics`
+provider supports only BTC and USDT on Ethereum/ERC-20 when configured and
+enabled.
 
 Before live credentials, the remaining work is operational qualification:
 

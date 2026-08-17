@@ -182,6 +182,34 @@ For an AES master-key rotation:
 Never replace the primary key without retaining the prior key in the keyring;
 those envelopes will correctly fail closed and require reconnection.
 
+### 6.2 Blockonomics payment deployment
+
+Blockonomics is a separate additive provider; the generic `crypto` safety gate
+remains disabled. Before enabling Blockonomics:
+
+1. Apply the committed Prisma migrations with the bootstrap/migrator container.
+2. Configure a Blockonomics store for BTC and/or USDT on Ethereum ERC-20.
+3. Generate a random callback secret of at least 32 characters and configure the
+   provider callback as:
+   `https://${DOMAIN}/api/v1/payments/blockonomics/webhook?secret=<secret>`.
+4. Keep provider and WINDELS Test Mode enabled during qualification.
+5. Configure credentials through `/platform/blockonomics` as Super Admin, or use
+   the `BLOCKONOMICS_*` environment bootstrap values in `.env.server`.
+6. Run the read-only provider health probe, create real Test Mode BTC and USDT
+   payments, deliver status 0/1/2 callbacks, verify invoice/ledger settlement,
+   and run reconciliation.
+7. Enable the provider only after all checks pass. Test Mode in WINDELS does not
+   turn on Test Mode in the Blockonomics store; both must be configured.
+
+Set `BLOCKONOMICS_RECONCILIATION_ENABLED=true` and choose an interval from 5 to
+1440 minutes. The default is 15 minutes. Redis must be persistent and available
+for the distributed reconciliation lock; PostgreSQL remains the payment source
+of truth.
+
+The complete setup, API, callback, operations, and acceptance procedure is in
+[`BLOCKONOMICS_API_SETUP_DEPLOYMENT.md`](./BLOCKONOMICS_API_SETUP_DEPLOYMENT.md).
+Do not use live funds until that document's Stage 15 evidence is captured.
+
 ## 7. Upgrade
 
 Take a backup first, pull the desired release, then rebuild:
