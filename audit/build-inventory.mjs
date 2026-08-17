@@ -826,7 +826,10 @@ for (const modKey of [...allModules].sort()) {
   const meta = MODULE_META[modKey] || { title: modKey, sessions: [], tier: "unknown" };
   const svcDir = path.join(API_SERVICES, modKey);
   const svcFiles = fexists(svcDir) ? ls(svcDir).filter(f=>f.endsWith(".ts")) : [];
-  const svcEntry = svcFiles.find(f => f.includes("service") || f === "index.ts") || svcFiles[0];
+  // The representative implementation must never be a test just because its
+  // filename alphabetically precedes `*.service.ts` (e.g. console.service.test.ts).
+  const implementationSvcFiles = svcFiles.filter(f => !/\.(test|spec)\.ts$/.test(f));
+  const svcEntry = implementationSvcFiles.find(f => f.includes("service") || f === "index.ts") || implementationSvcFiles[0];
   const bootstrapFile = svcFiles.find(f => f.startsWith("bootstrap"));
   const sharedType = `${modKey}.ts`;
   const webClient = `${modKey}.ts`;

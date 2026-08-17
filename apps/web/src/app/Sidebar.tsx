@@ -182,7 +182,7 @@ const navItems = [
   { to: "/app/module-runtime", icon: Blocks, label: "Module Runtime" },
   { to: "/app/native-ai-api", icon: Bot, label: "Native AI API" },
   { to: "/app/nfc-public", icon: Nfc, label: "NFC (Public)" },
-  { to: "/app/native-ai", icon: Bot, label: "Native AI (Legacy)" },
+  { to: "/app/native-ai", icon: Bot, label: "Native AI Studio" },
   { to: "/app/quantum", icon: Atom, label: "Quantum Readiness" },
   { to: "/app/legal", icon: Gavel, label: "Legal Intelligence" },
   { to: "/app/scientific", icon: FlaskConical, label: "Scientific Research" },
