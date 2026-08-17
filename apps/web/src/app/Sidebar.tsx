@@ -141,7 +141,6 @@ const navItems = [
   { to: "/app/search", icon: Search, label: "Search" },
   { to: "/app/software-factory", icon: Layers, label: "Factory Studios" },
   { to: "/app/modelFactory", icon: Factory, label: "Model Factory" },
-  { to: "/app/memoryEvolution", icon: Brain, label: "Memory Evolution" },
   { to: "/app/finops", icon: WalletCards, label: "Enterprise FinOps" },
   { to: "/app/ai-economy", icon: Coins, label: "AI Economy" },
   { to: "/app/api-keys", icon: KeyRound, label: "API Keys" },

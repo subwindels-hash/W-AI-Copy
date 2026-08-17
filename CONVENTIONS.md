@@ -2323,3 +2323,8 @@
 
 1. **Kebab-case vs camelCase.** `promptTemplates` is `pages/admin/PromptTemplatesPage.tsx` (`/app/prompt-templates`, kebab-case, via `lib/promptTemplates.ts`, Session 23/119, `pt:*` org_scoped) but Tier 4 checks `pages/promptTemplates/` (camelCase module key). The fix is the same one-line alias as S182–S188: `pages/promptTemplates/PromptTemplatesPage.tsx: export { default } from "../admin/PromptTemplatesPage"` + alias route `/app/promptTemplates`. No service change — the substance was already `COMPLETE`.
 
+
+### Session 190 — Tier 4 marketplace dedicated console (66 → 65 no-page)
+
+1. **A PlatformPage tab is not a dedicated page.** `marketplace` (`lib/marketplace.ts`, `marketplaceApi`, `/marketplace/*`, Session 34, `marketplace:*` + `twin:*`) had no `pages/marketplace/` — its console was only a `PlatformPage` tab (Marketplace). Tier 4 checks `pages/marketplace/` — a directory named exactly after the module key — so it reported “no page” for a module that had a client since Session 34 but no dedicated route. The fix is a dedicated `pages/marketplace/MarketplacePage.tsx` that renders `marketplaceApi.dashboard()` + route `/app/marketplace` — like `modelFactory`/`memoryEvolution` in S187–S188, not a one-line alias like `businessIntelligence`/`enterpriseSearch` where the console was at a short-name directory (`bi`/`search`).
+

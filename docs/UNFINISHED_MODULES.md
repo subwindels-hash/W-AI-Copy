@@ -99,7 +99,7 @@ Most are correctly headless (`kernel`, `tenantIsolation`, `mfa`, `permissions`,
 `platformServices`), but these have substantial user-facing services and no
 console:
 
-`publicApi`, `marketplace`, `dataMarketplace`, `digitalHumans`, `expertsPlatform`,
+`publicApi`, `dataMarketplace`, `digitalHumans`, `expertsPlatform`,
 `voiceFoundry`, `voiceOwnership`, `voiceStudio`, `musicGen`, `musicVideo`,
 `training`, `mlOps`, `etl`, `governance`, `sustainability`, `tradingIntel`,
 `cyber`, `industry`, `healthEcosystem`, `biomedical`, `licensing`, `composer`,

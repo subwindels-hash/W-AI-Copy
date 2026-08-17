@@ -105,6 +105,7 @@ const NfcPublicPage = lazy(() => import("./pages/nfcPublic/NfcPublicPage").then(
 const NativeAiPage = lazy(() => import("./pages/nativeAi/NativeAiPage").then((m) => ({ default: m.NativeAiPage })));
 const ModelFactoryPage = lazy(() => import("./pages/modelFactory/ModelFactoryPage").then((m) => ({ default: m.ModelFactoryPage })));
 const MemoryEvolutionPage = lazy(() => import("./pages/memoryEvolution/MemoryEvolutionPage").then((m) => ({ default: m.MemoryEvolutionPage })));
+const MarketplacePage = lazy(() => import("./pages/marketplace/MarketplacePage").then((m) => ({ default: m.MarketplacePage })));
 const MediaGenPage = lazy(() => import("./pages/mediaGen/MediaGenPage").then((m) => ({ default: m.MediaGenPage })));
 const QuantumPage = lazy(() => import("./pages/quantum/QuantumPage").then((m) => ({ default: m.QuantumPage })));
 const LegalPage = lazy(() => import("./pages/legal/LegalPage").then((m) => ({ default: m.LegalPage })));
@@ -414,6 +415,7 @@ export const router = createBrowserRouter([
       { path: "native-ai", element: withSuspense(<NativeAiPage />) },
       { path: "modelFactory", element: withSuspense(<ModelFactoryPage />) },
       { path: "memoryEvolution", element: withSuspense(<MemoryEvolutionPage />) },
+      { path: "marketplace", element: withSuspense(<MarketplacePage />) },
       { path: "mediaGen", element: withSuspense(<MediaGenPage />) },
       { path: "mediaFactory", element: withSuspense(<MediaFactoryPage />) },
       { path: "quantum", element: withSuspense(<QuantumPage />) },
