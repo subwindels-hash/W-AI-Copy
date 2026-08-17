@@ -256,7 +256,11 @@ export const PaymentGatewaysService = {
 
     if (evidence.status === "completed" && tx.invoiceId) {
       try {
-        await billing.markInvoicePaid(organizationId, tx.invoiceId);
+        await billing.markInvoicePaidForOrganization(organizationId, tx.invoiceId, {
+          source: tx.provider,
+          paymentId: tx.id,
+          providerTransactionId: evidence.providerTransactionId,
+        });
         tx.metadata = { ...(tx.metadata ?? {}), invoiceSettlement: { status: "completed", at: new Date().toISOString() } };
       } catch (error) {
         tx.metadata = { ...(tx.metadata ?? {}), invoiceSettlement: { status: "failed", at: new Date().toISOString(), error: (error as Error).message } };

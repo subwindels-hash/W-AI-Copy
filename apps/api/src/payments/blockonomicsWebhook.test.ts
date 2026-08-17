@@ -48,6 +48,14 @@ vi.mock("../db/client.js", () => ({
   },
 }));
 
+vi.mock("../services/billing.service.js", () => ({
+  settleConfirmedBlockonomicsPayment: vi.fn(async (paymentId: string) => {
+    const index = state.payments.findIndex((payment) => payment.id === paymentId);
+    state.payments[index] = { ...state.payments[index], status: "completed", completedAt: new Date() };
+    return { payment: state.payments[index], invoicePaid: true, idempotent: false };
+  }),
+}));
+
 vi.mock("./blockonomics.service.js", () => {
   class Client {
     async listConfirmedPayments() { return state.providerPayments; }
@@ -104,12 +112,12 @@ describe("Blockonomics Stage 5 callback processing", () => {
     expect(state.payments[0].completedAt).toBeNull();
   });
 
-  it("independently reconciles exact final payment but stops at CONFIRMED for Stage 6", async () => {
+  it("independently reconciles exact final payment and delegates one atomic settlement", async () => {
     const row = payment();
     state.providerPayments.push({ id: 42, timestamp: 1, crypto: "BTC", amount: 200000, address: row.paymentAddress, txid: "f".repeat(64) });
     const result = await BlockonomicsPaymentService.processCallback(callback(row, { status: 2 }));
-    expect(result.payment).toMatchObject({ status: "confirmed", reconciliationStatus: "matched", confirmations: 2 });
-    expect(state.payments[0].completedAt).toBeNull();
+    expect(result.payment).toMatchObject({ status: "completed", reconciliationStatus: "matched", confirmations: 2 });
+    expect(state.payments[0].completedAt).toBeTruthy();
   });
 
   it("processes the same provider event exactly once", async () => {

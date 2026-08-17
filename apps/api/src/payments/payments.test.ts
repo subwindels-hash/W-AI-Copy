@@ -39,7 +39,7 @@ vi.mock("../db/redis.js", () => {
   };
 });
 
-vi.mock("../services/billing.service.js", () => ({ markInvoicePaid: vi.fn().mockResolvedValue({ id: "inv-paid", status: "PAID" }) }));
+vi.mock("../services/billing.service.js", () => ({ markInvoicePaidForOrganization: vi.fn().mockResolvedValue({ id: "inv-paid", status: "PAID" }) }));
 
 const originalEnv = { ...process.env };
 const jsonResponse = (status: number, body: unknown) => new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
@@ -206,7 +206,7 @@ describe("settlement invariants", () => {
     await expect(PaymentGatewaysService.applyVerifiedResult("org-mismatch", tx.reference, { ...base, currency: "USD" })).rejects.toMatchObject({ status: 409 });
     await expect(PaymentGatewaysService.applyVerifiedResult("org-mismatch", tx.reference, { ...base, provider: "stripe" })).rejects.toMatchObject({ status: 409 });
     await expect(PaymentGatewaysService.applyVerifiedResult("org-mismatch", tx.reference, { ...base, reference: "OTHER" })).rejects.toMatchObject({ status: 409 });
-    expect(billing.markInvoicePaid).not.toHaveBeenCalled();
+    expect(billing.markInvoicePaidForOrganization).not.toHaveBeenCalled();
   });
 
   it("settles and marks an invoice only after matching provider verification", async () => {
@@ -217,13 +217,15 @@ describe("settlement invariants", () => {
     });
     expect(settled.status).toBe("completed");
     expect((settled.metadata as any)?.verification?.providerTransactionId).toBe("provider-verified-1");
-    expect(billing.markInvoicePaid).toHaveBeenCalledWith("org-settle", "inv-1");
+    expect(billing.markInvoicePaidForOrganization).toHaveBeenCalledWith("org-settle", "inv-1", {
+      source: "paystack", paymentId: tx.id, providerTransactionId: "provider-verified-1",
+    });
     const retried = await PaymentGatewaysService.applyVerifiedResult("org-settle", tx.reference, {
       verified: true, provider: "paystack", reference: tx.reference, status: "completed",
       amount: 100, currency: "NGN", providerTransactionId: "provider-verified-1",
     });
     expect(retried.id).toBe(tx.id);
-    expect(billing.markInvoicePaid).toHaveBeenCalledTimes(1);
+    expect(billing.markInvoicePaidForOrganization).toHaveBeenCalledTimes(1);
   });
 
   it("resolves webhook references without a default organization and preserves tenant isolation", async () => {

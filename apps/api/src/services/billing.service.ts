@@ -231,34 +231,121 @@ export async function updateSubscription(userId: string, input: z.infer<typeof U
   };
 }
 
-export async function markInvoicePaid(userId: string, invoiceId: string, paidAt: Date = new Date()) {
-  const ctx = await resolveUserContext(userId);
-  const inv = await prisma.invoice.findFirst({ where: { id: invoiceId, organizationId: ctx.organizationId } });
+export async function markInvoicePaidForOrganization(
+  organizationId: string,
+  invoiceId: string,
+  input: { paidAt?: Date; actorUserId?: string; source: string; paymentId?: string; providerTransactionId?: string },
+) {
+  const inv = await prisma.invoice.findFirst({ where: { id: invoiceId, organizationId } });
   if (!inv) throw new Error("Invoice not found");
   if (inv.status === "paid") return inv;
-  const updated = await prisma.invoice.update({
-    where: { id: inv.id },
-    data: { status: "paid", paidAt },
-  });
+  const paidAt = input.paidAt ?? new Date();
+  const updated = await prisma.invoice.update({ where: { id: inv.id }, data: { status: "paid", paidAt } });
   await prisma.auditLog.create({
     data: {
-      organizationId: ctx.organizationId,
-      userId,
+      organizationId,
+      userId: input.actorUserId ?? null,
       action: "billing.invoice.paid",
       resourceType: "Invoice",
       resourceId: inv.id,
-      metadata: { number: inv.number, amountCents: inv.amountCents, source: "admin" },
+      metadata: {
+        number: inv.number, amountCents: inv.amountCents, source: input.source,
+        paymentId: input.paymentId ?? null, providerTransactionId: input.providerTransactionId ?? null,
+      },
     },
   });
-  // If this was the last unpaid invoice, restore subscription to active
-  const stillOpen = await prisma.invoice.count({ where: { organizationId: ctx.organizationId, status: { in: ["open", "past_due"] } } });
+  const stillOpen = await prisma.invoice.count({ where: { organizationId, status: { in: ["open", "past_due"] } } });
   if (stillOpen === 0) {
-    await prisma.billingSubscription.update({
-      where: { organizationId: ctx.organizationId },
-      data: { status: "active" },
-    });
+    await prisma.billingSubscription.updateMany({ where: { organizationId }, data: { status: "active" } });
   }
   return updated;
+}
+
+export async function markInvoicePaid(userId: string, invoiceId: string, paidAt: Date = new Date()) {
+  const ctx = await resolveUserContext(userId);
+  return markInvoicePaidForOrganization(ctx.organizationId, invoiceId, { paidAt, actorUserId: userId, source: "admin" });
+}
+
+export async function settleConfirmedBlockonomicsPayment(paymentId: string) {
+  return prisma.$transaction(async (tx) => {
+    let payment = await tx.paymentRecord.findUnique({ where: { id: paymentId } });
+    if (!payment || payment.provider !== "blockonomics") throw new Error("Blockonomics payment not found");
+    if (payment.status === "completed") {
+      const invoice = payment.invoiceId ? await tx.invoice.findUnique({ where: { id: payment.invoiceId } }) : null;
+      return { payment, invoice, invoicePaid: invoice?.status === "paid", idempotent: true };
+    }
+    if (payment.status !== "confirmed" || payment.reconciliationStatus !== "matched") {
+      throw new Error(`Payment is not eligible for settlement (${payment.status}/${payment.reconciliationStatus})`);
+    }
+    if (!payment.invoiceId) {
+      payment = await tx.paymentRecord.update({ where: { id: payment.id }, data: { status: "under_review", reconciliationStatus: "entitlement_target_missing" } });
+      await tx.auditLog.create({ data: { organizationId: payment.organizationId, userId: payment.requestedById, action: "billing.payment.under_review", resourceType: "PaymentRecord", resourceId: payment.id, metadata: { provider: payment.provider, reason: "invoice/entitlement target missing" } } });
+      return { payment, invoice: null, invoicePaid: false, idempotent: false };
+    }
+    const invoice = await tx.invoice.findFirst({ where: { id: payment.invoiceId, organizationId: payment.organizationId } });
+    if (!invoice) throw new Error("Payment invoice not found in organization");
+    if (invoice.currency.toUpperCase() !== payment.currency.toUpperCase()) throw new Error("Payment currency does not match invoice currency");
+
+    const sourceId = payment.id;
+    let allocation = await tx.invoicePaymentAllocation.findUnique({
+      where: { invoiceId_sourceKind_sourceId: { invoiceId: invoice.id, sourceKind: "provider_payment", sourceId } },
+    });
+    if (!allocation) {
+      allocation = await tx.invoicePaymentAllocation.create({
+        data: {
+          organizationId: payment.organizationId, invoiceId: invoice.id, paymentId: payment.id,
+          sourceKind: "provider_payment", sourceId, amountCents: payment.amountCents,
+          currency: payment.currency, status: "applied", appliedAt: new Date(),
+          metadata: { provider: "blockonomics", providerTransactionId: payment.providerTransactionId },
+        },
+      });
+    }
+
+    const journalKey = `blockonomics:payment:${payment.id}`;
+    let ledgerEntry = await tx.billingLedgerEntry.findUnique({ where: { journalKey } });
+    if (!ledgerEntry) {
+      ledgerEntry = await tx.billingLedgerEntry.create({
+        data: {
+          organizationId: payment.organizationId, invoiceId: invoice.id, paymentId: payment.id,
+          sourceKind: "provider_payment", journalKey, amountCents: allocation.amountCents,
+          debitAccount: "crypto_cash:blockonomics", creditAccount: "accounts_receivable",
+          metadata: { provider: "blockonomics", cryptoCurrency: payment.cryptoCurrency, providerTransactionId: payment.providerTransactionId },
+        },
+      });
+    }
+
+    const allocations = await tx.invoicePaymentAllocation.findMany({ where: { invoiceId: invoice.id, status: "applied", currency: invoice.currency } });
+    const appliedCents = allocations.reduce((sum, item) => sum + item.amountCents, 0);
+    if (appliedCents > invoice.amountCents) throw new Error("Applied payment allocations exceed invoice amount");
+    const invoicePaid = appliedCents === invoice.amountCents;
+    const settledAt = new Date();
+    const updatedInvoice = invoicePaid
+      ? await tx.invoice.update({ where: { id: invoice.id }, data: { status: "paid", paidAt: settledAt } })
+      : invoice;
+
+    payment = await tx.paymentRecord.update({
+      where: { id: payment.id },
+      data: {
+        status: "completed", completedAt: settledAt,
+        metadata: { ...(payment.metadata as any), receipt: { number: `RCT-${payment.id}`, issuedAt: settledAt.toISOString(), invoiceId: invoice.id } },
+      },
+    });
+    if (invoicePaid && invoice.subscriptionId) {
+      await tx.billingSubscription.update({ where: { id: invoice.subscriptionId }, data: { status: "active" } });
+    }
+    await tx.auditLog.create({
+      data: {
+        organizationId: payment.organizationId, userId: payment.requestedById,
+        action: "billing.payment_success", resourceType: "PaymentRecord", resourceId: payment.id,
+        metadata: {
+          provider: "blockonomics", invoiceId: invoice.id, amountCents: payment.amountCents,
+          currency: payment.currency, journalKey, allocationId: allocation.id,
+          providerTransactionId: payment.providerTransactionId, invoicePaid,
+        },
+      },
+    });
+    return { payment, invoice: updatedInvoice, allocation, ledgerEntry, appliedCents, invoicePaid, idempotent: false };
+  });
 }
 
 export async function voidInvoice(userId: string, invoiceId: string, reason?: string) {

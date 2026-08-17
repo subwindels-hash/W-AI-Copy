@@ -4,6 +4,7 @@ import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/client.js";
 import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
+import { settleConfirmedBlockonomicsPayment } from "../services/billing.service.js";
 import { AppError } from "../utils/result.js";
 import type { BlockonomicsCallbackInput, BlockonomicsCreatePaymentInput, PaymentTransaction } from "@windels/shared/payments";
 import { BlockonomicsConfigService, BlockonomicsClient, configuredBlockonomicsClient } from "./blockonomics.service.js";
@@ -249,6 +250,10 @@ export const BlockonomicsPaymentService = {
             ? { status: "confirmed", confirmedAt: new Date(), reconciliationStatus: "matched" }
             : { status: "under_review", reconciliationStatus: expired ? "late_payment" : "provider_mismatch" },
         });
+        if (row.status === "confirmed") {
+          const settled = await settleConfirmedBlockonomicsPayment(row.id);
+          row = settled.payment;
+        }
       }
       await prisma.paymentWebhookEvent.update({ where: { id: event.id }, data: { processingStatus: "processed", processedAt: new Date() } });
       Metrics.increment("payments_webhooks_total", 1, { provider: "blockonomics", status: String(input.status), result: row.status });
