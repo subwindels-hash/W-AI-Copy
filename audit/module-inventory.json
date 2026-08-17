@@ -1096,12 +1096,13 @@
       "serviceFile": {
         "file": "architecture.service.ts",
         "path": "/home/user/WIN/apps/api/src/architecture/architecture.service.ts",
-        "sloc": 45,
+        "sloc": 127,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 467,
+      "serviceTotalSloc": 813,
       "serviceFiles": [
+        "architecture.completion.test.ts",
         "architecture.service.ts",
         "bootstrap.ts",
         "esiAggregation.service.ts",
@@ -1119,7 +1120,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/architecture.ts",
-        "sloc": 88,
+        "sloc": 126,
         "counts": {
           "total": 10,
           "GET": 6,
@@ -1144,14 +1145,15 @@
     ],
     "sharedTypes": "packages/shared/src/architecture.ts (67 LOC)",
     "web": {
-      "client": "apps/web/src/lib/architecture.ts (17 LOC)",
-      "pages": []
+      "client": "apps/web/src/lib/architecture.ts (35 LOC)",
+      "pages": [
+        "apps/web/src/pages/architecture/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
         "User",
         "Organization",
-        "Agent",
         "Message"
       ],
       "migrations": [],
@@ -1159,6 +1161,7 @@
     },
     "tests": [
       "sessions37-40.spec.ts",
+      "architecture/architecture.completion.test.ts",
       "architecture/esiAggregation.test.ts"
     ],
     "syntheticData": [],
@@ -11907,11 +11910,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 795,
+        "sloc": 804,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1766,
+      "serviceTotalSloc": 1784,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",

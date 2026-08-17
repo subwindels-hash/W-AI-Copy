@@ -542,6 +542,15 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "ux:gate", scope: "org_scoped" },
   { prefix: "ux:imported", scope: "org_scoped" },
   { prefix: "ux:notes", scope: "org_scoped" },
+  // Session 193 architecture: every key is per-org
+  // (`arch:modules:<org>`, `arch:esi:<org>`, `arch:imported:<org>`,
+  // `arch:notes:<org>`). The Session 37 global keys (`arch:modules`,
+  // `arch:esi`) are left in place after adoption for rollback safety,
+  // but the service no longer reads them.
+  { prefix: "arch:modules", scope: "org_scoped" },
+  { prefix: "arch:esi", scope: "org_scoped" },
+  { prefix: "arch:imported", scope: "org_scoped" },
+  { prefix: "arch:notes", scope: "org_scoped" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {
