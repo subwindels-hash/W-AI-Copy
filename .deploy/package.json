@@ -1,0 +1,1 @@
+{"name":"windels-deploy","version":"1.0.0","private":true,"dependencies":{"embedded-postgres":"^18.4.0-beta.17"}}
