@@ -5,7 +5,7 @@
  *   - Provider status & supported currencies (`listPaymentProviders`)
  *   - Universal checkout (`initiatePaymentCheckout`)
  *   - Transaction ledger queries (`listPaymentTransactions`, `getPaymentTransaction`)
- *   - Gateway verifications (`verifyFlutterwavePayment`, `verifyPaystackPayment`, `capturePayPalOrder`, `getCryptoCharge`)
+ *   - Gateway verifications and backend-authoritative Blockonomics monitoring
  */
 import { api } from "./api";
 import type {
@@ -99,9 +99,23 @@ export function capturePayPalOrder(orderId: string): Promise<PaymentTransaction>
   });
 }
 
+/** Retrieve backend-authoritative Blockonomics payment state. */
+export function getBlockonomicsPayment(id: string): Promise<PaymentTransaction> {
+  return api<PaymentTransaction>(`/payments/blockonomics/payments/${encodeURIComponent(id)}`);
+}
+
 /**
- * Get details for a Blockonomics / Crypto payment charge.
+ * Ask the backend to register a USDT ERC-20 transaction for provider
+ * monitoring. This request never marks the payment complete.
  */
+export function monitorBlockonomicsUsdt(id: string, txhash: string): Promise<PaymentTransaction> {
+  return api<PaymentTransaction>(`/payments/blockonomics/payments/${encodeURIComponent(id)}/monitor`, {
+    method: "POST",
+    body: JSON.stringify({ txhash }),
+  });
+}
+
+/** Retrieve a generic crypto charge. The generic provider remains blocked. */
 export function getCryptoCharge(id: string): Promise<PaymentTransaction> {
   return api<PaymentTransaction>(`/payments/crypto/charge/${encodeURIComponent(id)}`);
 }

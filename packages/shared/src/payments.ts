@@ -22,6 +22,7 @@ export const PaymentProviderConfigSchema = z.object({
   testMode: z.boolean(),
   supportedCurrencies: z.array(z.string()),
   supportedNetworks: z.array(z.enum(CRYPTO_NETWORKS)).optional(),
+  supportedAssets: z.array(z.enum(["BTC", "USDT"])).optional(),
   displayName: z.string(),
 });
 

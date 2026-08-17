@@ -74,12 +74,14 @@ describe("payment providers fail closed", () => {
     process.env.BLOCKONOMICS_API_KEY = "blockonomics-api-key";
     process.env.BLOCKONOMICS_CALLBACK_SECRET = "high-entropy-callback-secret";
     process.env.BLOCKONOMICS_ENABLED = "true";
+    process.env.BLOCKONOMICS_SUPPORTED_ASSETS = "BTC,USDT";
     const providers = await PaymentGatewaysService.listProviders();
     expect(providers.find((provider) => provider.provider === "blockonomics")).toMatchObject({
       active: true,
       configured: true,
       status: "ready",
       supportedNetworks: ["btc", "eth_erc20"],
+      supportedAssets: ["BTC", "USDT"],
     });
     expect(providers.find((provider) => provider.provider === "crypto")).toMatchObject({ active: false, status: "blocked" });
   });

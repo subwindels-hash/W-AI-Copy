@@ -117,11 +117,33 @@ export async function getBilling(userId: string) {
     orderBy: { createdAt: "desc" },
     take: 24,
   });
+  const invoiceById = new Map<string, Prisma.InvoiceGetPayload<{}>>();
+  for (const invoice of invoices) invoiceById.set(invoice.id, invoice);
+  const appliedAllocations = invoices.length
+    ? await prisma.invoicePaymentAllocation.findMany({
+        where: { invoiceId: { in: invoices.map((invoice) => invoice.id) }, status: "applied" },
+        select: { invoiceId: true, amountCents: true, currency: true },
+      })
+    : [];
+  const allocatedByInvoice = new Map<string, number>();
+  for (const allocation of appliedAllocations) {
+    const invoice = invoiceById.get(allocation.invoiceId);
+    if (!invoice || allocation.currency.toUpperCase() !== invoice.currency.toUpperCase()) continue;
+    allocatedByInvoice.set(allocation.invoiceId, (allocatedByInvoice.get(allocation.invoiceId) ?? 0) + allocation.amountCents);
+  }
+  const invoiceBalances = new Map<string, { allocatedCents: number; remainingCents: number }>();
+  for (const invoice of invoices) {
+    const allocatedCents = allocatedByInvoice.get(invoice.id) ?? 0;
+    const remainingCents = invoice.amountCents - allocatedCents;
+    if (remainingCents < 0) throw new Error(`Applied payment allocations exceed invoice ${invoice.number}`);
+    invoiceBalances.set(invoice.id, { allocatedCents, remainingCents });
+  }
+
   const price = PLAN_PRICES[sub.plan as PlanId] ?? PLAN_PRICES.starter;
   const monthlyRate = sub.cycle === "annual" ? Math.round(price.annual / 12) : price.monthly;
   const openInvoiceTotal = invoices
     .filter((i) => i.status === "open" || i.status === "past_due")
-    .reduce((s, i) => s + i.amountCents, 0);
+    .reduce((sum, invoice) => sum + (invoiceBalances.get(invoice.id)?.remainingCents ?? invoice.amountCents), 0);
 
   return {
     subscription: {
@@ -150,6 +172,8 @@ export async function getBilling(userId: string) {
       id: i.id,
       number: i.number,
       amountCents: i.amountCents,
+      allocatedCents: invoiceBalances.get(i.id)?.allocatedCents ?? 0,
+      remainingCents: invoiceBalances.get(i.id)?.remainingCents ?? i.amountCents,
       currency: i.currency,
       status: i.status,
       dueDate: i.dueDate,

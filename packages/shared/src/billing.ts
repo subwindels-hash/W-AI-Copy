@@ -45,6 +45,8 @@ export interface BillingInvoice {
   id: string;
   number: string;
   amountCents: number;
+  allocatedCents?: number;
+  remainingCents?: number;
   currency: string;
   status: string;
   dueDate: string | null;

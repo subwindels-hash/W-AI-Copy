@@ -56,6 +56,19 @@ describe("billing — subscription and invoice ledger", () => {
     expect(overview.accountsReceivable.openInvoiceTotal).toBe(2900);
   });
 
+  it("reports the exact remaining invoice balance after an applied split-tender allocation", async () => {
+    const invoice = await openProInvoice();
+    db.seed("InvoicePaymentAllocation", [{
+      id: cuid(), organizationId: ORG_A, invoiceId: invoice.id, paymentId: null,
+      sourceKind: "gift_card", sourceId: "gc-1", amountCents: 900,
+      currency: "USD", status: "applied", appliedAt: new Date(),
+      reversedAt: null, metadata: {}, createdAt: new Date(), updatedAt: new Date(),
+    }]);
+    const overview = await billing.getBilling(USER_A);
+    expect(overview.invoices[0]).toMatchObject({ amountCents: 2900, allocatedCents: 900, remainingCents: 2000 });
+    expect(overview.accountsReceivable.openInvoiceTotal).toBe(2000);
+  });
+
   it("does not create a duplicate invoice for an unchanged update", async () => {
     await billing.updateSubscription(USER_A, { plan: "pro" });
     const unchanged: any = await billing.updateSubscription(USER_A, { plan: "pro", cycle: "monthly", seats: 5 });

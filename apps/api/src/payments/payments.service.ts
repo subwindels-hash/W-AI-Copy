@@ -87,6 +87,7 @@ export const PaymentGatewaysService = {
           active: cfg.configured && cfg.enabled,
           configured: cfg.configured,
           status: !cfg.configured ? "not_configured" as const : !cfg.enabled ? "disabled" as const : "ready" as const,
+          supportedAssets: cfg.supportedAssets,
           configurationIssue: cfg.configured
             ? cfg.enabled ? undefined : "Disabled by Super Admin"
             : "API key and callback secret are required",

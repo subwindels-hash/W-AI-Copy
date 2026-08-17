@@ -111,6 +111,7 @@ tests/e2e/                # Playwright specs
 | [docs/BLOCKONOMICS_STAGE5_WEBHOOK_MONITORING.md](./docs/BLOCKONOMICS_STAGE5_WEBHOOK_MONITORING.md) | Durable GET callback inbox, exact status/amount matching, provider reconciliation, and USDT monitoring |
 | [docs/BLOCKONOMICS_STAGE6_BILLING_SETTLEMENT.md](./docs/BLOCKONOMICS_STAGE6_BILLING_SETTLEMENT.md) | Atomic allocation, existing-ledger journal, invoice/subscription settlement, receipt, audit, and idempotency |
 | [docs/BLOCKONOMICS_STAGE7_CURRENCY_GIFTCARD.md](./docs/BLOCKONOMICS_STAGE7_CURRENCY_GIFTCARD.md) | Fail-closed billable FX routing, provider currency eligibility, and durable WMPC Gift Card plus Blockonomics split tender |
+| [docs/BLOCKONOMICS_STAGE8_CHECKOUT_UI.md](./docs/BLOCKONOMICS_STAGE8_CHECKOUT_UI.md) | Existing checkout-page extension with invoice remainder, BTC/USDT selection, QR instructions, backend polling, confirmations, quote timer, and USDT monitoring |
 | [docs/PRODUCTION_FIX_PLAN.md](./docs/PRODUCTION_FIX_PLAN.md) | Ordered remediation checklist and completion gates for production blockers |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |
