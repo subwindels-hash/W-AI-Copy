@@ -1,67 +1,65 @@
 # syntax=docker/dockerfile:1.7
-# ────────────────────────────────────────────────────────────────────────────
-# WINDELS AI OS — API image (Node 20 Alpine, non-root, production-only deps)
-# ────────────────────────────────────────────────────────────────────────────
+# WINDELS AI OS — API + migration images.
+#
+# Targets:
+#   production  lean, non-root API runtime
+#   migrator    Prisma CLI + seed runner used as a one-shot Compose job
+
 FROM node:20-alpine AS base
 ENV PNPM_HOME="/pnpm" \
-    PATH="$PNPM_HOME:$PATH" \
-    NODE_ENV=production
-RUN corepack enable && corepack prepare pnpm@10 --activate
+    PATH="$PNPM_HOME:$PATH"
+RUN corepack enable && corepack prepare pnpm@10.34.5 --activate
 WORKDIR /app
-RUN addgroup -g 1001 -S nodejs && adduser -S windels -u 1001 -G nodejs
 
-# ── deps (production only) ──────────────────────────────────────────────────
-FROM base AS deps
-COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json tsconfig.base.json ./
-COPY packages/shared/package.json packages/shared/
-COPY apps/api/package.json apps/api/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --prod --frozen-lockfile=false --no-optional
-
-# ── build ───────────────────────────────────────────────────────────────────
 FROM base AS build
+# Native dependencies are compiled only in the build image. libstdc++ is also
+# installed in the runtime image for packages such as zeromq.
+RUN apk add --no-cache python3 make g++
 COPY package.json pnpm-workspace.yaml pnpm-lock.yaml turbo.json tsconfig.base.json ./
 COPY packages/shared/package.json packages/shared/
 COPY apps/api/package.json apps/api/
-COPY apps/web/package.json apps/web/
-RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
-    pnpm install --frozen-lockfile=false
+RUN --mount=type=cache,id=pnpm-api,target=/pnpm/store \
+    pnpm install --frozen-lockfile
 COPY . .
-RUN pnpm --filter @windels/shared build 2>/dev/null || true
+# pnpm-workspace.yaml intentionally disables dependency install scripts, so
+# generate the real Prisma client explicitly before compiling or deploying.
+RUN pnpm --filter @windels/api exec prisma generate
+RUN pnpm --filter @windels/shared build
 RUN pnpm --filter @windels/api build
+# Produce a portable production dependency tree, including the built shared
+# workspace package, instead of copying pnpm's symlinked workspace piecemeal.
+RUN pnpm --filter @windels/api deploy --prod --legacy /opt/windels-api
+# `pnpm deploy` creates a fresh virtual store after Prisma generation and does
+# not carry the generated sibling `.prisma/client` directory with it. Copy that
+# generated client beside the deployed @prisma/client package explicitly.
+RUN set -eu; \
+    prisma_source="$(find /app/node_modules/.pnpm -path '*/node_modules/.prisma' -type d -print -quit)"; \
+    prisma_package="$(find /opt/windels-api/node_modules/.pnpm -path '*/node_modules/@prisma/client' -type d -print -quit)"; \
+    test -n "$prisma_source"; \
+    test -n "$prisma_package"; \
+    prisma_modules="$(dirname "$(dirname "$prisma_package")")"; \
+    cp -a "$prisma_source" "$prisma_modules/.prisma"; \
+    test -f "$prisma_modules/.prisma/client/index.js"
 
-# ── generate Prisma client in production deps ───────────────────────────────
-FROM deps AS prisma
-COPY apps/api/prisma ./apps/api/prisma
-COPY apps/api/package.json ./apps/api/package.json
-RUN cd apps/api && pnpm exec prisma generate
+FROM build AS migrator
+ENV NODE_ENV=production
+WORKDIR /app/apps/api
+CMD ["sh", "-c", "pnpm exec prisma migrate deploy && pnpm exec tsx prisma/seed.ts"]
 
-# ── runner ──────────────────────────────────────────────────────────────────
-FROM node:20-alpine AS runner
+FROM node:20-alpine AS production
 ENV NODE_ENV=production \
-    PNPM_HOME="/pnpm" \
-    PATH="$PNPM_HOME:$PATH" \
     API_PORT=4000 \
     API_HOST=0.0.0.0
-RUN corepack enable && corepack prepare pnpm@10 --activate \
-    && apk add --no-cache tini curl \
-    && addgroup -g 1001 -S nodejs && adduser -S windels -u 1001 -G nodejs
-WORKDIR /app
-USER windels
-COPY --from=prisma --chown=windels:nodejs /app/node_modules ./node_modules
-COPY --from=prisma --chown=windels:nodejs /app/apps/api/node_modules ./apps/api/node_modules
-COPY --from=prisma --chown=windels:nodejs /app/packages/shared/node_modules ./packages/shared/node_modules
-COPY --from=build --chown=windels:nodejs /app/apps/api/dist ./apps/api/dist
-COPY --from=build --chown=windels:nodejs /app/apps/api/prisma ./apps/api/prisma
-COPY --from=build --chown=windels:nodejs /app/packages/shared/dist ./packages/shared/dist 2>/dev/null || true
-COPY --from=build --chown=windels:nodejs /app/package.json ./package.json
-COPY --from=build --chown=windels:nodejs /app/pnpm-workspace.yaml ./pnpm-workspace.yaml
-COPY --from=build --chown=windels:nodejs /app/apps/api/package.json ./apps/api/package.json
-COPY --from=build --chown=windels:nodejs /app/packages/shared/package.json ./packages/shared/package.json
-
-EXPOSE 4000
-HEALTHCHECK --interval=30s --timeout=5s --start-period=40s --retries=3 \
-  CMD curl -fsS http://localhost:4000/api/v1/health || exit 1
+RUN apk add --no-cache curl libstdc++ tini \
+    && addgroup -g 1001 -S nodejs \
+    && adduser -S windels -u 1001 -G nodejs \
+    && mkdir -p /app/apps/api /data \
+    && chown -R windels:nodejs /app /data
 WORKDIR /app/apps/api
+COPY --from=build --chown=windels:nodejs /opt/windels-api/ ./
+USER windels
+EXPOSE 4000
+HEALTHCHECK --interval=30s --timeout=5s --start-period=45s --retries=3 \
+  CMD curl -fsS http://127.0.0.1:4000/api/v1/health >/dev/null || exit 1
 ENTRYPOINT ["/sbin/tini", "--"]
 CMD ["node", "dist/index.js"]

@@ -1,13 +1,7 @@
-/**
- * Paystack Payment Gateway Service — Session 128
- *
- * Implements card and bank checkout across African currencies (NGN, GHS, ZAR, KES).
- * Includes reference generation, transaction verification, and SHA512 HMAC
- * `x-paystack-signature` verification in constant time.
- */
+/** Fail-closed Paystack checkout and verification adapter. */
 import { randomUUID, createHmac } from "node:crypto";
-import { logger } from "../config/logger.js";
 import { safeCompare } from "../webhook/webhookReceiver.service.js";
+import { clean, publicOrigin, requireFields, providerUpstreamError, responseJson, assertHttpsUrl, type ProviderConfiguration } from "./paymentConfig.js";
 
 export interface PYSInitResult {
   reference: string;
@@ -15,22 +9,30 @@ export interface PYSInitResult {
   provider: "paystack";
   amount: number;
   currency: string;
-  accessCode?: string;
+  accessCode: string;
 }
 
 export interface PYSVerifyResult {
+  verified: true;
+  provider: "paystack";
   reference: string;
   status: "completed" | "pending" | "failed";
   amount: number;
   currency: string;
+  providerTransactionId: string;
   channel?: string;
 }
 
+function key(): string {
+  return requireFields("paystack", { PAYSTACK_SECRET_KEY: process.env.PAYSTACK_SECRET_KEY }).PAYSTACK_SECRET_KEY;
+}
+
 export const PaystackService = {
-  /**
-   * Initialize a Paystack checkout transaction.
-   * Note: Paystack amounts in NGN/GHS are in kobo/pesewas (amount * 100).
-   */
+  configuration(): ProviderConfiguration {
+    const value = clean(process.env.PAYSTACK_SECRET_KEY);
+    return { configured: !!value, testMode: /^sk_test_/i.test(value ?? ""), issue: value ? undefined : "Missing PAYSTACK_SECRET_KEY" };
+  },
+
   async initializePayment(input: {
     amount: number;
     currency?: string;
@@ -38,102 +40,67 @@ export const PaystackService = {
     description?: string;
     invoiceId?: string;
     callbackUrl?: string;
-  }): Promise<PYSInitResult> {
+    reference?: string;
+  }, fetchImpl: typeof fetch = fetch): Promise<PYSInitResult> {
+    const secret = key();
+    const origin = publicOrigin();
+    if (!input.customerEmail) throw providerUpstreamError("paystack", "initialize", undefined, "customer email is required");
     const currency = (input.currency || "NGN").toUpperCase();
-    const reference = `PYS_WIN_${Date.now()}_${randomUUID().slice(0, 8)}`;
-    const email = input.customerEmail || "customer@windels.ai";
-    const subaccountAmount = Math.round(input.amount * 100);
-
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    let checkoutUrl = `https://checkout.paystack.com/${reference}`;
-    let accessCode: string | undefined;
-
-    if (secretKey && process.env.NODE_ENV === "production") {
-      try {
-        const resp = await fetch("https://api.paystack.co/transaction/initialize", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${secretKey}`,
-          },
-          body: JSON.stringify({
-            reference,
-            amount: subaccountAmount,
-            email,
-            currency,
-            callback_url: input.callbackUrl || "https://windels.example.com/app/payments/callback",
-            metadata: {
-              invoiceId: input.invoiceId ?? "",
-              description: input.description ?? "",
-            },
-          }),
-          signal: AbortSignal.timeout(10_000),
-        });
-
-        if (resp.ok) {
-          const json = await resp.json() as any;
-          if (json.data?.authorization_url) {
-            checkoutUrl = json.data.authorization_url;
-            accessCode = json.data.access_code;
-          }
-        }
-      } catch (err: any) {
-        logger.warn("PaystackService.initializePayment: remote API failed, using fallback URL", { error: err?.message });
-      }
+    const reference = input.reference ?? `PYS_WIN_${Date.now()}_${randomUUID().slice(0, 8)}`;
+    const response = await fetchImpl("https://api.paystack.co/transaction/initialize", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${secret}` },
+      body: JSON.stringify({
+        reference,
+        amount: Math.round(input.amount * 100),
+        email: input.customerEmail,
+        currency,
+        callback_url: input.callbackUrl || `${origin}/app/payments/callback?provider=paystack`,
+        metadata: { invoiceId: input.invoiceId ?? "", description: input.description ?? "" },
+      }),
+      signal: AbortSignal.timeout(10_000),
+    }).catch((error) => { throw providerUpstreamError("paystack", "initialize", undefined, (error as Error).message); });
+    const json = await responseJson(response);
+    if (!response.ok || json.status !== true || !json.data) {
+      throw providerUpstreamError("paystack", "initialize", response.status, json.message ?? json._text);
     }
+    const checkoutUrl = assertHttpsUrl("paystack", "initialize", json.data.authorization_url);
+    const accessCode = String(json.data.access_code ?? "");
+    if (!accessCode) throw providerUpstreamError("paystack", "initialize", response.status, "provider returned no access code");
+    if (json.data.reference && String(json.data.reference) !== reference) {
+      throw providerUpstreamError("paystack", "initialize", response.status, "provider reference mismatch");
+    }
+    return { reference, checkoutUrl, provider: "paystack", amount: input.amount, currency, accessCode };
+  },
 
+  async verifyPayment(reference: string, fetchImpl: typeof fetch = fetch): Promise<PYSVerifyResult> {
+    const secret = key();
+    const response = await fetchImpl(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(10_000),
+    }).catch((error) => { throw providerUpstreamError("paystack", "verify", undefined, (error as Error).message); });
+    const json = await responseJson(response);
+    if (!response.ok || json.status !== true || !json.data) throw providerUpstreamError("paystack", "verify", response.status, json.message ?? json._text);
+    const data = json.data;
+    if (String(data.reference ?? "") !== reference) throw providerUpstreamError("paystack", "verify", response.status, "provider reference mismatch");
+    const providerStatus = String(data.status ?? "").toLowerCase();
+    const status = providerStatus === "success" ? "completed" : providerStatus === "failed" || providerStatus === "abandoned" ? "failed" : "pending";
     return {
-      reference,
-      checkoutUrl,
+      verified: true,
       provider: "paystack",
-      amount: input.amount,
-      currency,
-      accessCode,
-    };
-  },
-
-  /**
-   * Verify transaction status with Paystack API.
-   */
-  async verifyPayment(reference: string): Promise<PYSVerifyResult> {
-    const secretKey = process.env.PAYSTACK_SECRET_KEY;
-    if (secretKey && process.env.NODE_ENV === "production") {
-      try {
-        const resp = await fetch(`https://api.paystack.co/transaction/verify/${encodeURIComponent(reference)}`, {
-          headers: { Authorization: `Bearer ${secretKey}` },
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (resp.ok) {
-          const json = await resp.json() as any;
-          const status = json.data?.status === "success" ? "completed" : json.data?.status === "failed" ? "failed" : "pending";
-          return {
-            reference: json.data?.reference || reference,
-            status,
-            amount: (json.data?.amount || 0) / 100,
-            currency: json.data?.currency || "NGN",
-            channel: json.data?.channel,
-          };
-        }
-      } catch (err: any) {
-        logger.warn("PaystackService.verifyPayment: remote verification failed", { error: err?.message });
-      }
-    }
-
-    return {
       reference,
-      status: "completed",
-      amount: 0,
-      currency: "NGN",
+      status,
+      amount: Number(data.amount) / 100,
+      currency: String(data.currency ?? "").toUpperCase(),
+      providerTransactionId: String(data.id ?? reference),
+      channel: data.channel ? String(data.channel) : undefined,
     };
   },
 
-  /**
-   * Verify SHA512 HMAC `x-paystack-signature` webhook signature header in constant time.
-   */
-  verifyWebhookSignature(signatureHeader: string | undefined, rawBody: string, secretOverride?: string): boolean {
-    const secret = secretOverride || process.env.PAYSTACK_SECRET_KEY || "test-pys-secret-key";
+  verifyWebhookSignature(signatureHeader: string | undefined, rawBody: Buffer | string, secretOverride?: string): boolean {
+    const secret = clean(secretOverride) ?? clean(process.env.PAYSTACK_SECRET_KEY);
     if (!signatureHeader || !secret) return false;
-    const computed = createHmac("sha512", secret).update(rawBody, "utf8").digest("hex");
+    const computed = createHmac("sha512", secret).update(rawBody).digest("hex");
     return safeCompare(signatureHeader, computed);
   },
 };

@@ -44,7 +44,7 @@ npm i -g pnpm@10.34.5
 pnpm install
 
 # 3. Start Postgres 17 + Redis (local install or Docker)
-#    See docs/DEPLOYMENT_ARCHITECTURE.md §Prerequisites for distro packages.
+#    `docker compose up -d` starts both on host-loopback ports.
 cp .env.example .env
 # edit .env — set JWT_SECRET and WINDELS_ENCRYPTION_KEY
 
@@ -63,7 +63,7 @@ cd apps/web && npx vite --host
 - API health: http://localhost:4000/healthz
 - Web app:    http://localhost:5173
 - Default admin after first registration: `admin@windels.ai` / first registered password (or `W1ndels!Admin#2026` per spec)
-- Full deployment guide (systemd + nginx + backups): **[docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md)**
+- Single-server production deployment (Docker, HTTPS, migrations, backups): **[docs/WINDELS-AI-OS-Deployment-Guide.md](./docs/WINDELS-AI-OS-Deployment-Guide.md)**
 
 ## Stack
 
@@ -102,7 +102,9 @@ tests/e2e/                # Playwright specs
 | [docs/MODULE_PLUGIN_CENTER.md](./docs/MODULE_PLUGIN_CENTER.md) | Signed `.wmod` format, fail-closed verification, isolated Module Runner contract, Super Admin lifecycle, runtime registration, rollback, and production validation |
 | [docs/NATIVE_AI_API.md](./docs/NATIVE_AI_API.md) | Native `/v1` AI provider API, WND keys, truthful model routing, SSE, external tool/agent loops, multimodal adapters, metering, billing, OpenAPI and production acceptance |
 | [docs/CLOUD_ANDROID.md](./docs/CLOUD_ANDROID.md) | Vendor-neutral Human + AI Cloud Android control plane, signed provider contract, agent permissions, collaboration locks, approvals, verification, fleet API and production checklist |
-| [docs/DEPLOYMENT_ARCHITECTURE.md](./docs/DEPLOYMENT_ARCHITECTURE.md) | Install, build, systemd/nginx deploy, backup, troubleshooting |
+| [docs/WINDELS-AI-OS-Deployment-Guide.md](./docs/WINDELS-AI-OS-Deployment-Guide.md) | Single-server Docker/HTTPS deployment, verification, upgrades, backups |
+| [docs/EXTERNAL_API_INTEGRATION_CATALOG.md](./docs/EXTERNAL_API_INTEGRATION_CATALOG.md) | External API/provider inventory, why each is needed, configuration, implementation status, blockers and rollout order |
+| [docs/PRODUCTION_FIX_PLAN.md](./docs/PRODUCTION_FIX_PLAN.md) | Ordered remediation checklist and completion gates for production blockers |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |
 | [docs/SESSION_89_SPECIFICATION.md](./docs/SESSION_89_SPECIFICATION.md) | Session 89 — Tenant Isolation & Cross-Tenant Data Governance (per-org isolation policies, namespace audit, cross-tenant self-tests, export gate) |

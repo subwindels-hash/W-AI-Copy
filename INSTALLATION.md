@@ -1,5 +1,12 @@
 # WINDELS AI OS — PRODUCTION INSTALLATION & DEPLOYMENT MANUAL
 
+> **Archived reference:** this document contains historical architecture examples
+> and is not the executable single-server runbook. For the current, fail-fast
+> Docker deployment use
+> [`docs/WINDELS-AI-OS-Deployment-Guide.md`](./docs/WINDELS-AI-OS-Deployment-Guide.md)
+> with `infra/docker/docker-compose.prod.yml`. Do not copy credentials or Compose
+> snippets from this archived document into a live environment.
+
 ```
 WINDELS AI OS Enterprise Documentation
 Version: 2.0

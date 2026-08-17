@@ -69,6 +69,15 @@ export function PaymentGatewaysPage() {
     loadData();
   }, [loadData]);
 
+  useEffect(() => {
+    if (!providers.length) return;
+    const current = providers.find((item) => item.provider === provider);
+    if (!current?.active) {
+      const firstReady = providers.find((item) => item.active);
+      if (firstReady) setProvider(firstReady.provider);
+    }
+  }, [providers, provider]);
+
   const handleCheckout = async (e: React.FormEvent) => {
     e.preventDefault();
     setCheckoutError(null);
@@ -93,6 +102,9 @@ export function PaymentGatewaysPage() {
   };
 
   const completedCount = transactions.filter((t) => t.status === "completed").length;
+  const configuredCount = providers.filter((item) => item.active).length;
+  const selectedProvider = providers.find((item) => item.provider === provider);
+  const cryptoProvider = providers.find((item) => item.provider === "crypto");
 
   return (
     <div className="space-y-6 p-6">
@@ -123,9 +135,9 @@ export function PaymentGatewaysPage() {
         <Card className="p-4">
           <div className="text-xs uppercase tracking-wide text-text-muted">Configured Gateways</div>
           <div className="mt-1 text-2xl font-semibold text-text-bright">
-            {providers.length !== undefined ? providers.length : "not recorded"}
+            {configuredCount}
           </div>
-          <div className="mt-1 text-xs text-text-muted">Flutterwave, Paystack, Stripe, PayPal, Crypto</div>
+          <div className="mt-1 text-xs text-text-muted">Ready and fully configured; unavailable providers are not counted</div>
         </Card>
         <Card className="p-4">
           <div className="text-xs uppercase tracking-wide text-text-muted">Total Transactions</div>
@@ -143,8 +155,8 @@ export function PaymentGatewaysPage() {
         </Card>
         <Card className="p-4">
           <div className="text-xs uppercase tracking-wide text-text-muted">Crypto Networks</div>
-          <div className="mt-1 text-2xl font-semibold text-text-bright">4</div>
-          <div className="mt-1 text-xs text-text-muted">BTC, TRC-20, ERC-20, BNB Chain</div>
+          <div className="mt-1 text-2xl font-semibold text-text-bright">{cryptoProvider?.active ? cryptoProvider.supportedNetworks?.length ?? 0 : 0}</div>
+          <div className="mt-1 text-xs text-text-muted">Crypto remains blocked until real address, pricing, and chain verification are available</div>
         </Card>
       </div>
 
@@ -171,12 +183,15 @@ export function PaymentGatewaysPage() {
                   onChange={(e) => setProvider(e.target.value as PaymentProvider)}
                   className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-bright"
                 >
-                  <option value="flutterwave">Flutterwave (Cards, Mobile Money)</option>
-                  <option value="paystack">Paystack (African Card & Bank)</option>
-                  <option value="stripe">Stripe (Global Card, Apple Pay, Google Pay, SEPA)</option>
-                  <option value="paypal">PayPal (Global Checkout Orders)</option>
-                  <option value="crypto">Blockonomics / Multi-Chain Crypto</option>
+                  {providers.map((item) => (
+                    <option key={item.provider} value={item.provider} disabled={!item.active}>
+                      {item.displayName}{item.active ? "" : ` — ${item.status.replace("_", " ")}`}
+                    </option>
+                  ))}
                 </select>
+                {selectedProvider && !selectedProvider.active ? (
+                  <p className="mt-1 text-xs text-amber-400">{selectedProvider.configurationIssue ?? "This provider is unavailable."}</p>
+                ) : null}
               </div>
 
               {provider === "crypto" ? (
@@ -243,7 +258,7 @@ export function PaymentGatewaysPage() {
                 />
               </div>
 
-              <Button type="submit" className="w-full gap-2" disabled={checkoutLoading}>
+              <Button type="submit" className="w-full gap-2" disabled={checkoutLoading || !selectedProvider?.active}>
                 <Send className="h-4 w-4" />
                 {checkoutLoading ? "Initiating..." : "Initiate Checkout"}
               </Button>
@@ -317,9 +332,10 @@ export function PaymentGatewaysPage() {
                         {p.displayName}
                       </td>
                       <td className="py-3 pr-4">
-                        <Badge variant={p.testMode ? "secondary" : "default"}>
-                          {p.testMode ? "Sandbox / Test" : "Production"}
+                        <Badge variant={p.status === "ready" ? (p.testMode ? "secondary" : "default") : p.status === "blocked" ? "danger" : "outline"}>
+                          {p.status === "ready" ? (p.testMode ? "Ready · Sandbox" : "Ready · Production") : p.status.replace("_", " ")}
                         </Badge>
+                        {p.configurationIssue ? <div className="mt-1 max-w-xs text-[11px] text-text-muted">{p.configurationIssue}</div> : null}
                       </td>
                       <td className="py-3 pr-4 text-xs font-mono text-text-muted">
                         {p.supportedCurrencies.join(", ")}

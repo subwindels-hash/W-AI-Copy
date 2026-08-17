@@ -11,7 +11,11 @@ export type PaymentTransactionStatus = (typeof PAYMENT_TRANSACTION_STATUSES)[num
 
 export const PaymentProviderConfigSchema = z.object({
   provider: z.enum(PAYMENT_PROVIDERS),
+  /** True only when the complete credential set is present and the adapter is enabled. */
   active: z.boolean(),
+  configured: z.boolean(),
+  status: z.enum(["ready", "not_configured", "blocked"]),
+  configurationIssue: z.string().optional(),
   testMode: z.boolean(),
   supportedCurrencies: z.array(z.string()),
   supportedNetworks: z.array(z.enum(CRYPTO_NETWORKS)).optional(),

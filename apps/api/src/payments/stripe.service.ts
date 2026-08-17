@@ -1,14 +1,11 @@
-/**
- * Stripe Payment Gateway Service — Session 128 (Multi-Provider Payment Gateways)
- *
- * Implements global checkout sessions (Card, Apple Pay, Google Pay, SEPA,
- * Bank Transfers) across international currencies (USD, EUR, GBP, CAD, AUD, JPY, NGN, ZAR).
- * Includes reference generation, transaction verification, and constant-time
- * `Stripe-Signature` HMAC SHA256 signature verification.
- */
+/** Fail-closed Stripe Checkout and verification adapter. */
 import { randomUUID, createHmac } from "node:crypto";
-import { logger } from "../config/logger.js";
 import { safeCompare } from "../webhook/webhookReceiver.service.js";
+import { clean, publicOrigin, requireFields, providerUpstreamError, responseJson, assertHttpsUrl, type ProviderConfiguration } from "./paymentConfig.js";
+
+const ZERO_DECIMAL = new Set(["BIF", "CLP", "DJF", "GNF", "JPY", "KMF", "KRW", "MGA", "PYG", "RWF", "UGX", "VND", "VUV", "XAF", "XOF", "XPF"]);
+const toMinor = (amount: number, currency: string) => ZERO_DECIMAL.has(currency) ? Math.round(amount) : Math.round(amount * 100);
+const fromMinor = (amount: number, currency: string) => ZERO_DECIMAL.has(currency) ? amount : amount / 100;
 
 export interface STRInitResult {
   reference: string;
@@ -16,21 +13,31 @@ export interface STRInitResult {
   provider: "stripe";
   amount: number;
   currency: string;
-  sessionId?: string;
+  sessionId: string;
 }
 
 export interface STRVerifyResult {
+  verified: true;
+  provider: "stripe";
   reference: string;
   status: "completed" | "pending" | "failed";
   amount: number;
   currency: string;
-  sessionId?: string;
+  providerTransactionId: string;
+  sessionId: string;
+}
+
+function key(): string {
+  return requireFields("stripe", { STRIPE_SECRET_KEY: process.env.STRIPE_SECRET_KEY }).STRIPE_SECRET_KEY;
 }
 
 export const StripeService = {
-  /**
-   * Create a Stripe Checkout Session.
-   */
+  configuration(): ProviderConfiguration {
+    const missing = ["STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET"].filter((name) => !clean(process.env[name]));
+    const value = clean(process.env.STRIPE_SECRET_KEY);
+    return { configured: missing.length === 0, testMode: /^sk_test_/i.test(value ?? ""), issue: missing.length ? `Missing ${missing.join(", ")}` : undefined };
+  },
+
   async createCheckoutSession(input: {
     amount: number;
     currency?: string;
@@ -39,126 +46,74 @@ export const StripeService = {
     invoiceId?: string;
     successUrl?: string;
     cancelUrl?: string;
-  }): Promise<STRInitResult> {
+    reference?: string;
+  }, fetchImpl: typeof fetch = fetch): Promise<STRInitResult> {
+    const secret = key();
+    const origin = publicOrigin();
+    if (!input.customerEmail) throw providerUpstreamError("stripe", "initialize", undefined, "customer email is required");
     const currency = (input.currency || "USD").toUpperCase();
-    const reference = `STR_WIN_${Date.now()}_${randomUUID().slice(0, 8)}`;
-    const email = input.customerEmail || "customer@windels.ai";
-    const title = input.description || `WINDELS AI OS Order (${currency} ${input.amount})`;
+    const reference = input.reference ?? `STR_WIN_${Date.now()}_${randomUUID().slice(0, 8)}`;
+    const params = new URLSearchParams();
+    params.append("mode", "payment");
+    params.append("success_url", input.successUrl || `${origin}/app/payments/callback?provider=stripe&session_id={CHECKOUT_SESSION_ID}`);
+    params.append("cancel_url", input.cancelUrl || `${origin}/app/payments`);
+    params.append("customer_email", input.customerEmail);
+    params.append("client_reference_id", reference);
+    params.append("line_items[0][price_data][currency]", currency.toLowerCase());
+    params.append("line_items[0][price_data][product_data][name]", input.description || `WINDELS AI OS Order (${currency} ${input.amount})`);
+    params.append("line_items[0][price_data][unit_amount]", String(toMinor(input.amount, currency)));
+    params.append("line_items[0][quantity]", "1");
+    params.append("metadata[organizationReference]", reference);
+    if (input.invoiceId) params.append("metadata[invoiceId]", input.invoiceId);
 
-    // Stripe amounts for zero-decimal currencies like JPY vs 2-decimal currencies
-    const unitAmount = currency === "JPY" ? Math.round(input.amount) : Math.round(input.amount * 100);
-
-    const secretKey = process.env.STRIPE_SECRET_KEY;
-    let checkoutUrl = `https://checkout.stripe.com/c/pay/${reference}`;
-    let sessionId: string | undefined;
-
-    if (secretKey && process.env.NODE_ENV === "production") {
-      try {
-        const params = new URLSearchParams();
-        params.append("mode", "payment");
-        params.append("success_url", input.successUrl || `https://windels.example.com/app/payments/callback?ref=${reference}`);
-        params.append("cancel_url", input.cancelUrl || "https://windels.example.com/app/payments");
-        params.append("customer_email", email);
-        params.append("client_reference_id", reference);
-        params.append("line_items[0][price_data][currency]", currency.toLowerCase());
-        params.append("line_items[0][price_data][product_data][name]", title);
-        params.append("line_items[0][price_data][unit_amount]", String(unitAmount));
-        params.append("line_items[0][quantity]", "1");
-        if (input.invoiceId) {
-          params.append("metadata[invoiceId]", input.invoiceId);
-        }
-
-        const resp = await fetch("https://api.stripe.com/v1/checkout/sessions", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/x-www-form-urlencoded",
-            Authorization: `Bearer ${secretKey}`,
-          },
-          body: params.toString(),
-          signal: AbortSignal.timeout(10_000),
-        });
-
-        if (resp.ok) {
-          const json = await resp.json() as any;
-          if (json.url) {
-            checkoutUrl = json.url;
-            sessionId = json.id;
-          }
-        }
-      } catch (err: any) {
-        logger.warn("StripeService.createCheckoutSession: remote API failed, using fallback URL", { error: err?.message });
-      }
+    const response = await fetchImpl("https://api.stripe.com/v1/checkout/sessions", {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded", Authorization: `Bearer ${secret}` },
+      body: params.toString(),
+      signal: AbortSignal.timeout(10_000),
+    }).catch((error) => { throw providerUpstreamError("stripe", "initialize", undefined, (error as Error).message); });
+    const json = await responseJson(response);
+    if (!response.ok) throw providerUpstreamError("stripe", "initialize", response.status, json.error?.message ?? json._text);
+    const checkoutUrl = assertHttpsUrl("stripe", "initialize", json.url);
+    const sessionId = String(json.id ?? "");
+    if (!sessionId || String(json.client_reference_id ?? "") !== reference) {
+      throw providerUpstreamError("stripe", "initialize", response.status, "provider session/reference missing or mismatched");
     }
+    return { reference, checkoutUrl, provider: "stripe", amount: input.amount, currency, sessionId };
+  },
 
+  async verifyPayment(reference: string, sessionId: string | undefined, fetchImpl: typeof fetch = fetch): Promise<STRVerifyResult> {
+    const secret = key();
+    if (!sessionId) throw providerUpstreamError("stripe", "verify", undefined, "session_id is required");
+    const response = await fetchImpl(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
+      headers: { Authorization: `Bearer ${secret}` },
+      signal: AbortSignal.timeout(10_000),
+    }).catch((error) => { throw providerUpstreamError("stripe", "verify", undefined, (error as Error).message); });
+    const json = await responseJson(response);
+    if (!response.ok) throw providerUpstreamError("stripe", "verify", response.status, json.error?.message ?? json._text);
+    if (String(json.client_reference_id ?? "") !== reference) throw providerUpstreamError("stripe", "verify", response.status, "provider reference mismatch");
+    const currency = String(json.currency ?? "").toUpperCase();
+    const status = json.payment_status === "paid" ? "completed" : json.status === "expired" ? "failed" : "pending";
     return {
-      reference,
-      checkoutUrl,
+      verified: true,
       provider: "stripe",
-      amount: input.amount,
-      currency,
-      sessionId,
-    };
-  },
-
-  /**
-   * Verify transaction status with Stripe API.
-   */
-  async verifyPayment(reference: string, sessionId?: string): Promise<STRVerifyResult> {
-    const secretKey = process.env.STRIPE_SECRET_KEY;
-    if (secretKey && sessionId && process.env.NODE_ENV === "production") {
-      try {
-        const resp = await fetch(`https://api.stripe.com/v1/checkout/sessions/${encodeURIComponent(sessionId)}`, {
-          headers: { Authorization: `Bearer ${secretKey}` },
-          signal: AbortSignal.timeout(10_000),
-        });
-        if (resp.ok) {
-          const json = await resp.json() as any;
-          const status = json.payment_status === "paid" ? "completed" : json.status === "expired" ? "failed" : "pending";
-          const amount = json.currency === "jpy" ? (json.amount_total || 0) : (json.amount_total || 0) / 100;
-          return {
-            reference: json.client_reference_id || reference,
-            status,
-            amount,
-            currency: (json.currency || "USD").toUpperCase(),
-            sessionId: json.id,
-          };
-        }
-      } catch (err: any) {
-        logger.warn("StripeService.verifyPayment: remote verification failed", { error: err?.message });
-      }
-    }
-
-    return {
       reference,
-      status: "completed",
-      amount: 0,
-      currency: "USD",
-      sessionId,
+      status,
+      amount: fromMinor(Number(json.amount_total), currency),
+      currency,
+      providerTransactionId: String(json.payment_intent ?? json.id ?? sessionId),
+      sessionId: String(json.id ?? sessionId),
     };
   },
 
-  /**
-   * Verify Stripe webhook `Stripe-Signature` header in constant time.
-   */
-  verifyWebhookSignature(signatureHeader: string | undefined, rawBody: string, secretOverride?: string): boolean {
-    const secret = secretOverride || process.env.STRIPE_WEBHOOK_SECRET || "test-stripe-secret";
+  verifyWebhookSignature(signatureHeader: string | undefined, rawBody: Buffer | string, secretOverride?: string, nowSeconds = Math.floor(Date.now() / 1000)): boolean {
+    const secret = clean(secretOverride) ?? clean(process.env.STRIPE_WEBHOOK_SECRET);
     if (!signatureHeader || !secret) return false;
-
-    // Parse Stripe signature header format: t=timestamp,v1=signature
-    const parts = signatureHeader.split(",").reduce((acc, part) => {
-      const [k, v] = part.trim().split("=");
-      if (k && v) acc[k] = v;
-      return acc;
-    }, {} as Record<string, string>);
-
-    if (!parts.t || !parts.v1) {
-      // Allow direct signature comparison in test environments
-      const directComputed = createHmac("sha256", secret).update(rawBody, "utf8").digest("hex");
-      return safeCompare(signatureHeader, directComputed) || safeCompare(signatureHeader, secret);
-    }
-
-    const payloadToSign = `${parts.t}.${rawBody}`;
-    const computed = createHmac("sha256", secret).update(payloadToSign, "utf8").digest("hex");
-    return safeCompare(parts.v1, computed);
+    const values = signatureHeader.split(",").map((part) => part.trim().split("=", 2));
+    const timestamp = Number(values.find(([name]) => name === "t")?.[1]);
+    const signatures = values.filter(([name]) => name === "v1").map(([, value]) => value).filter(Boolean) as string[];
+    if (!Number.isFinite(timestamp) || Math.abs(nowSeconds - timestamp) > 300 || !signatures.length) return false;
+    const computed = createHmac("sha256", secret).update(`${timestamp}.`).update(rawBody).digest("hex");
+    return signatures.some((signature) => safeCompare(signature, computed));
   },
 };
