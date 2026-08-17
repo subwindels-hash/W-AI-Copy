@@ -419,9 +419,11 @@ export const GiftCardsService = {
         organizationId: inv.organizationId,
         invoiceId: inv.id,
         giftCardId: cardId,
+        sourceKind: "gift_card",
+        journalKey: `gift-card:${cardId}:invoice:${inv.id}`,
         amountCents: Math.round(redemption.redeemed * 100),
-        debitAccount: "accounts_receivable",
-        creditAccount: "gift_card_liability",
+        debitAccount: "gift_card_liability",
+        creditAccount: "accounts_receivable",
       },
     });
 

@@ -1,12 +1,15 @@
 import { z } from "zod";
 
-export const PAYMENT_PROVIDERS = ["flutterwave", "paystack", "stripe", "paypal", "crypto"] as const;
+export const PAYMENT_PROVIDERS = ["flutterwave", "paystack", "stripe", "paypal", "crypto", "blockonomics"] as const;
 export type PaymentProvider = (typeof PAYMENT_PROVIDERS)[number];
 
 export const CRYPTO_NETWORKS = ["btc", "tron_trc20", "eth_erc20", "bnb_chain"] as const;
 export type CryptoNetwork = (typeof CRYPTO_NETWORKS)[number];
 
-export const PAYMENT_TRANSACTION_STATUSES = ["pending", "completed", "failed", "refunded", "expired"] as const;
+export const PAYMENT_TRANSACTION_STATUSES = [
+  "created", "pending", "detected", "confirming", "confirmed", "completed",
+  "expired", "failed", "cancelled", "under_review", "refunded",
+] as const;
 export type PaymentTransactionStatus = (typeof PAYMENT_TRANSACTION_STATUSES)[number];
 
 export const PaymentProviderConfigSchema = z.object({
@@ -14,7 +17,7 @@ export const PaymentProviderConfigSchema = z.object({
   /** True only when the complete credential set is present and the adapter is enabled. */
   active: z.boolean(),
   configured: z.boolean(),
-  status: z.enum(["ready", "not_configured", "blocked"]),
+  status: z.enum(["ready", "disabled", "not_configured", "blocked"]),
   configurationIssue: z.string().optional(),
   testMode: z.boolean(),
   supportedCurrencies: z.array(z.string()),
@@ -36,6 +39,12 @@ export const PaymentTransactionSchema = z.object({
   cryptoAddress: z.string().optional(),
   confirmations: z.number().int().nonnegative().optional(),
   requiredConfirmations: z.number().int().nonnegative().optional(),
+  cryptoCurrency: z.enum(["BTC", "USDT"]).optional(),
+  expectedCryptoUnits: z.string().regex(/^\d+$/).optional(),
+  receivedCryptoUnits: z.string().regex(/^\d+$/).optional(),
+  providerStatus: z.string().optional(),
+  expiresAt: z.string().datetime().nullable().optional(),
+  reconciliationStatus: z.string().optional(),
   status: z.enum(PAYMENT_TRANSACTION_STATUSES),
   invoiceId: z.string().nullable().optional(),
   description: z.string().optional(),
@@ -77,3 +86,42 @@ export const CryptoAddressRequestSchema = z.object({
 });
 
 export type CryptoAddressRequestInput = z.input<typeof CryptoAddressRequestSchema>;
+
+export const BLOCKONOMICS_ASSETS = ["BTC", "USDT"] as const;
+export type BlockonomicsAsset = (typeof BLOCKONOMICS_ASSETS)[number];
+
+export const BlockonomicsCreatePaymentSchema = z.object({
+  amount: z.number().positive(),
+  currency: z.string().trim().length(3).transform((value) => value.toUpperCase()),
+  cryptoCurrency: z.enum(BLOCKONOMICS_ASSETS),
+  invoiceId: z.string().min(1).max(200).optional(),
+  description: z.string().max(500).optional(),
+  customerEmail: z.string().email().optional(),
+});
+export type BlockonomicsCreatePaymentInput = z.infer<typeof BlockonomicsCreatePaymentSchema>;
+
+export const BlockonomicsMonitorTransactionSchema = z.object({
+  txhash: z.string().regex(/^0x[0-9a-fA-F]{64}$/),
+});
+export type BlockonomicsMonitorTransactionInput = z.infer<typeof BlockonomicsMonitorTransactionSchema>;
+
+export const BlockonomicsCallbackSchema = z.object({
+  secret: z.string().min(16).max(500),
+  addr: z.string().min(20).max(200),
+  crypto: z.enum(BLOCKONOMICS_ASSETS).default("BTC"),
+  status: z.coerce.number().int().min(0).max(2),
+  value: z.coerce.bigint().positive(),
+  txid: z.string().min(16).max(200),
+  rbf: z.coerce.number().int().optional(),
+});
+export type BlockonomicsCallbackInput = z.infer<typeof BlockonomicsCallbackSchema>;
+
+export const BlockonomicsProviderSettingsSchema = z.object({
+  enabled: z.boolean(),
+  testMode: z.boolean().default(false),
+  matchCallback: z.string().trim().min(3).max(300),
+  supportedAssets: z.array(z.enum(BLOCKONOMICS_ASSETS)).min(1).default(["BTC"]),
+  quoteExpiryMinutes: z.number().int().min(5).max(60).default(15),
+  requiredConfirmations: z.literal(2).default(2),
+});
+export type BlockonomicsProviderSettings = z.infer<typeof BlockonomicsProviderSettingsSchema>;

@@ -13,6 +13,7 @@ const PROVIDER_LABEL: Record<PaymentProvider, string> = {
   stripe: "Stripe",
   paypal: "PayPal",
   crypto: "Crypto payments",
+  blockonomics: "Blockonomics",
 };
 
 export function clean(value: string | undefined): string | undefined {
