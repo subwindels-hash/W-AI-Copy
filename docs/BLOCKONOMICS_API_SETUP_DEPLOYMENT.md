@@ -423,6 +423,17 @@ history. Preserve all existing allocations and audit evidence.
 
 ## 15. Stage 15 target-runtime acceptance checklist
 
+Begin with the non-destructive, secret-safe preflight:
+
+```bash
+pnpm validate:blockonomics-target
+```
+
+It checks configuration posture, PostgreSQL/Redis TCP reachability, public BTC
+and USDT quotes, and authenticated read-only provider history. It does not
+allocate an address or mutate a payment, so passing it is necessary but not
+sufficient.
+
 Capture evidence for every item without recording secrets:
 
 ### PostgreSQL

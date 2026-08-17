@@ -119,6 +119,7 @@ tests/e2e/                # Playwright specs
 | [docs/BLOCKONOMICS_STAGE13_TEST_CERTIFICATION.md](./docs/BLOCKONOMICS_STAGE13_TEST_CERTIFICATION.md) | Full API/web test counts, recursive build/typecheck/lint evidence, offline Prisma validation, and explicit environment blockers |
 | [docs/BLOCKONOMICS_STAGE14_DOCUMENTATION.md](./docs/BLOCKONOMICS_STAGE14_DOCUMENTATION.md) | Documentation gate and truthfulness review for API/setup/deployment/operations coverage |
 | [docs/BLOCKONOMICS_API_SETUP_DEPLOYMENT.md](./docs/BLOCKONOMICS_API_SETUP_DEPLOYMENT.md) | Consolidated provider setup, API reference, callback contract, deployment, operations, troubleshooting, and Stage 15 acceptance checklist |
+| [docs/BLOCKONOMICS_STAGE15_TARGET_RUNTIME_VALIDATION.md](./docs/BLOCKONOMICS_STAGE15_TARGET_RUNTIME_VALIDATION.md) | Measured target-runtime attempt, absent dependency/network evidence, non-destructive preflight, and exact unblock procedure; validation remains blocked |
 | [docs/PRODUCTION_FIX_PLAN.md](./docs/PRODUCTION_FIX_PLAN.md) | Ordered remediation checklist and completion gates for production blockers |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |

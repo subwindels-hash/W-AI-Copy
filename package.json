@@ -23,6 +23,7 @@
     "db:migrate": "pnpm --filter @windels/api exec prisma migrate deploy",
     "db:migrate:dev": "pnpm --filter @windels/api exec prisma migrate dev",
     "db:seed": "pnpm --filter @windels/api exec tsx prisma/seed.ts",
+    "validate:blockonomics-target": "node scripts/validate-blockonomics-target.mjs",
     "api": "pnpm --filter @windels/api dev",
     "web": "pnpm --filter @windels/web dev",
     "docker:build": "docker build --target production -f infra/docker/Dockerfile.api -t windels-ai-api:dev . && docker build -f infra/docker/Dockerfile.web -t windels-ai-web:dev .",
