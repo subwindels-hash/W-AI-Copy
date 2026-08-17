@@ -62,13 +62,14 @@ afterAll(() => { process.env = originalEnv; });
 describe("payment providers fail closed", () => {
   it("reports providers as inactive instead of calling missing credentials test mode", async () => {
     const providers = await PaymentGatewaysService.listProviders();
-    expect(providers).toHaveLength(5);
+    expect(providers).toHaveLength(6);
     expect(providers.every((provider) => provider.active === false)).toBe(true);
     expect(providers.find((provider) => provider.provider === "crypto")?.status).toBe("blocked");
+    expect(providers.find((provider) => provider.provider === "blockonomics")?.active).toBe(false);
     expect(providers.filter((provider) => provider.provider !== "crypto").every((provider) => provider.status === "not_configured")).toBe(true);
   });
 
-  it.each(["flutterwave", "paystack", "stripe", "paypal", "crypto"] as const)("refuses unconfigured %s checkout without creating a ledger row", async (provider) => {
+  it.each(["flutterwave", "paystack", "stripe", "paypal", "crypto", "blockonomics"] as const)("refuses unconfigured %s checkout without creating a ledger row", async (provider) => {
     await expect(PaymentGatewaysService.initiateCheckout(`org-${provider}`, {
       provider, amount: 100, currency: "USD", customerEmail: "buyer@example.test",
       cryptoNetwork: provider === "crypto" ? "btc" : undefined,

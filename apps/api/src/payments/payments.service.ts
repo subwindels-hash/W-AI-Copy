@@ -16,6 +16,7 @@ import { PaystackService } from "./paystack.service.js";
 import { PayPalService } from "./paypal.service.js";
 import { StripeService } from "./stripe.service.js";
 import { CryptoPaymentsService } from "./crypto.service.js";
+import { BlockonomicsConfigService } from "./blockonomics.service.js";
 import { AppError } from "../utils/result.js";
 import { sameMoney } from "./paymentConfig.js";
 import type {
@@ -72,11 +73,25 @@ const PROVIDERS: Array<Omit<PaymentProviderConfig, "active" | "configured" | "st
   { provider: "stripe", supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "NGN", "ZAR"], displayName: "Stripe (Global Card, Wallets & Bank Methods)" },
   { provider: "paypal", supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD"], displayName: "PayPal (Global Checkout Orders)" },
   { provider: "crypto", supportedCurrencies: [], supportedNetworks: [], displayName: "Crypto payments (disabled pending chain verification)" },
+  { provider: "blockonomics", supportedCurrencies: ["USD", "EUR", "GBP", "NGN", "GHS", "KES", "ZAR", "CAD", "AUD", "JPY"], supportedNetworks: ["btc", "eth_erc20"], displayName: "Blockonomics (BTC & USDT ERC-20)" },
 ];
 
 export const PaymentGatewaysService = {
   async listProviders(): Promise<PaymentProviderConfig[]> {
-    return PROVIDERS.map((base) => {
+    return Promise.all(PROVIDERS.map(async (base) => {
+      if (base.provider === "blockonomics") {
+        const cfg = await BlockonomicsConfigService.public();
+        return {
+          ...base,
+          active: false, // Stage 4 payment creation gate is not open yet.
+          configured: cfg.configured,
+          status: !cfg.configured ? "not_configured" as const : !cfg.enabled ? "disabled" as const : "blocked" as const,
+          configurationIssue: cfg.configured
+            ? cfg.enabled ? "Configured; payment creation remains blocked until Stage 4 is complete" : "Disabled by Super Admin"
+            : "API key and callback secret are required",
+          testMode: cfg.testMode,
+        };
+      }
       const cfg = providerConfig(base.provider);
       const blocked = base.provider === "crypto";
       return {
@@ -87,7 +102,7 @@ export const PaymentGatewaysService = {
         configurationIssue: cfg.issue,
         testMode: cfg.testMode,
       };
-    });
+    }));
   },
 
   async assertLedgerAvailable(): Promise<void> {
@@ -142,6 +157,9 @@ export const PaymentGatewaysService = {
     if (!organizationId) throw AppError.badRequest("Organization is required for payment checkout");
     await this.assertLedgerAvailable();
     const provider = input.provider;
+    if (provider === "blockonomics") {
+      throw new AppError("SERVICE_UNAVAILABLE", "Blockonomics payment creation is not enabled until Stage 4 completes", 503, { provider, code: "PAYMENT_PROVIDER_BLOCKED" });
+    }
     const cfg = providerConfig(provider);
     if (!cfg.configured || provider === "crypto") {
       throw new AppError("SERVICE_UNAVAILABLE", `${provider} payment provider is unavailable`, 503, {
