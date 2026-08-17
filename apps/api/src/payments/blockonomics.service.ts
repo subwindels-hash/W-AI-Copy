@@ -113,8 +113,11 @@ export const BlockonomicsConfigService = {
     settings: BlockonomicsProviderSettings;
   }, actorId: string): Promise<BlockonomicsPublicConfig> {
     const current = await storedRow();
-    const previousApi = decryptSecret(current?.apiKeyEnc);
-    const previousCallback = decryptSecret(current?.callbackSecretEnc);
+    // The first Super Admin write adopts environment bootstrap credentials into
+    // encrypted PostgreSQL storage. Once a database row exists, it is the only
+    // source of truth and missing DB secrets never fall back to environment.
+    const previousApi = current ? decryptSecret(current.apiKeyEnc) : process.env.BLOCKONOMICS_API_KEY?.trim() || null;
+    const previousCallback = current ? decryptSecret(current.callbackSecretEnc) : process.env.BLOCKONOMICS_CALLBACK_SECRET?.trim() || null;
     const apiKey = input.apiKey?.trim() || previousApi;
     const callbackSecret = input.callbackSecret?.trim() || previousCallback;
     if (input.settings.enabled && (!apiKey || !callbackSecret)) {
@@ -142,14 +145,63 @@ export const BlockonomicsConfigService = {
         lastError: null,
       },
     });
+    await prisma.auditLog.create({
+      data: {
+        organizationId: null,
+        userId: actorId,
+        action: "payment_provider.configuration_updated",
+        resourceType: "PaymentProviderConfiguration",
+        resourceId: PROVIDER,
+        metadata: {
+          provider: PROVIDER,
+          enabled: settings.enabled,
+          testMode: settings.testMode,
+          supportedAssets: settings.supportedAssets,
+          quoteExpiryMinutes: settings.quoteExpiryMinutes,
+          apiKeyRotated: !!input.apiKey,
+          callbackSecretRotated: !!input.callbackSecret,
+        },
+      },
+    });
     logger.info("Blockonomics provider configuration updated", { provider: PROVIDER, actorId, enabled: settings.enabled, testMode: settings.testMode });
     return this.public();
   },
 
+  async setEnabled(enabled: boolean, actorId: string): Promise<BlockonomicsPublicConfig> {
+    const current = await this.public();
+    const settings = BlockonomicsProviderSettingsSchema.parse({
+      enabled,
+      testMode: current.testMode,
+      matchCallback: current.matchCallback,
+      supportedAssets: current.supportedAssets,
+      quoteExpiryMinutes: current.quoteExpiryMinutes,
+      requiredConfirmations: 2,
+    });
+    return this.upsert({ settings }, actorId);
+  },
+
   async recordHealth(healthy: boolean, error?: string): Promise<void> {
-    await prisma.paymentProviderConfiguration.updateMany({
-      where: { provider: PROVIDER },
-      data: { healthStatus: healthy ? "HEALTHY" : "UNHEALTHY", lastHealthAt: new Date(), lastError: error?.slice(0, 500) ?? null },
+    const data = { healthStatus: healthy ? "HEALTHY" : "UNHEALTHY", lastHealthAt: new Date(), lastError: error?.slice(0, 500) ?? null };
+    const current = await storedRow();
+    if (current) {
+      await prisma.paymentProviderConfiguration.update({ where: { provider: PROVIDER }, data });
+      return;
+    }
+    const bootstrap = await this.secret();
+    if (!bootstrap) return;
+    const safeSettings = BlockonomicsProviderSettingsSchema.parse(bootstrap);
+    await prisma.paymentProviderConfiguration.create({
+      data: {
+        provider: PROVIDER,
+        enabled: bootstrap.enabled,
+        testMode: bootstrap.testMode,
+        apiKeyEnc: encryptString(bootstrap.apiKey) as unknown as Prisma.InputJsonValue,
+        callbackSecretEnc: encryptString(bootstrap.callbackSecret) as unknown as Prisma.InputJsonValue,
+        settings: safeSettings as unknown as Prisma.InputJsonValue,
+        healthStatus: data.healthStatus,
+        lastHealthAt: data.lastHealthAt,
+        lastError: data.lastError,
+      },
     });
   },
 };

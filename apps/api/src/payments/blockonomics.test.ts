@@ -18,7 +18,13 @@ vi.mock("../db/client.js", () => ({
         return state.row;
       }),
       updateMany: vi.fn(async ({ data }: any) => { if (state.row) state.row = { ...state.row, ...data }; return { count: state.row ? 1 : 0 }; }),
+      update: vi.fn(async ({ data }: any) => { state.row = { ...state.row, ...data, updatedAt: new Date() }; return state.row; }),
+      create: vi.fn(async ({ data }: any) => {
+        state.row = { id: "cfg-1", ...data, version: 1, createdAt: new Date(), updatedAt: new Date() };
+        return state.row;
+      }),
     },
+    auditLog: { create: vi.fn(async ({ data }: any) => ({ id: "audit-1", ...data })) },
   },
 }));
 
@@ -63,6 +69,18 @@ describe("Blockonomics encrypted provider configuration", () => {
     const disabled = await BlockonomicsConfigService.upsert({ settings: { ...settings, enabled: false } }, "admin");
     expect(disabled).toMatchObject({ enabled: false, configured: true, version: 2 });
     await expect(configuredBlockonomicsClient()).rejects.toMatchObject({ status: 503 });
+  });
+
+  it("adopts environment bootstrap credentials into encrypted DB storage on first control-plane mutation", async () => {
+    process.env.BLOCKONOMICS_API_KEY = "environment-api-key-secret";
+    process.env.BLOCKONOMICS_CALLBACK_SECRET = "environment-callback-secret-value";
+    process.env.BLOCKONOMICS_ENABLED = "true";
+    const disabled = await BlockonomicsConfigService.setEnabled(false, "super-admin");
+    expect(disabled).toMatchObject({ source: "database", configured: true, enabled: false });
+    expect(JSON.stringify(state.row)).not.toContain("environment-api-key-secret");
+    expect(JSON.stringify(state.row)).not.toContain("environment-callback-secret-value");
+    expect(state.row.settings).not.toHaveProperty("apiKey");
+    expect(state.row.settings).not.toHaveProperty("callbackSecret");
   });
 });
 

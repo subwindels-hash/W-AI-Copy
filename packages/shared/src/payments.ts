@@ -133,3 +133,64 @@ export const BlockonomicsProviderSettingsSchema = z.object({
   requiredConfirmations: z.literal(2).default(2),
 });
 export type BlockonomicsProviderSettings = z.infer<typeof BlockonomicsProviderSettingsSchema>;
+
+export const BlockonomicsAdminConfigUpdateSchema = z.object({
+  apiKey: z.string().trim().min(10).max(500).optional(),
+  callbackSecret: z.string().trim().min(32).max(500).optional(),
+  settings: BlockonomicsProviderSettingsSchema,
+});
+export type BlockonomicsAdminConfigUpdateInput = z.infer<typeof BlockonomicsAdminConfigUpdateSchema>;
+
+export const BlockonomicsAdminToggleSchema = z.object({ enabled: z.boolean() });
+
+export interface BlockonomicsAdminPublicConfig extends BlockonomicsProviderSettings {
+  provider: "blockonomics";
+  configured: boolean;
+  apiKeyConfigured: boolean;
+  callbackSecretConfigured: boolean;
+  source: "database" | "environment" | "none";
+  version: number;
+  healthStatus: string;
+  lastHealthAt: string | null;
+  lastError: string | null;
+}
+
+export interface BlockonomicsAdminDashboard {
+  generatedAt: string;
+  configuration: BlockonomicsAdminPublicConfig;
+  totals: { payments: number; webhookEvents: number; failedWebhookEvents: number };
+  paymentsByStatus: Array<{ status: string; count: number }>;
+  reconciliationByStatus: Array<{ status: string; count: number }>;
+  paymentsByAsset: Array<{ asset: string; count: number }>;
+  webhooksByStatus: Array<{ status: string; count: number }>;
+  recentPayments: Array<{
+    id: string;
+    organizationId: string;
+    reference: string;
+    status: string;
+    amountCents: number;
+    currency: string;
+    cryptoCurrency: string | null;
+    confirmations: number;
+    requiredConfirmations: number;
+    reconciliationStatus: string;
+    createdAt: string;
+    updatedAt: string;
+  }>;
+  recentWebhookErrors: Array<{
+    id: string;
+    paymentId: string | null;
+    errorCode: string | null;
+    errorMessage: string | null;
+    attempts: number;
+    receivedAt: string;
+  }>;
+}
+
+export interface BlockonomicsAdminHealthResult {
+  healthy: boolean;
+  latencyMs: number;
+  checkedAt: string;
+  healthStatus: string;
+  error?: string;
+}

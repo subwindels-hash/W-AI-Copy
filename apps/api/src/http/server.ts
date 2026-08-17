@@ -61,6 +61,7 @@ import { registerPublicApiRoutes } from "./routes/publicApi.js";
 import { registerDeveloperGatewayRoutes } from "./routes/developerGateway.js";
 import { registerDeveloperPlatformRoutes } from "./routes/developerPlatform.js";
 import { registerAdminApiControlRoutes } from "./routes/adminApiControl.js";
+import { registerBlockonomicsAdminRoutes } from "./routes/blockonomicsAdmin.js";
 import { registerContactRoutes } from "./routes/contact.js";
 import { registerMobileRoutes } from "./routes/mobile.js";
 import { registerMobileSyncRoutes } from "./routes/mobileSync.js";
@@ -1540,6 +1541,8 @@ export function createApp() {
   registerDeveloperPlatformRoutes(v1);
   // Admin API Control Center (Super Admin) — platform-wide developer control.
   registerAdminApiControlRoutes(v1);
+  // Blockonomics payment-provider control plane (Super Admin only).
+  registerBlockonomicsAdminRoutes(v1);
   // Contact & Support Center (public form, AI assistant, my-requests, admin).
   registerContactRoutes(v1);
 
