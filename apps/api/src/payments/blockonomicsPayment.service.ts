@@ -89,7 +89,13 @@ export const BlockonomicsPaymentService = {
       if (!invoice) throw AppError.notFound("Invoice not found in organization");
       if (!["open", "past_due"].includes(invoice.status)) throw AppError.conflict(`Invoice cannot be paid from status ${invoice.status}`);
       if (invoice.currency.toUpperCase() !== input.currency.toUpperCase()) throw AppError.conflict("Checkout currency does not match invoice currency");
-      if (invoice.amountCents !== Math.round(input.amount * 100)) throw AppError.conflict("Checkout amount does not match invoice amount");
+      const allocated = await prisma.invoicePaymentAllocation.aggregate({
+        where: { invoiceId: invoice.id, status: "applied", currency: invoice.currency },
+        _sum: { amountCents: true },
+      });
+      const remainingCents = invoice.amountCents - Number(allocated._sum.amountCents ?? 0);
+      if (remainingCents <= 0) throw AppError.conflict("Invoice has no remaining balance");
+      if (remainingCents !== Math.round(input.amount * 100)) throw AppError.conflict("Checkout amount does not match invoice remaining balance");
     }
 
     const now = new Date();

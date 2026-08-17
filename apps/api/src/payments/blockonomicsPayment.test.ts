@@ -5,7 +5,7 @@ const state = vi.hoisted(() => ({
   invoices: new Map<string, any>(),
   failAddress: false,
   price: 50_000,
-  address: "bc1q" + "z".repeat(38),
+  address: "bc1q" + "z".repeat(38), allocatedCents: 0,
 }));
 
 vi.mock("../db/client.js", () => ({
@@ -14,6 +14,7 @@ vi.mock("../db/client.js", () => ({
       const invoice = state.invoices.get(where.id);
       return invoice?.organizationId === where.organizationId ? invoice : null;
     }) },
+    invoicePaymentAllocation: { aggregate: vi.fn(async () => ({ _sum: { amountCents: state.allocatedCents || null } })) },
     paymentRecord: {
       create: vi.fn(async ({ data }: any) => {
         const row = { id: `pay-${state.payments.length + 1}`, ...data, confirmations: 0, reconciliationStatus: data.reconciliationStatus ?? "pending", metadata: data.metadata ?? {}, createdAt: new Date(), updatedAt: new Date(), completedAt: null };
@@ -52,6 +53,7 @@ beforeEach(() => {
   state.failAddress = false;
   state.price = 50_000;
   state.address = "bc1q" + "z".repeat(38);
+  state.allocatedCents = 0;
 });
 
 describe("Blockonomics Stage 4 durable payment creation", () => {
@@ -85,6 +87,13 @@ describe("Blockonomics Stage 4 durable payment creation", () => {
     await expect(BlockonomicsPaymentService.create("org-a", "user-a", { amount: 99, currency: "USD", cryptoCurrency: "BTC", invoiceId: "inv-a" })).rejects.toMatchObject({ status: 409 });
     await expect(BlockonomicsPaymentService.create("org-a", "user-a", { amount: 100, currency: "EUR", cryptoCurrency: "BTC", invoiceId: "inv-a" })).rejects.toMatchObject({ status: 409 });
     expect(state.payments).toHaveLength(0);
+  });
+
+  it("creates only the remaining invoice balance after an applied WMPC allocation", async () => {
+    state.invoices.set("inv-split", { id: "inv-split", organizationId: "org-a", status: "open", currency: "USD", amountCents: 10000, subscriptionId: "sub-a" });
+    state.allocatedCents = 4000;
+    await expect(BlockonomicsPaymentService.create("org-a", "user-a", { amount: 60, currency: "USD", cryptoCurrency: "BTC", invoiceId: "inv-split" })).resolves.toMatchObject({ amount: 60, invoiceId: "inv-split" });
+    await expect(BlockonomicsPaymentService.create("org-a", "user-a", { amount: 100, currency: "USD", cryptoCurrency: "BTC", invoiceId: "inv-split" })).rejects.toMatchObject({ status: 409 });
   });
 
   it("returns organization-scoped payment details and history", async () => {

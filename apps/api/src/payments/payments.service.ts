@@ -74,7 +74,7 @@ const PROVIDERS: Array<Omit<PaymentProviderConfig, "active" | "configured" | "st
   { provider: "stripe", supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD", "JPY", "NGN", "ZAR"], displayName: "Stripe (Global Card, Wallets & Bank Methods)" },
   { provider: "paypal", supportedCurrencies: ["USD", "EUR", "GBP", "CAD", "AUD"], displayName: "PayPal (Global Checkout Orders)" },
   { provider: "crypto", supportedCurrencies: [], supportedNetworks: [], displayName: "Crypto payments (disabled pending chain verification)" },
-  { provider: "blockonomics", supportedCurrencies: ["USD", "EUR", "GBP", "NGN", "GHS", "KES", "ZAR", "CAD", "AUD", "JPY"], supportedNetworks: ["btc", "eth_erc20"], displayName: "Blockonomics (BTC & USDT ERC-20)" },
+  { provider: "blockonomics", supportedCurrencies: ["USD", "EUR", "GBP", "NGN", "GHS", "KES", "ZAR", "CAD", "AUD", "JPY", "CNY", "AED", "SAR", "BRL"], supportedNetworks: ["btc", "eth_erc20"], displayName: "Blockonomics (BTC & USDT ERC-20)" },
 ];
 
 export const PaymentGatewaysService = {
@@ -84,11 +84,11 @@ export const PaymentGatewaysService = {
         const cfg = await BlockonomicsConfigService.public();
         return {
           ...base,
-          active: false, // Stage 4 payment creation gate is not open yet.
+          active: cfg.configured && cfg.enabled,
           configured: cfg.configured,
-          status: !cfg.configured ? "not_configured" as const : !cfg.enabled ? "disabled" as const : "blocked" as const,
+          status: !cfg.configured ? "not_configured" as const : !cfg.enabled ? "disabled" as const : "ready" as const,
           configurationIssue: cfg.configured
-            ? cfg.enabled ? "Configured; payment creation remains blocked until Stage 4 is complete" : "Disabled by Super Admin"
+            ? cfg.enabled ? undefined : "Disabled by Super Admin"
             : "API key and callback secret are required",
           testMode: cfg.testMode,
         };

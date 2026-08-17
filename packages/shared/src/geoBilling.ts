@@ -10,6 +10,7 @@ export const GEO_PAYMENT_METHODS = [
   "stripe",
   "paypal",
   "crypto",
+  "blockonomics",
   "bank-transfer",
   "sepa",
 ] as const;

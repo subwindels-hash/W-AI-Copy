@@ -47,7 +47,8 @@ const unset = [
   "FLUTTERWAVE_SECRET_KEY", "FLUTTERWAVE_SECRET_HASH", "PAYSTACK_SECRET_KEY",
   "STRIPE_SECRET_KEY", "STRIPE_WEBHOOK_SECRET", "PAYPAL_CLIENT_ID",
   "PAYPAL_CLIENT_SECRET", "PAYPAL_WEBHOOK_ID", "PAYPAL_ENVIRONMENT",
-  "BLOCKONOMICS_API_KEY", "BLOCKONOMICS_CALLBACK_SECRET",
+  "BLOCKONOMICS_API_KEY", "BLOCKONOMICS_CALLBACK_SECRET", "BLOCKONOMICS_ENABLED",
+  "BLOCKONOMICS_SUPPORTED_ASSETS", "BLOCKONOMICS_TEST_MODE",
 ];
 
 beforeEach(async () => {
@@ -67,6 +68,20 @@ describe("payment providers fail closed", () => {
     expect(providers.find((provider) => provider.provider === "crypto")?.status).toBe("blocked");
     expect(providers.find((provider) => provider.provider === "blockonomics")?.active).toBe(false);
     expect(providers.filter((provider) => provider.provider !== "crypto").every((provider) => provider.status === "not_configured")).toBe(true);
+  });
+
+  it("advertises Blockonomics as ready only when its complete configuration is enabled", async () => {
+    process.env.BLOCKONOMICS_API_KEY = "blockonomics-api-key";
+    process.env.BLOCKONOMICS_CALLBACK_SECRET = "high-entropy-callback-secret";
+    process.env.BLOCKONOMICS_ENABLED = "true";
+    const providers = await PaymentGatewaysService.listProviders();
+    expect(providers.find((provider) => provider.provider === "blockonomics")).toMatchObject({
+      active: true,
+      configured: true,
+      status: "ready",
+      supportedNetworks: ["btc", "eth_erc20"],
+    });
+    expect(providers.find((provider) => provider.provider === "crypto")).toMatchObject({ active: false, status: "blocked" });
   });
 
   it.each(["flutterwave", "paystack", "stripe", "paypal", "crypto", "blockonomics"] as const)("refuses unconfigured %s checkout without creating a ledger row", async (provider) => {
