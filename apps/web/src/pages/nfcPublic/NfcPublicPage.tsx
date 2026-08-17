@@ -3,5 +3,5 @@
  * (React web/mobile/desktop + Electron PC/SC) exposed via API-key scopes.
  * This alias re-exports the internal console for scanner completeness.
  */
-export { NfcCardManagerPage as default } from "../nfc/NfcCardManagerPage";
+export { NfcCardManagerPage as default, NfcCardManagerPage as NfcPublicPage } from "../nfc/NfcCardManagerPage";
 export { NfcCardManagerPage } from "../nfc/NfcCardManagerPage";

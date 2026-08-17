@@ -77,6 +77,11 @@ import {
   Server,
   UserCircle,
   Nfc,
+  ShieldAlert,
+  Component as ComponentIcon,
+  Boxes,
+  Cpu,
+  ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -159,6 +164,12 @@ const navItems = [
   { to: "/app/constitution", icon: Scale, label: "Constitution" },
   { to: "/app/licensing", icon: DollarSign, label: "Licensing" },
   { to: "/app/deployment", icon: Server, label: "Deployment" },
+  { to: "/app/disaster-recovery", icon: ShieldAlert, label: "Disaster Recovery" },
+  { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
+  { to: "/app/architecture", icon: Boxes, label: "Architecture" },
+  { to: "/app/hybrid-execution", icon: Cpu, label: "Hybrid Execution" },
+  { to: "/app/v76-validation", icon: ClipboardCheck, label: "V76 Validation" },
+  { to: "/app/ea", icon: Cpu, label: "Expert Advisors (MT5)" },
   { to: "/app/composer", icon: Blocks, label: "Composer" },
   { to: "/app/global-currency", icon: GlobeIcon, label: "Global Currency" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },

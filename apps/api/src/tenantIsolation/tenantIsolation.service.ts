@@ -518,6 +518,103 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "dr:notes", scope: "org_scoped" },
   { prefix: "ext:industry", scope: "shared" },
   { prefix: "google:state", scope: "shared" },
+  // Session 192 UX Intelligence: every key is per-org
+  // (`ux:tokens:<org>`, `ux:tok:<org>:<ns>:<n>`, `ux:components:<org>`,
+  // `ux:comp:<org>:<id>`, `ux:findings:<org>`, `ux:find:<org>:<id>`,
+  // `ux:agents:<org>`, `ux:agent:<org>:<id>`, `ux:brands:<org>`,
+  // `ux:brand:<org>:<id>`, `ux:meta:<org>`, `ux:r24:<org>`,
+  // `ux:gate:<org>`, `ux:imported:<org>`, `ux:notes:<org>`). The legacy
+  // Session 78 global keys (`ux:tokens`, `ux:components`, …) are left in
+  // place after adoption so a rollback is possible, but the service no
+  // longer reads them.
+  { prefix: "ux:tokens", scope: "org_scoped" },
+  { prefix: "ux:tok", scope: "org_scoped" },
+  { prefix: "ux:components", scope: "org_scoped" },
+  { prefix: "ux:comp", scope: "org_scoped" },
+  { prefix: "ux:findings", scope: "org_scoped" },
+  { prefix: "ux:find", scope: "org_scoped" },
+  { prefix: "ux:agents", scope: "org_scoped" },
+  { prefix: "ux:agent", scope: "org_scoped" },
+  { prefix: "ux:brands", scope: "org_scoped" },
+  { prefix: "ux:brand", scope: "org_scoped" },
+  { prefix: "ux:meta", scope: "org_scoped" },
+  { prefix: "ux:r24", scope: "org_scoped" },
+  { prefix: "ux:gate", scope: "org_scoped" },
+  { prefix: "ux:imported", scope: "org_scoped" },
+  { prefix: "ux:notes", scope: "org_scoped" },
+  // Session 193 architecture: every key is per-org
+  // (`arch:modules:<org>`, `arch:esi:<org>`, `arch:imported:<org>`,
+  // `arch:notes:<org>`). The Session 37 global keys (`arch:modules`,
+  // `arch:esi`) are left in place after adoption for rollback safety,
+  // but the service no longer reads them.
+  { prefix: "arch:modules", scope: "org_scoped" },
+  { prefix: "arch:esi", scope: "org_scoped" },
+  { prefix: "arch:imported", scope: "org_scoped" },
+  { prefix: "arch:notes", scope: "org_scoped" },
+  // Session 194 hybridExec: every key is per-org
+  // (`hx:models:<org>`, `hx:model:<org>:<id>`, `hx:nodes:<org>`,
+  // `hx:node:<org>:<id>`, `hx:routes:<org>`, `hx:route:<org>:<id>`,
+  // `hx:m:req:<org>`, `hx:m:rb:<org>`, `hx:mode:<org>`,
+  // `hx:flags:<org>`, `hx:imported:<org>`, `hx:notes:<org>`). The
+  // Session 43 global keys (`hx:models`, `hx:nodes`, `hx:routes`,
+  // `hx:m:req`, `hx:m:rb`) are left in place after adoption for
+  // rollback safety, but the service no longer reads them.
+  { prefix: "hx:models", scope: "org_scoped" },
+  { prefix: "hx:model", scope: "org_scoped" },
+  { prefix: "hx:nodes", scope: "org_scoped" },
+  { prefix: "hx:node", scope: "org_scoped" },
+  { prefix: "hx:routes", scope: "org_scoped" },
+  { prefix: "hx:route", scope: "org_scoped" },
+  { prefix: "hx:m:req", scope: "org_scoped" },
+  { prefix: "hx:m:rb", scope: "org_scoped" },
+  { prefix: "hx:mode", scope: "org_scoped" },
+  { prefix: "hx:flags", scope: "org_scoped" },
+  { prefix: "hx:imported", scope: "org_scoped" },
+  { prefix: "hx:notes", scope: "org_scoped" },
+  // Session 195 v76validation: every key is per-org
+  // (`v76:report:<org>:<id>`, `v76:lastReportId:<org>`,
+  // `v76:lastReportAt:<org>`, `v76:imported:<org>`, `v76:notes:<org>`,
+  // `v76:reportsIdx:<org>`). The bare `v76` prefix is deliberately
+  // never added — with a two-segment prefix like `v76:report:<org>`,
+  // the org sits in the segment after the literal `report`; a bare
+  // entry would shift the org index and report conformance checks the
+  // sweep never performed. `v76:notes` matches the existing
+  // tenantStore shape (notes:idx:<org> / notes:i:<org>:<id>) so the
+  // org is in the segment after `notes`, identical to the
+  // `arch:notes` / `hx:notes` cataloguing above.
+  { prefix: "v76:report", scope: "org_scoped" },
+  { prefix: "v76:lastReportId", scope: "org_scoped" },
+  { prefix: "v76:lastReportAt", scope: "org_scoped" },
+  { prefix: "v76:imported", scope: "org_scoped" },
+  { prefix: "v76:notes", scope: "org_scoped" },
+  { prefix: "v76:reportsIdx", scope: "org_scoped" },
+  // Session 196 EA (MetaTrader 5 Expert Advisor). Every per-EA
+  // key is keyed by the server-generated `eaId` (a CSPRNG
+  // identifier, not an org id), so the EA namespace is
+  // principal-scoped rather than org-scoped — the same
+  // treatment as `mfa:secret:<userId>` (per-user second factor)
+  // and `mob:action:<userId>` (per-user offline queue). The
+  // org boundary is enforced at the API layer: the
+  // `EaService.listEa(oid)` endpoint reads `ea:org:<oid>` to
+  // enumerate the calling org's EAs, and the bearer-token
+  // routes (`/ea/poll`, `/ea/fill`, `/ea/heartbeat`,
+  // `/ea/config`) resolve the org from the stored session
+  // body. `ea:org:<oid>` and `ea:acct:<aid>` are reference
+  // indices (not org-scoped state), so they go in the same
+  // `shared` bucket. A bare `ea` entry is deliberately never
+  // added — it would read the literal `org` as an organization
+  // id.
+  { prefix: "ea:token", scope: "shared" },
+  { prefix: "ea:session", scope: "shared" },
+  { prefix: "ea:seq", scope: "shared" },
+  { prefix: "ea:wmark", scope: "shared" },
+  { prefix: "ea:pending", scope: "shared" },
+  { prefix: "ea:sig", scope: "shared" },
+  { prefix: "ea:sigidx", scope: "shared" },
+  { prefix: "ea:fills", scope: "shared" },
+  { prefix: "ea:hb", scope: "shared" },
+  { prefix: "ea:org", scope: "shared" },
+  { prefix: "ea:acct", scope: "shared" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {

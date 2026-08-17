@@ -22,7 +22,7 @@ export function ModelFactoryPage() {
   useEffect(() => { void load(); }, []);
   async function create() {
     if (!name) return;
-    try { await mf2Api.create({ name, builder: "custom", size: "7B", quant: "fp16", vramMb: 16000 }); setName(""); await load(); } catch (e:any) { setErr(e.message); }
+    try { await mf2Api.create({ name, builder: "domain", size: "7B", quant: "fp16", vramMb: 16000 }); setName(""); await load(); } catch (e:any) { setErr(e.message); }
   }
   if (!data) return <div className="p-6 text-sm text-text-muted">{err ? `Error: ${err}` : "Loading model factory…"}</div>;
   return (

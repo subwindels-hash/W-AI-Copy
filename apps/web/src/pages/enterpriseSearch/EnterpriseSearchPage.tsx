@@ -3,5 +3,4 @@
  * not at `pages/enterpriseSearch/`. This alias makes the Tier 4 filesystem
  * check see a page directory without forking the UI.
  */
-export { default } from "../search/EnterpriseSearchPage";
-export * from "../search/EnterpriseSearchPage";
+export { EnterpriseSearchPage as default, EnterpriseSearchPage } from "../search/EnterpriseSearchPage";

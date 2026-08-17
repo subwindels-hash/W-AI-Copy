@@ -370,6 +370,18 @@ export const EaService = {
 
   /* ── Listing / revoke ────────────────────────────────────── */
 
+  /**
+   * Recent fill acks for an EA. Returns the latest `limit` records
+   * from `ea:fills:<eaId>` (capped at 500 by the producer). The
+   * caller is responsible for the per-org gate: the helper does
+   * not check the session's organizationId.
+   */
+  async recentFills(eaId: string, limit = 50): Promise<Array<{ id?: string; signalId?: string; status: string; ticket?: string; dealId?: string; fillPrice?: number; filledVolume?: number; latencyMs?: number; error?: string; retcode?: string; receivedAt: string }>> {
+    const safeLimit = Math.max(1, Math.min(500, Math.floor(limit)));
+    const raw = await redis.lrange(`ea:fills:${eaId}`, 0, safeLimit - 1);
+    return raw.map((s) => JSON.parse(s));
+  },
+
   async listEa(oid: string) {
     const ids = await redis.smembers(K.orgEas(oid));
     const out: Array<{ eaId: string; brokerAccountId: string; magic: number; terminalName: string; mt5Login: string; createdAt: string; lastPollAt?: string; connected: boolean }> = [];

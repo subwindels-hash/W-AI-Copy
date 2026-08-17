@@ -2,8 +2,8 @@
  * Session 78 — UX Intelligence, Design System & Experience API client.
  */
 import { api } from "./api";
-import type { UxDashboard, UxToken, UxComponent, UxAccessibilityFinding, UxAgent, UxBrandProfile } from "@windels/shared";
-export type { UxDashboard, UxToken, UxComponent, UxAccessibilityFinding, UxAgent, UxBrandProfile } from "@windels/shared";
+import type { UxDashboard, UxToken, UxComponent, UxAccessibilityFinding, UxAgent, UxBrandProfile, UxDeviceClass } from "@windels/shared";
+export type { UxDashboard, UxToken, UxComponent, UxAccessibilityFinding, UxAgent, UxBrandProfile, UxDeviceClass } from "@windels/shared";
 
 export const uxApi = {
   dashboard: () => api<UxDashboard>("/ux-intelligence/dashboard/rollup"),
@@ -12,6 +12,6 @@ export const uxApi = {
   findings: () => api<UxAccessibilityFinding[]>("/ux-intelligence/findings"),
   agents: () => api<UxAgent[]>("/ux-intelligence/agents"),
   brands: () => api<UxBrandProfile[]>("/ux-intelligence/brands"),
-  devices: () => api<string[]>("/ux-intelligence/devices"),
+  devices: () => api<UxDeviceClass[]>("/ux-intelligence/devices"),
   runQa: (scope: string = "all") => api<UxAccessibilityFinding[]>("/ux-intelligence/qa/run", { method: "POST", json: { scope } }),
 };

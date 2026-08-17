@@ -5,5 +5,5 @@
  * This alias satisfies the inventory's `web.pages` heuristic without forking
  * the UI — it re-exports the internal console.
  */
-export { CloudAndroidPage as default } from "../cloudAndroid/CloudAndroidPage";
+export { CloudAndroidPage as default, CloudAndroidPage as CloudAndroidPublicPage } from "../cloudAndroid/CloudAndroidPage";
 export { CloudAndroidPage } from "../cloudAndroid/CloudAndroidPage";
