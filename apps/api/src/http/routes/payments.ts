@@ -9,11 +9,14 @@ import { PaystackService } from "../../payments/paystack.service.js";
 import { StripeService } from "../../payments/stripe.service.js";
 import { PayPalService } from "../../payments/paypal.service.js";
 import { CryptoPaymentsService } from "../../payments/crypto.service.js";
+import { BlockonomicsPaymentService } from "../../payments/blockonomicsPayment.service.js";
 import { AppError } from "../../utils/result.js";
 import {
   PaymentCheckoutRequestSchema,
   CryptoAddressRequestSchema,
   BlockonomicsCreatePaymentSchema,
+  BlockonomicsMonitorTransactionSchema,
+  BlockonomicsCallbackSchema,
   PAYMENT_PROVIDERS,
   PAYMENT_TRANSACTION_STATUSES,
   type PaymentProvider,
@@ -220,11 +223,38 @@ export function registerPaymentsRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
+  // Public provider callback. Blockonomics documents an HTTP GET callback with
+  // query parameters; secret verification and durable idempotency occur in the
+  // service before any payment state changes.
+  payments.get("/blockonomics/webhook", validate({ query: BlockonomicsCallbackSchema }), async (req, res, next) => {
+    try {
+      const result = await BlockonomicsPaymentService.processCallback(req.query as any);
+      res.status(200).json({ ok: true, data: { received: true, duplicate: result.duplicate, ignored: result.ignored } });
+    } catch (error) { next(error); }
+  });
+
   payments.post("/blockonomics/create", validate({ body: BlockonomicsCreatePaymentSchema }), async (req, res, next) => {
     try {
       const org = organization(req);
       const payment = await PaymentGatewaysService.initiateCheckout(org.id, { provider: "blockonomics", ...req.body }, org.userId);
       res.status(201).json({ ok: true, data: payment, meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  payments.post("/blockonomics/payments/:id/monitor", validate({ params: z.object({ id: z.string().min(1).max(100) }), body: BlockonomicsMonitorTransactionSchema }), async (req, res, next) => {
+    try {
+      const org = organization(req);
+      const payment = await BlockonomicsPaymentService.monitorUsdtTransaction(org.id, org.userId, req.params.id, req.body.txhash);
+      res.json({ ok: true, data: payment, meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  payments.get("/blockonomics/payments/:id", validate({ params: z.object({ id: z.string().min(1).max(100) }) }), async (req, res, next) => {
+    try {
+      const org = organization(req);
+      const payment = await BlockonomicsPaymentService.get(org.id, req.params.id);
+      if (!payment) throw AppError.notFound("Blockonomics payment not found");
+      res.json({ ok: true, data: payment, meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 

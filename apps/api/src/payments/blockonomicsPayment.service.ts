@@ -1,11 +1,12 @@
 /** Durable Blockonomics payment creation (Stage 4). */
-import { randomUUID } from "node:crypto";
+import { createHash, randomUUID, timingSafeEqual } from "node:crypto";
 import type { Prisma } from "@prisma/client";
 import { prisma } from "../db/client.js";
 import { logger } from "../config/logger.js";
+import { Metrics } from "../observability/metrics.js";
 import { AppError } from "../utils/result.js";
-import type { BlockonomicsCreatePaymentInput, PaymentTransaction } from "@windels/shared/payments";
-import { BlockonomicsConfigService, BlockonomicsClient } from "./blockonomics.service.js";
+import type { BlockonomicsCallbackInput, BlockonomicsCreatePaymentInput, PaymentTransaction } from "@windels/shared/payments";
+import { BlockonomicsConfigService, BlockonomicsClient, configuredBlockonomicsClient } from "./blockonomics.service.js";
 
 function scale(asset: "BTC" | "USDT"): bigint { return asset === "BTC" ? 100_000_000n : 1_000_000n; }
 function unitsFor(amount: number, price: number, asset: "BTC" | "USDT"): bigint {
@@ -17,6 +18,17 @@ function cryptoAmount(units: bigint, asset: "BTC" | "USDT"): number {
   return Number(units) / Number(scale(asset));
 }
 function network(asset: "BTC" | "USDT"): "btc" | "eth_erc20" { return asset === "BTC" ? "btc" : "eth_erc20"; }
+function safeSecret(provided: string, expected: string): boolean {
+  const a = Buffer.from(provided); const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+function callbackEventKey(input: BlockonomicsCallbackInput): string {
+  return `blockonomics:${input.crypto}:${input.addr}:${input.txid}:${input.status}:${input.value}`;
+}
+function callbackHash(input: BlockonomicsCallbackInput): string {
+  return createHash("sha256").update(JSON.stringify({ addr: input.addr, crypto: input.crypto, status: input.status, value: input.value.toString(), txid: input.txid, rbf: input.rbf ?? null })).digest("hex");
+}
+function isUniqueError(error: unknown): boolean { return (error as any)?.code === "P2002"; }
 
 export function serializeBlockonomicsPayment(row: any): PaymentTransaction {
   return {
@@ -52,6 +64,11 @@ export function serializeBlockonomicsPayment(row: any): PaymentTransaction {
         : "Send USDT on Ethereum ERC-20 only, then submit the transaction hash for monitoring. Other networks will not be credited.",
     },
   };
+}
+
+async function confirmedProviderPayment(row: any, client: BlockonomicsClient) {
+  const rows = await client.listConfirmedPayments({ crypto: row.cryptoCurrency, currency: row.currency, timeframe: "1Y", limit: 200 });
+  return rows.find((item) => item.txid === row.providerTransactionId && item.address === row.paymentAddress && item.crypto === row.cryptoCurrency && BigInt(item.amount) === BigInt(row.receivedCryptoUnits ?? 0)) ?? null;
 }
 
 export const BlockonomicsPaymentService = {
@@ -117,6 +134,128 @@ export const BlockonomicsPaymentService = {
         where: { id: row.id },
         data: { status: "failed", providerStatus: "creation_failed", reconciliationStatus: "required", metadata: { ...(row.metadata as any), creationError: (error as Error).message.slice(0, 300) } },
       }).catch(() => {});
+      throw error;
+    }
+  },
+
+  async monitorUsdtTransaction(organizationId: string, requestedById: string, paymentId: string, txhash: string, fetchImpl: typeof fetch = fetch): Promise<PaymentTransaction> {
+    let row = await prisma.paymentRecord.findFirst({ where: { id: paymentId, organizationId, provider: "blockonomics" } });
+    if (!row) throw AppError.notFound("Blockonomics payment not found in organization");
+    if (row.requestedById && row.requestedById !== requestedById) throw AppError.forbidden("Only the payment requester may submit its transaction hash");
+    if (row.cryptoCurrency !== "USDT") throw AppError.badRequest("Transaction monitoring is required only for USDT payments");
+    if (["completed", "cancelled", "failed"].includes(row.status)) throw AppError.conflict(`Payment cannot be monitored from status ${row.status}`);
+    const duplicate = await prisma.paymentRecord.findFirst({ where: { provider: "blockonomics", providerTransactionId: txhash, id: { not: row.id } } });
+    if (duplicate) throw AppError.conflict("Transaction hash is already assigned to another payment");
+    const client = await configuredBlockonomicsClient(fetchImpl);
+    const providerStatus = await client.monitorUsdtTransaction(txhash);
+    const status = providerStatus < 0 ? "failed" : providerStatus === 0 ? "detected" : "confirming";
+    row = await prisma.paymentRecord.update({
+      where: { id: row.id },
+      data: {
+        providerTransactionId: txhash,
+        providerStatus: String(providerStatus),
+        status,
+        detectedAt: row.detectedAt ?? new Date(),
+        confirmations: Math.max(0, providerStatus),
+        reconciliationStatus: providerStatus >= 2 ? "required" : "pending",
+      },
+    });
+    // A browser-submitted tx hash can never complete payment. Even if monitor_tx
+    // reports final, the callback/reconciliation path must independently match it.
+    return serializeBlockonomicsPayment(row);
+  },
+
+  async processCallback(input: BlockonomicsCallbackInput, fetchImpl: typeof fetch = fetch): Promise<{ duplicate: boolean; ignored: boolean; payment: PaymentTransaction | null }> {
+    const cfg = await BlockonomicsConfigService.secret();
+    if (!cfg || !cfg.enabled) throw new AppError("SERVICE_UNAVAILABLE", "Blockonomics is not configured and enabled", 503);
+    if (!safeSecret(input.secret, cfg.callbackSecret)) throw AppError.unauthorized("Invalid Blockonomics callback secret");
+    if (!cfg.supportedAssets.includes(input.crypto)) throw AppError.badRequest("Callback asset is not enabled");
+
+    const eventKey = callbackEventKey(input);
+    let event = await prisma.paymentWebhookEvent.findUnique({ where: { eventKey } });
+    if (event?.processingStatus === "processed" || event?.processingStatus === "ignored") {
+      const row = event.paymentId ? await prisma.paymentRecord.findUnique({ where: { id: event.paymentId } }) : null;
+      return { duplicate: true, ignored: event.processingStatus === "ignored", payment: row ? serializeBlockonomicsPayment(row) : null };
+    }
+    if (!event) {
+      try {
+        event = await prisma.paymentWebhookEvent.create({
+          data: {
+            provider: "blockonomics", eventKey, payloadHash: callbackHash(input),
+            providerTransactionId: input.txid, providerStatus: String(input.status),
+            processingStatus: "processing", attempts: 1,
+          },
+        });
+      } catch (error) {
+        if (!isUniqueError(error)) throw error;
+        event = await prisma.paymentWebhookEvent.findUnique({ where: { eventKey } });
+      }
+    } else {
+      event = await prisma.paymentWebhookEvent.update({ where: { id: event.id }, data: { processingStatus: "processing", attempts: { increment: 1 }, errorCode: null, errorMessage: null } });
+    }
+    if (!event) throw AppError.internal("Could not claim Blockonomics callback event");
+
+    try {
+      const candidates = await prisma.paymentRecord.findMany({
+        where: { provider: "blockonomics", paymentAddress: input.addr, cryptoCurrency: input.crypto, status: { notIn: ["cancelled", "failed"] } },
+        orderBy: { createdAt: "desc" }, take: 20,
+      });
+      let row = candidates.find((item) => item.providerTransactionId === input.txid) ?? null;
+      if (!row && input.crypto === "BTC" && candidates.length === 1) row = candidates[0]!;
+      if (!row) {
+        await prisma.paymentWebhookEvent.update({ where: { id: event.id }, data: { processingStatus: "ignored", processedAt: new Date(), errorCode: "PAYMENT_NOT_RESOLVED", errorMessage: candidates.length > 1 ? "Ambiguous payment address" : "Payment address not found" } });
+        return { duplicate: false, ignored: true, payment: null };
+      }
+      await prisma.paymentWebhookEvent.update({ where: { id: event.id }, data: { organizationId: row.organizationId, paymentId: row.id } });
+
+      const received = input.value;
+      const expected = BigInt(row.expectedCryptoUnits ?? 0);
+      const amountMatches = received === expected;
+      const expired = !!row.expiresAt && row.expiresAt.getTime() < Date.now();
+      const txCollision = await prisma.paymentRecord.findFirst({ where: { provider: "blockonomics", providerTransactionId: input.txid, id: { not: row.id } } });
+      if (txCollision || !amountMatches) {
+        row = await prisma.paymentRecord.update({
+          where: { id: row.id },
+          data: {
+            providerTransactionId: input.txid, providerStatus: String(input.status),
+            receivedCryptoUnits: received, status: "under_review",
+            reconciliationStatus: txCollision ? "duplicate_transaction" : received < expected ? "underpaid" : "overpaid",
+            detectedAt: row.detectedAt ?? new Date(), confirmations: input.status,
+            metadata: { ...(row.metadata as any), callbackRbf: input.rbf ?? null },
+          },
+        });
+        await prisma.paymentWebhookEvent.update({ where: { id: event.id }, data: { processingStatus: "processed", processedAt: new Date(), errorCode: txCollision ? "DUPLICATE_TRANSACTION" : "AMOUNT_MISMATCH" } });
+        return { duplicate: false, ignored: false, payment: serializeBlockonomicsPayment(row) };
+      }
+
+      const mappedStatus = input.status === 0 ? "detected" : input.status === 1 ? "confirming" : "confirming";
+      row = await prisma.paymentRecord.update({
+        where: { id: row.id },
+        data: {
+          providerTransactionId: input.txid, providerStatus: String(input.status),
+          receivedCryptoUnits: received, status: mappedStatus,
+          detectedAt: row.detectedAt ?? new Date(), confirmations: input.status,
+          reconciliationStatus: input.status >= 2 ? "verifying" : "pending",
+          metadata: { ...(row.metadata as any), callbackRbf: input.rbf ?? null },
+        },
+      });
+
+      if (input.status >= 2) {
+        const client = new BlockonomicsClient(cfg, fetchImpl);
+        const verified = await confirmedProviderPayment(row, client);
+        row = await prisma.paymentRecord.update({
+          where: { id: row.id },
+          data: verified && !expired
+            ? { status: "confirmed", confirmedAt: new Date(), reconciliationStatus: "matched" }
+            : { status: "under_review", reconciliationStatus: expired ? "late_payment" : "provider_mismatch" },
+        });
+      }
+      await prisma.paymentWebhookEvent.update({ where: { id: event.id }, data: { processingStatus: "processed", processedAt: new Date() } });
+      Metrics.increment("payments_webhooks_total", 1, { provider: "blockonomics", status: String(input.status), result: row.status });
+      return { duplicate: false, ignored: false, payment: serializeBlockonomicsPayment(row) };
+    } catch (error) {
+      await prisma.paymentWebhookEvent.update({ where: { id: event.id }, data: { processingStatus: "failed", errorCode: (error as any)?.code ?? "PROCESSING_ERROR", errorMessage: (error as Error).message.slice(0, 500) } }).catch(() => {});
+      Metrics.increment("payments_webhooks_total", 1, { provider: "blockonomics", status: String(input.status), result: "failed" });
       throw error;
     }
   },
