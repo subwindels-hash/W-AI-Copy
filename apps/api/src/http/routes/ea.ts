@@ -48,6 +48,24 @@ export function registerEaRoutes(router: Router) {
       res.json({ ok: true });
     } catch (e) { next(e); }
   });
+  // Session 196 — per-org read of an EA's recent fill acks. The
+  // session body carries `organizationId`; we check that the
+  // requested eaId is in the same org before exposing the fill
+  // history. Returns [] for unknown / cross-tenant eaIds rather
+  // than 404, so a UI can render an empty state without leaking
+  // existence.
+  router.get("/ea/:eaId/fills", authenticate, validate({ params: z.object({ eaId: z.string().min(1).max(64) }), query: z.object({ limit: z.coerce.number().int().min(1).max(500).default(50) }) }), async (req, res, next) => {
+    try {
+      const oid = (req as any).user.organizationId;
+      const { eaId } = req.params;
+      const limit = Number((req.query as any).limit ?? 50);
+      const sess = await EaService.getSession(eaId);
+      if (!sess || sess.organizationId !== oid) {
+        return res.json({ ok: true, data: [], meta: { requestId: (req as any).requestId } });
+      }
+      res.json({ ok: true, data: await EaService.recentFills(eaId, limit), meta: { requestId: (req as any).requestId } });
+    } catch (e) { next(e); }
+  });
 
   // ── EA-facing bearer-auth middleware (separate from session auth).
   const eaAuth = async (req: Request, _res: Response, next: NextFunction) => {

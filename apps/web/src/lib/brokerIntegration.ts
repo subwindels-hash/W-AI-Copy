@@ -257,3 +257,9 @@ export const brokerApi = {
   revokeEa: (eaId: string) => api<void>(`/ea/${eaId}`, { method: "DELETE" }),
   audit: (limit = 100) => api<any[]>("/brokers/audit", { params: { limit } }),
 };
+
+// Session 196 — re-export the dedicated EA client so existing
+// call sites (e.g. BrokerCommandCenterPage's `eas()` and
+// `revokeEa()`) keep working without a separate import. The
+// canonical home for EA routes is `lib/ea.ts`.
+export { eaApi } from "./ea";

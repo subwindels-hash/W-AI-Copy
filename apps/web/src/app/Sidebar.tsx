@@ -169,6 +169,7 @@ const navItems = [
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },
   { to: "/app/hybrid-execution", icon: Cpu, label: "Hybrid Execution" },
   { to: "/app/v76-validation", icon: ClipboardCheck, label: "V76 Validation" },
+  { to: "/app/ea", icon: Cpu, label: "Expert Advisors (MT5)" },
   { to: "/app/composer", icon: Blocks, label: "Composer" },
   { to: "/app/global-currency", icon: GlobeIcon, label: "Global Currency" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },

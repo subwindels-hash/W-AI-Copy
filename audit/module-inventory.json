@@ -1922,7 +1922,7 @@
     ],
     "sharedTypes": "packages/shared/src/brokerIntegration.ts (588 LOC)",
     "web": {
-      "client": "apps/web/src/lib/brokerIntegration.ts (260 LOC)",
+      "client": "apps/web/src/lib/brokerIntegration.ts (266 LOC)",
       "pages": []
     },
     "db": {
@@ -1936,6 +1936,7 @@
     },
     "tests": [
       "tradingIntel/brokerIntegration.test.ts",
+      "tradingIntel/ea.completion.test.ts",
       "tradingIntel/ea.test.ts",
       "tradingIntel/trading-events.test.ts",
       "tradingIntel/mt5/mt5-connector.test.ts"
@@ -4347,6 +4348,7 @@
     "tests": [
       "services/ai/registry.test.ts",
       "services/workflow.engine.test.ts",
+      "tradingIntel/ea.completion.test.ts",
       "tradingIntel/ea.test.ts",
       "tradingIntel/marketData.test.ts"
     ],
@@ -4790,11 +4792,11 @@
       "serviceFile": {
         "file": "ea.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/ea.service.ts",
-        "sloc": 429,
+        "sloc": 441,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 429,
+      "serviceTotalSloc": 441,
       "serviceFiles": [
         "tradingIntel/ea.service.ts"
       ],
@@ -4806,10 +4808,10 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/ea.ts",
-        "sloc": 105,
+        "sloc": 123,
         "counts": {
-          "total": 7,
-          "GET": 3,
+          "total": 8,
+          "GET": 4,
           "POST": 3,
           "PUT": 0,
           "PATCH": 0,
@@ -4819,6 +4821,7 @@
           "POST /ea/register",
           "GET /ea",
           "DELETE /ea/:eaId",
+          "GET /ea/:eaId/fills",
           "GET /ea/poll",
           "POST /ea/fill",
           "POST /ea/heartbeat",
@@ -4828,8 +4831,10 @@
     ],
     "sharedTypes": "packages/shared/src/ea.ts (261 LOC)",
     "web": {
-      "client": "apps/web/src/lib/brokerIntegration.ts (260 LOC, serves /ea)",
-      "pages": []
+      "client": "apps/web/src/lib/ea.ts (55 LOC)",
+      "pages": [
+        "apps/web/src/pages/ea/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4840,6 +4845,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "tradingIntel/ea.completion.test.ts",
       "tradingIntel/ea.test.ts"
     ],
     "syntheticData": [],
@@ -11916,11 +11922,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 841,
+        "sloc": 868,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1858,
+      "serviceTotalSloc": 1912,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -12002,7 +12008,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 7368,
+      "serviceTotalSloc": 7612,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
@@ -12012,6 +12018,7 @@
         "derivatives.test.ts",
         "derivatives.ts",
         "derivativesContract.test.ts",
+        "ea.completion.test.ts",
         "ea.service.ts",
         "ea.test.ts",
         "indicators.test.ts",
@@ -12101,6 +12108,7 @@
       "tradingIntel/brokerIntegration.test.ts",
       "tradingIntel/derivatives.test.ts",
       "tradingIntel/derivativesContract.test.ts",
+      "tradingIntel/ea.completion.test.ts",
       "tradingIntel/ea.test.ts",
       "tradingIntel/indicators.test.ts",
       "tradingIntel/marketData.test.ts",

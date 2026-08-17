@@ -588,6 +588,33 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "v76:imported", scope: "org_scoped" },
   { prefix: "v76:notes", scope: "org_scoped" },
   { prefix: "v76:reportsIdx", scope: "org_scoped" },
+  // Session 196 EA (MetaTrader 5 Expert Advisor). Every per-EA
+  // key is keyed by the server-generated `eaId` (a CSPRNG
+  // identifier, not an org id), so the EA namespace is
+  // principal-scoped rather than org-scoped — the same
+  // treatment as `mfa:secret:<userId>` (per-user second factor)
+  // and `mob:action:<userId>` (per-user offline queue). The
+  // org boundary is enforced at the API layer: the
+  // `EaService.listEa(oid)` endpoint reads `ea:org:<oid>` to
+  // enumerate the calling org's EAs, and the bearer-token
+  // routes (`/ea/poll`, `/ea/fill`, `/ea/heartbeat`,
+  // `/ea/config`) resolve the org from the stored session
+  // body. `ea:org:<oid>` and `ea:acct:<aid>` are reference
+  // indices (not org-scoped state), so they go in the same
+  // `shared` bucket. A bare `ea` entry is deliberately never
+  // added — it would read the literal `org` as an organization
+  // id.
+  { prefix: "ea:token", scope: "shared" },
+  { prefix: "ea:session", scope: "shared" },
+  { prefix: "ea:seq", scope: "shared" },
+  { prefix: "ea:wmark", scope: "shared" },
+  { prefix: "ea:pending", scope: "shared" },
+  { prefix: "ea:sig", scope: "shared" },
+  { prefix: "ea:sigidx", scope: "shared" },
+  { prefix: "ea:fills", scope: "shared" },
+  { prefix: "ea:hb", scope: "shared" },
+  { prefix: "ea:org", scope: "shared" },
+  { prefix: "ea:acct", scope: "shared" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {
