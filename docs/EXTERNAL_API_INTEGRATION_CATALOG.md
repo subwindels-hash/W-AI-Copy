@@ -146,7 +146,7 @@ as real generated footage.
 | Provider | Need | Why | Configuration | Current status |
 |---|---|---|---|---|
 | Google OAuth 2.0 / OpenID Connect | Feature optional | Google sign-in, account linking, and user provisioning | `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET`, `GOOGLE_REDIRECT_URI`, public web origin | Implemented with state, nonce, token exchange, and Google JWKS signature verification. |
-| GitHub REST API | Feature optional; recommended for AI Engineering | Repository discovery, files, branches, commits, pull requests, reviews, issues, milestones, releases, Actions, and checks | Fine-grained GitHub token supplied through the AI Engineering connection UI | Implemented. **Hardening needed:** the current token is stored in Redis as plaintext inside the connection document; encrypt it before production use. |
+| GitHub REST API | Feature optional; recommended for AI Engineering | Repository discovery, files, branches, commits, pull requests, reviews, issues, milestones, releases, Actions, and checks | Fine-grained GitHub token supplied through the AI Engineering connection UI | Implemented. Tokens are verified before AES-256-GCM storage, exposed only in masked form, and support rotation/revocation plus one-shot plaintext legacy adoption. |
 | Microsoft Entra ID / generic OIDC | Enterprise feature | Enterprise SSO | No live provider contract | **Planned.** Data models/catalog entries do not equal a working login adapter. |
 | Okta/SAML | Enterprise feature | Enterprise SSO and federation | No live provider contract | **Planned.** |
 | SCIM | Enterprise feature | Automated user/group provisioning | No live provider contract | **Planned.** |
@@ -299,11 +299,12 @@ are entered per broker account rather than through global environment variables.
 Use read-only testnet keys first, IP restrictions, no withdrawal permission, and
 `WINDELS_CRYPTO_GLOBAL_READONLY=true` during qualification.
 
-**Current credential blocker:** `BrokerIntegrationService.loadCredentials()`
-restores login and password but not encrypted passphrase/sub-account/wallet-key
-fields. Exchanges that require those extra credentials cannot be considered
-production-ready until the credential model and encrypted storage path are
-completed.
+Broker/exchange credentials now use one versioned AES-256-GCM envelope covering
+the login/API key, secret, passphrase, sub-account, wallet signing key, and
+MetaApi token. Public account responses expose only a masked identifier;
+rotation and revocation disconnect active sessions before replacing/removing the
+credential. Each exchange still requires real testnet qualification before live
+use.
 
 ## 9.4 Planned traditional broker APIs
 

@@ -14,12 +14,14 @@ Work proceeds in this order. A task is marked complete only after code, negative
   - Crypto checkout/callbacks are blocked until a real chain verifier exists.
   - Remaining gate: real provider sandbox qualification before live credentials.
 
-- [ ] **P0.2 Encrypt and rotate external credentials** — next
-  - GitHub tokens.
-  - Crypto API key/secret/passphrase/sub-account/wallet-key records.
-  - Plaintext migration, masking, revocation, and rotation tests.
+- [x] **P0.2 Encrypt and rotate external credentials**
+  - GitHub tokens are verified before AES-256-GCM storage; plaintext legacy rows are adopted and erased on read.
+  - Broker/exchange login/API key, secret, passphrase, sub-account, wallet key, and MetaApi token share one encrypted versioned envelope.
+  - Public records expose masked identifiers only.
+  - GitHub and broker credentials have rotation/revocation APIs and UI controls.
+  - Master-key IDs/keyrings support controlled envelope-key rotation; production refuses the development fallback.
 
-- [ ] **P0.3 Block synthetic/stale financial data from decisions**
+- [ ] **P0.3 Block synthetic/stale financial data from decisions** — next
   - Payments, billing, invoices, trading, risk, valuation, and P&L.
 
 ## Priority 1 — Core production security

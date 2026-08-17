@@ -4,7 +4,7 @@ import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { z } from "zod";
 import {
-  CreateBrokerAccountSchema, UpdateBrokerAccountSchema, TradeSignalSchema,
+  CreateBrokerAccountSchema, UpdateBrokerAccountSchema, RotateBrokerCredentialsSchema, TradeSignalSchema,
   CreateStrategySchema, UpdateRiskControlsSchema, BrokerIdSchema, StrategyIdSchema,
   ConnectAccountSchema, SyncAccountSchema, CandleQuerySchema, HistoryQuerySchema,
   BrokerOrderRequestSchema,
@@ -51,6 +51,14 @@ export function registerBrokerIntegrationRoutes(router: Router) {
   });
   router.post("/brokers/accounts/:id/verify", validate({ params: brokerId }), async (req, res, next) => {
     try { res.json({ ok: true, data: await BrokerIntegrationService.verifyCredentials(oid(req), req.params.id), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.patch("/brokers/accounts/:id/credentials", validate({ params: brokerId, body: RotateBrokerCredentialsSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.rotateCredentials(oid(req), req.params.id, req.body, uid(req)), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+  router.delete("/brokers/accounts/:id/credentials", validate({ params: brokerId }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await BrokerIntegrationService.revokeCredentials(oid(req), req.params.id, uid(req)), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
   });
 

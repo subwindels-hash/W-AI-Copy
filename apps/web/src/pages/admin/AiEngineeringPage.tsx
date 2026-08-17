@@ -180,6 +180,23 @@ export function AiEngineeringPage() {
     } catch (e) { setError((e as Error).message); } finally { setBusy(false); }
   };
 
+  const rotateConnection = async (id: string) => {
+    const token = window.prompt("Enter the replacement GitHub token. It will be verified before the encrypted credential is replaced.");
+    if (!token) return;
+    setBusy(true);
+    try { await aiEngineeringApi.rotateConnection(id, token); await loadAll(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
+  const removeConnection = async (id: string) => {
+    if (!window.confirm("Revoke and delete this GitHub connection?")) return;
+    setBusy(true);
+    try { await aiEngineeringApi.removeConnection(id); await loadAll(); }
+    catch (e) { setError((e as Error).message); }
+    finally { setBusy(false); }
+  };
+
   const addMemory = async () => {
     setBusy(true);
     try {
@@ -413,7 +430,11 @@ export function AiEngineeringPage() {
                   <Badge variant={c.status === "connected" ? "emerald" : c.status === "failed" ? "crimson" : "amber"}>{c.status}</Badge>
                 </div>
                 <div className="mt-2 text-xs text-text-muted">
-                  The token is stored only in the org-scoped store and never returned — reads expose {c.tokenMasked} at most.
+                  AES-256-GCM encrypted · credential v{c.credentialVersion} · reads expose {c.tokenMasked} at most.
+                </div>
+                <div className="mt-3 flex gap-2">
+                  <Button size="sm" variant="outline" onClick={() => void rotateConnection(c.id)} disabled={busy}>Rotate token</Button>
+                  <Button size="sm" variant="outline" onClick={() => void removeConnection(c.id)} disabled={busy}>Revoke</Button>
                 </div>
               </Card>
             ))}
@@ -465,7 +486,7 @@ export function AiEngineeringPage() {
       <Modal open={connModal} onClose={() => setConnModal(false)} title="Connect a GitHub account"
         footer={<div className="flex justify-end gap-2"><Button variant="outline" onClick={() => setConnModal(false)}>Cancel</Button><Button onClick={() => void connect()} loading={busy} disabled={!newConn.accountLabel.trim() || newConn.token.length < 8}>Connect</Button></div>}>
         <div className="grid gap-3">
-          <p className="text-xs text-text-muted">The token is verified against the GitHub API at connect time and stored only in the org-scoped store; every read returns a masked form.</p>
+          <p className="text-xs text-text-muted">The token is verified before storage, encrypted with AES-256-GCM in the organization-scoped record, and returned only in masked form.</p>
           <label className="text-sm"><span className="text-text-muted">Account label</span>
             <Input value={newConn.accountLabel} onChange={(e) => setNewConn({ ...newConn, accountLabel: e.target.value })} /></label>
           <label className="text-sm"><span className="text-text-muted">Personal access token (classic or fine-grained)</span>

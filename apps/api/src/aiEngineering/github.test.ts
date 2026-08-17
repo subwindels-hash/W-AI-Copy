@@ -15,6 +15,8 @@
  */
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { FakeKv } from "../mediaFactory/publishing/fakeKv.js";
+process.env.WINDELS_ENCRYPTION_KEY = "1".repeat(64);
+process.env.WINDELS_ENCRYPTION_KEY_ID = "test-k1";
 
 const kv = new FakeKv();
 vi.mock("../db/redis.js", () => ({
@@ -25,6 +27,7 @@ vi.mock("../db/redis.js", () => ({
 }));
 
 const { GithubClient, GithubService } = await import("./github.service.js");
+const credentialCrypto = await import("../security/encryption.js");
 
 const ORG_A = "org-alpha";
 
@@ -68,21 +71,71 @@ describe("connections", () => {
     const conn = await GithubService.connect(ORG_A, { accountLabel: "Acme", token: "ghp_0123456789abcdefghijklmnopqrstuvwxyz", addedBy: "u1" }, fn);
     expect(conn.status).toBe("connected");
     expect(conn.organizations).toEqual(["acme", "windels"]);
-    expect(conn.tokenMasked).toBe("ghp_0123…yz");
+    expect(conn.tokenMasked).toBe("ghp***yz");
     expect(JSON.stringify(conn)).not.toContain("ghp_0123456789");
-    // The full token lives in the store (the org-scoped secret half).
+    const raw = await kv.hget(`aew:conn:${ORG_A}:${conn.id}`, "doc");
+    expect(raw).toBeTruthy();
+    expect(raw).not.toContain("ghp_0123456789abcdefghijklmnopqrstuvwxyz");
+    expect(JSON.parse(raw!).tokenEnc).toMatchObject({ v: "enc.v1", kid: "test-k1" });
     const stored = await GithubService.get(ORG_A, conn.id);
-    expect(stored!.token).toBe("ghp_0123456789abcdefghijklmnopqrstuvwxyz");
-    expect(stored!.token).not.toBe(conn.tokenMasked);
+    expect((stored as any).token).toBeUndefined();
+    expect((stored as any).tokenEnc).toBeUndefined();
   });
 
-  it("marks a connection failed on a 401 and still stores it", async () => {
+  it("rejects a credential that GitHub does not verify and stores nothing", async () => {
     const { fn } = mockFetch([
       { match: /\/user/, respond: () => ({ status: 401, text: "Bad credentials" }) },
     ]);
-    const conn = await GithubService.connect(ORG_A, { accountLabel: "Bad", token: "ghp_badbadbadbadbadbadbadbadbad", addedBy: "u1" }, fn);
-    expect(conn.status).toBe("failed");
-    expect(await GithubService.list(ORG_A)).toHaveLength(1);
+    await expect(GithubService.connect(ORG_A, { accountLabel: "Bad", token: "ghp_badbadbadbadbadbadbadbadbad", addedBy: "u1" }, fn)).rejects.toMatchObject({ status: 401 });
+    expect(await GithubService.list(ORG_A)).toHaveLength(0);
+  });
+
+  it("adopts and erases a legacy plaintext token on first read", async () => {
+    const id = "aewc-legacy";
+    const token = "ghp_legacyplaintexttoken123456789";
+    await kv.hset(`aew:conn:${ORG_A}:${id}`, "doc", JSON.stringify({
+      id, provider: "github", accountLabel: "Legacy", organizations: [], tokenMasked: "old",
+      status: "connected", addedBy: "u1", createdAt: "2026-01-01T00:00:00.000Z", updatedAt: "2026-01-01T00:00:00.000Z", token,
+    }));
+    await kv.lpush(`aew:connidx:${ORG_A}`, id);
+    const list = await GithubService.list(ORG_A);
+    expect(list[0]?.tokenMasked).toBe("ghp***89");
+    const migrated = await kv.hget(`aew:conn:${ORG_A}:${id}`, "doc");
+    expect(migrated).not.toContain(token);
+    expect(JSON.parse(migrated!).token).toBeUndefined();
+    expect(JSON.parse(migrated!).tokenEnc.v).toBe("enc.v1");
+  });
+
+  it("verifies a replacement token before atomic credential rotation", async () => {
+    const good = mockFetch([
+      { match: /\/user\/orgs/, respond: () => ({ status: 200, json: [{ login: "acme" }] }) },
+      { match: /\/user$/, respond: () => ({ status: 200, json: { login: "bot" } }) },
+    ]).fn;
+    const conn = await GithubService.connect(ORG_A, { accountLabel: "Rotate", token: "ghp_firstcredential123456789", addedBy: "u1" }, good);
+    const rotated = await GithubService.rotateCredential(ORG_A, conn.id, "github_pat_replacementcredential987654321", "u2", good);
+    expect(rotated.credentialVersion).toBe(2);
+    expect(rotated.credentialsRotatedBy).toBe("u2");
+    expect(rotated.tokenMasked).toBe("git***21");
+    const raw = await kv.hget(`aew:conn:${ORG_A}:${conn.id}`, "doc");
+    expect(raw).not.toContain("replacementcredential");
+
+    const bad = mockFetch([{ match: /\/user/, respond: () => ({ status: 401, text: "bad" }) }]).fn;
+    await expect(GithubService.rotateCredential(ORG_A, conn.id, "github_pat_rejectedcredential", "u3", bad)).rejects.toMatchObject({ status: 401 });
+    const afterRejected = await GithubService.client(ORG_A, conn.id);
+    expect(afterRejected.client.token).toBe("github_pat_replacementcredential987654321");
+  });
+
+  it("re-encrypts an existing token when the master key id rotates", async () => {
+    const good = mockFetch([
+      { match: /\/user\/orgs/, respond: () => ({ status: 200, json: [] }) },
+      { match: /\/user$/, respond: () => ({ status: 200, json: { login: "bot" } }) },
+    ]).fn;
+    const conn = await GithubService.connect(ORG_A, { accountLabel: "Key rotation", token: "ghp_masterkeyrotation123456789", addedBy: "u1" }, good);
+    credentialCrypto.registerKey("test-k2", "2".repeat(64));
+    credentialCrypto.setPrimaryKey("test-k2");
+    await GithubService.get(ORG_A, conn.id);
+    const raw = await kv.hget(`aew:conn:${ORG_A}:${conn.id}`, "doc");
+    expect(JSON.parse(raw!).tokenEnc.kid).toBe("test-k2");
   });
 
   it("refuses capabilities on a missing connection honestly", async () => {

@@ -52,6 +52,7 @@ import { CommandCenterService } from "../../aiEngineering/commandCenter.service.
 import {
   AewAddRepoSchema,
   AewConnectSchema,
+  AewRotateCredentialSchema,
   AewIntelQuerySchema,
   AewListQuerySchema,
   AewMemoryCreateSchema,
@@ -291,6 +292,13 @@ export function registerAiEngineeringRoutes(router: Router) {
   router.get("/connections", async (req, res, next) => {
     try {
       res.json({ ok: true, data: await GithubService.list(orgOf(req)), meta: meta(req) });
+    } catch (e) { next(e); }
+  });
+
+  router.post("/connections/:id/rotate", validate({ params: IdParam, body: AewRotateCredentialSchema }), async (req, res, next) => {
+    try {
+      const connection = await GithubService.rotateCredential(orgOf(req), req.params.id, req.body.token, userOf(req));
+      res.json({ ok: true, data: connection, meta: meta(req) });
     } catch (e) { next(e); }
   });
 

@@ -68,6 +68,8 @@ export const aiEngineeringApi = {
   connections: () => api<AiEngineeringConnection[]>("/ai-engineering/connections"),
   connect: (input: AewConnectInput) =>
     api<AiEngineeringConnection>("/ai-engineering/connections", { method: "POST", json: input }),
+  rotateConnection: (id: string, token: string) =>
+    api<AiEngineeringConnection>(`/ai-engineering/connections/${id}/rotate`, { method: "POST", json: { token } }),
   removeConnection: (id: string) =>
     api<{ id: string; deleted: true }>(`/ai-engineering/connections/${id}`, { method: "DELETE" }),
 

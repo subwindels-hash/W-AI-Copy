@@ -208,7 +208,7 @@ export abstract class BaseCryptoConnector extends EventEmitter implements IBroke
 
     const sess: CryptoAccountSession = {
       id: accountId, login: creds.login, creds: cryptoCreds, opts,
-      http, name: opts.name ?? `${this.label} ${creds.login}`,
+      http, name: opts.name ?? `${this.label} account ${accountId.slice(0, 8)}`,
       environment, status: "connecting", connectedAt: new Date().toISOString(),
       latencyMs: 0,
       markets: new Map(), marketsByRaw: new Map(),

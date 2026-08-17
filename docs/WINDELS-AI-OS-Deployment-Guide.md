@@ -162,6 +162,26 @@ Likewise, optional modules report not-configured/unavailable until their real
 provider credentials and infrastructure are present. `WINDELS_DEMO_DATA` and
 `WINDELS_ALLOW_MOCK_DB_FALLBACK` are forced off by the production Compose file.
 
+### 6.1 Credential and master-key rotation
+
+GitHub and broker/exchange credentials can be rotated or revoked from their
+administrative consoles. Rotation verifies GitHub replacements before commit;
+broker replacements disconnect the active session so the next connection uses
+the new encrypted credential.
+
+For an AES master-key rotation:
+
+1. Keep the old `key-id -> 64-hex key` in `WINDELS_ENCRYPTION_KEYRING`.
+2. Set a new `WINDELS_ENCRYPTION_KEY_ID` and `WINDELS_ENCRYPTION_KEY`.
+3. Restart the API. Credential reads automatically re-encrypt old envelopes
+   with the new primary key.
+4. Exercise/list all credential-bearing connections and verify recovery before
+   removing the old key from the keyring.
+5. Back up the old key securely until rollback and restoration tests pass.
+
+Never replace the primary key without retaining the prior key in the keyring;
+those envelopes will correctly fail closed and require reconnection.
+
 ## 7. Upgrade
 
 Take a backup first, pull the desired release, then rebuild:

@@ -21,6 +21,18 @@ describe("piiRedact", () => {
       expect(out.nested.apiKey).toBe("[REDACTED]");
     });
 
+    it("redacts external connector credential fields", () => {
+      const out = redact({
+        passphrase: "exchange-pass", walletKey: "private-wallet", metaapiToken: "meta-token",
+        clientSecret: "oauth-secret", subAccount: "non-secret-label",
+      }) as any;
+      expect(out.passphrase).toBe("[REDACTED]");
+      expect(out.walletKey).toBe("[REDACTED]");
+      expect(out.metaapiToken).toBe("[REDACTED]");
+      expect(out.clientSecret).toBe("[REDACTED]");
+      expect(out.subAccount).toBe("[REDACTED]");
+    });
+
     // Regression: a circular object used to recurse forever and crash the
     // process with "RangeError: Maximum call stack size exceeded". Because
     // logger.make() calls redact() on every log call, ANY cyclic meta object

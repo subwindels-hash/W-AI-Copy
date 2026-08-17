@@ -42,8 +42,12 @@ export interface BrokerAccount {
   broker: BrokerType;
   /** Broker platform display name. */
   brokerLabel: string;
-  /** Account login / identifier (never the secret). */
+  /** Masked account login / API-key identifier. The full value is encrypted. */
   login: string;
+  loginMasked?: string;
+  credentialsConfigured?: boolean;
+  credentialVersion?: number;
+  credentialsUpdatedAt?: string;
   server: string;
   /** The platform trading mode assigned to this account. */
   mode: TradingMode;
@@ -101,7 +105,7 @@ export interface BrokerAccount {
 
 export const BrokerConnectorConfigSchema = z.object({
   bridgeEndpoint: z.string().max(200).optional(),
-  metaapiToken: z.string().max(300).optional(),
+  metaapiToken: z.string().min(16).max(300).optional(),
   terminalPath: z.string().max(400).optional(),
   syncIntervalMs: z.coerce.number().int().min(500).max(3_600_000).optional(),
   tickStream: z.boolean().optional(),
@@ -113,10 +117,13 @@ export const BrokerConnectorConfigSchema = z.object({
 export const CreateBrokerAccountSchema = z.object({
   name: z.string().min(1).max(120),
   broker: z.enum(BROKER_TYPES),
-  login: z.string().min(1).max(80),
-  server: z.string().min(1).max(120),
-  /** Secret credentials — stored encrypted at rest, never returned. */
-  password: z.string().min(1).max(200),
+  login: z.string().min(1).max(200),
+  server: z.string().min(1).max(200),
+  /** Secret credentials — every field is stored in one encrypted envelope. */
+  password: z.string().min(1).max(400),
+  passphrase: z.string().min(1).max(200).optional(),
+  subAccount: z.string().min(1).max(120).optional(),
+  walletKey: z.string().min(1).max(500).optional(),
   mode: z.enum(TRADING_MODES).default("analysis_only"),
   currency: z.string().default("USD"),
   leverage: z.coerce.number().int().positive().default(100),
@@ -131,6 +138,17 @@ export const UpdateBrokerAccountSchema = z.object({
   connectorConfig: BrokerConnectorConfigSchema.optional(),
 });
 export type UpdateBrokerAccountInput = z.input<typeof UpdateBrokerAccountSchema>;
+
+export const RotateBrokerCredentialsSchema = z.object({
+  login: z.string().min(1).max(200).optional(),
+  server: z.string().min(1).max(200).optional(),
+  password: z.string().min(1).max(400).optional(),
+  passphrase: z.string().min(1).max(200).nullable().optional(),
+  subAccount: z.string().min(1).max(120).nullable().optional(),
+  walletKey: z.string().min(1).max(500).nullable().optional(),
+  metaapiToken: z.string().min(16).max(500).nullable().optional(),
+}).refine((value) => Object.keys(value).length > 0, "At least one credential field is required");
+export type RotateBrokerCredentialsInput = z.input<typeof RotateBrokerCredentialsSchema>;
 
 /* ── Positions / orders (synced from broker) ────────────────────── */
 
