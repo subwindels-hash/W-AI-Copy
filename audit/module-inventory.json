@@ -11907,11 +11907,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 771,
+        "sloc": 795,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1718,
+      "serviceTotalSloc": 1766,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -12554,13 +12554,14 @@
       "serviceFile": {
         "file": "uxIntelligence.service.ts",
         "path": "/home/user/WIN/apps/api/src/uxIntelligence/uxIntelligence.service.ts",
-        "sloc": 56,
+        "sloc": 355,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 120,
+      "serviceTotalSloc": 862,
       "serviceFiles": [
         "bootstrap.ts",
+        "uxIntelligence.completion.test.ts",
         "uxIntelligence.service.ts",
         "uxIntelligence/uxIntelligence.service.ts"
       ],
@@ -12572,7 +12573,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/uxIntelligence.ts",
-        "sloc": 68,
+        "sloc": 121,
         "counts": {
           "total": 12,
           "GET": 8,
@@ -12600,7 +12601,9 @@
     "sharedTypes": "packages/shared/src/uxIntelligence.ts (63 LOC)",
     "web": {
       "client": "apps/web/src/lib/uxIntelligence.ts (18 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/uxIntelligence/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12613,7 +12616,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions41-76-80.spec.ts"
+      "sessions41-76-80.spec.ts",
+      "uxIntelligence/uxIntelligence.completion.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [

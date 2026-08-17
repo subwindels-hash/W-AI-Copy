@@ -1,19 +1,72 @@
 import { Router } from "express";
 import { UxIntelligenceService } from "../../uxIntelligence/uxIntelligence.service.js";
 import { tenantStore } from "../../utils/tenantStore.js";
-import { authenticate as _authenticate } from "../middleware/auth.js";
+import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { z as z_notes } from "zod";
 
+/**
+ * Session 192 — additive fix.
+ * Every read now requires an authenticated user and an organization
+ * context. The previous version had zero org guards on the 8 read
+ * routes (`_req` was unused), so a request without a token or a
+ * token with a null organization silently read whatever happened to
+ * be in the global keys — the cross-tenant leak shape Sessions
+ * 162–168 closed in other modules.
+ */
 export function registerUxIntelligenceRoutes(router: Router) {
-  router.get("/dashboard/rollup", async (_req, res, next) => { try { res.json({ ok:true, data: await UxIntelligenceService.dashboard() }); } catch(e){next(e);} });
-  router.get("/tokens", async (_req, res, next) => { try { res.json({ ok:true, data: await UxIntelligenceService.listTokens() }); } catch(e){next(e);} });
-  router.get("/components", async (_req, res, next) => { try { res.json({ ok:true, data: await UxIntelligenceService.listComponents() }); } catch(e){next(e);} });
-  router.get("/findings", async (_req, res, next) => { try { res.json({ ok:true, data: await UxIntelligenceService.listFindings() }); } catch(e){next(e);} });
-  router.get("/agents", async (_req, res, next) => { try { res.json({ ok:true, data: await UxIntelligenceService.listAgents() }); } catch(e){next(e);} });
-  router.get("/brands", async (_req, res, next) => { try { res.json({ ok:true, data: await UxIntelligenceService.listBrands() }); } catch(e){next(e);} });
-  router.get("/devices", (_req, res) => res.json({ ok:true, data: UxIntelligenceService.deviceClasses() }));
-  router.post("/qa/run", async (_req, res, next) => { try { res.json({ ok:true, data: await UxIntelligenceService.runDesignQa() }); } catch(e){next(e);} });
+  router.get("/dashboard/rollup", authenticate, async (req, res, next) => {
+    try {
+      const oid = (req.user as any)?.organizationId;
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+      res.json({ ok: true, data: await UxIntelligenceService.dashboard(oid) });
+    } catch (e) { next(e); }
+  });
+  router.get("/tokens", authenticate, async (req, res, next) => {
+    try {
+      const oid = (req.user as any)?.organizationId;
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+      res.json({ ok: true, data: await UxIntelligenceService.listTokens(oid) });
+    } catch (e) { next(e); }
+  });
+  router.get("/components", authenticate, async (req, res, next) => {
+    try {
+      const oid = (req.user as any)?.organizationId;
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+      res.json({ ok: true, data: await UxIntelligenceService.listComponents(oid) });
+    } catch (e) { next(e); }
+  });
+  router.get("/findings", authenticate, async (req, res, next) => {
+    try {
+      const oid = (req.user as any)?.organizationId;
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+      res.json({ ok: true, data: await UxIntelligenceService.listFindings(oid) });
+    } catch (e) { next(e); }
+  });
+  router.get("/agents", authenticate, async (req, res, next) => {
+    try {
+      const oid = (req.user as any)?.organizationId;
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+      res.json({ ok: true, data: await UxIntelligenceService.listAgents(oid) });
+    } catch (e) { next(e); }
+  });
+  router.get("/brands", authenticate, async (req, res, next) => {
+    try {
+      const oid = (req.user as any)?.organizationId;
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+      res.json({ ok: true, data: await UxIntelligenceService.listBrands(oid) });
+    } catch (e) { next(e); }
+  });
+  // `/devices` is a static catalogue (9 spec classes); it has no org
+  // state and no auth requirement.
+  router.get("/devices", (_req, res) => res.json({ ok: true, data: UxIntelligenceService.deviceClasses() }));
+  router.post("/qa/run", authenticate, async (req, res, next) => {
+    try {
+      const oid = (req.user as any)?.organizationId;
+      if (!oid) return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+      res.json({ ok: true, data: await UxIntelligenceService.runDesignQa(oid) });
+    } catch (e) { next(e); }
+  });
 
 
   // Real tenant-scoped notes ledger for uxIntelligence — user-authored annotations

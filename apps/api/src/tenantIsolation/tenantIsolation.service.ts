@@ -518,6 +518,30 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "dr:notes", scope: "org_scoped" },
   { prefix: "ext:industry", scope: "shared" },
   { prefix: "google:state", scope: "shared" },
+  // Session 192 UX Intelligence: every key is per-org
+  // (`ux:tokens:<org>`, `ux:tok:<org>:<ns>:<n>`, `ux:components:<org>`,
+  // `ux:comp:<org>:<id>`, `ux:findings:<org>`, `ux:find:<org>:<id>`,
+  // `ux:agents:<org>`, `ux:agent:<org>:<id>`, `ux:brands:<org>`,
+  // `ux:brand:<org>:<id>`, `ux:meta:<org>`, `ux:r24:<org>`,
+  // `ux:gate:<org>`, `ux:imported:<org>`, `ux:notes:<org>`). The legacy
+  // Session 78 global keys (`ux:tokens`, `ux:components`, …) are left in
+  // place after adoption so a rollback is possible, but the service no
+  // longer reads them.
+  { prefix: "ux:tokens", scope: "org_scoped" },
+  { prefix: "ux:tok", scope: "org_scoped" },
+  { prefix: "ux:components", scope: "org_scoped" },
+  { prefix: "ux:comp", scope: "org_scoped" },
+  { prefix: "ux:findings", scope: "org_scoped" },
+  { prefix: "ux:find", scope: "org_scoped" },
+  { prefix: "ux:agents", scope: "org_scoped" },
+  { prefix: "ux:agent", scope: "org_scoped" },
+  { prefix: "ux:brands", scope: "org_scoped" },
+  { prefix: "ux:brand", scope: "org_scoped" },
+  { prefix: "ux:meta", scope: "org_scoped" },
+  { prefix: "ux:r24", scope: "org_scoped" },
+  { prefix: "ux:gate", scope: "org_scoped" },
+  { prefix: "ux:imported", scope: "org_scoped" },
+  { prefix: "ux:notes", scope: "org_scoped" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {

@@ -78,6 +78,7 @@ import {
   UserCircle,
   Nfc,
   ShieldAlert,
+  Component as ComponentIcon,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -161,6 +162,7 @@ const navItems = [
   { to: "/app/licensing", icon: DollarSign, label: "Licensing" },
   { to: "/app/deployment", icon: Server, label: "Deployment" },
   { to: "/app/disaster-recovery", icon: ShieldAlert, label: "Disaster Recovery" },
+  { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/composer", icon: Blocks, label: "Composer" },
   { to: "/app/global-currency", icon: GlobeIcon, label: "Global Currency" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },

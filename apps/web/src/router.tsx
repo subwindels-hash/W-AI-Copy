@@ -113,6 +113,7 @@ const EducationPage = lazy(() => import("./pages/education/EducationPage").then(
 const ScientificPage = lazy(() => import("./pages/scientific/ScientificPage").then((m) => ({ default: m.ScientificPage })));
 const UniversityEnginePage = lazy(() => import("./pages/universityEngine/UniversityEnginePage").then((m) => ({ default: m.UniversityEnginePage })));
 const DisasterRecoveryPage = lazy(() => import("./pages/disasterRecovery/DisasterRecoveryPage").then((m) => ({ default: m.DisasterRecoveryPage })));
+const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
 const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
 const NotificationsPage = lazy(() => import("./pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
@@ -403,6 +404,7 @@ export const router = createBrowserRouter([
       { path: "licensing", element: withSuspense(<LicensingConsolePage />) },
       { path: "deployment", element: withSuspense(<DeploymentConsolePage />) },
       { path: "disaster-recovery", element: withSuspense(<DisasterRecoveryPage />) },
+      { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "composer", element: withSuspense(<ComposerConsolePage />) },
       { path: "global-currency", element: withSuspense(<GlobalCurrencyConsolePage />) },
       { path: "spatial", element: withSuspense(<SpatialPage />) },
