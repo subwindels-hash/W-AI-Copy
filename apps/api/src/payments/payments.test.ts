@@ -73,7 +73,7 @@ describe("payment providers fail closed", () => {
     await expect(PaymentGatewaysService.initiateCheckout(`org-${provider}`, {
       provider, amount: 100, currency: "USD", customerEmail: "buyer@example.test",
       cryptoNetwork: provider === "crypto" ? "btc" : undefined,
-    })).rejects.toMatchObject({ status: 503 });
+    }, provider === "blockonomics" ? "user-test" : undefined)).rejects.toMatchObject({ status: 503 });
     expect(await PaymentGatewaysService.listTransactions(`org-${provider}`)).toEqual([]);
   });
 

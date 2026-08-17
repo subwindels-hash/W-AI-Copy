@@ -13,6 +13,7 @@ import { AppError } from "../../utils/result.js";
 import {
   PaymentCheckoutRequestSchema,
   CryptoAddressRequestSchema,
+  BlockonomicsCreatePaymentSchema,
   PAYMENT_PROVIDERS,
   PAYMENT_TRANSACTION_STATUSES,
   type PaymentProvider,
@@ -32,10 +33,10 @@ const TransactionQuerySchema = z.object({
 });
 const CaptureSchema = z.object({ orderId: z.string().trim().min(1).max(200) });
 
-function organization(req: Request): { id: string; email: string } {
+function organization(req: Request): { id: string; userId: string; email: string } {
   if (!req.user) throw AppError.unauthorized();
   if (!req.user.organizationId) throw AppError.forbidden("An organization context is required for payments");
-  return { id: req.user.organizationId, email: req.user.email };
+  return { id: req.user.organizationId, userId: req.user.id, email: req.user.email };
 }
 function rawBody(req: Request): Buffer {
   return (req as any).rawBody ?? Buffer.from(JSON.stringify(req.body ?? {}));
@@ -88,7 +89,7 @@ export function registerPaymentsRoutes(router: Router) {
   payments.post("/checkout", validate({ body: PaymentCheckoutRequestSchema }), async (req, res, next) => {
     try {
       const org = organization(req);
-      const tx = await PaymentGatewaysService.initiateCheckout(org.id, { ...req.body, customerEmail: req.body.customerEmail || org.email });
+      const tx = await PaymentGatewaysService.initiateCheckout(org.id, { ...req.body, customerEmail: req.body.customerEmail || org.email }, org.userId);
       res.status(201).json({ ok: true, data: tx, meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
@@ -216,6 +217,14 @@ export function registerPaymentsRoutes(router: Router) {
         await applyForIndexedReference(evidence);
       });
       res.json({ ok: true, data: { received: true, duplicate: !processed } });
+    } catch (error) { next(error); }
+  });
+
+  payments.post("/blockonomics/create", validate({ body: BlockonomicsCreatePaymentSchema }), async (req, res, next) => {
+    try {
+      const org = organization(req);
+      const payment = await PaymentGatewaysService.initiateCheckout(org.id, { provider: "blockonomics", ...req.body }, org.userId);
+      res.status(201).json({ ok: true, data: payment, meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 

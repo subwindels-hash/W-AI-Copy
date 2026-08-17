@@ -65,6 +65,7 @@ export const PaymentCheckoutRequestSchema = z.object({
   description: z.string().max(500).optional(),
   customerEmail: z.string().email().optional(),
   cryptoNetwork: z.enum(CRYPTO_NETWORKS).optional(),
+  cryptoCurrency: z.enum(["BTC", "USDT"]).optional(),
 });
 
 export type PaymentCheckoutRequestInput = z.input<typeof PaymentCheckoutRequestSchema>;
@@ -91,7 +92,7 @@ export const BLOCKONOMICS_ASSETS = ["BTC", "USDT"] as const;
 export type BlockonomicsAsset = (typeof BLOCKONOMICS_ASSETS)[number];
 
 export const BlockonomicsCreatePaymentSchema = z.object({
-  amount: z.number().positive(),
+  amount: z.number().positive().refine((value) => Number.isSafeInteger(Math.round(value * 100)) && Math.abs(value * 100 - Math.round(value * 100)) < 1e-7, "Amount must have at most two decimal places"),
   currency: z.string().trim().length(3).transform((value) => value.toUpperCase()),
   cryptoCurrency: z.enum(BLOCKONOMICS_ASSETS),
   invoiceId: z.string().min(1).max(200).optional(),

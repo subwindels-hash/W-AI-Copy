@@ -107,6 +107,7 @@ tests/e2e/                # Playwright specs
 | [docs/BLOCKONOMICS_STAGE1_ARCHITECTURE_AUDIT.md](./docs/BLOCKONOMICS_STAGE1_ARCHITECTURE_AUDIT.md) | Official-provider contract audit, current billing/ledger gaps, additive target design, and 15-stage acceptance gates |
 | [docs/BLOCKONOMICS_STAGE2_PAYMENT_FOUNDATION.md](./docs/BLOCKONOMICS_STAGE2_PAYMENT_FOUNDATION.md) | Additive durable payment/provider/webhook/allocation models, generalized ledger migration, and Stage 2 verification |
 | [docs/BLOCKONOMICS_STAGE3_PROVIDER_ADAPTER.md](./docs/BLOCKONOMICS_STAGE3_PROVIDER_ADAPTER.md) | Encrypted provider configuration and official fail-closed Blockonomics HTTP client |
+| [docs/BLOCKONOMICS_STAGE4_PAYMENT_CREATION.md](./docs/BLOCKONOMICS_STAGE4_PAYMENT_CREATION.md) | Durable pre-provider payment creation, live quote/address allocation, exact crypto units, and safe instructions |
 | [docs/PRODUCTION_FIX_PLAN.md](./docs/PRODUCTION_FIX_PLAN.md) | Ordered remediation checklist and completion gates for production blockers |
 | [docs/PRODUCTION_READINESS_AUDIT.md](./docs/PRODUCTION_READINESS_AUDIT.md) | Honest status of every module, gaps, and what is actually working |
 | [docs/SIMULATED_MODULES_INVENTORY.md](./docs/SIMULATED_MODULES_INVENTORY.md) | Code-level inventory of demo/simulated modules and remediation |

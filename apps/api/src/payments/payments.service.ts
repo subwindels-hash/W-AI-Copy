@@ -17,6 +17,7 @@ import { PayPalService } from "./paypal.service.js";
 import { StripeService } from "./stripe.service.js";
 import { CryptoPaymentsService } from "./crypto.service.js";
 import { BlockonomicsConfigService } from "./blockonomics.service.js";
+import { BlockonomicsPaymentService } from "./blockonomicsPayment.service.js";
 import { AppError } from "../utils/result.js";
 import { sameMoney } from "./paymentConfig.js";
 import type {
@@ -153,12 +154,17 @@ export const PaymentGatewaysService = {
     else { mem.unshift(structuredClone(tx)); if (mem.length > MAX_TRANSACTION_LIMIT) mem.length = MAX_TRANSACTION_LIMIT; }
   },
 
-  async initiateCheckout(organizationId: string, input: PaymentCheckoutRequestInput): Promise<PaymentTransaction> {
+  async initiateCheckout(organizationId: string, input: PaymentCheckoutRequestInput, requestedById?: string): Promise<PaymentTransaction> {
     if (!organizationId) throw AppError.badRequest("Organization is required for payment checkout");
     await this.assertLedgerAvailable();
     const provider = input.provider;
     if (provider === "blockonomics") {
-      throw new AppError("SERVICE_UNAVAILABLE", "Blockonomics payment creation is not enabled until Stage 4 completes", 503, { provider, code: "PAYMENT_PROVIDER_BLOCKED" });
+      if (!requestedById) throw AppError.forbidden("An authenticated requester is required for Blockonomics checkout");
+      return BlockonomicsPaymentService.create(organizationId, requestedById, {
+        amount: Number(input.amount), currency: String(input.currency || "USD"),
+        cryptoCurrency: input.cryptoCurrency ?? "BTC", invoiceId: input.invoiceId,
+        description: input.description, customerEmail: input.customerEmail,
+      });
     }
     const cfg = providerConfig(provider);
     if (!cfg.configured || provider === "crypto") {
