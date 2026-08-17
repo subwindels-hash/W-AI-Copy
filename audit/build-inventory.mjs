@@ -512,6 +512,87 @@ function findWebClient(modKey) {
   return null;
 }
 
+/**
+ * Locate the web console page(s) for a module.
+ *
+ * Pre-existing bug (UNFINISHED_MODULES.md): the emitted `pages` array was
+ * hardcoded to `[]` for every module, even when a real page directory
+ * existed. The convention in this repo is `apps/web/src/pages/<modKey>/`,
+ * but a number of modules keep their page under a different directory
+ * (e.g. `pages/bi/` for `businessIntelligence`, `pages/finops/` for
+ * `enterpriseFinOps`, `pages/voice/` for `voice` etc.) — those directories
+ * either are the canonical home and the module-key directory is an alias,
+ * or vice versa. Match both shapes, following the same prefix-alias map
+ * the route resolver uses.
+ *
+ * Returns an array of page directory paths (one per match) or `[]` if no
+ * page is registered for the module. Headless modules (kernel, mfa, etc.)
+ * legitimately have no page.
+ */
+function findWebPages(modKey) {
+  // Map of "module key" → the *actual* console directory under
+  // apps/web/src/pages/. The module-key directory may also exist (e.g. as
+  // an alias added by S181–S190), so the function reports *both* the home
+  // directory and the alias directory when present.
+  const PAGE_HOME = {
+    // Module key -> canonical pages directory (without the "pages/" prefix).
+    mfa: ["security"],
+    canvasCollab: ["canvas"],
+    googleAuth: ["googleAuth"],
+    // Pages that live under pages/admin/ with a different module key.
+    // S121 (sustainability), S124 (aiEngineering), S125 (identityKnowledge),
+    // S118 (opex), S120 (publicApi), S176-S190 console aliases.
+    promptTemplates: ["admin", "promptTemplates"],
+    publicApi: ["admin"],
+    usage: ["admin"],
+    sustainability: ["admin"],
+    opex: ["admin"],
+    aiEngineering: ["admin"],
+    identityKnowledge: ["admin"],
+    tenantIsolation: ["admin"],
+    security: ["admin"],
+    governance: ["admin"],
+    enterprise: ["admin"],
+    adminApiControl: ["admin"],
+    businessIntelligence: ["bi", "businessIntelligence"],
+    enterpriseSearch: ["search", "enterpriseSearch"],
+    enterpriseFinOps: ["finops", "enterpriseFinOps"],
+    // The "media" directory serves both mediaFactory (S77b) and the legacy
+    // mediaGen (S42) under the Universal Media Generation dashboard.
+    mediaFactory: ["media", "mediaFactory"],
+    mediaGen: ["media", "mediaGen"],
+    // voice was reused for voiceStudio in S162; both module keys share the
+    // canonical "voice" directory (S135) and voiceStudio has a dedicated
+    // voiceStudio alias (S162).
+    voice: ["voice"],
+    voiceStudio: ["voiceStudio", "voice"],
+    // cloudAndroid, nfc: aliases (S181).
+    cloudAndroidPublic: ["cloudAndroid", "cloudAndroidPublic"],
+    nfcPublic: ["nfc", "nfcPublic"],
+    moduleRuntime: ["modules", "moduleRuntime"],
+    nativeAi: ["nativeAi"],
+    nativeAiApi: ["nativeAiApi"],
+    modelFactory: ["modelFactory"],
+    memoryEvolution: ["memoryEvolution"],
+    marketplace: ["marketplace"],
+    // The rest use the module key as the directory name.
+  };
+
+  const homes = PAGE_HOME[modKey] ?? [modKey];
+  const found = [];
+  for (const home of homes) {
+    const p = path.join(WEB_PAGES, home);
+    if (fexists(p) && fs.statSync(p).isDirectory()) {
+      // Count the actual page files inside (not just any subdirectory).
+      const files = ls(p).filter(f => f.endsWith(".tsx") || f.endsWith(".ts"));
+      if (files.length > 0) {
+        found.push(`apps/web/src/pages/${home}/ (${files.length} file${files.length === 1 ? "" : "s"})`);
+      }
+    }
+  }
+  return found;
+}
+
 function moduleRoutePrefix(key) {
   const map = {
     healthEcosystem: "health-ecosystem", v76validation: "validation",
@@ -797,7 +878,7 @@ for (const modKey of [...allModules].sort()) {
     sharedTypes: findSharedTypes(modKey),
     web: {
       client: findWebClient(modKey),
-      pages: [], // pages are mostly in admin/PlatformPage tabs
+      pages: findWebPages(modKey),
     },
     db: {
       prismaModels: prismaModels.filter(m => {

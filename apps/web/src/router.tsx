@@ -112,6 +112,7 @@ const LegalPage = lazy(() => import("./pages/legal/LegalPage").then((m) => ({ de
 const EducationPage = lazy(() => import("./pages/education/EducationPage").then((m) => ({ default: m.EducationPage })));
 const ScientificPage = lazy(() => import("./pages/scientific/ScientificPage").then((m) => ({ default: m.ScientificPage })));
 const UniversityEnginePage = lazy(() => import("./pages/universityEngine/UniversityEnginePage").then((m) => ({ default: m.UniversityEnginePage })));
+const DisasterRecoveryPage = lazy(() => import("./pages/disasterRecovery/DisasterRecoveryPage").then((m) => ({ default: m.DisasterRecoveryPage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
 const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
 const NotificationsPage = lazy(() => import("./pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
@@ -401,6 +402,7 @@ export const router = createBrowserRouter([
       { path: "constitution", element: withSuspense(<ConstitutionStudioPage />) },
       { path: "licensing", element: withSuspense(<LicensingConsolePage />) },
       { path: "deployment", element: withSuspense(<DeploymentConsolePage />) },
+      { path: "disaster-recovery", element: withSuspense(<DisasterRecoveryPage />) },
       { path: "composer", element: withSuspense(<ComposerConsolePage />) },
       { path: "global-currency", element: withSuspense(<GlobalCurrencyConsolePage />) },
       { path: "spatial", element: withSuspense(<SpatialPage />) },

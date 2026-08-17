@@ -41,7 +41,9 @@
     "sharedTypes": "packages/shared/src/admin.ts (67 LOC)",
     "web": {
       "client": "apps/web/src/lib/admin.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -100,7 +102,9 @@
     "sharedTypes": "packages/shared/src/developerPlatform.ts (265 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/adminApiControl.ts (55 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -192,7 +196,9 @@
     "sharedTypes": "packages/shared/src/advertising.ts (334 LOC)",
     "web": {
       "client": "apps/web/src/lib/advertising.ts (247 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/advertising/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -439,7 +445,9 @@
     "sharedTypes": "packages/shared/src/agents.ts (168 LOC)",
     "web": {
       "client": "apps/web/src/lib/agents.ts (54 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/agents/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -648,7 +656,9 @@
     "sharedTypes": "packages/shared/src/aiEconomy.ts (125 LOC)",
     "web": {
       "client": "apps/web/src/lib/aiEconomy.ts (29 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/aiEconomy/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -880,7 +890,9 @@
     "sharedTypes": "packages/shared/src/aiEngineering.ts (342 LOC)",
     "web": {
       "client": "apps/web/src/lib/aiEngineering.ts (77 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -952,7 +964,9 @@
     "sharedTypes": "packages/shared/src/apiKeys.ts (84 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/apikey.ts (3 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/apikey/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1048,7 +1062,9 @@
     "sharedTypes": "packages/shared/src/appBuilder.ts (200 LOC)",
     "web": {
       "client": "apps/web/src/lib/appBuilder.ts (164 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/appBuilder/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1195,7 +1211,9 @@
     "sharedTypes": "packages/shared/src/attachments.ts (39 LOC)",
     "web": {
       "client": "apps/web/src/lib/attachments.ts (3 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/attachments/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1271,7 +1289,9 @@
     "sharedTypes": "packages/shared/src/audit.ts (202 LOC)",
     "web": {
       "client": "apps/web/src/lib/audit.ts (64 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/audit/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1383,7 +1403,9 @@
     "sharedTypes": "packages/shared/src/permissions.ts (65 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/api.ts (262 LOC, serves /auth)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/auth/ (5 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1418,6 +1440,7 @@
       "derivatives.spec.ts",
       "devPortal.spec.ts",
       "digitalHumans.spec.ts",
+      "disasterRecovery.spec.ts",
       "education.spec.ts",
       "engineering.spec.ts",
       "enterprise.spec.ts",
@@ -1538,7 +1561,9 @@
     "sharedTypes": "packages/shared/src/autonomous.ts (106 LOC)",
     "web": {
       "client": "apps/web/src/lib/autonomous.ts (15 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/autonomous/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1687,7 +1712,9 @@
     "sharedTypes": "packages/shared/src/billing.ts (93 LOC)",
     "web": {
       "client": "apps/web/src/lib/billing.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/billing/ (3 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1771,7 +1798,9 @@
     "sharedTypes": "packages/shared/src/biomedical.ts (86 LOC)",
     "web": {
       "client": "apps/web/src/lib/biomedical.ts (37 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/biomedical/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1977,7 +2006,10 @@
     "sharedTypes": "packages/shared/src/businessIntelligence.ts (160 LOC)",
     "web": {
       "client": "apps/web/src/lib/businessIntelligence.ts (103 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/bi/ (1 file)",
+        "apps/web/src/pages/businessIntelligence/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2050,7 +2082,9 @@
     "sharedTypes": "packages/shared/src/camera.ts (70 LOC)",
     "web": {
       "client": "apps/web/src/lib/camera.ts (19 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/camera/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2128,7 +2162,9 @@
     "sharedTypes": "packages/shared/src/canvasCollab.ts (24 LOC)",
     "web": {
       "client": "apps/web/src/lib/canvasCollab.ts (13 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/canvas/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2393,7 +2429,9 @@
     "sharedTypes": "packages/shared/src/cinematic.ts (330 LOC)",
     "web": {
       "client": "apps/web/src/lib/cinematic.ts (58 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cinematic/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2496,7 +2534,9 @@
     "sharedTypes": "packages/shared/src/cloudAndroid.ts (120 LOC)",
     "web": {
       "client": "apps/web/src/lib/cloudAndroid.ts (32 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cloudAndroid/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2587,7 +2627,10 @@
     "sharedTypes": "packages/shared/src/cloudAndroid.ts (120 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/cloudAndroidPublic.ts (10 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cloudAndroid/ (1 file)",
+        "apps/web/src/pages/cloudAndroidPublic/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2671,7 +2714,9 @@
     "sharedTypes": "packages/shared/src/cognitive.ts (314 LOC)",
     "web": {
       "client": "apps/web/src/lib/cognitive.ts (64 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cognitive/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2967,7 +3012,9 @@
     "sharedTypes": "packages/shared/src/command.ts (455 LOC)",
     "web": {
       "client": "apps/web/src/lib/command.ts (97 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/command/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3062,7 +3109,9 @@
     "sharedTypes": "packages/shared/src/commerce.ts (27 LOC)",
     "web": {
       "client": "apps/web/src/lib/commerce.ts (18 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/commerce/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3172,7 +3221,9 @@
     "sharedTypes": "packages/shared/src/composer.ts (204 LOC)",
     "web": {
       "client": "apps/web/src/lib/composer.ts (24 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/composer/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3252,7 +3303,9 @@
     "sharedTypes": "packages/shared/src/constitution.ts (194 LOC)",
     "web": {
       "client": "apps/web/src/lib/constitution.ts (22 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/constitution/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3321,7 +3374,9 @@
     "sharedTypes": "packages/shared/src/contactCenter.ts (230 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/contact.ts (46 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/contact/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3448,7 +3503,9 @@
     "sharedTypes": "packages/shared/src/conversations.ts (451 LOC)",
     "web": {
       "client": "apps/web/src/lib/conversations.ts (94 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/conversations/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3623,7 +3680,9 @@
     "sharedTypes": "packages/shared/src/crm.ts (237 LOC)",
     "web": {
       "client": "apps/web/src/lib/crm.ts (191 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/crm/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3801,7 +3860,9 @@
     "sharedTypes": "packages/shared/src/cyber.ts (279 LOC)",
     "web": {
       "client": "apps/web/src/lib/cyber.ts (65 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cyber/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3876,7 +3937,9 @@
     "sharedTypes": "packages/shared/src/cyberCloudAcademy.ts (235 LOC)",
     "web": {
       "client": "apps/web/src/lib/cyberCloudAcademy.ts (68 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cyberCloudAcademy/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4089,7 +4152,9 @@
     "sharedTypes": "packages/shared/src/deployment.ts (165 LOC)",
     "web": {
       "client": "apps/web/src/lib/deployment.ts (22 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/deployment/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4181,7 +4246,9 @@
     "sharedTypes": "packages/shared/src/derivatives.ts (645 LOC)",
     "web": {
       "client": "apps/web/src/lib/derivatives.ts (115 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/derivatives/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4413,7 +4480,9 @@
     "sharedTypes": "packages/shared/src/apiKeys.ts (84 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/developers.ts (71 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/developers/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4599,7 +4668,9 @@
     "sharedTypes": "packages/shared/src/digitalHumans.ts (129 LOC)",
     "web": {
       "client": "apps/web/src/lib/digitalHumans.ts (23 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/digitalHumans/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4683,7 +4754,9 @@
     "sharedTypes": "packages/shared/src/disasterRecovery.ts (129 LOC)",
     "web": {
       "client": "apps/web/src/lib/disasterRecovery.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/disasterRecovery/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4695,6 +4768,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "disasterRecovery.spec.ts",
       "disasterRecovery/disasterRecovery.completion.test.ts",
       "config/moduleGates.test.ts"
     ],
@@ -4844,7 +4918,9 @@
     "sharedTypes": "packages/shared/src/education.ts (106 LOC)",
     "web": {
       "client": "apps/web/src/lib/education.ts (29 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/education/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4941,7 +5017,9 @@
     "sharedTypes": "packages/shared/src/emailIntel.ts (201 LOC)",
     "web": {
       "client": "apps/web/src/lib/emailIntel.ts (194 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/emailIntel/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5166,7 +5244,9 @@
     "sharedTypes": "packages/shared/src/enterprise.ts (168 LOC)",
     "web": {
       "client": "apps/web/src/lib/enterprise.ts (161 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5256,7 +5336,10 @@
     "sharedTypes": "packages/shared/src/enterpriseFinOps.ts (196 LOC)",
     "web": {
       "client": "apps/web/src/lib/enterpriseFinOps.ts (55 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/finops/ (1 file)",
+        "apps/web/src/pages/enterpriseFinOps/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5457,7 +5540,10 @@
     "sharedTypes": "packages/shared/src/enterpriseSearch.ts (68 LOC)",
     "web": {
       "client": "apps/web/src/lib/enterpriseSearch.ts (52 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/search/ (1 file)",
+        "apps/web/src/pages/enterpriseSearch/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5557,7 +5643,9 @@
     "sharedTypes": "packages/shared/src/erp.ts (240 LOC)",
     "web": {
       "client": "apps/web/src/lib/erp.ts (233 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/erp/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5697,7 +5785,9 @@
     "sharedTypes": "packages/shared/src/events.ts (75 LOC)",
     "web": {
       "client": "apps/web/src/lib/events.ts (109 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/events/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6239,7 +6329,9 @@
     "sharedTypes": "packages/shared/src/globalCurrency.ts (195 LOC)",
     "web": {
       "client": "apps/web/src/lib/globalCurrency.ts (54 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/globalCurrency/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6343,7 +6435,9 @@
     "sharedTypes": "packages/shared/src/googleAuth.ts (404 LOC)",
     "web": {
       "client": "apps/web/src/lib/googleAuth.ts (115 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/googleAuth/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6460,7 +6554,9 @@
     "sharedTypes": "packages/shared/src/governance.ts (139 LOC)",
     "web": {
       "client": "apps/web/src/lib/governance.ts (84 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6587,7 +6683,9 @@
     "sharedTypes": "packages/shared/src/healthEcosystem.ts (307 LOC)",
     "web": {
       "client": "apps/web/src/lib/healthEcosystem.ts (74 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/healthEcosystem/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6667,7 +6765,9 @@
     "sharedTypes": "packages/shared/src/helpdesk.ts (130 LOC)",
     "web": {
       "client": "apps/web/src/lib/helpdesk.ts (95 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/helpdesk/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6834,7 +6934,9 @@
     "sharedTypes": "packages/shared/src/identityKnowledge.ts (239 LOC)",
     "web": {
       "client": "apps/web/src/lib/identityKnowledge.ts (89 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6912,7 +7014,9 @@
     "sharedTypes": "packages/shared/src/industry.ts (149 LOC)",
     "web": {
       "client": "apps/web/src/lib/industry.ts (33 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/industry/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7203,7 +7307,9 @@
     "sharedTypes": "packages/shared/src/knowledge.ts (809 LOC)",
     "web": {
       "client": "apps/web/src/lib/knowledge.ts (247 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/knowledge/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7407,7 +7513,9 @@
     "sharedTypes": "packages/shared/src/legal.ts (92 LOC)",
     "web": {
       "client": "apps/web/src/lib/legal.ts (56 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/legal/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7485,7 +7593,9 @@
     "sharedTypes": "packages/shared/src/licensing.ts (161 LOC)",
     "web": {
       "client": "apps/web/src/lib/licensing.ts (24 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/licensing/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7569,7 +7679,9 @@
     "sharedTypes": "packages/shared/src/lifePrinciples.ts (332 LOC)",
     "web": {
       "client": "apps/web/src/lib/lifePrinciples.ts (166 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/lifePrinciples/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7663,7 +7775,9 @@
     "sharedTypes": "packages/shared/src/marketing.ts (212 LOC)",
     "web": {
       "client": "apps/web/src/lib/marketing.ts (146 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/marketing/ (12 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7771,7 +7885,9 @@
     "sharedTypes": "packages/shared/src/marketplace.ts (298 LOC)",
     "web": {
       "client": "apps/web/src/lib/marketplace.ts (72 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/marketplace/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7892,7 +8008,10 @@
     "sharedTypes": "packages/shared/src/mediaFactory.ts (246 LOC)",
     "web": {
       "client": "apps/web/src/lib/mediaFactory.ts (110 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/media/ (2 files)",
+        "apps/web/src/pages/mediaFactory/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7988,7 +8107,10 @@
     "sharedTypes": "packages/shared/src/mediaGen.ts (44 LOC)",
     "web": {
       "client": "apps/web/src/lib/mediaGen.ts (13 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/media/ (2 files)",
+        "apps/web/src/pages/mediaGen/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8061,7 +8183,9 @@
     "sharedTypes": "packages/shared/src/memoryEvolution.ts (44 LOC)",
     "web": {
       "client": "apps/web/src/lib/memoryEvolution.ts (18 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/memoryEvolution/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8165,7 +8289,9 @@
     "sharedTypes": "packages/shared/src/mfa.ts (655 LOC)",
     "web": {
       "client": "apps/web/src/lib/mfa.ts (149 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/security/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8406,7 +8532,9 @@
     "sharedTypes": "packages/shared/src/mobile.ts (827 LOC)",
     "web": {
       "client": "apps/web/src/lib/mobile/biometrics.ts (100 LOC, serves /mobile)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/mobile/ (13 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8494,7 +8622,9 @@
     "sharedTypes": "packages/shared/src/modelFactory.ts (60 LOC)",
     "web": {
       "client": "apps/web/src/lib/modelFactory.ts (19 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/modelFactory/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8650,7 +8780,10 @@
     "sharedTypes": "packages/shared/src/moduleCenter.ts (152 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/moduleRuntime.ts (10 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/modules/ (1 file)",
+        "apps/web/src/pages/moduleRuntime/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8864,7 +8997,9 @@
     "sharedTypes": "packages/shared/src/nativeAiApi.ts (81 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/nativeAi.ts (10 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/nativeAi/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8969,7 +9104,9 @@
     "sharedTypes": "packages/shared/src/nativeAiApi.ts (81 LOC)",
     "web": {
       "client": "apps/web/src/lib/nativeAiApi.ts (16 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/nativeAiApi/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9059,7 +9196,9 @@
     "sharedTypes": "packages/shared/src/nfc.ts (301 LOC)",
     "web": {
       "client": "apps/web/src/lib/nfc.ts (283 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/nfc/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9143,7 +9282,10 @@
     "sharedTypes": "packages/shared/src/nfc.ts (301 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/nfcPublic.ts (9 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/nfc/ (1 file)",
+        "apps/web/src/pages/nfcPublic/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9212,7 +9354,9 @@
     "sharedTypes": "packages/shared/src/notifications.ts (112 LOC)",
     "web": {
       "client": "apps/web/src/lib/notifications.ts (16 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/notifications/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9325,7 +9469,9 @@
     "sharedTypes": "packages/shared/src/opex.ts (761 LOC)",
     "web": {
       "client": "apps/web/src/lib/opex.ts (160 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9490,7 +9636,9 @@
     "sharedTypes": "packages/shared/src/permissions.ts (65 LOC)",
     "web": {
       "client": "apps/web/src/lib/permissions.ts (8 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/permissions/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9915,7 +10063,9 @@
     "sharedTypes": "packages/shared/src/politics.ts (952 LOC)",
     "web": {
       "client": "apps/web/src/lib/politics.ts (195 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/politics/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10180,7 +10330,10 @@
     "sharedTypes": "packages/shared/src/promptTemplates.ts (319 LOC)",
     "web": {
       "client": "apps/web/src/lib/promptTemplates.ts (55 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)",
+        "apps/web/src/pages/promptTemplates/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10264,7 +10417,9 @@
     "sharedTypes": "packages/shared/src/publicApi.ts (178 LOC)",
     "web": {
       "client": "apps/web/src/lib/publicApi.ts (41 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10363,7 +10518,9 @@
     "sharedTypes": "packages/shared/src/publishing.ts (13 LOC)",
     "web": {
       "client": "apps/web/src/lib/publishing.ts (9 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/publishing/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10535,7 +10692,9 @@
     "sharedTypes": "packages/shared/src/quantum.ts (125 LOC)",
     "web": {
       "client": "apps/web/src/lib/quantum.ts (29 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/quantum/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10736,7 +10895,9 @@
     "sharedTypes": "packages/shared/src/religions.ts (777 LOC)",
     "web": {
       "client": "apps/web/src/lib/religions.ts (341 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/religions/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10846,7 +11007,9 @@
     "sharedTypes": "packages/shared/src/revenueGuardian.ts (492 LOC)",
     "web": {
       "client": "apps/web/src/lib/revenueGuardian.ts (147 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/revenueGuardian/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10932,7 +11095,9 @@
     "sharedTypes": "packages/shared/src/robotics.ts (188 LOC)",
     "web": {
       "client": "apps/web/src/lib/robotics.ts (38 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/robotics/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11015,7 +11180,9 @@
     "sharedTypes": "packages/shared/src/scientific.ts (98 LOC)",
     "web": {
       "client": "apps/web/src/lib/scientific.ts (28 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/scientific/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11205,7 +11372,9 @@
     "sharedTypes": "packages/shared/src/security.ts (122 LOC)",
     "web": {
       "client": "apps/web/src/lib/security.ts (42 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11378,7 +11547,9 @@
     "sharedTypes": "packages/shared/src/socialPlatform.ts (120 LOC)",
     "web": {
       "client": "apps/web/src/lib/socialPlatform.ts (99 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/socialPlatform/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11449,7 +11620,9 @@
     "sharedTypes": "packages/shared/src/softwareFactory.ts (183 LOC)",
     "web": {
       "client": "apps/web/src/lib/softwareFactory.ts (92 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/softwareFactory/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11524,7 +11697,9 @@
     "sharedTypes": "packages/shared/src/spatial.ts (88 LOC)",
     "web": {
       "client": "apps/web/src/lib/spatial.ts (26 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/spatial/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11602,7 +11777,9 @@
     "sharedTypes": "packages/shared/src/sustainability.ts (176 LOC)",
     "web": {
       "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11694,7 +11871,9 @@
     "sharedTypes": "packages/shared/src/talk.ts (340 LOC)",
     "web": {
       "client": "apps/web/src/lib/talk.ts (117 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/talk/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11768,7 +11947,9 @@
     "sharedTypes": "packages/shared/src/tenantIsolation.ts (106 LOC)",
     "web": {
       "client": "apps/web/src/lib/tenantIsolation.ts (66 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12089,7 +12270,9 @@
     "sharedTypes": "packages/shared/src/university.ts (305 LOC)",
     "web": {
       "client": "apps/web/src/lib/university.ts (94 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/university/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12168,7 +12351,9 @@
     "sharedTypes": "packages/shared/src/universityEngine.ts (233 LOC)",
     "web": {
       "client": "apps/web/src/lib/universityEngine.ts (152 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/universityEngine/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12318,7 +12503,9 @@
     "sharedTypes": "packages/shared/src/usage.ts (168 LOC)",
     "web": {
       "client": "apps/web/src/lib/usage.ts (49 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (15 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12709,7 +12896,9 @@
     "sharedTypes": "packages/shared/src/videoTransform.ts (267 LOC)",
     "web": {
       "client": "apps/web/src/lib/videoTransform.ts (62 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/videoTransform/ (4 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12798,7 +12987,9 @@
     "sharedTypes": "packages/shared/src/videoTransformer.ts (254 LOC)",
     "web": {
       "client": "apps/web/src/lib/videoTransformer.ts (33 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/videoTransformer/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12880,7 +13071,9 @@
     "sharedTypes": "packages/shared/src/voice.ts (267 LOC)",
     "web": {
       "client": "apps/web/src/lib/voice.ts (10 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/voice/ (2 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13127,7 +13320,10 @@
     "sharedTypes": "packages/shared/src/voiceStudio.ts (110 LOC)",
     "web": {
       "client": "apps/web/src/lib/voiceStudio.ts (31 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/voiceStudio/ (1 file)",
+        "apps/web/src/pages/voice/ (2 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13302,7 +13498,9 @@
     "sharedTypes": "packages/shared/src/webhook.ts (48 LOC)",
     "web": {
       "client": "apps/web/src/lib/webhook.ts (60 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/webhook/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13394,7 +13592,9 @@
     "sharedTypes": "packages/shared/src/websiteBuilder.ts (202 LOC)",
     "web": {
       "client": "apps/web/src/lib/websiteBuilder.ts (131 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/websiteBuilder/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [

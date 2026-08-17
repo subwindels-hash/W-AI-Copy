@@ -77,6 +77,7 @@ import {
   Server,
   UserCircle,
   Nfc,
+  ShieldAlert,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 
@@ -159,6 +160,7 @@ const navItems = [
   { to: "/app/constitution", icon: Scale, label: "Constitution" },
   { to: "/app/licensing", icon: DollarSign, label: "Licensing" },
   { to: "/app/deployment", icon: Server, label: "Deployment" },
+  { to: "/app/disaster-recovery", icon: ShieldAlert, label: "Disaster Recovery" },
   { to: "/app/composer", icon: Blocks, label: "Composer" },
   { to: "/app/global-currency", icon: GlobeIcon, label: "Global Currency" },
   { to: "/app/robotics", icon: Bot, label: "Robotics" },

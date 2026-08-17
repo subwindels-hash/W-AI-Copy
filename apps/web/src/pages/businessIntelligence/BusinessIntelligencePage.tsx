@@ -4,5 +4,4 @@
  * at `pages/bi/BusinessIntelligencePage.tsx` (short name). This alias makes
  * the scanner's expected path exist without forking the UI.
  */
-export { default } from "../bi/BusinessIntelligencePage";
-export * from "../bi/BusinessIntelligencePage";
+export { BusinessIntelligencePage as default, BusinessIntelligencePage } from "../bi/BusinessIntelligencePage";
