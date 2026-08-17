@@ -116,6 +116,7 @@ const DisasterRecoveryPage = lazy(() => import("./pages/disasterRecovery/Disaste
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
+const V76ValidationPage = lazy(() => import("./pages/v76validation/V76ValidationPage").then((m) => ({ default: m.V76ValidationPage })));
 const GeoBillingConsolePage = lazy(() => import("./pages/billing/GeoBillingConsolePage").then((m) => ({ default: m.GeoBillingConsolePage })));
 const CommercePage = lazy(() => import("./pages/commerce/CommercePage").then((m) => ({ default: m.CommercePage })));
 const NotificationsPage = lazy(() => import("./pages/notifications/NotificationsPage").then((m) => ({ default: m.NotificationsPage })));
@@ -409,6 +410,7 @@ export const router = createBrowserRouter([
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },
+      { path: "v76-validation", element: withSuspense(<V76ValidationPage />) },
       { path: "composer", element: withSuspense(<ComposerConsolePage />) },
       { path: "global-currency", element: withSuspense(<GlobalCurrencyConsolePage />) },
       { path: "spatial", element: withSuspense(<SpatialPage />) },

@@ -11916,11 +11916,11 @@
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
         "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 824,
+        "sloc": 841,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1824,
+      "serviceTotalSloc": 1858,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -12647,13 +12647,14 @@
       "serviceFile": {
         "file": "v76validation.service.ts",
         "path": "/home/user/WIN/apps/api/src/v76validation/v76validation.service.ts",
-        "sloc": 202,
+        "sloc": 339,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 415,
+      "serviceTotalSloc": 881,
       "serviceFiles": [
         "bootstrap.ts",
+        "v76validation.completion.test.ts",
         "v76validation.service.ts",
         "v76validation/v76validation.service.ts"
       ],
@@ -12665,17 +12666,19 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/v76validation.ts",
-        "sloc": 66,
+        "sloc": 107,
         "counts": {
-          "total": 5,
-          "GET": 2,
-          "POST": 1,
+          "total": 7,
+          "GET": 3,
+          "POST": 2,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
         },
         "endpoints": [
+          "POST /run",
           "GET /report",
+          "GET /history",
           "GET /notes",
           "POST /notes",
           "PATCH /notes/:id",
@@ -12685,8 +12688,10 @@
     ],
     "sharedTypes": "packages/shared/src/v76validation.ts (43 LOC)",
     "web": {
-      "client": "apps/web/src/lib/v76validation.ts (11 LOC)",
-      "pages": []
+      "client": "apps/web/src/lib/v76validation.ts (48 LOC)",
+      "pages": [
+        "apps/web/src/pages/v76validation/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12701,7 +12706,8 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
-      "sessions41-76-80.spec.ts"
+      "sessions41-76-80.spec.ts",
+      "v76validation/v76validation.completion.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [

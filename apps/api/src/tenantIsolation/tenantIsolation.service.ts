@@ -571,6 +571,23 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "hx:flags", scope: "org_scoped" },
   { prefix: "hx:imported", scope: "org_scoped" },
   { prefix: "hx:notes", scope: "org_scoped" },
+  // Session 195 v76validation: every key is per-org
+  // (`v76:report:<org>:<id>`, `v76:lastReportId:<org>`,
+  // `v76:lastReportAt:<org>`, `v76:imported:<org>`, `v76:notes:<org>`,
+  // `v76:reportsIdx:<org>`). The bare `v76` prefix is deliberately
+  // never added — with a two-segment prefix like `v76:report:<org>`,
+  // the org sits in the segment after the literal `report`; a bare
+  // entry would shift the org index and report conformance checks the
+  // sweep never performed. `v76:notes` matches the existing
+  // tenantStore shape (notes:idx:<org> / notes:i:<org>:<id>) so the
+  // org is in the segment after `notes`, identical to the
+  // `arch:notes` / `hx:notes` cataloguing above.
+  { prefix: "v76:report", scope: "org_scoped" },
+  { prefix: "v76:lastReportId", scope: "org_scoped" },
+  { prefix: "v76:lastReportAt", scope: "org_scoped" },
+  { prefix: "v76:imported", scope: "org_scoped" },
+  { prefix: "v76:notes", scope: "org_scoped" },
+  { prefix: "v76:reportsIdx", scope: "org_scoped" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {
