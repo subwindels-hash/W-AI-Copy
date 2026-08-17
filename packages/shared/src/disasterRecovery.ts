@@ -95,15 +95,21 @@ export interface DrDrill {
 export interface DrDashboard {
   overallHealthy: boolean;
   components: DrStatus[];
-  activeRegion: string;
+  activeRegion: string | null;
   standbyRegions: string[];
-  replicationLagMs: number;
+  replicationLagMs: number | null;
   failovers30d: number;
   lastDrillStatus?: "passed" | "failed" | "running";
   lastDrillAt?: string;
   offlineModeAvailable: boolean;
   emergencyModeActive: boolean;
   upcomingDrills: DrDrill[];
+  provenance?: DrProvenance;
+}
+
+export interface DrProvenance {
+  topology: "configured" | "unconfigured";
+  note: string;
 }
 
 export const triggerFailoverSchema = z.object({

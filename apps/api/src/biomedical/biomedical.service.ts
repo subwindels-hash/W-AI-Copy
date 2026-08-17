@@ -23,12 +23,23 @@
  * `aiFindings` is only ever populated from a genuine model or clinician.
  * Hospital-ops metrics, pharmacy alerts and telemedicine sessions are likewise
  * reported from recorded entries only; nothing is simulated.
+ *
+ * Session 174 (unfinished-module track #9):
+ *  - `dashboard()` no longer seeds — it is a pure read. A fresh org returns
+ *    empty collections and `avgTurnaroundMin: null` (unmeasured), not 0.
+ *  - Tenant is required on every call — no `org-windels` fallback.
+ *  - Provenance block explains which numbers are measured.
  */
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import {
-  BiomedicalDashboard, ImagingStudy, HospitalOpsMetric, PharmacyAlert,
-  TelemedicineSession, BIOMED_AREAS,
+  BiomedicalDashboard,
+  BiomedicalProvenance,
+  ImagingStudy,
+  HospitalOpsMetric,
+  PharmacyAlert,
+  TelemedicineSession,
+  BIOMED_AREAS,
 } from "@windels/shared";
 
 const K = {
@@ -44,6 +55,10 @@ const uid = (p: string) => p + randomUUID().slice(0, 8);
 /** Patient identifiers are pseudonymous by construction — no PHI is stored. */
 const patientHash = () => "pt-" + randomUUID().slice(0, 12);
 
+function assertOrg(oid: string): void {
+  if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
+}
+
 async function readSet<T>(oid: string, setKey: string, docKey: (id: string) => string): Promise<T[]> {
   const ids = await redis.smembers(setKey);
   const out: T[] = [];
@@ -58,15 +73,24 @@ export const BiomedicalService = {
   /**
    * Marks the organization as initialised. Seeds **no** studies, alerts or
    * sessions — a new organization starts empty and fills from real intake.
+   *
+   * This is NOT called from any read path. It is called only from
+   * `bootstrapBiomedical` at server start.
    */
-  async ensureBootstrapped(logger?: any, oid = "org-windels", _uid?: string) {
+  async ensureBootstrapped(logger?: any, oid?: string, _uid?: string) {
+    if (!oid) return;
+    assertOrg(oid);
     if (await redis.exists(K.meta(oid))) return;
     await redis.set(K.meta(oid), "1");
     logger?.info?.("[biomedical] initialized (registry-only; no synthetic studies or findings)");
   },
 
-  async dashboard(oid = "org-windels"): Promise<BiomedicalDashboard> {
-    if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid);
+  /**
+   * Pure read — never writes. A fresh org returns empty collections and
+   * `avgTurnaroundMin: null` rather than fabricating a 0-minute turnaround.
+   */
+  async dashboard(oid: string): Promise<BiomedicalDashboard> {
+    assertOrg(oid);
 
     const [studies, pharm, telemed, ops] = await Promise.all([
       readSet<ImagingStudy>(oid, K.imgs(oid), (id) => K.img(oid, id)),
@@ -78,14 +102,22 @@ export const BiomedicalService = {
     const last24 = studies.filter((s) => Date.now() - new Date(s.createdAt).getTime() < 86_400_000);
     const alerts24h = pharm.filter((a) => Date.now() - new Date(a.at).getTime() < 86_400_000).length;
 
-    // Turnaround is measured over studies that actually completed.
+    // Turnaround is measured over studies that actually completed. Empty → null.
     const completed = studies.filter((s) => s.completedAt);
-    const avgTurnaroundMin = completed.length
+    const avgTurnaroundMin: number | null = completed.length
       ? Math.round(
           completed.reduce((acc, s) =>
             acc + (new Date(s.completedAt!).getTime() - new Date(s.createdAt).getTime()) / 60_000, 0) / completed.length,
         )
-      : 0;
+      : null;
+
+    const provenance: BiomedicalProvenance = {
+      avgTurnaroundMin: completed.length ? "measured" : "unmeasured_no_completed",
+      studiesMeasured: completed.length > 0,
+      note: completed.length
+        ? `Turnaround measured over ${completed.length} completed studies`
+        : "No completed studies — turnaround is unmeasured (null, not 0)",
+    };
 
     // Per-area counters are derived from recorded studies, not invented.
     const areas = {} as BiomedicalDashboard["areas"];
@@ -123,6 +155,7 @@ export const BiomedicalService = {
       telemetryActive: telemed.filter((t) => !t.endedAt).length,
       complianceStatus,
       recentStudies: studies.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, 8),
+      provenance,
     };
   },
 
@@ -136,9 +169,10 @@ export const BiomedicalService = {
   async submitStudy(input: {
     modality: ImagingStudy["modality"];
     bodyPart: string;
-    organizationId?: string;
+    organizationId: string;
   }): Promise<ImagingStudy> {
-    const oid = input.organizationId || "org-windels";
+    const oid = input.organizationId;
+    assertOrg(oid);
     const id = uid("img-");
     const study: ImagingStudy = {
       id,
@@ -156,12 +190,14 @@ export const BiomedicalService = {
   },
 
   async getStudy(oid: string, id: string): Promise<ImagingStudy | null> {
+    assertOrg(oid);
     const r = await redis.hgetall(K.img(oid, id));
     if (!r._doc) return null;
     try { return JSON.parse(r._doc) as ImagingStudy; } catch { return null; }
   },
 
   async listStudies(oid: string, limit = 50): Promise<ImagingStudy[]> {
+    assertOrg(oid);
     const all = await readSet<ImagingStudy>(oid, K.imgs(oid), (id) => K.img(oid, id));
     return all.sort((a, b) => b.createdAt.localeCompare(a.createdAt)).slice(0, limit);
   },
@@ -176,6 +212,7 @@ export const BiomedicalService = {
     findings: ImagingStudy["aiFindings"],
     opts?: { reviewedByRadiologist?: boolean },
   ): Promise<ImagingStudy | null> {
+    assertOrg(oid);
     const study = await this.getStudy(oid, id);
     if (!study) return null;
     study.aiFindings = findings;
@@ -191,6 +228,7 @@ export const BiomedicalService = {
 
   // ── pharmacy alerts (recorded by integrations / staff) ────────────
   async addPharmacyAlert(oid: string, input: Omit<PharmacyAlert, "id" | "at"> & { at?: string }): Promise<PharmacyAlert> {
+    assertOrg(oid);
     const id = uid("ph-");
     const alert: PharmacyAlert = { ...input, id, at: input.at ?? new Date().toISOString() };
     await redis.hset(K.ph(oid, id), "_doc", s2(alert));
@@ -203,6 +241,7 @@ export const BiomedicalService = {
     oid: string,
     input: { providerId: string; modality: TelemedicineSession["modality"]; language?: string; aiScribeActive?: boolean },
   ): Promise<TelemedicineSession> {
+    assertOrg(oid);
     const id = uid("tl-");
     const session: TelemedicineSession = {
       id,
@@ -220,6 +259,7 @@ export const BiomedicalService = {
   },
 
   async endTelemedSession(oid: string, id: string): Promise<TelemedicineSession | null> {
+    assertOrg(oid);
     const r = await redis.hgetall(K.tl(oid, id));
     if (!r._doc) return null;
     const session = JSON.parse(r._doc) as TelemedicineSession;
@@ -230,6 +270,7 @@ export const BiomedicalService = {
 
   /** Replace the recorded hospital-ops metric set (from a real ops feed). */
   async setOpsMetrics(oid: string, metrics: HospitalOpsMetric[]): Promise<HospitalOpsMetric[]> {
+    assertOrg(oid);
     await redis.set(K.ops(oid), s2(metrics));
     return metrics;
   },

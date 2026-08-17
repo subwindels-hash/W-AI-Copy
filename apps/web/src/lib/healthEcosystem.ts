@@ -1,13 +1,42 @@
-/** Session 75 — Health, Wellness & Digital Healthcare Ecosystem client */
+/** Session 75 / 175 — Health, Wellness & Digital Healthcare Ecosystem client */
 import { api } from "./api";
-import type { HealthDashboard, HealthMetric, FitnessSession, Medication, DailyNote, EmergencyAlert, HealthInsight } from "@windels/shared";
-export type { HealthDashboard, HealthMetric, FitnessSession, Medication, DailyNote, EmergencyAlert, HealthInsight } from "@windels/shared";
+import type {
+  HealthDashboard,
+  HealthProfile,
+  HealthMetric,
+  FitnessSession,
+  Medication,
+  DailyNote,
+  EmergencyAlert,
+  HealthInsight,
+  WearableDevice,
+  MedicalDevice,
+  Vaccination,
+  Screening,
+} from "@windels/shared";
+export type {
+  HealthDashboard,
+  HealthProfile,
+  HealthMetric,
+  FitnessSession,
+  Medication,
+  DailyNote,
+  EmergencyAlert,
+  HealthInsight,
+  WearableDevice,
+  MedicalDevice,
+  Vaccination,
+  Screening,
+} from "@windels/shared";
 
 export const hecApi = {
   dashboard: () => api<HealthDashboard>("/health-ecosystem/dashboard/rollup"),
 
+  getProfile: () => api.get<HealthProfile | null>("/health-ecosystem/profile"),
+  upsertProfile: (input: Partial<HealthProfile>) => api.post<HealthProfile>("/health-ecosystem/profile", input),
+
   listMetrics: (params?: { kind?: string; limit?: number }) =>
-    api.get<HealthMetric[]>(`/health-ecosystem/metrics`, params),
+    api.get<HealthMetric[]>("/health-ecosystem/metrics", params),
   addMetric: (input: Partial<HealthMetric>) => api.post<HealthMetric>("/health-ecosystem/metrics", input),
 
   listSessions: () => api.get<FitnessSession[]>("/health-ecosystem/fitness-sessions"),
@@ -25,7 +54,19 @@ export const hecApi = {
   ackAlert: (id: string) => api.post<EmergencyAlert>(`/health-ecosystem/emergency-alerts/${id}/acknowledge`, {}),
 
   listInsights: (label?: string) =>
-    api.get<HealthInsight[]>(`/health-ecosystem/insights`, label ? { label } : undefined),
+    api.get<HealthInsight[]>("/health-ecosystem/insights", label ? { label } : undefined),
+
+  listWearables: () => api.get<WearableDevice[]>("/health-ecosystem/wearables"),
+  addWearable: (input: Partial<WearableDevice>) => api.post<WearableDevice>("/health-ecosystem/wearables", input),
+
+  listMedicalDevices: () => api.get<MedicalDevice[]>("/health-ecosystem/medical-devices"),
+  addMedicalDevice: (input: Partial<MedicalDevice>) => api.post<MedicalDevice>("/health-ecosystem/medical-devices", input),
+
+  listVaccinations: () => api.get<Vaccination[]>("/health-ecosystem/vaccinations"),
+  addVaccination: (input: Partial<Vaccination>) => api.post<Vaccination>("/health-ecosystem/vaccinations", input),
+
+  listScreenings: () => api.get<Screening[]>("/health-ecosystem/screenings"),
+  addScreening: (input: Partial<Screening>) => api.post<Screening>("/health-ecosystem/screenings", input),
 
   modules: () => api.get<any[]>("/health-ecosystem/modules"),
   disclaimer: () => api.get<{ disclaimer: string; rule: string }>("/health-ecosystem/disclaimer"),

@@ -6852,9 +6852,9 @@ function DisasterRecoveryTab() {
       {d && <Badge variant={d.overallHealthy?"emerald":"crimson"}>{d.overallHealthy?"healthy":"degraded"}</Badge>}
     </div></CardContent></Card>
     {d && (<div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Active Region" value={d.activeRegion} tone="azure"/>
-      <Stat label="Standby" value={d.standbyRegions.length} tone="violet" sub={d.standbyRegions.join(", ")}/>
-      <Stat label="Max Repl Lag" value={`${d.replicationLagMs}ms`} tone={d.replicationLagMs<2000?"emerald":"amber"}/>
+      <Stat label="Active Region" value={d.activeRegion ?? "—"} tone="azure"/>
+      <Stat label="Standby" value={d.standbyRegions.length} tone="violet" sub={d.standbyRegions.length ? d.standbyRegions.join(", ") : "no topology"}/>
+      <Stat label="Max Repl Lag" value={d.replicationLagMs == null ? "—" : `${d.replicationLagMs}ms`} tone={d.replicationLagMs == null ? "slate" : d.replicationLagMs<2000?"emerald":"amber"}/>
       <Stat label="Failovers (30d)" value={d.failovers30d} tone="crimson"/>
       <Stat label="Last Drill" value={d.lastDrillStatus||"—"} tone={d.lastDrillStatus==="passed"?"emerald":"crimson"} sub={d.lastDrillAt?new Date(d.lastDrillAt).toLocaleDateString():""}/>
       <Stat label="Offline Mode" value={d.offlineModeAvailable?"ready":"—"} tone="teal"/>
@@ -6866,8 +6866,8 @@ function DisasterRecoveryTab() {
         {(d?.components||[]).map(c=>(<div key={c.component} className="flex items-center gap-2 p-2 rounded border border-white/5">
           <span className={cn("h-2 w-2 rounded-full",c.healthy?"bg-emerald":"bg-crimson")}/>
           <span className="flex-1 font-mono">{c.component.replace(/_/g," ")}</span>
-          <span className="text-text-muted">{c.activeRegion}</span>
-          <span className="text-text-muted">{c.replicationLagMs}ms</span>
+          <span className="text-text-muted">{c.activeRegion ?? "—"}</span>
+          <span className="text-text-muted">{c.replicationLagMs == null ? "—" : `${c.replicationLagMs}ms`}</span>
         </div>))}
       </CardContent></Card>
       <Card><CardHeader><CardTitle className="text-sm">Manual Failover</CardTitle></CardHeader>
@@ -7783,7 +7783,7 @@ function BiomedicalTab() {
       <Stat label="Studies (24h)" value={data.imaging?.studies24h||0} tone="crimson"/>
       <Stat label="AI-Assisted" value={data.imaging?.aiAssisted||0} tone="azure"/>
       <Stat label="Pending Review" value={data.imaging?.pendingReview||0} tone="amber"/>
-      <Stat label="Avg TAT" value={`${(data.imaging?.avgTurnaroundMin||0).toFixed(0)}m`} tone="violet"/>
+      <Stat label="Avg TAT" value={data.imaging?.avgTurnaroundMin == null ? "—" : `${data.imaging.avgTurnaroundMin}m`} tone="violet"/>
       <Stat label="Alerts 24h" value={data.alerts24h||0} tone="crimson"/>
       <Stat label="Telemetry" value={data.telemetryActive||0} tone="emerald"/>
       <Stat label="Pharmacy Alerts" value={(data.pharmacyAlerts||[]).length} tone="amber"/>
@@ -7991,12 +7991,12 @@ function CognitiveTab() {
       <div className="text-xs text-text-muted">Self-evolution, AI DNA framework, unified marketplace network, federation, observatory, universal reasoning engine, autonomous research, global memory, innovation, AI civilization, world model.</div></div>
     </CardContent></Card>
     <div className="grid md:grid-cols-4 gap-3">
-      <Stat label="Self-Evolution Health" value={`${data.selfEvolutionHealth}%`} tone="emerald"/>
-      <Stat label="Auto-Fixes (30d)" value={data.autoFixes30d} tone="azure"/>
+      <Stat label="Self-Evolution Health" value={metric(data.selfEvolutionHealth, (n)=>`${n}%`)} tone="emerald"/>
+      <Stat label="Auto-Fixes (30d)" value={metric(data.autoFixes30d)} tone="azure"/>
       <Stat label="Bottlenecks" value={data.activeBottlenecks} tone="crimson"/>
-      <Stat label="DNA Complete" value={`${data.dnaCompleteness}%`} tone="violet"/>
-      <Stat label="Marketplace Assets" value={data.marketplaceUnifiedAssets} tone="fuchsia"/>
-      <Stat label="Federation Partners" value={data.federationPartners} tone="teal"/>
+      <Stat label="DNA Complete" value={metric(data.dnaCompleteness, (n)=>`${n}%`)} tone="violet"/>
+      <Stat label="Marketplace Assets" value={metric(data.marketplaceUnifiedAssets)} tone="fuchsia"/>
+      <Stat label="Federation Partners" value={metric(data.federationPartners)} tone="teal"/>
       <Stat label="Observatory" value={`${data.observatoryHealthyPct}%`} tone="emerald"/>
       {/* Session 110: the service already returns whole percents (AI success
           rate over 30d). Multiplying by 100 again rendered e.g. 7500%. */}
@@ -8004,8 +8004,8 @@ function CognitiveTab() {
       {/* Raw entry count — dividing by 1e6 and labelling it "M" implied
           millions of memories on an organization that has a handful. */}
       <Stat label="Memory + knowledge entries" value={data.globalMemoryEntries} tone="amber"/>
-      <Stat label="Innovation Pipeline" value={`$${(data.innovationPipelineValueUsd/1e6).toFixed(1)}M`} tone="fuchsia"/>
-      <Stat label="Civilization Entities" value={data.civilizationEntities} tone="violet"/>
+      <Stat label="Innovation Pipeline" value={metric(data.innovationPipelineValueUsd, (n)=>`$${(n/1e6).toFixed(1)}M`)} tone="fuchsia"/>
+      <Stat label="Civilization Entities" value={metric(data.civilizationEntities)} tone="violet"/>
       <Stat label="Prediction Acc" value={`${data.predictionAccuracyPct}%`} tone="emerald"/>
     </div>
     {/* Session 110 — the world-model evidence register behind /app/cognitive. */}

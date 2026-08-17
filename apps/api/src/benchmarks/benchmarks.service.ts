@@ -40,13 +40,15 @@ export const BenchmarksService = {
    * Marks the organization as initialised. Seeds **no** runs: an organization
    * with no recorded evaluations reports an empty benchmark centre.
    */
-  async ensureBootstrapped(logger?: any, oid = "org-windels") {
+  async ensureBootstrapped(logger?: any, oid?: string) {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) return;
     if (await redis.exists(K.metrics(oid))) return;
     await redis.hset(K.metrics(oid), "optimizedModels", "0", "pending", "0");
     logger?.info?.("[benchmarks] initialized (result-registry; no synthetic runs)", { areas: BM_AREAS.length });
   },
 
-  async dashboard(oid = "org-windels"): Promise<BmDashboard> {
+  async dashboard(oid: string): Promise<BmDashboard> {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     const runs = await this.listRuns(oid, 100);
     const completed = runs.filter(r=>r.status==="completed");
     const last24h = runs.filter(r=>Date.now()-new Date(r.startedAt).getTime()<24*3600*1000 && r.status==="completed").length;
@@ -64,8 +66,9 @@ export const BenchmarksService = {
     };
   },
 
-  async runBenchmark(input: { area: BmArea; targetId?: string; targetName?: string; notes?: string; metrics: BmMetric[]; overallScore: number; passed: boolean; evaluator: string; evidence: string; organizationId?: string }): Promise<BmRun> {
-    const oid = input.organizationId || "org-windels";
+  async runBenchmark(input: { area: BmArea; targetId?: string; targetName?: string; notes?: string; metrics: BmMetric[]; overallScore: number; passed: boolean; evaluator: string; evidence: string; organizationId: string }): Promise<BmRun> {
+    const oid = input.organizationId;
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     const id = uid("br-"); const start = Date.now();
     const run: BmRun = { id, organizationId: oid, area: input.area, targetId: input.targetId, targetName: input.targetName || input.targetId || input.area.replace(/_/g," "), status: "completed", startedAt: new Date(start).toISOString(), completedAt: new Date(start).toISOString(), durationMs: 0, metrics: input.metrics, overallScore: input.overallScore, passed: input.passed, notes: input.notes, metadata: { evaluator: input.evaluator, evidence: input.evidence, imported: true } };
     await redis.hset(K.run(oid,id), "_doc", s2(run));
@@ -76,8 +79,9 @@ export const BenchmarksService = {
     return run;
   },
 
-  async schedule(input: { area: BmArea; cron: string; enabled: boolean; targetId?: string; organizationId?: string }): Promise<BmScheduled> {
-    const oid = input.organizationId || "org-windels";
+  async schedule(input: { area: BmArea; cron: string; enabled: boolean; targetId?: string; organizationId: string }): Promise<BmScheduled> {
+    const oid = input.organizationId;
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     const id = uid("sc-");
     const s: BmScheduled = { id, area: input.area, targetId: input.targetId, cron: input.cron, enabled: input.enabled, nextRunAt: new Date(Date.now()+3600_000).toISOString() };
     await redis.hset(K.sched(oid,id), "_doc", s2(s));
@@ -85,7 +89,8 @@ export const BenchmarksService = {
     return s;
   },
 
-  async listRuns(oid = "org-windels", limit = 30): Promise<BmRun[]> {
+  async listRuns(oid: string, limit = 30): Promise<BmRun[]> {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     const ids = await redis.zrange(K.runs(oid), -limit, -1, "REV");
     const out: BmRun[] = [];
     for (const id of ids) { const r = await redis.hgetall(K.run(oid,id)); if (r._doc) out.push(JSON.parse(r._doc)); }

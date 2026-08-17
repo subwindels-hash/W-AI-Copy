@@ -30,7 +30,8 @@ describe("biomedical — no fabricated diagnostics", () => {
     expect(d.recentStudies).toHaveLength(0);
     expect(d.pharmacyAlerts).toHaveLength(0);
     expect(d.imaging.studies24h).toBe(0);
-    expect(d.imaging.avgTurnaroundMin).toBe(0);
+    expect(d.imaging.avgTurnaroundMin).toBeNull();
+    expect(d.provenance?.avgTurnaroundMin).toBe("unmeasured_no_completed");
     expect(d.telemetryActive).toBe(0);
     expect(d.ops).toHaveLength(0);
   });

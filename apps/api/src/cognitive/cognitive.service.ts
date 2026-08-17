@@ -6,6 +6,10 @@
  * observations, hypotheses) lives beside it in `worldModel.service.ts`; the
  * `worldModel()` delegate below exists so callers that already hold
  * `CognitiveService` reach it without a second import.
+ *
+ * Session 177: the nine self-evolution/DNA/federation/world-model fields now
+ * report `null` (was 0) — those subsystems do not exist yet, and 0 is a
+ * measurement claim. `dashboard()` no longer seeds; it is a pure read.
  */
 import { prisma } from "../db/client.js";
 import { redisCmd as redis } from "../db/redis.js";
@@ -14,17 +18,24 @@ import type { CognitiveDashboard, CogWorldModelRollup, ObservatoryNode } from "@
 
 const K = { meta: (oid: string) => `cog:${oid}:meta` };
 export const CognitiveService = {
-  async ensureBootstrapped(logger?: Logger, oid = "org-windels") { if (!(await redis.exists(K.meta(oid)))) { await redis.set(K.meta(oid), "1"); logger?.info({ msg: "[cognitive] observability rollup initialized", organizationId: oid }); } },
+  async ensureBootstrapped(logger?: Logger, oid?: string) {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) return;
+    if (!(await redis.exists(K.meta(oid)))) { await redis.set(K.meta(oid), "1"); logger?.info({ msg: "[cognitive] observability rollup initialized", organizationId: oid }); }
+  },
   /**
    * Platform observability rollup.
    *
    * Counts are read from real tables. Fields with no backing store (self-
    * evolution, DNA completeness, federation partners, civilization/world
-   * modelling) stay 0 rather than being estimated — those subsystems do not
-   * exist yet, and a plausible number would imply they do.
+   * modelling) now report `null` — those subsystems do not exist yet, and a
+   * plausible number would imply they do. Measured aggregates (observatory,
+   * memory, predictions) remain numbers; 0 there is measured (0 healthy nodes).
+   *
+   * This is a pure read — it never writes. A fresh org returns `null` for the
+   * nine structural fields and provenance marks them as `structural_null`.
    */
   async dashboard(oid: string): Promise<CognitiveDashboard> {
-    await this.ensureBootstrapped(undefined, oid);
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     const since = new Date(Date.now() - 30 * 86_400_000);
     const [agents, workflows, conversations, memories, knowledge, tasks, runningWorkflows,
            aiTotal, aiFailed, aiAvg, failedRuns, openAlerts] = await Promise.all([
@@ -54,16 +65,16 @@ export const CognitiveService = {
     ];
     const healthyPct = Math.round((observatory.filter((o) => o.healthy).length / observatory.length) * 100);
     return {
-      selfEvolutionHealth: 0, autoFixes30d: 0,
+      selfEvolutionHealth: null, autoFixes30d: null,
       // A bottleneck is a workflow that is stuck running or has failed.
       activeBottlenecks: runningWorkflows + failedRuns,
-      dnaCompleteness: 0, marketplaceUnifiedAssets: 0, federationPartners: 0,
+      dnaCompleteness: null, marketplaceUnifiedAssets: null, federationPartners: null,
       observatoryHealthyPct: healthyPct,
       observabilityNodes: observatory.reduce((n, x) => n + x.count, 0),
       reasoningAccuracyAvg: successPct,
       globalMemoryEntries: memories + knowledge,
-      innovationProposalsOpen: 0, innovationPipelineValueUsd: 0,
-      civilizationEntities: 0, worldScenariosTracked: 0,
+      innovationProposalsOpen: null, innovationPipelineValueUsd: null,
+      civilizationEntities: null, worldScenariosTracked: null,
       predictionsMade30d: aiTotal, predictionAccuracyPct: successPct,
       components: [], partners: [], observatory,
       // ReasoningCapability is keyed by a fixed domain enum, and we do not
@@ -75,6 +86,18 @@ export const CognitiveService = {
         { layer: "agent_knowledge", entries: knowledge, accesses24h: 0, sizeGb: 0 },
       ],
       innovations: [], scenarios: [],
+      provenance: {
+        selfEvolutionHealth: "structural_null",
+        autoFixes30d: "structural_null",
+        dnaCompleteness: "structural_null",
+        marketplaceUnifiedAssets: "structural_null",
+        federationPartners: "structural_null",
+        innovationProposalsOpen: "structural_null",
+        innovationPipelineValueUsd: "structural_null",
+        civilizationEntities: "structural_null",
+        worldScenariosTracked: "structural_null",
+        note: "Nine subsystems report null — they do not exist yet (no estimation). Measured rolls (observatory, memory, predictions, bottlenecks) remain numbers.",
+      },
     } satisfies CognitiveDashboard;
   },
 

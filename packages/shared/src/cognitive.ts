@@ -73,20 +73,20 @@ export interface CivilizationEntity { id: string; kind: "citizen"|"team"|"depart
 export interface WorldScenario { id: string; name: string; domain: WorldModelDomain; horizonMonths: number; outcomeP50: string; outcomeP90: string; confidence: number; }
 
 export interface CognitiveDashboard {
-  selfEvolutionHealth: number;
-  autoFixes30d: number;
+  selfEvolutionHealth: number | null;
+  autoFixes30d: number | null;
   activeBottlenecks: number;
-  dnaCompleteness: number;
-  marketplaceUnifiedAssets: number;
-  federationPartners: number;
+  dnaCompleteness: number | null;
+  marketplaceUnifiedAssets: number | null;
+  federationPartners: number | null;
   observatoryHealthyPct: number;
   observabilityNodes: number;
   reasoningAccuracyAvg: number;
   globalMemoryEntries: number;
-  innovationProposalsOpen: number;
-  innovationPipelineValueUsd: number;
-  civilizationEntities: number;
-  worldScenariosTracked: number;
+  innovationProposalsOpen: number | null;
+  innovationPipelineValueUsd: number | null;
+  civilizationEntities: number | null;
+  worldScenariosTracked: number | null;
   predictionsMade30d: number;
   predictionAccuracyPct: number;
   components: SelfEvolutionMetric[];
@@ -96,6 +96,21 @@ export interface CognitiveDashboard {
   memoryLayers: MemoryLayer[];
   innovations: InnovationProposal[];
   scenarios: WorldScenario[];
+  provenance?: CognitiveProvenance;
+}
+
+export interface CognitiveProvenance {
+  /** Marks which rolls are structural-null vs measured. */
+  selfEvolutionHealth: "structural_null";
+  autoFixes30d: "structural_null";
+  dnaCompleteness: "structural_null";
+  marketplaceUnifiedAssets: "structural_null";
+  federationPartners: "structural_null";
+  innovationProposalsOpen: "structural_null";
+  innovationPipelineValueUsd: "structural_null";
+  civilizationEntities: "structural_null";
+  worldScenariosTracked: "structural_null";
+  note: string;
 }
 
 // ─── Session 110 — World Model evidence register ───────────────────────────

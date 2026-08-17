@@ -1,0 +1,106 @@
+/**
+ * Session 176 — opex completion (Tier 2 #11)
+ * Read-path seeding + default tenant fallback.
+ * Runs fully in-memory via FakeKv + FakePrisma.
+ */
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { FakeKv } from "../mediaFactory/publishing/fakeKv.js";
+import { FakePrisma } from "../testUtils/fakePrisma.js";
+
+const kv = new FakeKv();
+const db = new FakePrisma();
+vi.mock("../db/redis.js", () => ({
+  redis: kv,
+  redisCmd: kv,
+  redisSub: kv,
+  redisCommand: (_c: string, fn: () => unknown) => fn(),
+}));
+vi.mock("../db/client.js", () => ({ prisma: db.client() }));
+
+const { OpexService } = await import("./opex.service.js");
+const { OpexAssuranceService } = await import("./opexAssurance.service.js");
+
+const ORG = "org-opex-comp";
+const OTHER = "org-opex-other";
+const ADMIN = "user-admin-opex";
+
+function resetAll() {
+  kv.strings.clear();
+  kv.hashes.clear();
+  kv.zsets.clear();
+  kv.lists.clear();
+  kv.sets.clear();
+  db.reset?.();
+}
+
+beforeEach(() => resetAll());
+
+describe("opex completion — O1 read/write paths do not seed meta", () => {
+  it("dashboard on empty org creates no opex:meta and no opx:alert (fails on O1 read)", async () => {
+    await OpexService.dashboard(ORG);
+    // dashboard must NOT create opex:meta (the S156 defect) and must NOT create any alert
+    expect(await kv.exists(`opex:${ORG}:meta`)).toBe(0);
+    const alerts = await OpexAssuranceService.listAlerts(ORG, { limit: 5 });
+    expect(alerts.alerts).toHaveLength(0);
+    // ensureLegacyImported is allowed to create opx:imported as a one-shot migration marker — that is not a seeder
+  });
+
+  it("createAlert on empty org does not create opex:meta via the write path (fails on O1 write)", async () => {
+    const beforeMeta = await kv.exists(`opex:${ORG}:meta`);
+    expect(beforeMeta).toBe(0);
+    await OpexService.createAlert(ORG, { category: "drift", severity: "warning", source: "monitor", message: "e2e finding" }, ADMIN);
+    // After S176, createAlert must NOT create opex:meta
+    expect(await kv.exists(`opex:${ORG}:meta`)).toBe(0);
+    // But it should have created an opx:alert
+    const alerts = await OpexAssuranceService.listAlerts(ORG, { limit: 5 });
+    expect(alerts.alerts.length).toBe(1);
+  });
+
+  it("ensureBootstrapped is idempotent and isolated", async () => {
+    await OpexService.ensureBootstrapped(undefined, ORG);
+    expect(await kv.exists(`opex:${ORG}:meta`)).toBe(1);
+    const keysBefore = await kv.keys("opex:*");
+    await OpexService.ensureBootstrapped(undefined, ORG);
+    const keysAfter = await kv.keys("opex:*");
+    expect(keysAfter.length).toBe(keysBefore.length);
+    // Other org not affected
+    expect(await kv.exists(`opex:${OTHER}:meta`)).toBe(0);
+  });
+
+  it("second-org isolation — alert written in org A not visible from org B", async () => {
+    await OpexService.createAlert(ORG, { category: "alignment", severity: "critical", source: "monitor", message: "A finding" }, ADMIN);
+    const otherAlerts = await OpexAssuranceService.listAlerts(OTHER, { limit: 10 });
+    expect(otherAlerts.alerts).toHaveLength(0);
+    const otherDash = await OpexService.dashboard(OTHER);
+    expect(otherDash.safety.alertsOpen).toBe(0);
+  });
+});
+
+describe("opex completion — O2 default tenant removed", () => {
+  it("dashboard requires organizationId (throws on empty) (fails on O2)", async () => {
+    await expect(OpexService.dashboard("" as any)).rejects.toThrow();
+    await expect(OpexService.dashboard(null as any)).rejects.toThrow();
+  });
+
+  it("createAlert requires organizationId (throws on empty)", async () => {
+    await expect(OpexService.createAlert("" as any, { category: "drift", severity: "warning", source: "monitor", message: "x" }, ADMIN)).rejects.toThrow();
+    await expect(OpexService.createAlert(null as any, { category: "drift", severity: "warning", source: "monitor", message: "x" }, ADMIN)).rejects.toThrow();
+  });
+
+  it("ensureBootstrapped early-returns on empty oid without creating global key", async () => {
+    await OpexService.ensureBootstrapped(undefined, "" as any);
+    await OpexService.ensureBootstrapped(undefined, null as any);
+    await OpexService.ensureBootstrapped(undefined, undefined as any);
+    expect((await kv.keys("opex:*")).length).toBe(0);
+    expect((await kv.keys("opx:*")).length).toBe(0);
+  });
+});
+
+describe("opex completion — dashboard still honest via assurance", () => {
+  it("dashboard on empty org returns empty register and provenance via assurance", async () => {
+    const d = await OpexService.dashboard(ORG);
+    expect(d.safety.alertsOpen).toBe(0);
+    expect(d.recentAlerts).toHaveLength(0);
+    expect(d.provenance).toBeTruthy();
+  });
+});

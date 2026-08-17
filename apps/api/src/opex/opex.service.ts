@@ -47,7 +47,8 @@ const K = {
 export type Alert = LegacyOpexAlert;
 
 export const OpexService = {
-  async ensureBootstrapped(logger?: Logger, oid = "org-windels") {
+  async ensureBootstrapped(logger?: Logger, oid?: string) {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) return;
     if (!(await redis.exists(K.meta(oid)))) {
       await redis.set(K.meta(oid), "1");
       logger?.info({ msg: "[opex] safety register initialized", organizationId: oid });
@@ -65,7 +66,7 @@ export const OpexService = {
     input: Omit<Alert, "id" | "at" | "status">,
     actorId: string | null = null,
   ): Promise<Alert> {
-    await this.ensureBootstrapped(undefined, oid);
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     const record = await OpexAssuranceService.fileAlert(oid, actorId, {
       category: input.category,
       severity: input.severity as OpexSeverity,
@@ -111,7 +112,7 @@ export const OpexService = {
    * block below marks each one, and `GET /opex/trust` reports them as `null`.
    */
   async dashboard(oid: string): Promise<OpexDashboard> {
-    await this.ensureBootstrapped(undefined, oid);
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     await OpexAssuranceService.ensureLegacyImported(oid);
 
     const [summary, reliabilityReport, policy] = await Promise.all([

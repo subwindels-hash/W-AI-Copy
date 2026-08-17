@@ -273,7 +273,9 @@ export const HealthEcosystemService = {
    * Marks the organization as initialised. Deliberately seeds **no** health
    * data: a new organization starts empty and populates as real records arrive.
    */
-  async ensureBootstrapped(logger?: Logger, oid = "org-windels", _uidSeed?: string) {
+  async ensureBootstrapped(logger?: Logger, oid?: string, _uidSeed?: string) {
+    if (!oid) return;
+    if (typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
     if (await redis.exists(K.meta(oid))) return;
     await redis.set(K.meta(oid), "1");
     logger?.info({ msg: "[health-ecosystem] initialized (record-only; no synthetic health data)", oid });
@@ -310,9 +312,10 @@ export const HealthEcosystemService = {
     return p;
   },
 
-  async dashboard(oid: string, userId?: string): Promise<HealthDashboard> {
-    if (!(await redis.exists(K.meta(oid)))) await this.ensureBootstrapped(undefined, oid, userId);
-    const u = userId ?? "anon";
+  async dashboard(oid: string, userId: string): Promise<HealthDashboard> {
+    if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
+    if (!userId || typeof userId !== "string" || userId.trim().length === 0) throw new Error("userId is required");
+    const u = userId;
 
     const [profile, metrics, sessions, meds, notes, alerts, wearables, medDevices, vaccines, screenings] =
       await Promise.all([

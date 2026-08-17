@@ -3,11 +3,14 @@
  * Registry-only: this API records imaging studies and routes them for reading.
  * It does not interpret images. Findings are attached exclusively through
  * POST /studies/:id/findings by a real inference provider or a clinician.
+ *
+ * Session 174: all handlers now enforce tenant isolation via orgOf() — no
+ * default "org-windels" fallback. Dashboard is a pure read (never seeds).
  */
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../middleware/validate.js";
-import { requireAdmin } from "../middleware/auth.js";
+import { authenticate, requireAdmin } from "../middleware/auth.js";
 import { BiomedicalService } from "../../biomedical/biomedical.service.js";
 
 const StudySchema = z.object({
@@ -51,25 +54,43 @@ const OpsSchema = z.object({
 
 const IdParam = z.object({ id: z.string().min(1).max(100) });
 
+function orgOf(req: any, res: any): string | null {
+  const oid = req.user?.organizationId;
+  if (!oid) {
+    res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "organization context required" } });
+    return null;
+  }
+  return oid;
+}
+
 export function registerBiomedicalRoutes(router: Router) {
-  const oid = (req: any) => (req.user as any).organizationId;
+  // All biomedical routes require authentication — unauthenticated → 401
+  router.use(authenticate);
 
   router.get("/dashboard/rollup", async (req, res, next) => {
-    try { res.json({ ok: true, data: await BiomedicalService.dashboard(oid(req)) }); }
+    try {
+      const oid = orgOf(req, res);
+      if (!oid) return;
+      res.json({ ok: true, data: await BiomedicalService.dashboard(oid) });
+    }
     catch (e) { next(e); }
   });
 
   // ── imaging registry ──────────────────────────────────────────────
   router.get("/studies", async (req, res, next) => {
     try {
+      const oid = orgOf(req, res);
+      if (!oid) return;
       const limit = Math.min(parseInt((req.query.limit as string) || "50", 10) || 50, 200);
-      res.json({ ok: true, data: await BiomedicalService.listStudies(oid(req), limit) });
+      res.json({ ok: true, data: await BiomedicalService.listStudies(oid, limit) });
     } catch (e) { next(e); }
   });
 
   router.post("/studies", validate({ body: StudySchema }), async (req, res, next) => {
     try {
-      const study = await BiomedicalService.submitStudy({ ...req.body, organizationId: oid(req) });
+      const oid = orgOf(req, res);
+      if (!oid) return;
+      const study = await BiomedicalService.submitStudy({ ...req.body, organizationId: oid });
       res.status(201).json({
         ok: true,
         data: study,
@@ -83,7 +104,9 @@ export function registerBiomedicalRoutes(router: Router) {
 
   router.get("/studies/:id", validate({ params: IdParam }), async (req, res, next) => {
     try {
-      const study = await BiomedicalService.getStudy(oid(req), req.params.id);
+      const oid = orgOf(req, res);
+      if (!oid) return;
+      const study = await BiomedicalService.getStudy(oid, req.params.id);
       if (!study) return res.status(404).json({ ok: false, error: { code: "not_found", message: "Study not found" } });
       res.json({ ok: true, data: study });
     } catch (e) { next(e); }
@@ -93,8 +116,10 @@ export function registerBiomedicalRoutes(router: Router) {
   router.post("/studies/:id/findings", requireAdmin, validate({ params: IdParam, body: FindingsSchema }),
     async (req, res, next) => {
       try {
+        const oid = orgOf(req, res);
+        if (!oid) return;
         const study = await BiomedicalService.recordFindings(
-          oid(req), req.params.id, req.body.findings,
+          oid, req.params.id, req.body.findings,
           { reviewedByRadiologist: req.body.reviewedByRadiologist },
         );
         if (!study) return res.status(404).json({ ok: false, error: { code: "not_found", message: "Study not found" } });
@@ -104,18 +129,28 @@ export function registerBiomedicalRoutes(router: Router) {
 
   // ── pharmacy alerts ───────────────────────────────────────────────
   router.post("/pharmacy-alerts", requireAdmin, validate({ body: PharmacyAlertSchema }), async (req, res, next) => {
-    try { res.status(201).json({ ok: true, data: await BiomedicalService.addPharmacyAlert(oid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res);
+      if (!oid) return;
+      res.status(201).json({ ok: true, data: await BiomedicalService.addPharmacyAlert(oid, req.body) });
+    }
     catch (e) { next(e); }
   });
 
   // ── telemedicine ──────────────────────────────────────────────────
   router.post("/telemedicine/sessions", validate({ body: TelemedStartSchema }), async (req, res, next) => {
-    try { res.status(201).json({ ok: true, data: await BiomedicalService.startTelemedSession(oid(req), req.body) }); }
+    try {
+      const oid = orgOf(req, res);
+      if (!oid) return;
+      res.status(201).json({ ok: true, data: await BiomedicalService.startTelemedSession(oid, req.body) });
+    }
     catch (e) { next(e); }
   });
   router.post("/telemedicine/sessions/:id/end", validate({ params: IdParam }), async (req, res, next) => {
     try {
-      const s = await BiomedicalService.endTelemedSession(oid(req), req.params.id);
+      const oid = orgOf(req, res);
+      if (!oid) return;
+      const s = await BiomedicalService.endTelemedSession(oid, req.params.id);
       if (!s) return res.status(404).json({ ok: false, error: { code: "not_found", message: "Session not found" } });
       res.json({ ok: true, data: s });
     } catch (e) { next(e); }
@@ -123,7 +158,11 @@ export function registerBiomedicalRoutes(router: Router) {
 
   // ── hospital ops feed ─────────────────────────────────────────────
   router.post("/ops-metrics", requireAdmin, validate({ body: OpsSchema }), async (req, res, next) => {
-    try { res.json({ ok: true, data: await BiomedicalService.setOpsMetrics(oid(req), req.body.metrics) }); }
+    try {
+      const oid = orgOf(req, res);
+      if (!oid) return;
+      res.json({ ok: true, data: await BiomedicalService.setOpsMetrics(oid, req.body.metrics) });
+    }
     catch (e) { next(e); }
   });
 }

@@ -63,13 +63,23 @@ export interface TelemedicineSession {
   summaryGenerated: boolean;
 }
 
+export interface BiomedicalProvenance {
+  /** How avgTurnaroundMin was derived — unmeasured until a study completes. */
+  avgTurnaroundMin: "measured" | "unmeasured_no_completed";
+  /** Whether any studies have been measured at all. */
+  studiesMeasured: boolean;
+  /** Human-readable note for provenance badge. */
+  note: string;
+}
+
 export interface BiomedicalDashboard {
   areas: Record<BiomedArea, { enabled: boolean; models: number; reviewed24h: number; escalations24h: number }>;
-  imaging: { studies24h: number; aiAssisted: number; pendingReview: number; avgTurnaroundMin: number };
+  imaging: { studies24h: number; aiAssisted: number; pendingReview: number; avgTurnaroundMin: number | null };
   ops: HospitalOpsMetric[];
   alerts24h: number;
   pharmacyAlerts: PharmacyAlert[];
   telemetryActive: number;
   complianceStatus: Record<string, "compliant"|"gap"|"at_risk">;
   recentStudies: ImagingStudy[];
+  provenance?: BiomedicalProvenance;
 }
