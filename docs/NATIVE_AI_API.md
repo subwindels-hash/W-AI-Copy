@@ -45,6 +45,26 @@ Aliases appear only when backed by tested runtime capabilities **and** the opera
 
 Capabilities such as vision, streaming, structured output and tools are published only when the router can select a healthy model with the required internal capability.
 
+## First-party Native AI Studio
+
+Signed-in WINDELS members also have a deliberately narrow control surface at
+`/api/v1/native-ai` and `/app/native-ai`. It is **not** an alternate public API
+or an API-key bypass:
+
+- uses the ordinary member JWT and requires an organization context for usage
+  and model-invocation routes;
+- calls the same health-gated native router as `/v1`;
+- offers non-streaming chat and real embeddings only;
+- applies the same `native-ai` product billing/quota gate and records the same
+  durable usage ledger, tagged `channel: "studio"`;
+- reports `unavailable` when publication is disabled or no real accepted model
+  is healthy; it never exposes Echo/demo or hash fallback output;
+- keeps streaming, files, image/audio endpoints and external-agent protocol on
+  the API-key-authenticated `/v1` surface.
+
+The Studio’s stable output intentionally omits the selected internal provider
+and backing model. It is a member workspace, not a provider diagnostic surface.
+
 ## Compatibility posture
 
 The API follows familiar OpenAI request/response shapes for the implemented and tested subset. It does **not** claim complete OpenAI API compatibility.

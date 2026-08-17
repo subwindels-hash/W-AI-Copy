@@ -1,20 +1,30 @@
-# Unfinished Modules — audit as of 2026-08-14
+# Unfinished Modules — historical audit; closed 2026-08-16
 
-**Scope:** which modules are still unfinished *in substance*, using the same
-defect signature the completion track (Sessions 155–160) used, not the
+> **Current status (Session 197):** `node audit/build-inventory.mjs` reports
+> **144 modules / 144 COMPLETE / 0 PARTIAL / 0 STUB**. The last inventory STUB,
+> `nativeAi`, is now a first-party Native AI Studio with its own authenticated
+> routes, shared contract, client, UI, quota gate, ledger integration, and
+> tests. See `docs/SESSION_197_SPECIFICATION.md`.
+>
+> The remainder of this file is the historical defect audit that drove
+> Sessions 155–196. It is retained for the rationale behind the completed work,
+> not as a current queue.
+
+**Historical scope:** which modules were unfinished *in substance*, using the
+same defect signature the completion track (Sessions 155–160) used, not the
 scanner's four gates.
 
-## Why the inventory says zero
+## Why the historical inventory said zero
 
-`audit/module-inventory.json` reports **125 modules / 125 COMPLETE / 0 PARTIAL**.
-That number is a heuristic (routes ≥ 5 + client + shared types + tests) and it
-already lied six times: `robotics` was COMPLETE in the inventory while it could
-not ingest a reading (S155). `README.md` says as much — the count is
-"a heuristic rather than a work order".
+The then-committed `audit/module-inventory.json` reported **125 modules / 125
+COMPLETE / 0 PARTIAL**. That was a heuristic (routes ≥ 5 + client + shared
+ types + tests) and it already lied six times: `robotics` was COMPLETE in the
+inventory while it could not ingest a reading (S155). `README.md` says as much
+— the count is "a heuristic rather than a work order".
 
-The completion track numbers its own specs `unfinished-module track, N/N` and
-stops at **6/N** (`docs/SESSION_160_SPECIFICATION.md`). `N` was never
-enumerated anywhere in the repo. This document enumerates it.
+The completion track numbered its own specs `unfinished-module track, N/N` and
+stopped at **6/N** (`docs/SESSION_160_SPECIFICATION.md`). `N` was never
+enumerated anywhere in the repo. This historical document enumerated it.
 
 ## Already completed on the track (do not redo)
 

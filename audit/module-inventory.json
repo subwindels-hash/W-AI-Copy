@@ -1671,11 +1671,11 @@
     "backend": {
       "serviceDir": "apps/api/src/billing",
       "serviceFile": {
-        "file": "billing.integration.test.ts",
-        "path": "/home/user/WIN/apps/api/src/billing/billing.integration.test.ts",
-        "sloc": 132,
+        "file": "exchangeRates.ts",
+        "path": "/home/user/WIN/apps/api/src/billing/exchangeRates.ts",
+        "sloc": 141,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
       "serviceTotalSloc": 1041,
       "serviceFiles": [
@@ -3144,9 +3144,9 @@
     "backend": {
       "serviceDir": "apps/api/src/composer",
       "serviceFile": {
-        "file": "composer.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/composer/composer.service.test.ts",
-        "sloc": 445,
+        "file": "composer.service.ts",
+        "path": "/home/user/WIN/apps/api/src/composer/composer.service.ts",
+        "sloc": 459,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -3263,9 +3263,9 @@
     "backend": {
       "serviceDir": "apps/api/src/constitution",
       "serviceFile": {
-        "file": "constitution.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/constitution/constitution.service.test.ts",
-        "sloc": 363,
+        "file": "constitution.service.ts",
+        "path": "/home/user/WIN/apps/api/src/constitution/constitution.service.ts",
+        "sloc": 427,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -3971,9 +3971,9 @@
     "backend": {
       "serviceDir": "apps/api/src/dataMarketplace",
       "serviceFile": {
-        "file": "dataMarketplace.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.test.ts",
-        "sloc": 174,
+        "file": "dataMarketplace.service.ts",
+        "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.ts",
+        "sloc": 271,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -4107,10 +4107,10 @@
     "backend": {
       "serviceDir": "apps/api/src/deployment",
       "serviceFile": {
-        "file": "deployment.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/deployment/deployment.service.test.ts",
-        "sloc": 268,
-        "mathRandom": true,
+        "file": "deployment.service.ts",
+        "path": "/home/user/WIN/apps/api/src/deployment/deployment.service.ts",
+        "sloc": 278,
+        "mathRandom": false,
         "externalFetch": false
       },
       "serviceTotalSloc": 961,
@@ -4423,6 +4423,7 @@
       "services/alerting.test.ts",
       "services/workflow.engine.test.ts",
       "services/workspace.service.test.ts",
+      "nativeAi/console.service.test.ts",
       "nativeAi/externalAgent.test.ts",
       "nativeAi/nativeAi.test.ts",
       "nativeAi/nativeUsage.test.ts"
@@ -4624,9 +4625,9 @@
     "backend": {
       "serviceDir": "apps/api/src/digitalHumans",
       "serviceFile": {
-        "file": "digitalHumans.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.test.ts",
-        "sloc": 246,
+        "file": "digitalHumans.service.ts",
+        "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.ts",
+        "sloc": 266,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -6280,9 +6281,9 @@
     "backend": {
       "serviceDir": "apps/api/src/globalCurrency",
       "serviceFile": {
-        "file": "globalCurrency.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/globalCurrency/globalCurrency.service.test.ts",
-        "sloc": 453,
+        "file": "globalCurrency.service.ts",
+        "path": "/home/user/WIN/apps/api/src/globalCurrency/globalCurrency.service.ts",
+        "sloc": 566,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -6985,9 +6986,9 @@
     "backend": {
       "serviceDir": "apps/api/src/industry",
       "serviceFile": {
-        "file": "industry.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/industry/industry.service.test.ts",
-        "sloc": 248,
+        "file": "industry.service.ts",
+        "path": "/home/user/WIN/apps/api/src/industry/industry.service.ts",
+        "sloc": 234,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -7562,9 +7563,9 @@
     "backend": {
       "serviceDir": "apps/api/src/licensing",
       "serviceFile": {
-        "file": "licensing.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/licensing/licensing.service.test.ts",
-        "sloc": 288,
+        "file": "licensing.service.ts",
+        "path": "/home/user/WIN/apps/api/src/licensing/licensing.service.ts",
+        "sloc": 303,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -8827,9 +8828,9 @@
     "backend": {
       "serviceDir": "apps/api/src/musicGen",
       "serviceFile": {
-        "file": "musicGen.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/musicGen/musicGen.service.test.ts",
-        "sloc": 106,
+        "file": "musicGen.service.ts",
+        "path": "/home/user/WIN/apps/api/src/musicGen/musicGen.service.ts",
+        "sloc": 220,
         "mathRandom": false,
         "externalFetch": false
       },
@@ -8988,14 +8989,16 @@
     "backend": {
       "serviceDir": "apps/api/src/nativeAi",
       "serviceFile": {
-        "file": "externalAgent.service.ts",
-        "path": "/home/user/WIN/apps/api/src/nativeAi/externalAgent.service.ts",
-        "sloc": 90,
+        "file": "console.service.ts",
+        "path": "/home/user/WIN/apps/api/src/nativeAi/console.service.ts",
+        "sloc": 123,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 508,
+      "serviceTotalSloc": 1187,
       "serviceFiles": [
+        "console.service.test.ts",
+        "console.service.ts",
         "externalAgent.service.ts",
         "externalAgent.test.ts",
         "nativeAi.service.ts",
@@ -9003,15 +9006,43 @@
         "nativeMedia.service.ts",
         "nativeQuota.test.ts",
         "nativeUsage.test.ts",
-        "openapi.ts"
+        "openapi.ts",
+        "nativeAi/console.service.ts",
+        "nativeAi/openapi.ts",
+        "publicApi/apiUsage.service.ts"
       ],
-      "importedServiceFiles": [],
+      "importedServiceFiles": [
+        "nativeAi/console.service.ts",
+        "nativeAi/openapi.ts",
+        "publicApi/apiUsage.service.ts"
+      ],
       "bootstrapFile": null
     },
-    "routes": [],
-    "sharedTypes": "packages/shared/src/nativeAiApi.ts (81 LOC, imported)",
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/nativeAi.ts",
+        "sloc": 121,
+        "counts": {
+          "total": 7,
+          "GET": 5,
+          "POST": 2,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /status",
+          "GET /models",
+          "GET /openapi",
+          "GET /usage",
+          "POST /chat",
+          "POST /embeddings"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/nativeAi.ts (81 LOC)",
     "web": {
-      "client": "apps/web/src/lib/nativeAi.ts (10 LOC)",
+      "client": "apps/web/src/lib/nativeAi.ts (45 LOC)",
       "pages": [
         "apps/web/src/pages/nativeAi/ (1 file)"
       ]
@@ -9020,6 +9051,7 @@
       "prismaModels": [
         "User",
         "Organization",
+        "Membership",
         "Agent",
         "Task",
         "Message",
@@ -9036,6 +9068,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "nativeAi/console.service.test.ts",
       "nativeAi/externalAgent.test.ts",
       "nativeAi/nativeAi.test.ts",
       "nativeAi/nativeQuota.test.ts",
@@ -9045,7 +9078,7 @@
     "externalIntegrations": [
       "OpenAI"
     ],
-    "status": "STUB"
+    "status": "COMPLETE"
   },
   {
     "moduleKey": "nativeAiApi",
@@ -9118,7 +9151,7 @@
     ],
     "sharedTypes": "packages/shared/src/nativeAiApi.ts (81 LOC)",
     "web": {
-      "client": "apps/web/src/lib/nativeAiApi.ts (16 LOC)",
+      "client": "apps/web/src/lib/nativeAiApi.ts (53 LOC)",
       "pages": [
         "apps/web/src/pages/nativeAiApi/ (1 file)"
       ]
@@ -9138,6 +9171,7 @@
       "services/ai/registry.test.ts",
       "attachments/attachments.test.ts",
       "projectContinuity/clamav.test.ts",
+      "nativeAi/console.service.test.ts",
       "nativeAi/externalAgent.test.ts",
       "nativeAi/nativeAi.test.ts"
     ],
@@ -9154,11 +9188,11 @@
     "backend": {
       "serviceDir": "apps/api/src/nfc",
       "serviceFile": {
-        "file": "nfc.service.test.ts",
-        "path": "/home/user/WIN/apps/api/src/nfc/nfc.service.test.ts",
-        "sloc": 222,
-        "mathRandom": true,
-        "externalFetch": true
+        "file": "nfc.service.ts",
+        "path": "/home/user/WIN/apps/api/src/nfc/nfc.service.ts",
+        "sloc": 505,
+        "mathRandom": false,
+        "externalFetch": false
       },
       "serviceTotalSloc": 1402,
       "serviceFiles": [

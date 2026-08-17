@@ -168,6 +168,7 @@ import { registerPublicNfcRoutes } from "./routes/nfcPublic.js";
 import { registerModuleCenterRoutes } from "./routes/moduleCenter.js";
 import { registerModuleRuntimeRoutes } from "./routes/moduleRuntime.js";
 import { registerNativeAiApiRoutes } from "./routes/nativeAiApi.js";
+import { registerNativeAiRoutes } from "./routes/nativeAi.js";
 import { registerCloudAndroidRoutes } from "./routes/cloudAndroid.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
@@ -1478,6 +1479,14 @@ export function createApp() {
   v1.use("/mobile", mobileSyncRouter);
   registerMobileSyncRoutes(mobileSyncRouter);
   registerMobileRoutes(v1);
+
+  // /native-ai — first-party Native AI Studio. This is intentionally a
+  // session-authenticated console API, distinct from the external API-key
+  // surface mounted at top-level `/v1` below. Both delegate to the same
+  // health-gated, real-provider-only native router.
+  const nativeAiStudioRouter = express.Router();
+  v1.use("/native-ai", nativeAiStudioRouter);
+  registerNativeAiRoutes(nativeAiStudioRouter);
 
   // /events — SSE real-time channel (Module 1: Gap 6)
   // EventSource doesn't support custom headers, so we accept token via query param
