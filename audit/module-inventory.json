@@ -42,7 +42,7 @@
     "web": {
       "client": "apps/web/src/lib/admin.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -103,7 +103,7 @@
     "web": {
       "client": "apps/web/src/lib/adminApiControl.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -803,7 +803,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 3183,
+      "serviceTotalSloc": 3362,
       "serviceFiles": [
         "commandCenter.service.ts",
         "github.service.ts",
@@ -832,11 +832,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/aiEngineering.ts",
-        "sloc": 531,
+        "sloc": 539,
         "counts": {
-          "total": 42,
+          "total": 43,
           "GET": 18,
-          "POST": 18,
+          "POST": 19,
           "PUT": 0,
           "PATCH": 3,
           "DELETE": 3
@@ -861,6 +861,7 @@
           "GET /command-center",
           "POST /connections",
           "GET /connections",
+          "POST /connections/:id/rotate",
           "DELETE /connections/:id",
           "GET /github/:connId/repos",
           "POST /github/:connId/repos",
@@ -887,11 +888,11 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/aiEngineering.ts (342 LOC)",
+    "sharedTypes": "packages/shared/src/aiEngineering.ts (351 LOC)",
     "web": {
-      "client": "apps/web/src/lib/aiEngineering.ts (77 LOC)",
+      "client": "apps/web/src/lib/aiEngineering.ts (79 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -1677,7 +1678,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1041,
+      "serviceTotalSloc": 1165,
       "serviceFiles": [
         "billing.integration.test.ts",
         "billing.test.ts",
@@ -1712,11 +1713,11 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/billing.ts (93 LOC)",
+    "sharedTypes": "packages/shared/src/billing.ts (95 LOC)",
     "web": {
       "client": "apps/web/src/lib/billing.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/billing/ (3 files)"
+        "apps/web/src/pages/billing/ (6 files)"
       ]
     },
     "db": {
@@ -1727,7 +1728,8 @@
         "Membership",
         "AuditLog",
         "BillingSubscription",
-        "Invoice"
+        "Invoice",
+        "InvoicePaymentAllocation"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -1827,6 +1829,72 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "blockonomicsAdmin",
+    "title": "blockonomicsAdmin",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/blockonomicsAdmin",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "blockonomics.service.ts",
+        "path": "/home/user/WIN/apps/api/src/payments/blockonomics.service.ts",
+        "sloc": 334,
+        "mathRandom": false,
+        "externalFetch": true
+      },
+      "serviceTotalSloc": 791,
+      "serviceFiles": [
+        "payments/blockonomics.service.ts",
+        "payments/blockonomicsAdmin.service.ts",
+        "payments/blockonomicsReconciliation.service.ts"
+      ],
+      "importedServiceFiles": [
+        "payments/blockonomics.service.ts",
+        "payments/blockonomicsAdmin.service.ts",
+        "payments/blockonomicsReconciliation.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/blockonomicsAdmin.ts",
+        "sloc": 61,
+        "counts": {
+          "total": 6,
+          "GET": 2,
+          "POST": 2,
+          "PUT": 1,
+          "PATCH": 1,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/payments.ts (243 LOC, imported)",
+    "web": {
+      "client": "apps/web/src/lib/blockonomicsAdmin.ts (24 LOC)",
+      "pages": []
+    },
+    "db": {
+      "prismaModels": [
+        "User"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "payments/blockonomics.test.ts",
+      "payments/blockonomicsAdmin.test.ts",
+      "payments/blockonomicsPayment.test.ts",
+      "payments/blockonomicsReconciliation.test.ts",
+      "payments/blockonomicsWebhook.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "brokerIntegration",
     "title": "brokerIntegration",
     "sessions": [],
@@ -1837,11 +1905,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 1359,
+        "sloc": 1561,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1767,
+      "serviceTotalSloc": 1969,
       "serviceFiles": [
         "tradingIntel/brokerIntegration.service.ts",
         "tradingIntel/connectors/connector-registry.ts",
@@ -1859,14 +1927,14 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/brokerIntegration.ts",
-        "sloc": 383,
+        "sloc": 391,
         "counts": {
-          "total": 48,
+          "total": 50,
           "GET": 24,
           "POST": 19,
           "PUT": 0,
-          "PATCH": 3,
-          "DELETE": 2
+          "PATCH": 4,
+          "DELETE": 3
         },
         "endpoints": [
           "GET /brokers/connectors",
@@ -1875,6 +1943,8 @@
           "PATCH /brokers/accounts/:id",
           "DELETE /brokers/accounts/:id",
           "POST /brokers/accounts/:id/verify",
+          "PATCH /brokers/accounts/:id/credentials",
+          "DELETE /brokers/accounts/:id/credentials",
           "POST /brokers/accounts/:id/connect",
           "POST /brokers/accounts/:id/disconnect",
           "POST /brokers/accounts/:id/sync",
@@ -1920,9 +1990,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/brokerIntegration.ts (588 LOC)",
+    "sharedTypes": "packages/shared/src/brokerIntegration.ts (606 LOC)",
     "web": {
-      "client": "apps/web/src/lib/brokerIntegration.ts (266 LOC)",
+      "client": "apps/web/src/lib/brokerIntegration.ts (274 LOC)",
       "pages": []
     },
     "db": {
@@ -4793,11 +4863,11 @@
       "serviceFile": {
         "file": "ea.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/ea.service.ts",
-        "sloc": 441,
+        "sloc": 443,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 441,
+      "serviceTotalSloc": 443,
       "serviceFiles": [
         "tradingIntel/ea.service.ts"
       ],
@@ -5255,7 +5325,7 @@
     "web": {
       "client": "apps/web/src/lib/enterprise.ts (161 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -6129,11 +6199,11 @@
       "serviceFile": {
         "file": "geoBilling.service.ts",
         "path": "/home/user/WIN/apps/api/src/geoBilling/geoBilling.service.ts",
-        "sloc": 595,
+        "sloc": 617,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1338,
+      "serviceTotalSloc": 1488,
       "serviceFiles": [
         "geoBilling.service.ts",
         "geoBilling.test.ts",
@@ -6159,7 +6229,7 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/geoBilling.ts (156 LOC)",
+    "sharedTypes": "packages/shared/src/geoBilling.ts (157 LOC)",
     "web": {
       "client": "apps/web/src/lib/geoBilling.ts (115 LOC)",
       "pages": []
@@ -6167,7 +6237,8 @@
     "db": {
       "prismaModels": [
         "User",
-        "Message"
+        "Message",
+        "Invoice"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -6195,11 +6266,11 @@
       "serviceFile": {
         "file": "giftCards.service.ts",
         "path": "/home/user/WIN/apps/api/src/giftCards/giftCards.service.ts",
-        "sloc": 458,
+        "sloc": 495,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1085,
+      "serviceTotalSloc": 1187,
       "serviceFiles": [
         "bootstrap.ts",
         "giftCards.service.ts",
@@ -6252,9 +6323,11 @@
     "db": {
       "prismaModels": [
         "User",
+        "Organization",
         "Agent",
         "Message",
         "Invoice",
+        "InvoicePaymentAllocation",
         "BillingLedgerEntry"
       ],
       "migrations": [],
@@ -6565,7 +6638,7 @@
     "web": {
       "client": "apps/web/src/lib/governance.ts (84 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -6951,7 +7024,7 @@
     "web": {
       "client": "apps/web/src/lib/identityKnowledge.ts (89 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -9519,7 +9592,7 @@
     "web": {
       "client": "apps/web/src/lib/opex.ts (160 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -9557,16 +9630,32 @@
     "backend": {
       "serviceDir": "apps/api/src/payments",
       "serviceFile": {
-        "file": "crypto.service.ts",
-        "path": "/home/user/WIN/apps/api/src/payments/crypto.service.ts",
-        "sloc": 128,
+        "file": "blockonomics.service.ts",
+        "path": "/home/user/WIN/apps/api/src/payments/blockonomics.service.ts",
+        "sloc": 334,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 2465,
+      "serviceTotalSloc": 4962,
       "serviceFiles": [
+        "blockonomics.foundation.test.ts",
+        "blockonomics.service.ts",
+        "blockonomics.test.ts",
+        "blockonomicsAdmin.service.ts",
+        "blockonomicsAdmin.test.ts",
+        "blockonomicsAi.test.ts",
+        "blockonomicsAi.tools.ts",
+        "blockonomicsDocumentation.test.ts",
+        "blockonomicsPayment.service.ts",
+        "blockonomicsPayment.test.ts",
+        "blockonomicsReconciliation.service.ts",
+        "blockonomicsReconciliation.test.ts",
+        "blockonomicsSecurity.test.ts",
+        "blockonomicsSettlement.test.ts",
+        "blockonomicsWebhook.test.ts",
         "crypto.service.ts",
         "flutterwave.service.ts",
+        "paymentConfig.ts",
         "payments.service.ts",
         "payments.test.ts",
         "paypal.service.ts",
@@ -9577,7 +9666,8 @@
         "payments/paystack.service.ts",
         "payments/stripe.service.ts",
         "payments/paypal.service.ts",
-        "payments/crypto.service.ts"
+        "payments/crypto.service.ts",
+        "payments/blockonomicsPayment.service.ts"
       ],
       "importedServiceFiles": [
         "payments/payments.service.ts",
@@ -9585,18 +9675,19 @@
         "payments/paystack.service.ts",
         "payments/stripe.service.ts",
         "payments/paypal.service.ts",
-        "payments/crypto.service.ts"
+        "payments/crypto.service.ts",
+        "payments/blockonomicsPayment.service.ts"
       ],
       "bootstrapFile": null
     },
     "routes": [
       {
         "file": "apps/api/src/http/routes/payments.ts",
-        "sloc": 383,
+        "sloc": 289,
         "counts": {
-          "total": 19,
-          "GET": 7,
-          "POST": 12,
+          "total": 23,
+          "GET": 9,
+          "POST": 14,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -9604,31 +9695,48 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/payments.ts (76 LOC)",
+    "sharedTypes": "packages/shared/src/payments.ts (243 LOC)",
     "web": {
-      "client": "apps/web/src/lib/payments.ts (108 LOC)",
+      "client": "apps/web/src/lib/payments.ts (122 LOC)",
       "pages": []
     },
     "db": {
       "prismaModels": [
         "User",
         "Organization",
+        "AuditLog",
+        "Agent",
+        "Conversation",
         "Message",
         "ApiKey",
+        "BillingSubscription",
         "Invoice",
-        "Integration"
+        "PaymentProviderConfiguration",
+        "PaymentRecord",
+        "PaymentWebhookEvent",
+        "InvoicePaymentAllocation",
+        "BillingLedgerEntry"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
       "payments.spec.ts",
+      "payments/blockonomics.foundation.test.ts",
+      "payments/blockonomics.test.ts",
+      "payments/blockonomicsAdmin.test.ts",
+      "payments/blockonomicsAi.test.ts",
+      "payments/blockonomicsDocumentation.test.ts",
+      "payments/blockonomicsPayment.test.ts",
+      "payments/blockonomicsReconciliation.test.ts",
+      "payments/blockonomicsSecurity.test.ts",
+      "payments/blockonomicsSettlement.test.ts",
+      "payments/blockonomicsWebhook.test.ts",
       "payments/payments.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
-      "Stripe",
-      "Google"
+      "Stripe"
     ],
     "status": "COMPLETE"
   },
@@ -10380,7 +10488,7 @@
     "web": {
       "client": "apps/web/src/lib/promptTemplates.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)",
+        "apps/web/src/pages/admin/ (16 files)",
         "apps/web/src/pages/promptTemplates/ (1 file)"
       ]
     },
@@ -10467,7 +10575,7 @@
     "web": {
       "client": "apps/web/src/lib/publicApi.ts (41 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -11348,9 +11456,10 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2380,
+      "serviceTotalSloc": 2517,
       "serviceFiles": [
         "csrf.ts",
+        "encryption.test.ts",
         "encryption.ts",
         "governance.service.ts",
         "passwords.ts",
@@ -11422,7 +11531,7 @@
     "web": {
       "client": "apps/web/src/lib/security.ts (42 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -11445,6 +11554,7 @@
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
     },
     "tests": [
+      "security/encryption.test.ts",
       "security/piiRedact.test.ts",
       "security/promptGuard.test.ts",
       "security/securityContract.test.ts",
@@ -11827,7 +11937,7 @@
     "web": {
       "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -11997,7 +12107,7 @@
     "web": {
       "client": "apps/web/src/lib/tenantIsolation.ts (66 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
@@ -12038,11 +12148,11 @@
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
         "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
-        "sloc": 1359,
+        "sloc": 1561,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 7612,
+      "serviceTotalSloc": 7879,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
@@ -12555,7 +12665,7 @@
     "web": {
       "client": "apps/web/src/lib/usage.ts (49 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (15 files)"
+        "apps/web/src/pages/admin/ (16 files)"
       ]
     },
     "db": {
