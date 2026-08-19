@@ -177,6 +177,55 @@ describe("strategies", () => {
   });
 });
 
+describe("cross-tenant broker isolation", () => {
+  it("Organization A cannot read, modify, revoke, or see Organization B trading data or credentials", async () => {
+    const ORG_A = "org-alpha-isolation";
+    const ORG_B = "org-beta-isolation";
+    const USER_A = "user-a";
+
+    // 1. Create account in Org B
+    const acctB = await BrokerIntegrationService.createAccount(ORG_B, "user-b", {
+      name: "Org B Secret MT5",
+      broker: "mt5",
+      login: "999888777",
+      server: "SecretBrokerServer",
+      password: "TopSecretPassword123",
+      mode: "semi_autonomous",
+    });
+
+    // 2. Org A cannot read Org B's account
+    await expect(BrokerIntegrationService.getAccount(ORG_A, acctB.id)).resolves.toBeNull();
+    await expect(BrokerIntegrationService.loadCredentials(ORG_A, acctB.id)).rejects.toThrow();
+
+    // 3. Org A cannot see Org B's account in list
+    const listA = await BrokerIntegrationService.listAccounts(ORG_A);
+    expect(listA.some((a) => a.id === acctB.id)).toBe(false);
+
+    // 4. Org A cannot modify Org B's account
+    await expect(
+      BrokerIntegrationService.rotateCredentials(
+        ORG_A,
+        acctB.id,
+        { password: "HackedPassword" },
+        USER_A,
+      ),
+    ).rejects.toThrow();
+
+    // 5. Org A cannot revoke Org B's credentials
+    await expect(BrokerIntegrationService.revokeCredentials(ORG_A, acctB.id, USER_A)).rejects.toThrow();
+
+    // 6. Org A cannot see Org B's positions, orders, or executions
+    const positionsA = await BrokerIntegrationService.listPositions(ORG_A, acctB.id);
+    expect(positionsA).toEqual([]);
+
+    const ordersA = await BrokerIntegrationService.listOrders(ORG_A, acctB.id);
+    expect(ordersA).toEqual([]);
+
+    const execsA = await BrokerIntegrationService.listExecutions(ORG_A);
+    expect(execsA.some((e) => e.accountId === acctB.id)).toBe(false);
+  });
+});
+
 describe("risk controls + command center", () => {
   it("command center returns aggregate account/risk state", async () => {
     await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "assisted" });

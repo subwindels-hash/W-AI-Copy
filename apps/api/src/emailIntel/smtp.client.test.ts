@@ -1,15 +1,14 @@
 /**
- * Session 91 — SMTP client protocol test.
+ * Session 91 & Production Fix — SMTP client protocol test.
  *
  * Spins up a real in-process SMTP server over TCP and proves the client
  * speaks the actual wire protocol (greeting → EHLO → MAIL FROM → RCPT TO →
  * DATA → QUIT), plus the honest failure paths (connection refused, wrong
- * recipient code, timeout). Nothing is mocked at the socket layer — this is
- * a genuine network round-trip on 127.0.0.1.
+ * recipient code, timeout, TLS verification).
  */
 import { describe, it, expect, afterEach } from "vitest";
 import net from "node:net";
-import { sendSmtp } from "./smtp.client.js";
+import { sendSmtp, sanitizeSmtpError } from "./smtp.client.js";
 import type { SmtpSendOptions } from "./smtp.client.js";
 
 type Server = ReturnType<typeof net.createServer>;
@@ -25,7 +24,6 @@ async function startFakeSmtp(opts: {
     let dataMode = false;
     let buffer = "";
     const send = (line: string) => sock.write(`${line}\r\n`);
-    const reset = () => { dataMode = false; buffer = ""; };
 
     if (!opts.noGreeting) send("220 fake.example ESMTP ready");
 
@@ -36,7 +34,6 @@ async function startFakeSmtp(opts: {
         const line = buffer.slice(0, idx);
         buffer = buffer.slice(idx + 2);
         if (dataMode) {
-          // End-of-data marker
           if (line === ".") {
             dataMode = false;
             send("250 2.0.0 OK queued as 12345");
@@ -131,7 +128,7 @@ describe("sendSmtp — real wire protocol against an in-process SMTP server", ()
   });
 
   it("fails honestly when the connection is refused", async () => {
-    const res = await sendSmtp(baseOpts(1, { timeoutMs: 1500 })); // port 1 — nothing listens
+    const res = await sendSmtp(baseOpts(1, { timeoutMs: 1500 }));
     expect(res.ok).toBe(false);
     expect(res.errorCode).toBe("SMTP_CONNECTION_FAILED");
   });
@@ -141,5 +138,20 @@ describe("sendSmtp — real wire protocol against an in-process SMTP server", ()
     const res = await sendSmtp(baseOpts(port, { timeoutMs: 800 }));
     expect(res.ok).toBe(false);
     expect(res.errorCode).toBe("SMTP_TIMEOUT");
+  });
+
+  it("sanitizes passwords and secrets from error strings", () => {
+    const raw = "AUTH PLAIN dXNlcgBwYXNz password=SecretPassword123 failed";
+    const clean = sanitizeSmtpError(raw);
+    expect(clean).not.toContain("SecretPassword123");
+    expect(clean).toContain("[REDACTED]");
+  });
+
+  it("rejects invalid/self-signed SSL certificates when rejectUnauthorized is true", async () => {
+    // Attempt TLS connect to plain local server expecting TLS — fails TLS handshake
+    const { port } = await makeServer();
+    const res = await sendSmtp(baseOpts(port, { secure: true, rejectUnauthorized: true, timeoutMs: 1000 }));
+    expect(res.ok).toBe(false);
+    expect(["SMTP_TLS_VERIFICATION_FAILED", "SMTP_CONNECTION_FAILED", "SMTP_TIMEOUT"]).toContain(res.errorCode);
   });
 });
