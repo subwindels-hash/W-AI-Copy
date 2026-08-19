@@ -18,7 +18,7 @@ export function PublicNav() {
     <header className="sticky top-0 z-40 border-b border-white/5 bg-bg-dark/80 backdrop-blur-xl">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
         <Link to="/" className="flex items-center gap-2">
-          <div className="h-9 w-9 rounded-lg bg-gradient-to-br from-azure to-violet grid place-items-center text-white font-bold">W</div>
+          <img src="/brand/logo-icon.png" alt="WINDELS" className="h-9 w-9 rounded-lg object-cover" />
           <div className="leading-tight">
             <div className="text-sm font-semibold text-text-bright tracking-tight">WINDELS</div>
             <div className="text-[10px] uppercase tracking-widest text-text-muted">AI OS</div>

@@ -41,23 +41,27 @@ export function ChatBubble({ message, streaming }: { message: ChatMessage; strea
       ? message.user?.displayName ?? message.user?.email ?? "You"
       : message.agent?.name ?? "Windels AI";
 
+  const AGENT_AVATARS = [
+    "/avatars/agent-1-strategist.png",
+    "/avatars/agent-2-engineer.png",
+    "/avatars/agent-3-analyst.png",
+    "/avatars/agent-4-creative.png",
+    "/avatars/agent-5-support.png",
+    "/avatars/agent-6-finance.png",
+    "/avatars/agent-7-researcher.png",
+    "/avatars/agent-8-ops.png",
+  ];
+  function agentAvatar(agent: NonNullable<typeof message.agent>) {
+    if ((agent as unknown as { avatarUrl?: string }).avatarUrl) return (agent as unknown as { avatarUrl: string }).avatarUrl;
+    const idx = Math.abs([...agent.id].reduce((a, c) => a + c.charCodeAt(0), 0)) % AGENT_AVATARS.length;
+    return AGENT_AVATARS[idx]!;
+  }
   const displayAvatar = isUser ? (
     <Avatar name={message.user?.displayName ?? message.user?.email} size={32} />
   ) : message.agent ? (
-    <div
-      className={cn(
-        "h-8 w-8 rounded-full grid place-items-center text-base shrink-0",
-        {
-          azure: "bg-azure/20", violet: "bg-violet/20", teal: "bg-teal/20",
-          fuchsia: "bg-fuchsia/20", amber: "bg-amber/20", emerald: "bg-emerald/20",
-          crimson: "bg-crimson/20",
-        }[message.agent.color] ?? "bg-white/10"
-      )}
-    >
-      <span>{message.agent.emoji}</span>
-    </div>
+    <img src={agentAvatar(message.agent)} alt={message.agent.name} className="h-8 w-8 rounded-full object-cover shrink-0 ring-1 ring-white/10" />
   ) : (
-    <div className="h-8 w-8 rounded-full bg-gradient-to-br from-azure to-violet grid place-items-center text-white font-bold text-sm shrink-0">W</div>
+    <img src="/brand/logo-icon.png" alt="Windels" className="h-8 w-8 rounded-full object-cover shrink-0" />
   );
 
   return (
