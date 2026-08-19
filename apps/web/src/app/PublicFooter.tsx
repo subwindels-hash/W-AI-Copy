@@ -36,7 +36,7 @@ export function PublicFooter() {
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-5 gap-8">
         <div className="col-span-2">
           <div className="flex items-center gap-2">
-            <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-azure to-violet grid place-items-center text-white font-bold">W</div>
+            <img src="/brand/logo-icon.png" alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
             <span className="font-semibold text-text-bright">WINDELS AI OS</span>
           </div>
           <p className="text-sm text-text-muted mt-3 max-w-sm">The enterprise operating system for AI workforces. Build, deploy, and govern intelligent agents across your organization.</p>

@@ -217,7 +217,7 @@ tests/e2e/                # Playwright specs
 > The Advertising Platform (Standard / AI Smart / Performance / Autonomous
 > campaign modes) is a single unified module at `apps/api/src/advertising/`,
 > `apps/web/src/pages/advertising/`, and `packages/shared/src/advertising.ts`,
-> exposed at `/app/ads`. See `project-understanding.md` for the S1–S88+ map.
+> exposed at `/app/ads`. See `docs/project-understanding.md` for the S1–S88+ map.
 
 ## Reality check
 

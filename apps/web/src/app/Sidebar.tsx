@@ -227,9 +227,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     >
       {/* Logo */}
       <div className="h-14 flex items-center gap-2 px-4 border-b border-white/5">
-        <div className="h-8 w-8 rounded-lg bg-gradient-to-br from-azure to-violet grid place-items-center text-white font-bold">
-          W
-        </div>
+        <img src="/brand/logo-icon.png" alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
         {!collapsed && (
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold text-text-bright tracking-tight">WINDELS</span>

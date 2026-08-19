@@ -4,7 +4,7 @@
 > `## Session N — Decisions Logged` section capturing naming conventions,
 > architectural choices, library picks and patterns so future sessions build
 > on decisions instead of rediscovering them. (Restored 2026-08-05 — earlier
-> sessions' decisions are documented in `docs/` and `SESSION_WORKFLOW.patch`.)
+> sessions' decisions are documented in `docs/` and `docs/archive/SESSION_WORKFLOW.patch`.)
 
 ## Standing conventions (from the master spec + prior sessions)
 
