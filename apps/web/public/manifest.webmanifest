@@ -16,8 +16,14 @@
     { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" },
     { "src": "/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
   ],
+  "screenshots": [
+    { "src": "/screenshots/desktop-1280.png", "sizes": "1280x720", "type": "image/png", "form_factor": "wide", "label": "WINDELS boot — enterprise command center" },
+    { "src": "/screenshots/mobile-540.png", "sizes": "540x960", "type": "image/png", "form_factor": "narrow", "label": "WINDELS boot — mobile" },
+    { "src": "/brand/boot-splash.png", "sizes": "1920x1080", "type": "image/png", "form_factor": "wide", "label": "WINDELS splash" }
+  ],
   "shortcuts": [
     { "name": "New Chat", "short_name": "Chat", "url": "/m/chat", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] },
     { "name": "AI Agents", "short_name": "Agents", "url": "/m/agents", "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }] }
-  ]
+  ],
+  "launch_handler": { "client_mode": "focus-existing" }
 }

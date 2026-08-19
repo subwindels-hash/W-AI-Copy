@@ -117,6 +117,12 @@ function showOrFocus(kind: WindowKind) {
 
 // ─── App lifecycle ────────────────────────────────────────────────────────
 app.whenReady().then(() => {
+  // Splash screen (boot image)
+  const splash = new BrowserWindow({ width: 520, height: 340, frame: false, transparent: true, alwaysOnTop: true, center: true, show: true, backgroundColor: "#0A0F1A", webPreferences: { sandbox: true } });
+  const splashPath = isDev ? "http://localhost:5173/brand/boot-animated.html" : `file://${path.join(__dirname, "../../web/dist/brand/boot-animated.html")}`;
+  splash.loadURL(splashPath).catch(()=>{});
+  setTimeout(()=>{ try{ splash.close(); }catch{} }, 1800);
+
   registerIpc();
   nfcBridge.on("state", (state) => {
     for (const w of windows.values()) w.webContents.send("nfc:state", state);

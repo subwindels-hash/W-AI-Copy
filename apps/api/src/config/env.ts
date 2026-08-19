@@ -45,7 +45,7 @@ const EnvSchema = z.object({
   WHATSAPP_VERIFY_TOKEN: z.string().optional(),
   WHATSAPP_APP_ID: z.string().optional(),
   WHATSAPP_APP_SECRET: z.string().optional(),
-  WHATSAPP_WEBHOOK_URL: z.string().url().optional(),
+  WHATSAPP_WEBHOOK_URL: z.preprocess((v)=>v===""?undefined:v, z.string().url().optional()),
 
   BOOTSTRAP_SUPERADMIN_EMAIL: z.string().email().default("admin@windels.ai"),
   BOOTSTRAP_SUPERADMIN_PASSWORD: z.string().min(8).default("ChangeMe!234"),
@@ -106,11 +106,11 @@ const EnvSchema = z.object({
   ANTHROPIC_API_KEY: z.string().optional(),
   GEMINI_API_KEY: z.string().optional(),
   // Generic OpenAI-compatible endpoint (vLLM, llama.cpp, Groq, Together, OpenRouter, etc.)
-  OPENAI_COMPAT_BASE_URL: z.string().url().optional(),
+  OPENAI_COMPAT_BASE_URL: z.preprocess((v)=>v===""?undefined:v, z.string().url().optional()),
   OPENAI_COMPAT_API_KEY: z.string().optional(),
   OPENAI_COMPAT_MODEL: z.string().default("default"),
   // Local Ollama
-  OLLAMA_BASE_URL: z.string().url().optional(),
+  OLLAMA_BASE_URL: z.preprocess((v)=>v===""?undefined:v, z.string().url().optional()),
   OLLAMA_MODEL: z.string().default("llama3"),
   // When true, calls fail fast with AI_PROVIDER_CONFIGURATION_REQUIRED instead of
   // using the Echo demo provider. Defaults to true in production, false in dev/test.
