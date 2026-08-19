@@ -158,3 +158,4 @@ export * from "./moduleCenter.js";
 export * from "./nativeAiApi.js";
 export * from "./nativeAi.js";
 export * from "./cloudAndroid.js";
+export * from "./financialPolicy.js";

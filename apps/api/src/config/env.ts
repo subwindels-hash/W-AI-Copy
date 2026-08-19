@@ -10,6 +10,9 @@ const EnvSchema = z.object({
   NODE_ENV: z
     .enum(["development", "test", "production"])
     .default("development"),
+  WINDELS_RUNTIME_MODE: z
+    .enum(["production", "staging", "development", "test"])
+    .default("development"),
   LOG_LEVEL: z
     .enum(["fatal", "error", "warn", "info", "debug", "trace"])
     .default("info"),

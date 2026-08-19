@@ -1,5 +1,6 @@
 import { env } from "./config/env.js";
 import { logger } from "./config/logger.js";
+import { validateStartupEnvironment } from "./config/startupValidation.js";
 import { createApp } from "./http/server.js";
 import { prisma } from "./db/client.js";
 import { redis } from "./db/redis.js";
@@ -18,6 +19,9 @@ let blockonomicsReconciliationTicker: NodeJS.Timeout | null = null;
 let stopWhatsAppWorker: (() => void) | null = null;
 
 async function main() {
+  // Enforce startup validation gates (fail-closed in production)
+  validateStartupEnvironment(logger as any);
+
   // Wait for Redis — don't crash if temporarily down at boot (dev-friendly).
   redis.connect().catch((e) => logger.warn("redis initial connect failed", { err: e }));
 
