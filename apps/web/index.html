@@ -24,6 +24,17 @@
     <title>WINDELS AI OS</title>
   </head>
   <body class="bg-bg-deep text-text-main antialiased">
+    <div id="boot-splash" style="position:fixed;inset:0;z-index:9999;display:grid;place-items:center;background:#0A0F1A;color:#E2E8F0;font-family:Inter,system-ui,sans-serif;transition:opacity .4s ease">
+      <div style="position:absolute;inset:0;background:radial-gradient(800px 400px at 50% 30%, rgba(59,130,246,.15), transparent 60%), radial-gradient(600px 400px at 70% 70%, rgba(139,92,246,.1), transparent 60%)"></div>
+      <div style="position:relative;display:flex;flex-direction:column;align-items:center;gap:18px">
+        <img src="/brand/logo-icon.png" alt="WINDELS" style="width:88px;height:88px;border-radius:20px;object-fit:cover;box-shadow:0 0 40px rgba(59,130,246,.45)" />
+        <div style="text-align:center"><div style="font-weight:800;letter-spacing:.18em;font-size:16px;color:#fff">WINDELS</div><div style="font-size:10px;letter-spacing:.35em;color:#6B7FA0;margin-top:2px">AI OS</div></div>
+        <div style="width:140px;height:3px;background:rgba(255,255,255,.08);border-radius:999px;overflow:hidden"><div style="height:100%;width:50%;background:linear-gradient(90deg,#3B82F6,#8B5CF6);animation:bootfill 1.4s ease-in-out infinite"></div></div>
+        <div style="font-size:10px;letter-spacing:.25em;color:#6B7FA0">BOOTING…</div>
+      </div>
+    </div>
+    <style>@keyframes bootfill{0%{transform:translateX(-100%)}50%{transform:translateX(50%)}100%{transform:translateX(180%)}}</style>
+    <script>addEventListener('load',()=>setTimeout(()=>{const s=document.getElementById('boot-splash');if(s){s.style.opacity='0';setTimeout(()=>s.remove(),450)}},900))</script>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
     <script>
