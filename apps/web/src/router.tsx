@@ -194,7 +194,7 @@ function PageLoader() {
 }
 function MobileSplash() {
   return (
-    <div className="h-screen w-screen bg-bg-deep grid place-items-center">
+    <div className="app-screen w-screen bg-bg-deep grid place-items-center">
       <div className="flex flex-col items-center gap-4">
         <div className="h-20 w-20 rounded-3xl bg-gradient-to-br from-azure-500 to-violet-500 grid place-items-center text-white font-black text-4xl shadow-2xl shadow-azure-500/30">W</div>
         <span className="text-text-muted text-sm tracking-widest">WINDELS</span>

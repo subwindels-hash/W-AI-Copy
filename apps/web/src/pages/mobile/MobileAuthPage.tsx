@@ -75,7 +75,7 @@ export function MobileAuthPage({ mode = "login" }: { mode?: "login" | "register"
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col bg-gradient-to-b from-bg-dark via-bg-deep to-black px-6 pt-[max(48px,var(--sat))] pb-8">
+    <div className="app-min-screen w-full flex flex-col bg-gradient-to-b from-bg-dark via-bg-deep to-black px-6 pt-[max(48px,var(--sat))] pb-8">
       <div className="flex items-center justify-center mb-8 mt-8">
         <div className="relative">
           <div className="h-16 w-16 rounded-2xl bg-gradient-to-br from-azure-500 to-violet-500 grid place-items-center shadow-2xl shadow-azure-500/30">

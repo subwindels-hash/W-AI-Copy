@@ -14,7 +14,7 @@ import { useDesktop } from "./hooks/useDesktop";
 export function DesktopLayout({ children }: { children?: ReactNode }) {
   const d = useDesktop();
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden text-text-main">
+    <div className="app-screen w-screen flex flex-col overflow-hidden text-text-main">
       {d && <DesktopTitleBar />}
       <div className="flex-1 flex min-h-0 overflow-hidden">
         <Sidebar collapsed={false} />

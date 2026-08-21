@@ -27,7 +27,7 @@ export function MobileNotificationsPage() {
 
   return (
     <div>
-      <div className="sticky top-0 z-20 bg-bg-dark/90 backdrop-blur-xl border-b border-white/5 flex items-center gap-2 px-2 py-2"
+      <div className="sticky top-0 z-20 bg-bg-dark/90 backdrop-blur-xl border-b border-white/5 flex items-center gap-2 px-2 py-2 app-sticky-top"
         style={{ paddingTop: "max(8px, var(--sat))" }}
       >
         <button onClick={() => nav(-1)} className="h-10 w-10 grid place-items-center rounded-full active:bg-white/10">

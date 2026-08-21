@@ -54,7 +54,7 @@ export function MobileShell() {
   }, [isOnline, deviceId]);
 
   return (
-    <div className="min-h-screen w-full bg-bg-deep text-text-main relative pb-[calc(76px+var(--sab))]">
+    <div className="app-min-screen w-full bg-bg-deep text-text-main relative pb-[calc(76px+var(--sab))]">
       <Outlet />
       {!immersive && <GlobalBrandingFooter compact />}
       {!immersive && <MobileTabBar />}

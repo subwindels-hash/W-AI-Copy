@@ -22,7 +22,7 @@ export function MobileMeetingRoomPage() {
   }, [id]);
 
   return (
-    <div className="flex flex-col h-screen bg-black text-white">
+    <div className="flex flex-col app-screen bg-black text-white">
       <div className="flex items-center justify-between px-4 pt-[max(14px,var(--sat))] pb-3">
         <button onClick={() => nav(-1)} className="h-10 w-10 grid place-items-center rounded-full bg-white/10"><ArrowLeft size={20} /></button>
         <div className="text-center">

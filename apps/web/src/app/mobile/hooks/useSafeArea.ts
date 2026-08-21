@@ -19,7 +19,7 @@ export function useSafeArea() {
           --sal: env(safe-area-inset-left, 0px);
         }
         html, body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
-        body { padding-top: var(--sat); padding-bottom: var(--sab); }
+        body { padding-top: calc(var(--announcement-bar-height, 36px) + var(--sat)); padding-bottom: var(--sab); }
       `;
       document.head.appendChild(s);
     }

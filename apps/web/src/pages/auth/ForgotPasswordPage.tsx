@@ -27,7 +27,7 @@ export function ForgotPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-deep flex items-center justify-center p-6">
+    <div className="app-min-screen bg-bg-deep flex items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="flex justify-center mb-6">
           <div className="h-12 w-12 rounded-xl bg-gradient-to-br from-azure to-violet grid place-items-center text-white font-bold text-xl">W</div>

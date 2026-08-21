@@ -38,8 +38,8 @@ export function SharePage() {
   }
 
   return (
-    <div className="min-h-screen bg-bg-deep text-text-main">
-      <header className="border-b border-white/10 bg-bg-dark/60 backdrop-blur px-6 py-4 flex items-center gap-3 sticky top-0 z-10">
+    <div className="app-min-screen bg-bg-deep text-text-main">
+      <header className="border-b border-white/10 bg-bg-dark/60 backdrop-blur px-6 py-4 flex items-center gap-3 sticky top-0 z-10 app-sticky-top">
         <div className="h-9 w-9 rounded-xl bg-gradient-to-br from-azure/40 to-violet/40 grid place-items-center">
           <MessageSquare className="h-4 w-4 text-white" />
         </div>

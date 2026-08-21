@@ -97,9 +97,9 @@ export function MobileChatPage({ listMode = false }: { listMode?: boolean }) {
   }
 
   return (
-    <div className="flex flex-col h-screen w-full">
+    <div className="flex flex-col app-screen w-full">
       {/* Header */}
-      <div className="sticky top-0 z-20 bg-bg-dark/90 backdrop-blur-xl border-b border-white/5 flex items-center gap-2 px-2 py-2"
+      <div className="sticky top-0 z-20 bg-bg-dark/90 backdrop-blur-xl border-b border-white/5 flex items-center gap-2 px-2 py-2 app-sticky-top"
         style={{ paddingTop: "max(8px, var(--sat))" }}
       >
         <button

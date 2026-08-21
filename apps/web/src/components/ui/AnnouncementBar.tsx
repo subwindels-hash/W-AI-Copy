@@ -9,7 +9,7 @@ export function AnnouncementBar() {
   const text = MESSAGES.join("   ·   ");
   return (
     <div
-      className="announcement-bar shrink-0 bg-white text-black border-b border-black/10 overflow-hidden"
+      className="announcement-bar fixed top-[var(--sat)] left-0 right-0 z-[300] shrink-0 bg-white text-black border-b border-black/10 overflow-hidden"
       role="region"
       aria-label="Announcements"
     >

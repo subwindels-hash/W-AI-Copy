@@ -17,7 +17,7 @@ export function OfflineBanner() {
           initial={{ y: -40, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           exit={{ y: -40, opacity: 0 }}
-          className="fixed top-0 left-0 right-0 z-[200] bg-amber/20 border-b border-amber/40 text-amber text-xs text-center py-1.5 backdrop-blur-md"
+          className="fixed top-[calc(var(--announcement-bar-height)+var(--sat))] left-0 right-0 z-[200] bg-amber/20 border-b border-amber/40 text-amber text-xs text-center py-1.5 backdrop-blur-md"
           role="status"
         >
           You’re offline. Changes will sync when your connection returns.
