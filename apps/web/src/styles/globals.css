@@ -123,6 +123,36 @@ body {
   }
 }
 
+/* Moving announcement bar (black on white) */
+.announcement-bar {
+  height: 36px;
+  display: flex;
+  align-items: center;
+}
+.announcement-track {
+  display: flex;
+  width: max-content;
+  animation: announcement-marquee 28s linear infinite;
+}
+.announcement-copy {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 3rem;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  white-space: nowrap;
+  color: #000;
+}
+@keyframes announcement-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(-50%); }
+}
+.announcement-bar:hover .announcement-track {
+  animation-play-state: paused;
+}
+
 /* Ambient orb animation */
 @keyframes drift {
   0%,100% { transform: translate(0,0) scale(1); }
