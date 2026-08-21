@@ -7,7 +7,7 @@ export function MobileTopBar({
   const { isOnline } = useOnlineStatus();
   return (
     <div className={cn(
-      "sticky top-0 z-20 bg-bg-dark/90 backdrop-blur-xl border-b border-white/5 px-4 pt-3 pb-2 flex items-center gap-3",
+      "sticky top-0 z-20 bg-bg-dark/90 backdrop-blur-xl border-b border-white/5 px-4 pt-3 pb-2 flex items-center gap-3 app-sticky-top",
     )}
     style={{ paddingTop: "max(12px, var(--sat))" }}
     >

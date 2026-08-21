@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/Button";
 
 export function NotFoundPage() {
   return (
-    <div className="min-h-screen grid place-items-center p-6 text-center">
+    <div className="app-min-screen grid place-items-center p-6 text-center">
       <div>
         <div className="text-[96px] font-black bg-gradient-to-br from-azure to-violet bg-clip-text text-transparent leading-none">404</div>
         <h1 className="text-2xl font-semibold text-text-bright mt-2">Page not found</h1>

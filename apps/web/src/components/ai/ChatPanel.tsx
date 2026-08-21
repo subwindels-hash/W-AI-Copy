@@ -132,7 +132,7 @@ export function ChatPanel({ open, onClose }: Props) {
       <div className="fixed inset-0 bg-black/40 z-40" onClick={onClose} />
       <aside
         className={cn(
-          "fixed top-0 right-0 h-full w-full sm:w-[400px] bg-bg-dark/95 backdrop-blur-xl border-l border-white/10 z-50",
+          "fixed top-[calc(var(--announcement-bar-height)+var(--sat))] right-0 h-[calc(100dvh-var(--announcement-bar-height)-var(--sat))] w-full sm:w-[400px] bg-bg-dark/95 backdrop-blur-xl border-l border-white/10 z-50",
           "flex flex-col shadow-2xl",
           "animate-in slide-in-from-right duration-300"
         )}

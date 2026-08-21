@@ -81,7 +81,7 @@ export function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen grid place-items-center p-6">
+    <div className="app-min-screen grid place-items-center p-6">
       <div className="absolute inset-0 overflow-hidden pointer-events-none">
         <div className="ambient-orb absolute -top-40 -left-20 h-[500px] w-[500px] rounded-full bg-azure/20 blur-3xl" />
         <div className="ambient-orb absolute bottom-0 right-0 h-[500px] w-[500px] rounded-full bg-violet/20 blur-3xl" />

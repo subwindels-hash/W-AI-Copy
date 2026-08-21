@@ -4,7 +4,6 @@ import { TopBar } from "./TopBar";
 import { AIPanel } from "./AIPanel";
 import { DesktopTitleBar } from "./desktop/DesktopTitleBar";
 import { GlobalBrandingFooter } from "./GlobalBrandingFooter";
-import { AnnouncementBar } from "@/components/ui/AnnouncementBar";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDesktop } from "./desktop/hooks/useDesktop";
 
@@ -31,9 +30,8 @@ export function AppLayout({ children }: { children: ReactNode }) {
   }, [desktop, navigate]);
 
   return (
-    <div className="h-screen w-screen flex flex-col overflow-hidden text-text-main">
+    <div className="app-screen w-screen flex flex-col overflow-hidden text-text-main">
       {desktop && <DesktopTitleBar />}
-      <AnnouncementBar />
       <div className="flex-1 flex min-h-0 overflow-hidden">
         <div className="hidden lg:block">
           <Sidebar collapsed={collapsed} />

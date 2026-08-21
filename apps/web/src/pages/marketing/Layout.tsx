@@ -1,12 +1,10 @@
 import { Outlet } from "react-router-dom";
 import { PublicNav } from "@/app/PublicNav";
 import { PublicFooter } from "@/app/PublicFooter";
-import { AnnouncementBar } from "@/components/ui/AnnouncementBar";
 
 export function MarketingLayout() {
   return (
-    <div className="min-h-screen bg-bg-dark text-text-main flex flex-col">
-      <AnnouncementBar />
+    <div className="app-min-screen bg-bg-dark text-text-main flex flex-col">
       <div className="pointer-events-none fixed inset-0 overflow-hidden">
         <div className="absolute -top-40 -left-40 h-[500px] w-[500px] rounded-full bg-azure/10 blur-[120px]"/>
         <div className="absolute top-1/3 -right-40 h-[600px] w-[600px] rounded-full bg-violet/10 blur-[140px]"/>

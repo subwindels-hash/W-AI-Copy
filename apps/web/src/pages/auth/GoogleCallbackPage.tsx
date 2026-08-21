@@ -80,7 +80,7 @@ export function GoogleCallbackPage() {
   }, [navigate, setAuth]);
 
   return (
-    <div className="grid min-h-screen place-items-center bg-bg-deep p-6">
+    <div className="grid app-min-screen place-items-center bg-bg-deep p-6">
       <Card className="w-full max-w-md p-6 text-center">
         {phase === "working" ? (
           <div className="flex flex-col items-center gap-3">

@@ -79,8 +79,14 @@
 }
 
 /* Base */
+:root {
+  --announcement-bar-height: 36px;
+  --sat: env(safe-area-inset-top, 0px);
+  --sab: env(safe-area-inset-bottom, 0px);
+}
 html, body, #root { height: 100%; }
 body {
+  padding-top: calc(var(--announcement-bar-height) + var(--sat));
   font-family: var(--font-sans);
   background:
     radial-gradient(1200px 600px at 80% -10%, rgba(59,130,246,0.12), transparent 60%),
@@ -121,6 +127,19 @@ body {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+/* App viewport helpers — reserve space for the global fixed announcement bar. */
+.app-screen {
+  height: calc(100vh - var(--announcement-bar-height) - var(--sat));
+  height: calc(100dvh - var(--announcement-bar-height) - var(--sat));
+}
+.app-min-screen {
+  min-height: calc(100vh - var(--announcement-bar-height) - var(--sat));
+  min-height: calc(100dvh - var(--announcement-bar-height) - var(--sat));
+}
+.app-sticky-top {
+  top: var(--announcement-bar-height);
 }
 
 /* Moving announcement bar (black on white) */

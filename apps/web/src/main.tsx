@@ -6,6 +6,7 @@ import { router } from "./router";
 import { bootstrapAuth } from "./lib/bootstrap";
 import { ToastHost } from "./lib/toast";
 import { OfflineBanner } from "./components/ui/OfflineBanner";
+import { AnnouncementBar } from "./components/ui/AnnouncementBar";
 
 function Root() {
   const [ready, setReady] = useState(false);
@@ -14,7 +15,9 @@ function Root() {
   }, []);
   if (!ready) {
     return (
-      <div className="h-screen grid place-items-center bg-bg-deep text-text-muted relative overflow-hidden">
+      <>
+        <AnnouncementBar />
+        <div className="app-screen grid place-items-center bg-bg-deep text-text-muted relative overflow-hidden">
         <div className="absolute inset-0 bg-[radial-gradient(800px_400px_at_50%_30%,rgba(59,130,246,.12),transparent_60%)]" />
         <div className="flex flex-col items-center gap-4 relative">
           <img src="/brand/logo-icon.png" alt="WINDELS" className="h-16 w-16 rounded-2xl object-cover shadow-[0_0_40px_rgba(59,130,246,.45)] animate-pulse" />
@@ -26,10 +29,12 @@ function Root() {
           <span className="text-xs tracking-widest text-text-muted animate-pulse">BOOTING…</span>
         </div>
       </div>
+      </>
     );
   }
   return (
     <>
+      <AnnouncementBar />
       <OfflineBanner />
       <RouterProvider router={router} />
       <ToastHost />
