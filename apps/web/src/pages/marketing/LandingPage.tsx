@@ -3,8 +3,12 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent } from "@/components/ui/Card";
 import { GitBranch, Users, MessageCircle, SquareDashedMousePointer, MessageSquare, BarChart3, ShieldCheck, Globe2, Lock, Star } from "lucide-react";
+import { pageCopy, siteImage, useSitePublic } from "@/lib/useSitePublic";
 
 export default function LandingPage() {
+  const site = useSitePublic();
+  const home = pageCopy(site, "/");
+  const reviews = site.reviews;
   return (
     <div>
       {/* Hero */}
@@ -14,12 +18,11 @@ export default function LandingPage() {
           <div>
             <Badge variant="violet" className="mb-5">Now in open beta · Enterprise-ready</Badge>
             <h1 className="text-5xl md:text-6xl font-bold tracking-tight text-text-bright leading-[1.05]">
-              The enterprise OS for<br/>
+              {home.title.includes("—") ? home.title.split("—")[0] : home.title}<br/>
               <span className="bg-gradient-to-r from-azure via-violet to-fuchsia bg-clip-text text-transparent">AI workforces</span>
             </h1>
             <p className="mt-6 text-lg text-text-muted max-w-xl">
-              Build, deploy, and govern AI agents across your organization.
-              Workforce Hub, Flow automations, Talk channels, Canvas, governance, and observability — one platform.
+              {home.lead || "Build, deploy, and govern AI agents across your organization. Workforce Hub, Flow automations, Talk channels, Canvas, governance, and observability — one platform."}
             </p>
             <div className="mt-8 flex flex-wrap gap-3">
               <Link to="/auth/register"><Button size="lg">Start free →</Button></Link>
@@ -28,15 +31,15 @@ export default function LandingPage() {
             <p className="mt-4 text-xs text-text-muted">14-day Team trial · No credit card · SOC2-ready controls</p>
             <div className="mt-8 flex items-center gap-3">
               <div className="flex -space-x-2">
-                {[1,2,3,4].map(i=> <img key={i} src={`/reviews/reviewer-${i}.png`} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-bg-dark" />)}
+                {[1,2,3,4].map((i) => <img key={i} src={siteImage(site, `reviewer-${i}`)} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-bg-dark" />)}
               </div>
-              <div className="text-xs text-text-muted"><span className="text-text-bright font-semibold flex items-center gap-1"><Star className="h-3 w-3 fill-amber-400 text-amber-400"/> 4.9/5</span> Trusted by 2,400+ teams</div>
+              <div className="text-xs text-text-muted">Illustrative product portraits — not customer photos or ratings.</div>
             </div>
           </div>
           <div className="relative">
-            <img src="/brand/hero-enterprise.png" alt="WINDELS AI OS enterprise command center" className="rounded-2xl border border-white/10 shadow-2xl w-full object-cover aspect-[16/10]" />
+            <img src={site.brand.heroImage} alt="WINDELS AI OS enterprise command center" className="rounded-2xl border border-white/10 shadow-2xl w-full object-cover aspect-[16/10]" />
             <div className="absolute -bottom-6 -left-6 hidden md:flex items-center gap-3 bg-bg-elevated border border-white/10 rounded-xl px-4 py-3 shadow-xl">
-              <img src="/brand/logo-icon.png" alt="" className="h-10 w-10 rounded-lg object-cover" />
+              <img src={site.brand.logo} alt="" className="h-10 w-10 rounded-lg object-cover" />
               <div><div className="text-sm font-semibold text-text-bright">WINDELS AI OS</div><div className="text-xs text-emerald-400">● All systems operational</div></div>
             </div>
           </div>
@@ -70,9 +73,9 @@ export default function LandingPage() {
             <Link to="/auth/register"><Button variant="outline" size="sm">Explore Workforce Hub →</Button></Link>
           </div>
           <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-8 gap-4">
-            {agents.map(a=>(
+            {agents.map((a) => (
               <div key={a.name} className="text-center">
-                <img src={a.img} alt={a.name} className="h-20 w-20 rounded-full object-cover mx-auto ring-2 ring-white/10" />
+                <img src={siteImage(site, a.slot, a.img)} alt={a.name} className="h-20 w-20 rounded-full object-cover mx-auto ring-2 ring-white/10" />
                 <div className="mt-2 text-sm font-medium text-text-bright">{a.name}</div>
                 <div className="text-xs text-text-muted">{a.role}</div>
               </div>
@@ -84,15 +87,15 @@ export default function LandingPage() {
       {/* Testimonials */}
       <section className="py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-text-bright text-center">Loved by operators, builders and founders</h2>
-          <p className="text-text-muted text-center mt-2 mb-10">Real teams running WINDELS in production.</p>
+          <h2 className="text-3xl font-bold text-text-bright text-center">How teams describe the product</h2>
+          <p className="text-text-muted text-center mt-2 mb-10">Illustrative quotes for the product story. They are not verified customer endorsements.</p>
           <div className="grid md:grid-cols-3 gap-6">
-            {testimonials.map(t=>(
-              <Card key={t.name} className="p-6">
+            {reviews.map((t) => (
+              <Card key={t.id} className="p-6">
                 <div className="flex gap-1 text-amber-400 mb-3">{Array.from({length:5}).map((_,i)=><Star key={i} className="h-4 w-4 fill-amber-400"/> )}</div>
                 <p className="text-sm text-text-main leading-relaxed">“{t.quote}”</p>
                 <div className="flex items-center gap-3 mt-5">
-                  <img src={t.img} alt={t.name} className="h-9 w-9 rounded-full object-cover" />
+                  <img src={t.image} alt="" className="h-9 w-9 rounded-full object-cover" />
                   <div><div className="text-sm font-medium text-text-bright">{t.name}</div><div className="text-xs text-text-muted">{t.title}</div></div>
                 </div>
               </Card>
@@ -144,20 +147,14 @@ const products = [
 ];
 
 const agents = [
-  { name: "Ava", role: "Strategist", img: "/avatars/agent-1-strategist.png" },
-  { name: "Leo", role: "Engineer", img: "/avatars/agent-2-engineer.png" },
-  { name: "Maya", role: "Analyst", img: "/avatars/agent-3-analyst.png" },
-  { name: "Noah", role: "Creative", img: "/avatars/agent-4-creative.png" },
-  { name: "Sofia", role: "Support", img: "/avatars/agent-5-support.png" },
-  { name: "David", role: "Finance", img: "/avatars/agent-6-finance.png" },
-  { name: "Lina", role: "Researcher", img: "/avatars/agent-7-researcher.png" },
-  { name: "Omar", role: "Operations", img: "/avatars/agent-8-ops.png" },
-];
-
-const testimonials = [
-  { name: "Sarah Chen", title: "COO, Meridian Labs", img: "/reviews/reviewer-1.png", quote: "WINDELS replaced five tools. Our AI workforce handles onboarding, support and reporting without hiring." },
-  { name: "James Okoro", title: "Founder, Paystackr", img: "/reviews/reviewer-2.png", quote: "The Canvas and Flow automation saved us 30 hours a week. Governance controls kept us compliant from day one." },
-  { name: "Elena Rossi", title: "VP Engineering, Volt", img: "/reviews/reviewer-3.png", quote: "Vendor-agnostic AI is not marketing — we swapped providers in an hour. The platform just works." },
+  { name: "Ava", role: "Strategist", slot: "agent-1", img: "/avatars/agent-1-strategist.png" },
+  { name: "Leo", role: "Engineer", slot: "agent-2", img: "/avatars/agent-2-engineer.png" },
+  { name: "Maya", role: "Analyst", slot: "agent-3", img: "/avatars/agent-3-analyst.png" },
+  { name: "Noah", role: "Creative", slot: "agent-4", img: "/avatars/agent-4-creative.png" },
+  { name: "Sofia", role: "Support", slot: "agent-5", img: "/avatars/agent-5-support.png" },
+  { name: "David", role: "Finance", slot: "agent-6", img: "/avatars/agent-6-finance.png" },
+  { name: "Lina", role: "Researcher", slot: "agent-7", img: "/avatars/agent-7-researcher.png" },
+  { name: "Omar", role: "Operations", slot: "agent-8", img: "/avatars/agent-8-ops.png" },
 ];
 
 const features = [

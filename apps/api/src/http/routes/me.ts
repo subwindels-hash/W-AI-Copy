@@ -9,6 +9,9 @@ interface MeResponse {
   role: "user" | "admin" | "super_admin";
   displayName: string | null;
   avatarUrl: string | null;
+  publicUserId: string | null;
+  username: string | null;
+  pinExpired: boolean;
   locale: string;
   timezone: string;
   theme: string;
@@ -35,12 +38,18 @@ export function registerMeRoutes(router: Router) {
       });
       if (!user) return res.status(401).end();
       const m = user.memberships[0];
+      const { ensureAccountIdentity, pinStatusOf } = await import("../../services/account.service.js");
+      const identified = await ensureAccountIdentity(user.id);
+      const pin = pinStatusOf(identified as any);
       const data: MeResponse = {
         id: user.id,
         email: user.email,
         role: user.role.toLowerCase() as MeResponse["role"],
         displayName: user.profile?.displayName ?? null,
         avatarUrl: user.profile?.avatarUrl ?? null,
+        publicUserId: (identified as any).publicUserId ?? null,
+        username: (identified as any).username ?? null,
+        pinExpired: pin.pinExpired,
         locale: user.profile?.locale ?? "en-US",
         timezone: user.profile?.timezone ?? "UTC",
         theme: user.profile?.theme ?? "dark",

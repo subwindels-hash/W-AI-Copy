@@ -80,7 +80,7 @@
 
 /* Base */
 :root {
-  --announcement-bar-height: 36px;
+  --announcement-bar-height: 0px;
   --sat: env(safe-area-inset-top, 0px);
   --sab: env(safe-area-inset-bottom, 0px);
 }
@@ -170,6 +170,11 @@ body {
 }
 .announcement-bar:hover .announcement-track {
   animation-play-state: paused;
+}
+.announcement-track-static {
+  animation: none;
+  width: 100%;
+  justify-content: center;
 }
 
 /* Ambient orb animation */

@@ -46,15 +46,19 @@ export function AdminPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [tempPassword, setTempPassword] = useState<string | null>(null);
+  const [activity, setActivity] = useState<Array<{ id: string; action: string; actorUserId: string | null; resourceId: string | null; createdAt: string; ipAddress: string | null }>>([]);
+  const setAuth = useAuthStore((s) => s.setAuth);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [nextStats, nextUsers] = await Promise.all([
+      const [nextStats, nextUsers, nextActivity] = await Promise.all([
         adminApi.stats(),
         adminApi.listUsers({ q: query || undefined, role: role || undefined, status, page, perPage: 25 }),
+        adminApi.activity(1).catch(() => ({ events: [] })),
       ]);
-      setStats(nextStats); setList(nextUsers); setError(null);
+      setStats(nextStats); setList(nextUsers); setActivity(nextActivity.events ?? []); setError(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally { setLoading(false); }
@@ -71,6 +75,36 @@ export function AdminPage() {
       await adminApi.setSuspended(user.id, next);
       flash(next ? "User suspended." : "User reactivated.");
       await load();
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(null); }
+  }
+
+  async function loginAs(user: AdmUserRow) {
+    setBusy(user.id);
+    try {
+      const session = await adminApi.impersonate(user.id);
+      setAuth(session.token, session.refreshToken, session.user, session.expiresIn);
+      window.location.href = "/app";
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(null); }
+  }
+
+  async function resetPin(user: AdmUserRow) {
+    setBusy(user.id);
+    try {
+      await adminApi.resetPin(user.id);
+      flash("PIN cleared. The user must create a new 4-digit PIN.");
+      await load();
+    } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
+    finally { setBusy(null); }
+  }
+
+  async function resetPassword(user: AdmUserRow) {
+    setBusy(user.id);
+    try {
+      const r = await adminApi.resetPassword(user.id);
+      setTempPassword(r.temporaryPassword);
+      flash("Temporary password generated once. It is not stored.");
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); }
     finally { setBusy(null); }
   }
@@ -113,7 +147,7 @@ export function AdminPage() {
         <CardHeader><CardTitle className="flex items-center gap-2"><Shield className="h-5 w-5 text-azure" />User directory</CardTitle><CardDescription>Search and filter real user records. Actions are audited by the API.</CardDescription></CardHeader>
         <CardContent>
           <form className="mb-4 flex flex-wrap gap-2" onSubmit={(event) => { event.preventDefault(); setPage(1); setQuery(searchInput.trim()); }}>
-            <div className="relative min-w-60 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" /><Input className="pl-9" placeholder="Search email or display name" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} /></div>
+            <div className="relative min-w-60 flex-1"><Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" /><Input className="pl-9" placeholder="Search User ID, username or email" value={searchInput} onChange={(event) => setSearchInput(event.target.value)} /></div>
             <Select className="w-40" value={role} onChange={(event) => { setPage(1); setRole(event.target.value as AdmRole | ""); }}><option value="">All roles</option>{ROLES.map((item) => <option key={item} value={item}>{item}</option>)}</Select>
             <Select className="w-36" value={status} onChange={(event) => { setPage(1); setStatus(event.target.value as AdmUserStatus); }}>{STATUSES.map((item) => <option key={item} value={item}>{item}</option>)}</Select>
             <Button type="submit" variant="secondary"><Search className="h-4 w-4" />Search</Button>
@@ -125,7 +159,7 @@ export function AdminPage() {
               <tbody>
                 {loading ? <tr><td colSpan={5} className="px-3 py-10 text-center text-text-muted">Loading user records…</td></tr> : null}
                 {!loading && users.map((user) => <tr key={user.id} className="border-b border-white/5 hover:bg-white/5">
-                  <td className="px-3 py-3"><div className="font-medium text-text-bright">{user.profile?.displayName || "Unnamed user"}</div><div className="text-xs text-text-muted">{user.email}</div></td>
+                  <td className="px-3 py-3"><div className="font-medium text-text-bright">{user.profile?.displayName || user.username || "Unnamed user"}</div><div className="text-xs text-text-muted">{user.email}</div><div className="font-mono text-[11px] text-text-muted">ID {user.publicUserId ?? "—"} · @{user.username ?? "—"}</div></td>
                   <td className="px-3 py-3">{canChangeRole && user.id !== currentUser?.id ? <Select className="w-36" value={user.role} disabled={busy === user.id} onChange={(event) => void changeRole(user, event.target.value as AdmRole)}>{ROLES.map((item) => <option key={item} value={item}>{item}</option>)}</Select> : <Badge variant={roleVariant(user.role)}>{user.role}</Badge>}</td>
                   <td className="px-3 py-3">{user.isSuspended ? <Badge variant="crimson">Suspended</Badge> : user.isActive ? <Badge variant="emerald">Active</Badge> : <Badge variant="slate">Inactive</Badge>}</td>
                   <td className="px-3 py-3 text-xs text-text-muted">{new Date(user.createdAt).toLocaleDateString()}</td>
@@ -140,7 +174,19 @@ export function AdminPage() {
         </CardContent>
       </Card>
 
-      <Card><CardContent className="flex items-start gap-3 p-4 text-xs text-text-muted"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald" /><span>Admin actions are enforced server-side and recorded in the audit log. You cannot suspend or change your own role, and super admin accounts cannot be suspended.</span></CardContent></Card>
+      <Card>
+        <CardHeader><CardTitle>Activity logs</CardTitle><CardDescription>Impersonation, PIN/password resets, and role changes. Passwords and PINs are never recorded.</CardDescription></CardHeader>
+        <CardContent className="space-y-2 text-sm">
+          {activity.length === 0 ? <p className="text-text-muted">No admin activity yet.</p> : activity.map((row) => (
+            <div key={row.id} className="flex flex-wrap justify-between gap-2 border-b border-white/5 py-2">
+              <span className="text-text-bright">{row.action}</span>
+              <span className="text-xs text-text-muted">{row.resourceId} · {new Date(row.createdAt).toLocaleString()}{row.ipAddress ? ` · ${row.ipAddress}` : ""}</span>
+            </div>
+          ))}
+        </CardContent>
+      </Card>
+
+      <Card><CardContent className="flex items-start gap-3 p-4 text-xs text-text-muted"><ShieldCheck className="mt-0.5 h-4 w-4 shrink-0 text-emerald" /><span>Admin actions are enforced server-side and recorded in the audit log. You cannot suspend or change your own role, and super admin accounts cannot be suspended. Existing passwords and PINs are never visible.</span></CardContent></Card>
     </div>
   );
 }

@@ -1,24 +1,26 @@
 import { Link, NavLink } from "react-router-dom";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
+import { useSitePublic } from "@/lib/useSitePublic";
 
 const links = [
+  { to: "/about", label: "About" },
+  { to: "/features", label: "Features" },
+  { to: "/workforce", label: "Workforce" },
+  { to: "/agents", label: "Agents" },
   { to: "/pricing", label: "Pricing" },
-  { to: "/enterprise", label: "Enterprise" },
-  { to: "/api", label: "API" },
-  { to: "/docs/api", label: "API Docs" },
-  { to: "/developers", label: "Developers" },
+  { to: "/faq", label: "FAQ" },
   { to: "/docs", label: "Docs" },
-  { to: "/blog", label: "Blog" },
-  { to: "/support", label: "Contact" },
+  { to: "/contact", label: "Contact" },
 ];
 
 export function PublicNav() {
+  const site = useSitePublic();
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-bg-dark/80 backdrop-blur-xl app-sticky-top">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/brand/logo-icon.png" alt="WINDELS" className="h-9 w-9 rounded-lg object-cover" />
+          <img src={site.brand.logo} alt="WINDELS" className="h-9 w-9 rounded-lg object-cover" />
           <div className="leading-tight">
             <div className="text-sm font-semibold text-text-bright tracking-tight">WINDELS</div>
             <div className="text-[10px] uppercase tracking-widest text-text-muted">AI OS</div>

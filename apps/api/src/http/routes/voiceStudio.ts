@@ -132,7 +132,8 @@ export function registerVoiceStudioRoutes(router: Router) {
     } catch (e) { next(e); }
   });
   router.get("/voices/registry", (_req, res) => {
-    res.json({ ok: true, data: { voices: VoiceService.listVoices(), providers: VoiceService.configuredProviders() } });
+    const providers = VoiceService.configuredProviders();
+    res.json({ ok: true, data: { voices: VoiceService.listVoices(), providers, configuredProviders: providers } });
   });
   router.get("/audio/:file", (req, res) => {
     const name = path.basename(req.params.file);

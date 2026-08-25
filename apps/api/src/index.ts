@@ -16,6 +16,10 @@ let workflowTicker: NodeJS.Timeout | null = null;
 let retentionTicker: NodeJS.Timeout | null = null;
 let summarizationTicker: NodeJS.Timeout | null = null;
 let blockonomicsReconciliationTicker: NodeJS.Timeout | null = null;
+let sportsJobTicker: NodeJS.Timeout | null = null;
+let lotteryJobTicker: NodeJS.Timeout | null = null;
+let languageLearningTicker: NodeJS.Timeout | null = null;
+let pinRotationTicker: NodeJS.Timeout | null = null;
 let stopWhatsAppWorker: (() => void) | null = null;
 
 async function main() {
@@ -37,6 +41,13 @@ async function main() {
     Metrics.gauge("process.uptime_seconds", 0);
     // Seed RBAC baseline.
     await ensureRolePermissions().catch((e) => logger.warn("role permission seed failed", { err: e }));
+    try {
+      const { SitePlatformService } = await import("./sitePlatform/sitePlatform.service.js");
+      await SitePlatformService.hydrateApiOverlay();
+      logger.info("site platform API overlay hydrated");
+    } catch (e) {
+      logger.warn("site platform overlay hydrate failed", { err: e });
+    }
 
     // ── Row-Level Security enforceability check ──
     // Tenant-isolation policies are silently inert when the application
@@ -349,6 +360,28 @@ async function main() {
           await bootstrapCrm(logger);
         } catch (e) { logger.warn("crm bootstrap failed", { err: e }); }
       }, 20000);
+
+      // Sports Intelligence — sandbox seed is gated; scheduled jobs start below
+      setTimeout(async () => {
+        try {
+          const { bootstrapSportsIntelligence } = await import("./sportsIntelligence/bootstrap.js");
+          await bootstrapSportsIntelligence(logger);
+        } catch (e) { logger.warn("sports intelligence bootstrap failed", { err: e }); }
+      }, 20400);
+
+      setTimeout(async () => {
+        try {
+          const { bootstrapLotteryIntelligence } = await import("./lotteryIntelligence/bootstrap.js");
+          await bootstrapLotteryIntelligence(logger);
+        } catch (e) { logger.warn("lottery intelligence bootstrap failed", { err: e }); }
+      }, 20800);
+
+      setTimeout(async () => {
+        try {
+          const { bootstrapLanguageLearning } = await import("./languageLearning/bootstrap.js");
+          await bootstrapLanguageLearning(logger);
+        } catch (e) { logger.warn("language learning bootstrap failed", { err: e }); }
+      }, 21200);
 
       // Session 91 — Enterprise Email Intelligence (demo seed gated)
       setTimeout(async () => {
@@ -671,6 +704,34 @@ async function main() {
     // Periodically reconcile durable local records against authenticated
     // Blockonomics provider history. A distributed lock in the service prevents
     // duplicate runs across replicas.
+    try {
+      const { startSportsJobTicker } = await import("./sportsIntelligence/jobs.js");
+      sportsJobTicker = startSportsJobTicker();
+      logger.info("sports intelligence job ticker started");
+    } catch (e) {
+      logger.warn("sports intelligence ticker failed to start", { err: e });
+    }
+    try {
+      const { startLotteryJobTicker } = await import("./lotteryIntelligence/jobs.js");
+      lotteryJobTicker = startLotteryJobTicker();
+      logger.info("lottery intelligence job ticker started");
+    } catch (e) {
+      logger.warn("lottery intelligence ticker failed to start", { err: e });
+    }
+    try {
+      const { startLanguageLearningTicker } = await import("./languageLearning/jobs.js");
+      languageLearningTicker = startLanguageLearningTicker();
+      logger.info("language learning ticker started");
+    } catch (e) {
+      logger.warn("language learning ticker failed to start", { err: e });
+    }
+    try {
+      const { startPinRotationTicker } = await import("./services/account.jobs.js");
+      pinRotationTicker = startPinRotationTicker();
+      logger.info("account PIN rotation ticker started");
+    } catch (e) {
+      logger.warn("account PIN rotation ticker failed to start", { err: e });
+    }
     if (env.BLOCKONOMICS_RECONCILIATION_ENABLED) {
       blockonomicsReconciliationTicker = setInterval(() => {
         void (async () => {
@@ -714,6 +775,10 @@ async function main() {
     if (retentionTicker) clearInterval(retentionTicker);
     if (summarizationTicker) clearInterval(summarizationTicker);
     if (blockonomicsReconciliationTicker) clearInterval(blockonomicsReconciliationTicker);
+    if (sportsJobTicker) clearInterval(sportsJobTicker);
+    if (lotteryJobTicker) clearInterval(lotteryJobTicker);
+    if (languageLearningTicker) clearInterval(languageLearningTicker);
+    if (pinRotationTicker) clearInterval(pinRotationTicker);
     if (stopWhatsAppWorker) stopWhatsAppWorker();
 
     // Stop accepting new connections and drain in-flight requests

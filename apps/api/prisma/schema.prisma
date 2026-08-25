@@ -219,6 +219,15 @@ model User {
   email                   String                 @unique
   emailVerifiedAt         DateTime?
   passwordHash            String
+  /// Public six-digit account number. Never the internal cuid.
+  publicUserId            String?                @unique
+  /// Unique login handle, stored lowercase. Independent of displayName.
+  username                String?                @unique
+  /// bcrypt of the 4-digit PIN. Never returned to clients.
+  pinHash                 String?
+  pinSetAt                DateTime?
+  pinExpiresAt            DateTime?
+  emailPending            String?
   role                    Role                   @default(USER)
   isActive                Boolean                @default(true)
   isSuspended             Boolean                @default(false)
@@ -3426,4 +3435,250 @@ model CloudAndroidUsageRecord {
   @@index([deviceId, measuredAt])
   @@index([sessionId])
   @@map("cloud_android_usage")
+}
+
+// ─── WINDELS Sports Intelligence (durable historical store) ──────────────
+// Operational hot path uses the org-scoped Redis ledger (`si:*`). These
+// tables exist so large historical datasets can be archived with proper
+// indexes. organizationId is stored without a Prisma relation so we do not
+// mutate the existing Organization model graph.
+
+model SportsMatch {
+  id               String   @id
+  organizationId   String
+  providerId       String
+  providerMatchId  String
+  leagueId         String
+  leagueName       String
+  homeTeamId       String
+  homeTeamName     String
+  awayTeamId       String
+  awayTeamName     String
+  kickoffAt        DateTime
+  status           String
+  dataClass        String
+  payload          Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([organizationId, providerId, providerMatchId])
+  @@index([organizationId, kickoffAt])
+  @@index([leagueId])
+  @@index([status])
+  @@map("sports_matches")
+}
+
+model SportsOdds {
+  id              String   @id
+  organizationId  String
+  matchId         String
+  providerId      String
+  market          String
+  selection       String
+  oddsDecimal     Float
+  observedAt      DateTime
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([matchId])
+  @@index([organizationId, observedAt])
+  @@index([market, selection])
+  @@index([providerId])
+  @@map("sports_odds")
+}
+
+model SportsPrediction {
+  id              String   @id
+  organizationId  String
+  matchId         String
+  market          String
+  selection       String
+  modelVersion    String
+  decision        String
+  result          String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([matchId])
+  @@index([organizationId, createdAt])
+  @@index([modelVersion])
+  @@map("sports_predictions")
+}
+
+model SportsTicket {
+  id              String   @id
+  organizationId  String
+  ticketCode      String
+  status          String
+  modelVersion    String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+  settledAt       DateTime?
+
+  @@unique([organizationId, ticketCode])
+  @@index([organizationId, createdAt])
+  @@index([status])
+  @@map("sports_tickets")
+}
+
+model SportsResult {
+  id              String   @id
+  organizationId  String
+  matchId         String
+  providerId      String
+  verified        Boolean  @default(false)
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([matchId])
+  @@index([organizationId, createdAt])
+  @@map("sports_results")
+}
+
+model SportsJobRun {
+  id              String   @id
+  organizationId  String
+  kind            String
+  status          String
+  executionId     String
+  providerId      String?
+  payload         Json     @default("{}")
+  startedAt       DateTime
+  endedAt         DateTime?
+
+  @@index([organizationId, startedAt])
+  @@index([executionId])
+  @@map("sports_job_runs")
+}
+
+// ─── WINDELS Lottery Intelligence (historical / archive store) ───────────
+model LotteryDraw {
+  id              String   @id
+  organizationId  String
+  lotteryId       String
+  providerId      String
+  providerDrawId  String
+  drawDate        DateTime
+  mainNumbers     Int[]
+  bonusNumbers    Int[]
+  dataClass       String
+  verified        Boolean  @default(false)
+  validationStatus String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, lotteryId, providerId, providerDrawId])
+  @@index([organizationId, drawDate])
+  @@index([lotteryId, drawDate])
+  @@map("lottery_draws")
+}
+
+model LotteryTicket {
+  id              String   @id
+  organizationId  String
+  userId          String
+  lotteryId       String
+  name            String
+  status          String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, createdAt])
+  @@index([lotteryId])
+  @@map("lottery_tickets")
+}
+
+model LotteryBacktest {
+  id              String   @id
+  organizationId  String
+  strategy        String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@map("lottery_backtests")
+}
+
+// ─── WINDELS Language Learning (archive store; hot path is Redis ll:*) ──
+// organizationId is stored without a Prisma relation so we do not mutate
+// the existing Organization model graph.
+
+model LanguageProfile {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  currentLevel    String
+  levelSource     String
+  status          String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, userId, languageCode])
+  @@index([organizationId, userId])
+  @@map("language_profiles")
+}
+
+model LanguageAssessment {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  overallLevel    String?
+  status          String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, createdAt])
+  @@map("language_assessments")
+}
+
+model LanguageLessonAttempt {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  lessonId        String
+  status          String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, languageCode])
+  @@map("language_lesson_attempts")
+}
+
+model LanguageVocabCard {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  vocabId         String
+  nextReviewAt    DateTime
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@unique([organizationId, userId, languageCode, vocabId])
+  @@index([organizationId, userId, nextReviewAt])
+  @@map("language_vocab_cards")
+}
+
+model LanguageWritingAttempt {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  originalText    String   @db.Text
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, createdAt])
+  @@map("language_writing_attempts")
 }

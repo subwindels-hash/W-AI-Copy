@@ -105,6 +105,10 @@ interface TokenPayload {
   email: string;
   role: PublicRole;
   organizationId: string | null;
+  publicUserId?: string | null;
+  username?: string | null;
+  impersonatorId?: string;
+  impersonationId?: string;
 }
 
 function signToken(payload: TokenPayload) {
@@ -119,6 +123,8 @@ export async function registerUser(input: {
   password: string;
   displayName: string;
   organizationName: string;
+  username?: string;
+  pin?: string;
 }) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw AppError.conflict("An account with this email already exists");
@@ -129,6 +135,27 @@ export async function registerUser(input: {
     userCount === 0 ? PrismaRole.SUPER_ADMIN : PrismaRole.USER;
 
   const passwordHash = await bcrypt.hash(input.password, 12);
+  const { allocatePublicUserId, allocateUsername, validatePin } = await import("./account.service.js");
+  const publicUserId = await allocatePublicUserId();
+  const username = await allocateUsername(input.username || input.displayName || input.email.split("@")[0] || "user");
+  let pinHash: string | null = null;
+  let pinSetAt: Date | null = null;
+  let pinExpiresAt: Date | null = null;
+  let issuedPin: string | null = null;
+  if (input.pin) {
+    validatePin(input.pin);
+    const { PIN_TTL_MS } = await import("@windels/shared/account");
+    pinHash = await bcrypt.hash(input.pin, 12);
+    pinSetAt = new Date();
+    pinExpiresAt = new Date(pinSetAt.getTime() + PIN_TTL_MS);
+  } else {
+    const { generateSystemPin } = await import("./account.service.js");
+    const { PIN_TTL_MS } = await import("@windels/shared/account");
+    issuedPin = generateSystemPin();
+    pinHash = await bcrypt.hash(issuedPin, 12);
+    pinSetAt = new Date();
+    pinExpiresAt = new Date(pinSetAt.getTime() + PIN_TTL_MS);
+  }
 
   // Generate a unique org slug.
   let orgSlug = slugify(input.organizationName) || "org";
@@ -143,8 +170,13 @@ export async function registerUser(input: {
         passwordHash,
         role: prismaRole,
         emailVerifiedAt: new Date(),
+        publicUserId,
+        username,
+        pinHash,
+        pinSetAt,
+        pinExpiresAt,
         profile: { create: { displayName: input.displayName, theme: "dark" } },
-      },
+      } as any,
     });
     const org = await tx.organization.create({
       data: {
@@ -174,19 +206,38 @@ export async function registerUser(input: {
     return u;
   });
 
-  return { userId: user.id, role: toPublicRole(prismaRole) };
+  if (issuedPin) {
+    const { storeIssuedPinAfterRegister } = await import("./account.service.js");
+    await storeIssuedPinAfterRegister(user.id, issuedPin, pinExpiresAt!);
+  }
+
+  try {
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    const creds = await EmailService.getActiveProvider();
+    if (creds) {
+      const loginUrl = `${process.env.WINDELS_WEB_ORIGIN ?? "http://localhost:5173"}/auth/login`;
+      await EmailService.sendTemplate("welcome", input.email, { loginUrl });
+    }
+  } catch (e) {
+    logger.warn("[auth] welcome email skipped", { userId: user.id, err: (e as Error)?.message });
+  }
+
+  return { userId: user.id, role: toPublicRole(prismaRole), publicUserId, username, issuedPin };
 }
 
 export async function loginUser(
-  input: { email: string; password: string },
+  input: { email?: string; identifier?: string; password: string },
   metadata?: { ip?: string; ua?: string }
 ) {
+  const identifier = (input.identifier ?? input.email ?? "").trim();
+  if (!identifier) throw AppError.unauthorized("Invalid email or password");
+  const { findUserByIdentifier, ensureAccountIdentity } = await import("./account.service.js");
+  const found = await findUserByIdentifier(identifier);
+  if (!found) throw AppError.unauthorized("Invalid email or password");
+  await ensureAccountIdentity(found.id);
   const user = await prisma.user.findUnique({
-    where: { email: input.email },
-    include: {
-      memberships: { take: 1, orderBy: { joinedAt: "asc" } },
-      profile: true,
-    },
+    where: { id: found.id },
+    include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true },
   });
   if (!user) throw AppError.unauthorized("Invalid email or password");
   if (user.isSuspended || !user.isActive) {
@@ -346,12 +397,21 @@ async function issueSession(
   publicRole: PublicRole,
   primaryMembership: any,
   metadata?: { ip?: string; ua?: string },
+  extra?: { impersonatorId?: string; impersonationId?: string },
 ) {
+  const { pinStatusOf, ensureAccountIdentity, ensureCurrentPin } = await import("./account.service.js");
+  await ensureAccountIdentity(user.id);
+  await ensureCurrentPin(user.id).catch(() => {});
+  const identified = await prisma.user.findUnique({ where: { id: user.id }, include: { profile: true } }) ?? user;
   const tokenPayload: TokenPayload = {
-    id: user.id,
-    email: user.email,
+    id: identified.id,
+    email: identified.email,
     role: publicRole,
     organizationId: primaryMembership?.organizationId ?? null,
+    publicUserId: (identified as any).publicUserId ?? null,
+    username: (identified as any).username ?? null,
+    impersonatorId: extra?.impersonatorId,
+    impersonationId: extra?.impersonationId,
   };
   const token = signToken(tokenPayload);
   // Generate and store a refresh token (opaque, one-time-use, Redis-backed)
@@ -378,13 +438,79 @@ async function issueSession(
     refreshToken,
     expiresIn: 900, // 15 minutes in seconds — client should refresh before this
     user: {
-      id: user.id,
-      email: user.email,
+      id: identified.id,
+      email: identified.email,
       role: publicRole,
-      displayName: user.profile?.displayName ?? null,
+      displayName: identified.profile?.displayName ?? user.profile?.displayName ?? null,
       organizationId: primaryMembership?.organizationId ?? null,
+      publicUserId: (identified as any).publicUserId ?? null,
+      username: (identified as any).username ?? null,
+      ...pinStatusOf(identified as any),
+      impersonatorId: extra?.impersonatorId ?? null,
+      impersonationId: extra?.impersonationId ?? null,
     },
   };
+}
+
+export async function startImpersonation(adminId: string, targetId: string, metadata?: { ip?: string; ua?: string }) {
+  if (adminId === targetId) throw AppError.badRequest("You cannot impersonate yourself");
+  const admin = await prisma.user.findUnique({ where: { id: adminId }, include: { memberships: { take: 1 } } });
+  if (!admin) throw AppError.unauthorized();
+  if (admin.role !== PrismaRole.SUPER_ADMIN && admin.role !== PrismaRole.ADMIN) {
+    throw AppError.forbidden("Only authorized administrators can log in as a user");
+  }
+  const target = await prisma.user.findUnique({
+    where: { id: targetId },
+    include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true },
+  });
+  if (!target) throw AppError.notFound("User not found");
+  if (admin.role === PrismaRole.ADMIN) {
+    const adminOrg = admin.memberships[0]?.organizationId;
+    const targetOrg = target.memberships[0]?.organizationId;
+    if (!adminOrg || adminOrg !== targetOrg) throw AppError.forbidden("You can only view users in your organization");
+  }
+  const impersonationId = randomUUID();
+  const session = await issueSession(target, toPublicRole(target.role), target.memberships[0], metadata, {
+    impersonatorId: admin.id,
+    impersonationId,
+  });
+  await prisma.auditLog.create({
+    data: {
+      userId: admin.id,
+      action: "admin.user.impersonate.start",
+      resourceType: "User",
+      resourceId: target.id,
+      ipAddress: metadata?.ip,
+      metadata: {
+        impersonationId,
+        targetPublicUserId: (target as any).publicUserId ?? null,
+        targetUsername: (target as any).username ?? null,
+        targetEmail: target.email,
+        userAgent: metadata?.ua,
+      },
+    },
+  }).catch(() => {});
+  return session;
+}
+
+export async function endImpersonation(actor: { id: string; impersonatorId?: string; impersonationId?: string }, metadata?: { ip?: string; ua?: string }) {
+  if (!actor.impersonatorId) throw AppError.badRequest("You are not in an impersonation session");
+  const admin = await prisma.user.findUnique({
+    where: { id: actor.impersonatorId },
+    include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true },
+  });
+  if (!admin || admin.isSuspended || !admin.isActive) throw AppError.forbidden("Administrator session cannot be restored");
+  await prisma.auditLog.create({
+    data: {
+      userId: admin.id,
+      action: "admin.user.impersonate.end",
+      resourceType: "User",
+      resourceId: actor.id,
+      ipAddress: metadata?.ip,
+      metadata: { impersonationId: actor.impersonationId ?? null },
+    },
+  }).catch(() => {});
+  return issueSession(admin, toPublicRole(admin.role), admin.memberships[0], metadata);
 }
 
 /**
@@ -453,12 +579,22 @@ export interface PasswordResetRequestResult {
   smtpConfigured: boolean;
 }
 
+async function smtpIsConfigured(): Promise<boolean> {
+  try {
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    return Boolean(await EmailService.getActiveProvider());
+  } catch {
+    return Boolean(process.env.WINDELS_SMTP_HOST);
+  }
+}
+
 export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
   const normalized = email.trim().toLowerCase();
+  const smtpConfigured = await smtpIsConfigured();
   const user = await prisma.user.findUnique({ where: { email: normalized } });
   if (!user) {
     // Fail-open: identical response whether or not the account exists.
-    return { ok: true, email: normalized, sent: false, smtpConfigured: Boolean(process.env.WINDELS_SMTP_HOST) };
+    return { ok: true, email: normalized, sent: false, smtpConfigured };
   }
 
   const token = randomBytes(32).toString("base64url");
@@ -478,42 +614,17 @@ export async function requestPasswordReset(email: string): Promise<PasswordReset
     },
   }).catch(() => {});
 
-  const host = process.env.WINDELS_SMTP_HOST;
-  const port = Number(process.env.WINDELS_SMTP_PORT || 0);
-  if (!host || !port) {
-    logger.warn("[auth] SMTP not configured — password reset email skipped", { userId: user.id });
-    return { ok: true, email: normalized, sent: false, smtpConfigured: false };
-  }
-
   try {
-    const { sendSmtp } = await import("../emailIntel/smtp.client.js");
-    const from = process.env.WINDELS_MAIL_FROM ?? "no-reply@windels.ai";
-    const fromName = process.env.WINDELS_MAIL_FROM_NAME ?? "WINDELS AI OS";
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    const creds = await EmailService.getActiveProvider();
+    if (!creds) {
+      logger.warn("[auth] SMTP not configured — password reset email skipped", { userId: user.id });
+      return { ok: true, email: normalized, sent: false, smtpConfigured: false };
+    }
     const resetUrl = `${process.env.WINDELS_WEB_ORIGIN ?? "http://localhost:5173"}/auth/reset?token=${token}`;
-    await sendSmtp({
-      host,
-      port,
-      secure: process.env.WINDELS_SMTP_SECURE === "true",
-      username: process.env.WINDELS_SMTP_USER ?? null,
-      password: process.env.WINDELS_SMTP_PASS ?? null,
-      from,
-      to: [normalized],
-      subject: "Reset your WINDELS AI OS password",
-      text: [
-        `Hello,`,
-        ``,
-        `We received a request to reset your WINDELS AI OS password.`,
-        ``,
-        `Reset your password here (valid for ${Math.round(PASSWORD_RESET_TTL_SECONDS / 60)} minutes):`,
-        resetUrl,
-        ``,
-        `If you did not request this, you can safely ignore this email.`,
-        ``,
-        fromName,
-      ].join("\n"),
-    });
-    logger.info("[auth] password reset email sent", { userId: user.id });
-    return { ok: true, email: normalized, sent: true, smtpConfigured: true };
+    const sent = await EmailService.sendTemplate("password_reset", normalized, { resetUrl });
+    logger.info("[auth] password reset email attempted", { userId: user.id, sent: sent.sent });
+    return { ok: true, email: normalized, sent: sent.sent, smtpConfigured: true };
   } catch (err) {
     logger.warn("[auth] password reset email send failed", { userId: user.id, err: (err as Error)?.message });
     return { ok: true, email: normalized, sent: false, smtpConfigured: true };

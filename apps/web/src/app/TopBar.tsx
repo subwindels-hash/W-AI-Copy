@@ -80,10 +80,10 @@ export function TopBar({ onToggleSidebar, workspaceLabel }: TopBarProps) {
                   <div className="text-[11px] text-text-muted truncate">{user?.email}</div>
                 </div>
                 <button
-                  onClick={() => { setMenuOpen(false); navigate("/app/settings"); }}
+                  onClick={() => { setMenuOpen(false); navigate("/app/account"); }}
                   className="w-full flex items-center gap-2 px-3 py-2 text-sm rounded-md hover:bg-white/5 text-left text-slate-200"
                 >
-                  <UserIcon className="h-4 w-4 text-text-muted" /> Profile
+                  <UserIcon className="h-4 w-4 text-text-muted" /> My Account
                 </button>
                 <button
                   onClick={() => { setMenuOpen(false); navigate("/app/settings"); }}

@@ -20,6 +20,8 @@ import {
   Lock,
   Monitor,
   TrendingUp,
+  Trophy,
+  Ticket,
   Mic,
   Film,
   BookOpen,
@@ -31,6 +33,7 @@ import {
   Clapperboard,
   Landmark,
   GraduationCap,
+  Languages,
   Lightbulb,
   ShieldCheck,
   Mail,
@@ -62,6 +65,7 @@ import {
   SquarePen,
   Leaf,
   Workflow,
+  Github,
   Wand2,
   Puzzle,
   Blocks,
@@ -85,11 +89,15 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useSitePublic } from "@/lib/useSitePublic";
 
 const navItems = [
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", end: true },
   { to: "/app/trading", icon: TrendingUp, label: "Trading Intel" },
   { to: "/app/trading/brokers", icon: Landmark, label: "Broker Trading" },
+  { to: "/app/sports", icon: Trophy, label: "Sports Intelligence" },
+  { to: "/app/lottery", icon: Ticket, label: "Lottery Intelligence" },
+  { to: "/app/languages", icon: Languages, label: "Language Learning" },
   { to: "/app/voice", icon: Mic, label: "Voice Playback" },
   { to: "/app/voice-console", icon: Mic, label: "Voice" },
   { to: "/app/media", icon: Film, label: "Media Factory" },
@@ -110,6 +118,7 @@ const navItems = [
   { to: "/app/sustainability", icon: Leaf, label: "Sustainability" },
   { to: "/app/usage", icon: BarChart3, label: "Usage" },
   { to: "/app/ai-engineering", icon: Workflow, label: "AI Engineering" },
+  { to: "/app/github", icon: Github, label: "GitHub" },
   { to: "/app/identity-knowledge", icon: ShieldCheck, label: "Identity Knowledge" },
   { to: "/app/events", icon: Radio, label: "Real-Time Events" },
   { to: "/app/webhook", icon: Inbox, label: "Webhook Inbox" },
@@ -201,16 +210,19 @@ const navItems = [
   { to: "/app/publishing", icon: Megaphone, label: "Publishing" },
   { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
+  { to: "/platform/site", icon: Globe2, label: "Site control" },
   { to: "/admin/modules", icon: Blocks, label: "Module & Plugin Center" },
   { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/platform/blockonomics", icon: Bitcoin, label: "Blockonomics Control" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/extensions", icon: Puzzle, label: "Extensions" },
+  { to: "/app/account", icon: UserCircle, label: "My Account" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
+  const site = useSitePublic();
   const [runtimeModules, setRuntimeModules] = useState<ModuleRuntimeRegistration[]>([]);
   useEffect(() => { void moduleRuntimeApi.registrations().then(setRuntimeModules).catch(() => setRuntimeModules([])); }, []);
   const runtimeItems = runtimeModules.flatMap((module) => module.frontend.navigation.map((item) => ({
@@ -227,7 +239,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     >
       {/* Logo */}
       <div className="h-14 flex items-center gap-2 px-4 border-b border-white/5">
-        <img src="/brand/logo-icon.png" alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
+        <img src={site.brand.logo} alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
         {!collapsed && (
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold text-text-bright tracking-tight">WINDELS</span>

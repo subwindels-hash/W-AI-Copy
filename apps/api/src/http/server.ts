@@ -17,6 +17,8 @@ import { registerDerivativesRoutes } from "./routes/derivatives.js";
 import { registerDerivativesDeskRoutes } from "./routes/derivativesDesk.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerMeRoutes } from "./routes/me.js";
+import { registerAccountRoutes } from "./routes/account.js";
+import { registerGithubConnectorRoutes } from "./routes/githubConnector.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
 import { registerWhatsAppRoutes } from "../channels/whatsapp/whatsapp.routes.js";
 import { registerWhatsAppWebhookRoutes } from "../channels/whatsapp/whatsappWebhook.routes.js";
@@ -86,6 +88,10 @@ import { registerSelfHostedRoutes } from "./routes/selfHosted.js";
 import { registerKernelRoutes } from "./routes/kernel.js";
 import { registerVoiceRoutes } from "./routes/voice.js";
 import { registerTradingIntelRoutes } from "./routes/tradingIntel.js";
+import { registerSportsIntelligenceRoutes } from "./routes/sportsIntelligence.js";
+import { registerLotteryIntelligenceRoutes } from "./routes/lotteryIntelligence.js";
+import { registerLanguageLearningRoutes } from "./routes/languageLearning.js";
+import { registerSitePlatformAdminRoutes, registerSitePlatformPublicRoutes, sendPublicSeoDocuments } from "./routes/sitePlatform.js";
 import { registerExpertsPlatformRoutes } from "./routes/expertsPlatform.js";
 import { registerMediaFactoryRoutes } from "./routes/mediaFactory.js";
 import { registerUxIntelligenceRoutes } from "./routes/uxIntelligence.js";
@@ -237,6 +243,11 @@ export function createApp() {
 
   const v1 = express.Router();
   registerHealthRoutes(v1);
+
+  // Public website platform (announcement, SEO, visitor chat) — no JWT.
+  const sitePublic = express.Router();
+  v1.use("/site", sitePublic);
+  registerSitePlatformPublicRoutes(sitePublic);
   registerAuthRoutes(v1);
   // Session 116 — MFA assurance (policy, coverage, throttle, ledger) on a
   // `/mfa` sub-router registered ahead of the original six endpoints. The
@@ -270,6 +281,8 @@ export function createApp() {
   registerDerivativesRoutes(v1);
   registerAdminRoutes(v1);
   registerMeRoutes(v1);
+  registerAccountRoutes(v1);
+  registerGithubConnectorRoutes(v1);
   registerWebhookRoutes(v1);
   registerApiKeyRoutes(v1);
   registerProfileRoutes(v1);
@@ -760,6 +773,21 @@ export function createApp() {
     } catch (e) { next(e); }
   });
   registerTradingIntelRoutes(tiRouter);
+
+  // /sports-intel — WINDELS Sports Intelligence & AI Ticket Engine
+  const sportsIntelRouter = express.Router();
+  v1.use("/sports-intel", sportsIntelRouter);
+  registerSportsIntelligenceRoutes(sportsIntelRouter);
+
+  // /lottery-intel — WINDELS Lottery Intelligence (EuroMillions first)
+  const lotteryIntelRouter = express.Router();
+  v1.use("/lottery-intel", lotteryIntelRouter);
+  registerLotteryIntelligenceRoutes(lotteryIntelRouter);
+
+  // /language-learning — WINDELS AI Language Teacher
+  const languageLearningRouter = express.Router();
+  v1.use("/language-learning", languageLearningRouter);
+  registerLanguageLearningRoutes(languageLearningRouter);
 
   // /experts — Session 77A: Professional Intelligence Platform (domain expert agents, courses, packages)
   const epRouter = express.Router();
@@ -1521,7 +1549,12 @@ export function createApp() {
   });
 
   app.get("/healthz", (_req, res) => res.send("ok"));
+  void sendPublicSeoDocuments(app);
   app.use("/api/v1", v1);
+
+  const siteAdmin = express.Router();
+  v1.use("/site-admin", siteAdmin);
+  registerSitePlatformAdminRoutes(siteAdmin);
 
   // Native AI provider surface. It deliberately lives at top-level /v1 while
   // the existing /api/rest/v1 gateway remains mounted and unchanged.

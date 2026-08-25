@@ -26,9 +26,13 @@ export interface AdmUserProfile {
 export interface AdmUserRow {
   id: string;
   email: string;
+  publicUserId: string | null;
+  username: string | null;
   role: AdmRole;
   isActive: boolean;
   isSuspended: boolean;
+  pinSet: boolean;
+  pinExpired: boolean;
   createdAt: string;
   profile: AdmUserProfile | null;
 }

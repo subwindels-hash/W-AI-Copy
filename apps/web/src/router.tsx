@@ -20,8 +20,16 @@ const WorkflowPage = lazy(() => import("./pages/workflow/WorkflowPage"));
 const NotFoundPage = lazy(() => import("./pages/errors/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 const DeveloperPage = lazy(() => import("./pages/developers/DeveloperPage"));
 const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
+const MyAccountPage = lazy(() => import("./pages/account/MyAccountPage").then((m) => ({ default: m.MyAccountPage })));
+const GitHubConnectorPage = lazy(() => import("./pages/github/GitHubConnectorPage").then((m) => ({ default: m.GitHubConnectorPage })));
 const AnalyticsPage = lazy(() => import("./pages/analytics/AnalyticsPage"));
 const TradingIntelPage = lazy(() => import("./pages/trading/TradingIntelPage").then((m) => ({ default: m.TradingIntelPage })));
+const SportsIntelligencePage = lazy(() => import("./pages/sports/SportsIntelligencePage").then((m) => ({ default: m.SportsIntelligencePage })));
+const MobileSportsPage = lazy(() => import("./pages/mobile/MobileSportsPage").then((m) => ({ default: m.MobileSportsPage })));
+const LotteryIntelligencePage = lazy(() => import("./pages/lottery/LotteryIntelligencePage").then((m) => ({ default: m.LotteryIntelligencePage })));
+const MobileLotteryPage = lazy(() => import("./pages/mobile/MobileLotteryPage").then((m) => ({ default: m.MobileLotteryPage })));
+const LanguageLearningPage = lazy(() => import("./pages/languages/LanguageLearningPage").then((m) => ({ default: m.LanguageLearningPage })));
+const MobileLanguagesPage = lazy(() => import("./pages/mobile/MobileLanguagesPage").then((m) => ({ default: m.MobileLanguagesPage })));
 const VoiceStudioPage = lazy(() => import("./pages/voice/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
 const VoiceConsolePage = lazy(() => import("./pages/voice/VoiceConsolePage").then((m) => ({ default: m.VoiceConsolePage })));
 const MediaFactoryPage = lazy(() => import("./pages/media/MediaFactoryPage").then((m) => ({ default: m.MediaFactoryPage })));
@@ -144,6 +152,16 @@ const MarketingApiDocs = lazy(() => import("./pages/marketing/ApiDocsPage"));
 const MarketingDocs = lazy(() => import("./pages/marketing/DocsPage"));
 const MarketingBlog = lazy(() => import("./pages/marketing/BlogPage"));
 const ContactPage = lazy(() => import("./pages/contact/ContactPage").then((m) => ({ default: m.ContactPage })));
+const AboutPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.AboutPage })));
+const FeaturesPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.FeaturesPage })));
+const WorkforcePage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.WorkforcePage })));
+const AgentsPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.AgentsPage })));
+const SolutionsPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.SolutionsPage })));
+const HowItWorksPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.HowItWorksPage })));
+const FaqPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.FaqPage })));
+const HelpPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.HelpPage })));
+const SiteControlPage = lazy(() => import("./pages/admin/SiteControlPage").then((m) => ({ default: m.SiteControlPage })));
+const PublicShell = lazy(() => import("./app/PublicShell").then((m) => ({ default: m.PublicShell })));
 const MySupportPage = lazy(() => import("./pages/support/MySupportPage").then((m) => ({ default: m.MySupportPage })));
 const ContactCenterPage = lazy(() => import("./pages/support/ContactCenterPage").then((m) => ({ default: m.ContactCenterPage })));
 const MarketingLegal = lazy(() => import("./pages/marketing/LegalPage"));
@@ -248,16 +266,25 @@ export const router = createBrowserRouter([
   { path: "/docs/api", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingApiDocs/>) }] },
   { path: "/blog", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
   { path: "/blog/:slug", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
-  { path: "/support", element: withSuspense(<ContactPage />) },
+  { path: "/about", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<AboutPage/>) }] },
+  { path: "/features", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FeaturesPage/>) }] },
+  { path: "/workforce", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<WorkforcePage/>) }] },
+  { path: "/agents", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<AgentsPage/>) }] },
+  { path: "/solutions", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<SolutionsPage/>) }] },
+  { path: "/how-it-works", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<HowItWorksPage/>) }] },
+  { path: "/faq", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FaqPage/>) }] },
+  { path: "/help", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<HelpPage/>) }] },
+  { path: "/contact", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
+  { path: "/support", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
   { path: "/legal", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingLegal/>) }] },
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },
-  { path: "/auth/login", element: withSuspense(<LoginPage />) },
-  { path: "/auth/register", element: withSuspense(<RegisterPage />) },
+  { path: "/auth/login", element: withSuspense(<PublicShell><LoginPage /></PublicShell>) },
+  { path: "/auth/register", element: withSuspense(<PublicShell><RegisterPage /></PublicShell>) },
   // Session 114 — the API has always redirected here after a Google sign-in;
   // until now the route did not exist and the token in the fragment was lost.
   { path: "/auth/callback", element: withSuspense(<GoogleCallbackPage />) },
-  { path: "/auth/forgot", element: withSuspense(<ForgotPasswordPage />) },
-  { path: "/auth/reset", element: withSuspense(<ResetPasswordPage />) },
+  { path: "/auth/forgot", element: withSuspense(<PublicShell><ForgotPasswordPage /></PublicShell>) },
+  { path: "/auth/reset", element: withSuspense(<PublicShell><ResetPasswordPage /></PublicShell>) },
 
   // Public shared-conversation view (no auth required for anyone_with_link).
   { path: "/share/:token", element: withSuspense(<SharePage />) },
@@ -309,6 +336,9 @@ export const router = createBrowserRouter([
       { path: "offline", element: withSuspense(<MobileOfflinePage />) },
       { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
       { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
+      { path: "sports", element: withSuspense(<MobileSportsPage />) },
+      { path: "lottery", element: withSuspense(<MobileLotteryPage />) },
+      { path: "languages", element: withSuspense(<MobileLanguagesPage />) },
     ],
   },
   {
@@ -333,6 +363,12 @@ export const router = createBrowserRouter([
       { path: "trading", element: withSuspense(<TradingIntelPage />) },
       { path: "trading/brokers", element: withSuspense(<BrokerCommandCenterPage />) },
       { path: "trading/dashboard", element: withSuspense(<TradingDashboardPage />) },
+      { path: "sports", element: withSuspense(<SportsIntelligencePage />) },
+      { path: "sports/:view", element: withSuspense(<SportsIntelligencePage />) },
+      { path: "lottery", element: withSuspense(<LotteryIntelligencePage />) },
+      { path: "lottery/:view", element: withSuspense(<LotteryIntelligencePage />) },
+      { path: "languages", element: withSuspense(<LanguageLearningPage />) },
+      { path: "languages/:view", element: withSuspense(<LanguageLearningPage />) },
       { path: "marketing", element: withSuspense(<MarketingDashboardPage />) },
       { path: "voice", element: withSuspense(<VoiceStudioPage />) },
       { path: "voice-console", element: withSuspense(<VoiceConsolePage />) },
@@ -367,6 +403,8 @@ export const router = createBrowserRouter([
       { path: "developer-portal", element: withSuspense(<DeveloperPortalPage />) },
       { path: "files", element: withSuspense(<FilesPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
+      { path: "account", element: withSuspense(<MyAccountPage />) },
+      { path: "github", element: withSuspense(<GitHubConnectorPage />) },
       { path: "my-support", element: withSuspense(<MySupportPage />) },
       { path: "enterprise", element: withSuspense(<EnterprisePage />) },
       { path: "governance", element: withSuspense(<GovernancePage />) },
@@ -473,6 +511,7 @@ export const router = createBrowserRouter([
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
       { path: "api-platform", element: withSuspense(<AdminApiControlPage />) },
+      { path: "site", element: withSuspense(<SiteControlPage />) },
     ],
   },
   {
@@ -485,6 +524,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(<SuperAdminDashboard />) },
       { path: "blockonomics", element: withSuspense(<BlockonomicsAdminPage />) },
+      { path: "site", element: withSuspense(<SiteControlPage />) },
     ],
   },
   { path: "*", element: withSuspense(<NotFoundPage />) },
