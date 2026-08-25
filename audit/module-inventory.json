@@ -6467,7 +6467,9 @@
     "sharedTypes": "packages/shared/src/wmpcGiftCards.ts (70 LOC, supplies WmpcGiftCard/GcTransaction/GcFraudFlag)",
     "web": {
       "client": "apps/web/src/lib/giftCards.ts (28 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/giftCards/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [

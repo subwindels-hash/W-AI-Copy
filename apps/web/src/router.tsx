@@ -127,6 +127,7 @@ const DataMarketplacePage = lazy(() => import("./pages/dataMarketplace/DataMarke
 const ReviewsPage = lazy(() => import("./pages/reviews/ReviewsPage").then((m) => ({ default: m.ReviewsPage })));
 const BenchmarksPage = lazy(() => import("./pages/benchmarks/BenchmarksPage").then((m) => ({ default: m.BenchmarksPage })));
 const MlOpsPage = lazy(() => import("./pages/mlOps/MlOpsPage").then((m) => ({ default: m.MlOpsPage })));
+const GiftCardsPage = lazy(() => import("./pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -458,6 +459,7 @@ export const router = createBrowserRouter([
       { path: "data-marketplace", element: withSuspense(<DataMarketplacePage />) },
       { path: "benchmarks", element: withSuspense(<BenchmarksPage />) },
       { path: "ml-ops", element: withSuspense(<MlOpsPage />) },
+      { path: "gift-cards", element: withSuspense(<GiftCardsPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },
