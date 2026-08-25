@@ -92,6 +92,7 @@ import {
   Gift,
   UserCheck,
   ArrowDownToLine,
+  Rocket,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSitePublic } from "@/lib/useSitePublic";
@@ -192,6 +193,11 @@ const navItems = [
   { to: "/app/updates", icon: ArrowDownToLine, label: "Updates & Lifecycle" },
   { to: "/app/voice-foundry", icon: Mic, label: "Voice Foundry" },
   { to: "/app/voice-ownership", icon: Fingerprint, label: "Voice Ownership" },
+  { to: "/app/sdk", icon: Code2, label: "SDK" },
+  { to: "/app/self-hosted", icon: Server, label: "Self-Hosted AI" },
+  { to: "/app/qa", icon: FlaskConical, label: "QA Platform" },
+  { to: "/app/releases", icon: Rocket, label: "Releases" },
+  { to: "/app/program", icon: ClipboardList, label: "Program Management" },
   { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },

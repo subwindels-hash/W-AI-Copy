@@ -135,6 +135,11 @@ const FabricPage = lazy(() => import("./pages/fabric/FabricPage").then((m) => ({
 const UpdatesPage = lazy(() => import("./pages/updates/UpdatesPage").then((m) => ({ default: m.UpdatesPage })));
 const VoiceFoundryPage = lazy(() => import("./pages/voiceFoundry/VoiceFoundryPage").then((m) => ({ default: m.VoiceFoundryPage })));
 const VoiceOwnershipPage = lazy(() => import("./pages/voiceOwnership/VoiceOwnershipPage").then((m) => ({ default: m.VoiceOwnershipPage })));
+const SdkPage = lazy(() => import("./pages/sdk/SdkPage").then((m) => ({ default: m.SdkPage })));
+const SelfHostedPage = lazy(() => import("./pages/selfHosted/SelfHostedPage").then((m) => ({ default: m.SelfHostedPage })));
+const QaPage = lazy(() => import("./pages/qa/QaPage").then((m) => ({ default: m.QaPage })));
+const ReleasePage = lazy(() => import("./pages/release/ReleasePage").then((m) => ({ default: m.ReleasePage })));
+const ProgramPage = lazy(() => import("./pages/program/ProgramPage").then((m) => ({ default: m.ProgramPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -474,6 +479,11 @@ export const router = createBrowserRouter([
       { path: "updates", element: withSuspense(<UpdatesPage />) },
       { path: "voice-foundry", element: withSuspense(<VoiceFoundryPage />) },
       { path: "voice-ownership", element: withSuspense(<VoiceOwnershipPage />) },
+      { path: "sdk", element: withSuspense(<SdkPage />) },
+      { path: "self-hosted", element: withSuspense(<SelfHostedPage />) },
+      { path: "qa", element: withSuspense(<QaPage />) },
+      { path: "releases", element: withSuspense(<ReleasePage />) },
+      { path: "program", element: withSuspense(<ProgramPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },

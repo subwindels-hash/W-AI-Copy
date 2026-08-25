@@ -10777,7 +10777,9 @@
     "sharedTypes": "packages/shared/src/program.ts (232 LOC)",
     "web": {
       "client": "apps/web/src/lib/program.ts (47 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/program/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11213,7 +11215,9 @@
     "sharedTypes": "packages/shared/src/qa.ts (208 LOC)",
     "web": {
       "client": "apps/web/src/lib/qa.ts (34 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/qa/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11387,7 +11391,9 @@
     "sharedTypes": "packages/shared/src/release.ts (172 LOC)",
     "web": {
       "client": "apps/web/src/lib/release.ts (60 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/release/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11927,7 +11933,9 @@
     "sharedTypes": "packages/shared/src/sdk.ts (90 LOC)",
     "web": {
       "client": "apps/web/src/lib/sdk.ts (14 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/sdk/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12135,7 +12143,9 @@
     "sharedTypes": "packages/shared/src/selfHosted.ts (52 LOC)",
     "web": {
       "client": "apps/web/src/lib/selfHosted.ts (22 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/selfHosted/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
