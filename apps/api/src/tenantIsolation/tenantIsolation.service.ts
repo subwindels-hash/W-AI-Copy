@@ -363,8 +363,9 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   //
   // sustainability: `esg:<org>:<entity>` puts the ORG FIRST, unlike almost
   // every other module here, so the bare `esg` prefix is correct and safe —
-  // the segment after it really is the organization id.
-  { prefix: "esg", scope: "org_scoped" },
+  // the segment after it really is the organization id. (The `esg` prefix is
+  // already catalogued above under Session 64; not re-added here to avoid a
+  // duplicate catalog entry.)
   // dataMarketplace: `dmp:<entity>:<org>[:<id>]`. Bare `dmp` is never added —
   // it would read `a`/`as`/`i` as an organization id.
   { prefix: "dmp:a", scope: "org_scoped" },
