@@ -96,6 +96,7 @@ import {
   ShoppingCart,
   LineChart,
   Link2,
+  MessageSquare,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSitePublic } from "@/lib/useSitePublic";
@@ -208,6 +209,10 @@ const navItems = [
   { to: "/app/crypto-intel", icon: Bitcoin, label: "Crypto Intelligence" },
   { to: "/app/core-integration", icon: Link2, label: "Core Integration" },
   { to: "/app/github-connector", icon: Github, label: "GitHub Connector" },
+  { to: "/app/channels", icon: MessageSquare, label: "Messaging Channels" },
+  { to: "/app/plugin-os", icon: Puzzle, label: "Plugin OS" },
+  { to: "/app/wake-intel", icon: Mic, label: "Wake Intelligence" },
+  { to: "/app/enterprise-foundation", icon: Database, label: "Enterprise Foundation" },
   { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },

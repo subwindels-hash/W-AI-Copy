@@ -147,6 +147,10 @@ const BrokerIntegrationPage = lazy(() => import("./pages/brokerIntegration/Broke
 const CryptoIntelligencePage = lazy(() => import("./pages/cryptoIntelligence/CryptoIntelligencePage").then((m) => ({ default: m.CryptoIntelligencePage })));
 const CoreIntegrationPage = lazy(() => import("./pages/coreIntegration/CoreIntegrationPage").then((m) => ({ default: m.CoreIntegrationPage })));
 const GithubConnectorPage = lazy(() => import("./pages/githubConnector/GithubConnectorPage").then((m) => ({ default: m.GithubConnectorPage })));
+const ChannelsPage = lazy(() => import("./pages/channels/ChannelsPage").then((m) => ({ default: m.ChannelsPage })));
+const PluginOsPage = lazy(() => import("./pages/pluginOs/PluginOsPage").then((m) => ({ default: m.PluginOsPage })));
+const WakeIntelPage = lazy(() => import("./pages/wakeIntel/WakeIntelPage").then((m) => ({ default: m.WakeIntelPage })));
+const EnterpriseFoundationPage = lazy(() => import("./pages/enterpriseFoundation/EnterpriseFoundationPage").then((m) => ({ default: m.EnterpriseFoundationPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -498,6 +502,10 @@ export const router = createBrowserRouter([
       { path: "crypto-intel", element: withSuspense(<CryptoIntelligencePage />) },
       { path: "core-integration", element: withSuspense(<CoreIntegrationPage />) },
       { path: "github-connector", element: withSuspense(<GithubConnectorPage />) },
+      { path: "channels", element: withSuspense(<ChannelsPage />) },
+      { path: "plugin-os", element: withSuspense(<PluginOsPage />) },
+      { path: "wake-intel", element: withSuspense(<WakeIntelPage />) },
+      { path: "enterprise-foundation", element: withSuspense(<EnterpriseFoundationPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },

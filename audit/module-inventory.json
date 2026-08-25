@@ -2445,7 +2445,9 @@
     "sharedTypes": "packages/shared/src/whatsapp.ts (267 LOC, supplies WhatsAppChannelSettings)",
     "web": {
       "client": "apps/web/src/lib/telegram.ts (41 LOC, serves /channels)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/channels/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5623,7 +5625,9 @@
     "sharedTypes": "packages/shared/src/enterpriseFoundation.ts (302 LOC)",
     "web": {
       "client": "apps/web/src/lib/enterpriseFoundation.ts (83 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/enterpriseFoundation/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10579,7 +10583,9 @@
     "sharedTypes": "packages/shared/src/pluginOs.ts (187 LOC)",
     "web": {
       "client": "apps/web/src/lib/pluginOs.ts (36 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/pluginOs/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -14352,7 +14358,9 @@
     "sharedTypes": "packages/shared/src/wakeIntel.ts (395 LOC)",
     "web": {
       "client": "apps/web/src/lib/wakeIntel.ts (30 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/wakeIntel/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
