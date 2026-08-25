@@ -37,7 +37,7 @@ function Stars({ value, onPick }: { value: number; onPick?: (r: ReviewRating) =>
           className={onPick ? "hover:scale-110 transition-transform" : "cursor-default"}
           aria-label={`${n} star${n > 1 ? "s" : ""}`}
         >
-          <Star className={`h-6 w-6 ${n <= value ? "fill-amber-400 text-amber-400" : "text-text-muted/40"}`} />
+          <Star className={`h-6 w-6 ${n <= value ? "fill-yellow-400 text-yellow-400" : "text-text-muted/40"}`} />
         </button>
       ))}
     </div>
@@ -51,9 +51,9 @@ function DistributionBar({ data }: { data: PlatformReviewsDashboard }) {
     <div className="space-y-1.5">
       {([5, 4, 3, 2, 1] as const).map((n) => (
         <div key={n} className="flex items-center gap-2 text-xs">
-          <span className="w-6 text-text-muted flex items-center gap-0.5"><Star className="h-3 w-3 fill-amber-400 text-amber-400" />{n}</span>
+          <span className="w-6 text-text-muted flex items-center gap-0.5"><Star className="h-3 w-3 fill-yellow-400 text-yellow-400" />{n}</span>
           <div className="flex-1 h-2 rounded bg-white/5 overflow-hidden">
-            <div className="h-full rounded bg-amber-400/80" style={{ width: `${(count(n) / max) * 100}%` }} />
+            <div className="h-full rounded bg-yellow-400/80" style={{ width: `${(count(n) / max) * 100}%` }} />
           </div>
           <span className="w-8 text-right text-text-muted">{count(n)}</span>
         </div>
