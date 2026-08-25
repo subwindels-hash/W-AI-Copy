@@ -90,6 +90,39 @@ describe("Blockonomics encrypted provider configuration", () => {
     expect(state.row.settings).not.toHaveProperty("apiKey");
     expect(state.row.settings).not.toHaveProperty("callbackSecret");
   });
+
+  it("toggles BTC and USDT independently and allows a both-off state", async () => {
+    process.env.BLOCKONOMICS_API_KEY = "environment-api-key-secret";
+    process.env.BLOCKONOMICS_CALLBACK_SECRET = "environment-callback-secret-value-at-least-32-chars";
+    process.env.BLOCKONOMICS_ENABLED = "true";
+    // Adopt env credentials into DB storage with both assets on.
+    const both = await BlockonomicsConfigService.upsert({ settings }, "super-admin");
+    expect(both.supportedAssets).toEqual(["BTC", "USDT"]);
+
+    // Turn USDT off -> only BTC remains; provider stays enabled.
+    const btcOnly = await BlockonomicsConfigService.setAssetEnabled("USDT", false, "super-admin");
+    expect(btcOnly.supportedAssets).toEqual(["BTC"]);
+    expect(btcOnly.enabled).toBe(true);
+
+    // Turn BTC off too -> both off is a valid, still-configured state.
+    const noneOn = await BlockonomicsConfigService.setAssetEnabled("BTC", false, "super-admin");
+    expect(noneOn.supportedAssets).toEqual([]);
+    expect(noneOn.enabled).toBe(true);
+    expect(noneOn.configured).toBe(true);
+
+    // Re-enable USDT alone -> only USDT.
+    const usdtOnly = await BlockonomicsConfigService.setAssetEnabled("USDT", true, "super-admin");
+    expect(usdtOnly.supportedAssets).toEqual(["USDT"]);
+  });
+
+  it("keeps supportedAssets in canonical BTC-before-USDT order when re-enabling BTC", async () => {
+    process.env.BLOCKONOMICS_API_KEY = "environment-api-key-secret";
+    process.env.BLOCKONOMICS_CALLBACK_SECRET = "environment-callback-secret-value-at-least-32-chars";
+    process.env.BLOCKONOMICS_ENABLED = "true";
+    await BlockonomicsConfigService.upsert({ settings: { ...settings, supportedAssets: ["USDT"] } }, "super-admin");
+    const both = await BlockonomicsConfigService.setAssetEnabled("BTC", true, "super-admin");
+    expect(both.supportedAssets).toEqual(["BTC", "USDT"]);
+  });
 });
 
 describe("official Blockonomics HTTP client", () => {

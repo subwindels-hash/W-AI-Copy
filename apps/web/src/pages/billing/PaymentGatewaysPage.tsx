@@ -19,6 +19,11 @@ import type {
   CryptoNetwork,
 } from "@windels/shared";
 import {
+  availableBlockonomicsAssets,
+  blockonomicsAssetDisplayName,
+  blockonomicsAssetNetworkWarning,
+} from "@windels/shared/payments";
+import {
   getPaymentTransaction,
   listPaymentProviders,
   listPaymentTransactions,
@@ -183,6 +188,15 @@ export function PaymentGatewaysPage() {
   const selectedProvider = providers.find((item) => item.provider === provider);
   const cryptoProvider = providers.find((item) => item.provider === "crypto");
   const blockonomicsProvider = providers.find((item) => item.provider === "blockonomics");
+  // Only methods the Super Admin has enabled are offered. `active` already means
+  // configured AND provider-enabled; per-asset toggles narrow it further.
+  const availableCryptoAssets = blockonomicsProvider
+    ? availableBlockonomicsAssets({
+        configured: blockonomicsProvider.configured,
+        enabled: blockonomicsProvider.active,
+        supportedAssets: blockonomicsProvider.supportedAssets ?? [],
+      })
+    : [];
   const openInvoices = invoices.filter((invoice) => ["open", "past_due"].includes(invoice.status) && (invoice.remainingCents ?? invoice.amountCents) > 0);
   const selectedInvoice = openInvoices.find((invoice) => invoice.id === invoiceId);
   const currencyOptions = selectedProvider?.supportedCurrencies.length ? selectedProvider.supportedCurrencies : ["USD"];
@@ -307,17 +321,32 @@ export function PaymentGatewaysPage() {
               {provider === "blockonomics" ? (
                 <div>
                   <label className="block text-xs uppercase font-medium text-text-muted mb-1">
-                    Settlement Asset
+                    Choose Payment Method
                   </label>
-                  <select
-                    value={blockonomicsAsset}
-                    onChange={(event) => setBlockonomicsAsset(event.target.value as BlockonomicsAsset)}
-                    className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-bright"
-                  >
-                    <option value="BTC" disabled={blockonomicsProvider?.supportedAssets ? !blockonomicsProvider.supportedAssets.includes("BTC") : false}>Bitcoin (BTC)</option>
-                    <option value="USDT" disabled={blockonomicsProvider?.supportedAssets ? !blockonomicsProvider.supportedAssets.includes("USDT") : false}>USDT — Ethereum ERC-20 only</option>
-                  </select>
-                  <p className="mt-1 text-xs text-text-muted">Asset availability is also enforced by encrypted server configuration.</p>
+                  {availableCryptoAssets.length === 0 ? (
+                    <p className="rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">
+                      Cryptocurrency payments are currently unavailable. No crypto payment method has been enabled by the administrator.
+                    </p>
+                  ) : (
+                    <>
+                      <select
+                        value={blockonomicsAsset}
+                        onChange={(event) => setBlockonomicsAsset(event.target.value as BlockonomicsAsset)}
+                        className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm text-text-bright"
+                        aria-label="Cryptocurrency payment method"
+                      >
+                        {availableCryptoAssets.map((asset) => (
+                          <option key={asset} value={asset}>{blockonomicsAssetDisplayName(asset)}</option>
+                        ))}
+                      </select>
+                      {blockonomicsAssetNetworkWarning(blockonomicsAsset) && availableCryptoAssets.includes(blockonomicsAsset) ? (
+                        <p className="mt-1.5 rounded-md border border-amber-500/30 bg-amber-500/10 p-2 text-xs text-amber-200">
+                          {blockonomicsAssetNetworkWarning(blockonomicsAsset)}
+                        </p>
+                      ) : null}
+                      <p className="mt-1 text-xs text-text-muted">Only methods enabled by the administrator are shown. Availability is also enforced server-side.</p>
+                    </>
+                  )}
                 </div>
               ) : null}
 

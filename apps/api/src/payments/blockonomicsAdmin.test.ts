@@ -91,6 +91,15 @@ describe("Blockonomics Super Admin control plane", () => {
     await expect(invoke("super_admin")).resolves.toBeUndefined();
   });
 
+  it("exposes an audited per-asset ON/OFF toggle route behind the same guard", () => {
+    // The BTC/USDT switches post to PATCH /assets, validated by the asset schema
+    // and served by the config service's per-asset setter. The router mounts it
+    // under the shared admin.use(authenticate, requireSuperAdmin, ...) guard.
+    expect(routeSource).toContain('admin.patch("/assets"');
+    expect(routeSource).toContain("BlockonomicsAdminAssetToggleSchema");
+    expect(routeSource).toContain("BlockonomicsConfigService.setAssetEnabled");
+  });
+
   it("validates secret rotation input without ever accepting a short callback secret", () => {
     const settings = { enabled: true, testMode: true, matchCallback: "payments.example.test", supportedAssets: ["BTC"], quoteExpiryMinutes: 15, requiredConfirmations: 2 };
     expect(BlockonomicsAdminConfigUpdateSchema.safeParse({ apiKey: "provider-api-key", callbackSecret: "short", settings }).success).toBe(false);

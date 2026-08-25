@@ -10,7 +10,7 @@ import { logger } from "../config/logger.js";
 import { Metrics } from "../observability/metrics.js";
 import { decryptString, encryptString, isEncryptedBlob, type EncryptedBlob } from "../security/encryption.js";
 import { AppError } from "../utils/result.js";
-import { BlockonomicsProviderSettingsSchema, type BlockonomicsAsset, type BlockonomicsProviderSettings } from "@windels/shared/payments";
+import { BlockonomicsProviderSettingsSchema, toggleBlockonomicsAsset, type BlockonomicsAsset, type BlockonomicsProviderSettings } from "@windels/shared/payments";
 import type { Prisma } from "@prisma/client";
 
 const PROVIDER = "blockonomics";
@@ -177,6 +177,28 @@ export const BlockonomicsConfigService = {
       testMode: current.testMode,
       matchCallback: current.matchCallback,
       supportedAssets: current.supportedAssets,
+      quoteExpiryMinutes: current.quoteExpiryMinutes,
+      requiredConfirmations: 2,
+    });
+    return this.upsert({ settings }, actorId);
+  },
+
+  /**
+   * Flip a single settlement asset (BTC or USDT) on or off. This backs the
+   * Super Admin per-method ON/OFF switches: BTC and USDT are controlled
+   * independently, and turning both off is a valid state that leaves the
+   * provider configured but offers no cryptocurrency payment method to users.
+   * The change is persisted through `upsert`, so it is audit-logged and
+   * versioned like any other configuration write.
+   */
+  async setAssetEnabled(asset: BlockonomicsAsset, enabled: boolean, actorId: string): Promise<BlockonomicsPublicConfig> {
+    const current = await this.public();
+    const supportedAssets = toggleBlockonomicsAsset(current.supportedAssets, asset, enabled);
+    const settings = BlockonomicsProviderSettingsSchema.parse({
+      enabled: current.enabled,
+      testMode: current.testMode,
+      matchCallback: current.matchCallback,
+      supportedAssets,
       quoteExpiryMinutes: current.quoteExpiryMinutes,
       requiredConfirmations: 2,
     });

@@ -3,7 +3,7 @@ import { Router } from "express";
 import { authenticate, requireSuperAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { rateLimit } from "../middleware/rateLimit.js";
-import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
+import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsAdminAssetToggleSchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
 import { BlockonomicsConfigService } from "../../payments/blockonomics.service.js";
 import { BlockonomicsAdminService } from "../../payments/blockonomicsAdmin.service.js";
 import { BlockonomicsReconciliationService } from "../../payments/blockonomicsReconciliation.service.js";
@@ -28,6 +28,16 @@ export function registerBlockonomicsAdminRoutes(router: Router) {
   admin.patch("/enabled", validate({ body: BlockonomicsAdminToggleSchema }), async (req, res, next) => {
     try {
       const config = await BlockonomicsConfigService.setEnabled(req.body.enabled, req.user!.id);
+      res.json({ ok: true, data: config, meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  // Per-method ON/OFF switch. Enables/disables BTC or USDT independently; the
+  // two are never coupled, and turning both off is a valid "crypto unavailable"
+  // state. Super-admin only + audit-logged via the config service.
+  admin.patch("/assets", validate({ body: BlockonomicsAdminAssetToggleSchema }), async (req, res, next) => {
+    try {
+      const config = await BlockonomicsConfigService.setAssetEnabled(req.body.asset, req.body.enabled, req.user!.id);
       res.json({ ok: true, data: config, meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
