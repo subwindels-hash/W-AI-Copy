@@ -418,7 +418,9 @@
     "sharedTypes": "packages/shared/src/agentComm.ts (310 LOC)",
     "web": {
       "client": "apps/web/src/lib/agentComm.ts (128 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/agents/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1945,7 +1947,9 @@
     "sharedTypes": "packages/shared/src/payments.ts (243 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/blockonomicsAdmin.ts (24 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (17 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3049,7 +3053,10 @@
     "sharedTypes": "packages/shared/src/collaboration.ts (363 LOC)",
     "web": {
       "client": "apps/web/src/lib/collaboration.ts (73 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/canvas/ (1 file)",
+        "apps/web/src/pages/workflow/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4557,7 +4564,9 @@
     "sharedTypes": "packages/shared/src/developerPlatform.ts (265 LOC)",
     "web": {
       "client": "apps/web/src/lib/developerPlatform.ts (96 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/developerPortal/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5281,7 +5290,10 @@
     "sharedTypes": "packages/shared/src/engMetrics.ts (160 LOC, supplies SLOTier/ServiceMetric)",
     "web": {
       "client": "apps/web/src/lib/engineering.ts (46 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/events/ (1 file)",
+        "apps/web/src/pages/webhook/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [],
@@ -6165,7 +6177,9 @@
     "sharedTypes": "packages/shared/src/extensions.ts (278 LOC)",
     "web": {
       "client": "apps/web/src/lib/extensions.ts (70 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/plugins/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6403,7 +6417,9 @@
     "sharedTypes": "packages/shared/src/geoBilling.ts (157 LOC)",
     "web": {
       "client": "apps/web/src/lib/geoBilling.ts (115 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/billing/ (6 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7771,7 +7787,9 @@
     "sharedTypes": "packages/shared/src/languageLearning.ts (615 LOC)",
     "web": {
       "client": "apps/web/src/lib/languageLearning.ts (99 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/languages/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7882,7 +7900,9 @@
     "sharedTypes": "packages/shared/src/leadDiscovery.ts (452 LOC)",
     "web": {
       "client": "apps/web/src/lib/leadDiscovery.ts (192 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/leads/ (2 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8236,7 +8256,9 @@
     "sharedTypes": "packages/shared/src/lotteryIntelligence.ts (562 LOC)",
     "web": {
       "client": "apps/web/src/lib/lotteryIntelligence.ts (59 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/lottery/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9258,7 +9280,10 @@
     "sharedTypes": "packages/shared/src/moduleCenter.ts (152 LOC)",
     "web": {
       "client": "apps/web/src/lib/moduleCenter.ts (46 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/moduleRuntime/ (1 file)",
+        "apps/web/src/pages/modules/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9417,7 +9442,9 @@
     "sharedTypes": "packages/shared/src/musicGen.ts (97 LOC)",
     "web": {
       "client": "apps/web/src/lib/musicGen.ts (63 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/music/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9496,7 +9523,9 @@
     "sharedTypes": "packages/shared/src/musicVideo.ts (293 LOC)",
     "web": {
       "client": "apps/web/src/lib/musicVideo.ts (180 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/media/ (2 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10162,7 +10191,9 @@
     "sharedTypes": "packages/shared/src/payments.ts (243 LOC)",
     "web": {
       "client": "apps/web/src/lib/payments.ts (122 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/billing/ (6 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10873,7 +10904,9 @@
     "sharedTypes": "packages/shared/src/projectContinuity.ts (210 LOC)",
     "web": {
       "client": "apps/web/src/lib/projectContinuity.ts (75 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/projects/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12609,7 +12642,9 @@
     "sharedTypes": "packages/shared/src/sportsIntelligence.ts (676 LOC)",
     "web": {
       "client": "apps/web/src/lib/sportsIntelligence.ts (81 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/sports/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12982,7 +13017,9 @@
     "sharedTypes": "packages/shared/src/tradingIntel.ts (269 LOC)",
     "web": {
       "client": "apps/web/src/lib/tradingIntel.ts (69 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/trading/ (3 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13711,7 +13748,9 @@
     "sharedTypes": "packages/shared/src/video.ts (400 LOC, supplies VideoMusicTrack/VideoProject/VideoVoiceTrack)",
     "web": {
       "client": "apps/web/src/lib/video.ts (85 LOC, serves /video)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/video/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13820,6 +13859,7 @@
     "web": {
       "client": "apps/web/src/lib/videoTransform.ts (62 LOC)",
       "pages": [
+        "apps/web/src/pages/videoTransform/ (4 files)",
         "apps/web/src/pages/videoTransform/ (4 files)"
       ]
     },
@@ -13911,6 +13951,7 @@
     "web": {
       "client": "apps/web/src/lib/videoTransformer.ts (33 LOC)",
       "pages": [
+        "apps/web/src/pages/videoTransformer/ (1 file)",
         "apps/web/src/pages/videoTransformer/ (1 file)"
       ]
     },
