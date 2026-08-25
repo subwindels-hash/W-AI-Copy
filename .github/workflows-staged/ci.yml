@@ -89,8 +89,15 @@ jobs:
 
       - run: pnpm --filter @windels/shared build
 
-      - name: Run test suite
+      - name: Run API test suite
         run: pnpm --filter @windels/api test
+
+      # The web app has its own vitest project (happy-dom + Testing Library),
+      # separate from vite.config.ts. It covers the core API client, auth store,
+      # shared hooks, reusable UI primitives and the language workspace. Prisma
+      # is not needed here; the suite mocks fetch and uses jsdom-style globals.
+      - name: Run web test suite
+        run: pnpm --filter @windels/web test
 
   migrations:
     name: Migration replay & RLS enforcement
