@@ -6027,7 +6027,9 @@
     "sharedTypes": "packages/shared/src/expertsPlatform.ts (93 LOC)",
     "web": {
       "client": "apps/web/src/lib/expertsPlatform.ts (16 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/expertsPlatform/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [

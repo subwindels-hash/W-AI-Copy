@@ -128,6 +128,7 @@ const ReviewsPage = lazy(() => import("./pages/reviews/ReviewsPage").then((m) =>
 const BenchmarksPage = lazy(() => import("./pages/benchmarks/BenchmarksPage").then((m) => ({ default: m.BenchmarksPage })));
 const MlOpsPage = lazy(() => import("./pages/mlOps/MlOpsPage").then((m) => ({ default: m.MlOpsPage })));
 const GiftCardsPage = lazy(() => import("./pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
+const ExpertsPlatformPage = lazy(() => import("./pages/expertsPlatform/ExpertsPlatformPage").then((m) => ({ default: m.ExpertsPlatformPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -460,6 +461,7 @@ export const router = createBrowserRouter([
       { path: "benchmarks", element: withSuspense(<BenchmarksPage />) },
       { path: "ml-ops", element: withSuspense(<MlOpsPage />) },
       { path: "gift-cards", element: withSuspense(<GiftCardsPage />) },
+      { path: "experts", element: withSuspense(<ExpertsPlatformPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },
