@@ -122,6 +122,7 @@ const EducationPage = lazy(() => import("./pages/education/EducationPage").then(
 const ScientificPage = lazy(() => import("./pages/scientific/ScientificPage").then((m) => ({ default: m.ScientificPage })));
 const UniversityEnginePage = lazy(() => import("./pages/universityEngine/UniversityEnginePage").then((m) => ({ default: m.UniversityEnginePage })));
 const DisasterRecoveryPage = lazy(() => import("./pages/disasterRecovery/DisasterRecoveryPage").then((m) => ({ default: m.DisasterRecoveryPage })));
+const FinancialPage = lazy(() => import("./pages/financial/FinancialPage").then((m) => ({ default: m.FinancialPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -447,6 +448,7 @@ export const router = createBrowserRouter([
       { path: "licensing", element: withSuspense(<LicensingConsolePage />) },
       { path: "deployment", element: withSuspense(<DeploymentConsolePage />) },
       { path: "disaster-recovery", element: withSuspense(<DisasterRecoveryPage />) },
+      { path: "financial", element: withSuspense(<FinancialPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },
