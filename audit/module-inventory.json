@@ -637,7 +637,9 @@
     "sharedTypes": "packages/shared/src/aiCommerce.ts (623 LOC)",
     "web": {
       "client": "apps/web/src/lib/aiCommerce.ts (117 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/aiCommerce/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -827,7 +829,9 @@
     "sharedTypes": "packages/shared/src/aiEcosystem.ts (341 LOC)",
     "web": {
       "client": "apps/web/src/lib/aiEcosystem.ts (73 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/aiEcosystem/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2060,7 +2064,9 @@
     "sharedTypes": "packages/shared/src/brokerIntegration.ts (606 LOC)",
     "web": {
       "client": "apps/web/src/lib/brokerIntegration.ts (274 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/brokerIntegration/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3731,7 +3737,9 @@
     "sharedTypes": "packages/shared/src/coreIntegration.ts (31 LOC)",
     "web": {
       "client": "apps/web/src/lib/coreIntegration.ts (9 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/coreIntegration/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3911,7 +3919,9 @@
     "sharedTypes": "packages/shared/src/cryptoIntelligence.ts (165 LOC)",
     "web": {
       "client": "apps/web/src/lib/cryptoIntelligence.ts (27 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cryptoIntelligence/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6546,7 +6556,9 @@
     "sharedTypes": "packages/shared/src/githubConnector.ts (94 LOC)",
     "web": {
       "client": "apps/web/src/lib/githubConnector.ts (20 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/githubConnector/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [

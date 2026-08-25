@@ -141,6 +141,12 @@ const QaPage = lazy(() => import("./pages/qa/QaPage").then((m) => ({ default: m.
 const ReleasePage = lazy(() => import("./pages/release/ReleasePage").then((m) => ({ default: m.ReleasePage })));
 const ProgramPage = lazy(() => import("./pages/program/ProgramPage").then((m) => ({ default: m.ProgramPage })));
 const DevportalPage = lazy(() => import("./pages/devportal/DevportalPage").then((m) => ({ default: m.DevportalPage })));
+const AiCommercePage = lazy(() => import("./pages/aiCommerce/AiCommercePage").then((m) => ({ default: m.AiCommercePage })));
+const AiEcosystemPage = lazy(() => import("./pages/aiEcosystem/AiEcosystemPage").then((m) => ({ default: m.AiEcosystemPage })));
+const BrokerIntegrationPage = lazy(() => import("./pages/brokerIntegration/BrokerIntegrationPage").then((m) => ({ default: m.BrokerIntegrationPage })));
+const CryptoIntelligencePage = lazy(() => import("./pages/cryptoIntelligence/CryptoIntelligencePage").then((m) => ({ default: m.CryptoIntelligencePage })));
+const CoreIntegrationPage = lazy(() => import("./pages/coreIntegration/CoreIntegrationPage").then((m) => ({ default: m.CoreIntegrationPage })));
+const GithubConnectorPage = lazy(() => import("./pages/githubConnector/GithubConnectorPage").then((m) => ({ default: m.GithubConnectorPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -486,6 +492,12 @@ export const router = createBrowserRouter([
       { path: "releases", element: withSuspense(<ReleasePage />) },
       { path: "program", element: withSuspense(<ProgramPage />) },
       { path: "dev-portal-tools", element: withSuspense(<DevportalPage />) },
+      { path: "ai-commerce", element: withSuspense(<AiCommercePage />) },
+      { path: "ai-ecosystem", element: withSuspense(<AiEcosystemPage />) },
+      { path: "broker-integration", element: withSuspense(<BrokerIntegrationPage />) },
+      { path: "crypto-intel", element: withSuspense(<CryptoIntelligencePage />) },
+      { path: "core-integration", element: withSuspense(<CoreIntegrationPage />) },
+      { path: "github-connector", element: withSuspense(<GithubConnectorPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },

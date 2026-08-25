@@ -93,6 +93,9 @@ import {
   UserCheck,
   ArrowDownToLine,
   Rocket,
+  ShoppingCart,
+  LineChart,
+  Link2,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSitePublic } from "@/lib/useSitePublic";
@@ -199,6 +202,12 @@ const navItems = [
   { to: "/app/releases", icon: Rocket, label: "Releases" },
   { to: "/app/program", icon: ClipboardList, label: "Program Management" },
   { to: "/app/dev-portal-tools", icon: Code2, label: "Dev Portal (SDK/CLI)" },
+  { to: "/app/ai-commerce", icon: ShoppingCart, label: "AI Commerce" },
+  { to: "/app/ai-ecosystem", icon: Boxes, label: "AI Ecosystem" },
+  { to: "/app/broker-integration", icon: LineChart, label: "Broker Integration" },
+  { to: "/app/crypto-intel", icon: Bitcoin, label: "Crypto Intelligence" },
+  { to: "/app/core-integration", icon: Link2, label: "Core Integration" },
+  { to: "/app/github-connector", icon: Github, label: "GitHub Connector" },
   { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },
