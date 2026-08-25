@@ -17,10 +17,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
 import { Textarea } from "@/components/ui/Textarea";
+import { ContactMap } from "@/components/site/ContactMap";
+import { pageCopy, useSitePublic } from "@/lib/useSitePublic";
 
 interface ChatMsg { role: "user" | "ai"; content: string }
 
 export function ContactPage() {
+  const site = useSitePublic();
+  const page = pageCopy(site, "/contact");
   const user = useAuthStore((s) => s.user);
   const [mode, setMode] = useState<"chat" | "form">("chat");
 
@@ -212,6 +216,7 @@ export function ContactPage() {
           </CardContent>
         </Card>
       </div>
+      <ContactMap map={site.map} />
     </div>
   );
 }

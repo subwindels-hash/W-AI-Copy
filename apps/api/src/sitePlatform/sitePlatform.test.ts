@@ -22,6 +22,7 @@ vi.mock("../services/ai/registry.js", () => ({
     hasRealModelConfigured: () => false,
     providerHealth: () => [],
     complete: async () => { throw new Error("not configured"); },
+    applyDashboardProvider: () => {},
   },
 }));
 vi.mock("../emailIntel/smtp.client.js", () => ({
@@ -90,6 +91,53 @@ describe("SMTP", () => {
     expect(test.ok).toBe(false);
     expect(test.sent).toBe(false);
     expect(test.error || test.reason).toBeTruthy();
+  });
+});
+
+describe("Brand, pages, reviews, map", () => {
+  it("applies Super Admin brand and page edits to the public payload", async () => {
+    await SitePlatformService.updateBrand({ logo: "/uploads/logo.png", chatName: "WINDELS Guide" }, "sa");
+    await SitePlatformService.upsertPageContent({
+      path: "/about", title: "About us", lead: "Edited lead", body: "Edited body", image: "/brand/workforce-hero.png", enabled: true,
+    }, "sa");
+    const site = await SitePlatformService.publicSite();
+    expect(site.brand.logo).toBe("/uploads/logo.png");
+    expect(site.brand.chatName).toBe("WINDELS Guide");
+    expect(site.pages.find((p) => p.path === "/about")?.lead).toBe("Edited lead");
+    expect(JSON.stringify(site)).not.toMatch(/password|apiKeyEnc|secret/i);
+  });
+
+  it("keeps reviews illustrative and hides the map until coordinates are set", async () => {
+    await SitePlatformService.saveReviews({
+      reviews: [{ name: "Ada", title: "Illustrative reviewer", quote: "This is a product-story quote, not a verified customer.", image: "/reviews/reviewer-1.png" }],
+    }, "sa");
+    const reviews = await SitePlatformService.getReviews();
+    expect(reviews[0]?.illustrative).toBe(true);
+    const map = await SitePlatformService.updateMap({ enabled: true, label: "Office" }, "sa");
+    expect(map.enabled).toBe(true);
+    expect(map.lat).toBeNull();
+    const summary = await SitePlatformService.controlSummary();
+    expect(summary.mapEnabled).toBe(false);
+    await SitePlatformService.updateMap({ lat: 9.0765, lng: 7.3986, city: "Abuja", country: "Nigeria" }, "sa");
+    expect((await SitePlatformService.controlSummary()).mapEnabled).toBe(true);
+  });
+});
+
+describe("Platform APIs", () => {
+  it("never returns a stored API key and supports add/remove", async () => {
+    const listed = await SitePlatformService.upsertApi({
+      slot: "openai", enabled: true, apiKey: "sk-super-secret-test-key",
+    }, "sa");
+    expect(JSON.stringify(listed)).not.toContain("sk-super-secret-test-key");
+    expect(listed.find((a) => a.slot === "openai")?.keySet).toBe(true);
+    const custom = await SitePlatformService.upsertApi({
+      slot: "custom-maps", label: "Internal geo", category: "custom", enabled: true, baseUrl: "https://geo.example.com", apiKey: "geo-secret",
+    }, "sa");
+    const row = custom.find((a) => a.label === "Internal geo");
+    expect(row?.removable).toBe(true);
+    expect(JSON.stringify(custom)).not.toContain("geo-secret");
+    const after = await SitePlatformService.removeApi(row!.id, "sa");
+    expect(after.some((a) => a.id === row!.id)).toBe(false);
   });
 });
 

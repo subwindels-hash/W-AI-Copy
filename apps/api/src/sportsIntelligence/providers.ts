@@ -11,6 +11,7 @@
  */
 
 import { env } from "../config/env.js";
+import { resolvePlatformApi } from "../sitePlatform/platformApis.runtime.js";
 import type {
   SiDataClass,
   SiInjuryNote,
@@ -328,12 +329,28 @@ function o(
   };
 }
 
+function footballCreds() {
+  return resolvePlatformApi(
+    "sports-football",
+    "WINDELS_SPORTS_API_FOOTBALL_KEY",
+    env.WINDELS_SPORTS_API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io",
+  );
+}
+
+function oddsCreds() {
+  return resolvePlatformApi(
+    "sports-odds",
+    "WINDELS_SPORTS_ODDS_API_KEY",
+    env.WINDELS_SPORTS_ODDS_API_BASE_URL ?? "https://api.the-odds-api.com/v4",
+  );
+}
+
 function apiFootballConfigured(): boolean {
-  return Boolean(env.WINDELS_SPORTS_API_FOOTBALL_KEY);
+  return footballCreds().configured;
 }
 
 function oddsApiConfigured(): boolean {
-  return Boolean(env.WINDELS_SPORTS_ODDS_API_KEY);
+  return oddsCreds().configured;
 }
 
 export const ApiFootballProvider: SportsProvider = {
@@ -345,11 +362,12 @@ export const ApiFootballProvider: SportsProvider = {
     if (!this.configured()) {
       return snapshotHealth({
         providerId: this.id, name: this.name, status: "NOT_CONFIGURED", available: false,
-        lastError: "WINDELS_SPORTS_API_FOOTBALL_KEY is not set",
+        lastError: "API-Football is not configured (dashboard or WINDELS_SPORTS_API_FOOTBALL_KEY)",
       });
     }
-    const base = env.WINDELS_SPORTS_API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
-    const res = await httpGet(`${base}/status`, { "x-apisports-key": env.WINDELS_SPORTS_API_FOOTBALL_KEY! });
+    const creds = footballCreds();
+    const base = creds.baseUrl ?? "https://v3.football.api-sports.io";
+    const res = await httpGet(`${base}/status`, { "x-apisports-key": creds.apiKey! });
     const status = res.status === 0 ? "OFFLINE" : classifyHttp(res.status, res.body);
     return snapshotHealth({
       providerId: this.id, name: this.name, status, available: status === "ONLINE" || status === "DEGRADED",
@@ -363,13 +381,14 @@ export const ApiFootballProvider: SportsProvider = {
     const started = Date.now();
     if (!this.configured()) {
       snapshotHealth({ providerId: this.id, name: this.name, status: "NOT_CONFIGURED", available: false, lastError: "API key missing" });
-      return emptySync("NOT_CONFIGURED", "API-Football is not configured. Set WINDELS_SPORTS_API_FOOTBALL_KEY.", Date.now() - started);
+      return emptySync("NOT_CONFIGURED", "API-Football is not configured. Add the key in Super Admin → APIs or set WINDELS_SPORTS_API_FOOTBALL_KEY.", Date.now() - started);
     }
-    const base = env.WINDELS_SPORTS_API_FOOTBALL_BASE_URL ?? "https://v3.football.api-sports.io";
+    const creds = footballCreds();
+    const base = creds.baseUrl ?? "https://v3.football.api-sports.io";
     const from = window.from.toISOString().slice(0, 10);
     const to = window.to.toISOString().slice(0, 10);
     const res = await httpGet(`${base}/fixtures?from=${from}&to=${to}`, {
-      "x-apisports-key": env.WINDELS_SPORTS_API_FOOTBALL_KEY!,
+      "x-apisports-key": creds.apiKey!,
     });
     const status = res.status === 0 ? "OFFLINE" : classifyHttp(res.status, res.body);
     if (status !== "ONLINE") {
@@ -466,11 +485,12 @@ export const TheOddsApiProvider: SportsProvider = {
     if (!this.configured()) {
       return snapshotHealth({
         providerId: this.id, name: this.name, status: "NOT_CONFIGURED", available: false,
-        lastError: "WINDELS_SPORTS_ODDS_API_KEY is not set",
+        lastError: "The Odds API is not configured (dashboard or WINDELS_SPORTS_ODDS_API_KEY)",
       });
     }
-    const base = env.WINDELS_SPORTS_ODDS_API_BASE_URL ?? "https://api.the-odds-api.com/v4";
-    const res = await httpGet(`${base}/sports/?apiKey=${encodeURIComponent(env.WINDELS_SPORTS_ODDS_API_KEY!)}`, {});
+    const creds = oddsCreds();
+    const base = creds.baseUrl ?? "https://api.the-odds-api.com/v4";
+    const res = await httpGet(`${base}/sports/?apiKey=${encodeURIComponent(creds.apiKey!)}`, {});
     const status = res.status === 0 ? "OFFLINE" : classifyHttp(res.status, res.body);
     return snapshotHealth({
       providerId: this.id, name: this.name, status, available: status === "ONLINE",
@@ -483,12 +503,13 @@ export const TheOddsApiProvider: SportsProvider = {
   async syncFixtures(_org, _window) {
     const started = Date.now();
     if (!this.configured()) {
-      return emptySync("NOT_CONFIGURED", "The Odds API is not configured. Set WINDELS_SPORTS_ODDS_API_KEY.", Date.now() - started);
+      return emptySync("NOT_CONFIGURED", "The Odds API is not configured. Add the key in Super Admin → APIs or set WINDELS_SPORTS_ODDS_API_KEY.", Date.now() - started);
     }
-    const base = env.WINDELS_SPORTS_ODDS_API_BASE_URL ?? "https://api.the-odds-api.com/v4";
+    const creds = oddsCreds();
+    const base = creds.baseUrl ?? "https://api.the-odds-api.com/v4";
     const sport = env.WINDELS_SPORTS_ODDS_SPORT ?? "soccer_epl";
     const res = await httpGet(
-      `${base}/sports/${encodeURIComponent(sport)}/odds/?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${encodeURIComponent(env.WINDELS_SPORTS_ODDS_API_KEY!)}`,
+      `${base}/sports/${encodeURIComponent(sport)}/odds/?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${encodeURIComponent(creds.apiKey!)}`,
       {},
     );
     const status = res.status === 0 ? "OFFLINE" : classifyHttp(res.status, res.body);
@@ -543,10 +564,11 @@ export const TheOddsApiProvider: SportsProvider = {
   async syncOdds(_org, fixtures) {
     const started = Date.now();
     if (!this.configured()) return emptySync("NOT_CONFIGURED", "The Odds API is not configured.", Date.now() - started);
-    const base = env.WINDELS_SPORTS_ODDS_API_BASE_URL ?? "https://api.the-odds-api.com/v4";
+    const creds = oddsCreds();
+    const base = creds.baseUrl ?? "https://api.the-odds-api.com/v4";
     const sport = env.WINDELS_SPORTS_ODDS_SPORT ?? "soccer_epl";
     const res = await httpGet(
-      `${base}/sports/${encodeURIComponent(sport)}/odds/?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${encodeURIComponent(env.WINDELS_SPORTS_ODDS_API_KEY!)}`,
+      `${base}/sports/${encodeURIComponent(sport)}/odds/?regions=eu&markets=h2h,totals&oddsFormat=decimal&apiKey=${encodeURIComponent(creds.apiKey!)}`,
       {},
     );
     const status = res.status === 0 ? "OFFLINE" : classifyHttp(res.status, res.body);

@@ -1,11 +1,15 @@
 import { useEffect, useRef, useState } from "react";
 import { useLocation } from "react-router-dom";
 import { siteApi, type SpChatReply } from "@/lib/sitePlatform";
+import { useSitePublic } from "@/lib/useSitePublic";
 
 const APP_PREFIXES = ["/app", "/admin", "/platform", "/m", "/d"];
 
 export function VisitorChat() {
   const loc = useLocation();
+  const site = useSitePublic();
+  const avatar = site.brand.chatAvatar;
+  const fallback = site.brand.chatAvatarFallback;
   const hidden = APP_PREFIXES.some((p) => loc.pathname === p || loc.pathname.startsWith(`${p}/`));
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
@@ -56,11 +60,11 @@ export function VisitorChat() {
         <div className="w-[min(22rem,calc(100vw-2rem))] overflow-hidden rounded-2xl border border-white/15 bg-bg-elevated shadow-2xl">
           <div className="flex items-center gap-3 border-b border-white/10 bg-bg-dark px-3 py-2">
             <div className="relative">
-              <img src="/brand/ai-assistant-avatar.png" alt="" className="h-10 w-10 rounded-full object-cover bg-navy-deep" onError={(e) => { (e.currentTarget as HTMLImageElement).src = "/brand/ai-assistant-fallback.png"; }} />
+              <img src={avatar} alt="" className="h-10 w-10 rounded-full object-cover bg-navy-deep" onError={(e) => { (e.currentTarget as HTMLImageElement).src = fallback; }} />
               <span className="absolute -right-0.5 -bottom-0.5 h-2.5 w-2.5 rounded-full bg-emerald ring-2 ring-bg-dark" />
             </div>
             <div className="min-w-0 flex-1">
-              <div className="text-sm font-semibold text-text-bright">WINDELS AI Assistant</div>
+              <div className="text-sm font-semibold text-text-bright">{site.brand.chatName}</div>
               <div className="truncate text-[11px] text-text-muted">{healthNote ?? "Ask about the product, pricing, or how to sign in."}</div>
             </div>
             <button className="text-text-muted hover:text-white" onClick={() => setOpen(false)} aria-label="Close chat">✕</button>

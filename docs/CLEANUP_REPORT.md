@@ -30,3 +30,11 @@ and deployment).
   same `aiRegistry` — it is not a second model stack.
 - Email Intel SMTP client remains the wire protocol. `EmailService` is the
   single application sender (auth reset + contact + test).
+
+## SUPER ADMIN CONTROL (follow-up)
+- Public brand, page copy, reviews, contact map, image slots, and platform API
+  credentials are stored under `sp:brand`, `sp:content`, `sp:reviews`, `sp:map`,
+  `sp:images`, `sp:apis`, `sp:media:*` (platform_global).
+- Super Admin dashboard (`/platform` and `/platform/site`) is the editor.
+  Developer marketplace products stay at `/admin/api-platform`.
+- No session modules were flattened or deleted.

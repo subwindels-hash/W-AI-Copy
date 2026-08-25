@@ -88,6 +88,7 @@ import {
   ClipboardCheck,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
+import { useSitePublic } from "@/lib/useSitePublic";
 
 const navItems = [
   { to: "/app", icon: LayoutDashboard, label: "Dashboard", end: true },
@@ -207,7 +208,7 @@ const navItems = [
   { to: "/app/publishing", icon: Megaphone, label: "Publishing" },
   { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
-  { to: "/platform/site", icon: Globe2, label: "Site & SMTP" },
+  { to: "/platform/site", icon: Globe2, label: "Site control" },
   { to: "/admin/modules", icon: Blocks, label: "Module & Plugin Center" },
   { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/platform/blockonomics", icon: Bitcoin, label: "Blockonomics Control" },
@@ -218,6 +219,7 @@ const navItems = [
 ];
 
 export function Sidebar({ collapsed }: { collapsed: boolean }) {
+  const site = useSitePublic();
   const [runtimeModules, setRuntimeModules] = useState<ModuleRuntimeRegistration[]>([]);
   useEffect(() => { void moduleRuntimeApi.registrations().then(setRuntimeModules).catch(() => setRuntimeModules([])); }, []);
   const runtimeItems = runtimeModules.flatMap((module) => module.frontend.navigation.map((item) => ({
@@ -234,7 +236,7 @@ export function Sidebar({ collapsed }: { collapsed: boolean }) {
     >
       {/* Logo */}
       <div className="h-14 flex items-center gap-2 px-4 border-b border-white/5">
-        <img src="/brand/logo-icon.png" alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
+        <img src={site.brand.logo} alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
         {!collapsed && (
           <div className="flex flex-col leading-tight">
             <span className="text-sm font-semibold text-text-bright tracking-tight">WINDELS</span>

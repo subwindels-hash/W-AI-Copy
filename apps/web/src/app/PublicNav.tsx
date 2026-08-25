@@ -1,6 +1,7 @@
 import { Link, NavLink } from "react-router-dom";
 import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
+import { useSitePublic } from "@/lib/useSitePublic";
 
 const links = [
   { to: "/about", label: "About" },
@@ -14,11 +15,12 @@ const links = [
 ];
 
 export function PublicNav() {
+  const site = useSitePublic();
   return (
     <header className="sticky top-0 z-40 border-b border-white/5 bg-bg-dark/80 backdrop-blur-xl app-sticky-top">
       <div className="max-w-7xl mx-auto px-6 h-16 flex items-center gap-6">
         <Link to="/" className="flex items-center gap-2">
-          <img src="/brand/logo-icon.png" alt="WINDELS" className="h-9 w-9 rounded-lg object-cover" />
+          <img src={site.brand.logo} alt="WINDELS" className="h-9 w-9 rounded-lg object-cover" />
           <div className="leading-tight">
             <div className="text-sm font-semibold text-text-bright tracking-tight">WINDELS</div>
             <div className="text-[10px] uppercase tracking-widest text-text-muted">AI OS</div>

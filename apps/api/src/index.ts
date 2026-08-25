@@ -40,6 +40,13 @@ async function main() {
     Metrics.gauge("process.uptime_seconds", 0);
     // Seed RBAC baseline.
     await ensureRolePermissions().catch((e) => logger.warn("role permission seed failed", { err: e }));
+    try {
+      const { SitePlatformService } = await import("./sitePlatform/sitePlatform.service.js");
+      await SitePlatformService.hydrateApiOverlay();
+      logger.info("site platform API overlay hydrated");
+    } catch (e) {
+      logger.warn("site platform overlay hydrate failed", { err: e });
+    }
 
     // ── Row-Level Security enforceability check ──
     // Tenant-isolation policies are silently inert when the application

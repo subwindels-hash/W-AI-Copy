@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Card, CardContent } from "@/components/ui/Card";
 import { Bot, BookOpen, GitBranch, Lock, MessageCircle, ShieldCheck, Users, Workflow } from "lucide-react";
+import { pageCopy, siteImage, useSitePublic } from "@/lib/useSitePublic";
 
 function Page({ eyebrow, title, lead, children, cta }: { eyebrow: string; title: string; lead: string; children: React.ReactNode; cta?: boolean }) {
   return (
@@ -24,15 +25,18 @@ function Page({ eyebrow, title, lead, children, cta }: { eyebrow: string; title:
 }
 
 export function AboutPage() {
+  const site = useSitePublic();
+  const p = pageCopy(site, "/about");
   return (
-    <Page eyebrow="About" title="The operating system for AI workforces" lead="WINDELS AI OS is a multi-tenant platform for building, governing, and operating AI agents — not a single chatbot bolted onto a website." cta>
-      <p className="text-text-main">The product already includes Workforce Hub, Chat, Talk, Flow, Canvas, Language Learning, billing, audit, and organization-scoped data isolation. This public site is the front door to that same system.</p>
-      <img src="/brand/workforce-hero.png" alt="WINDELS AI Workforce command environment" className="w-full rounded-2xl border border-white/10 object-cover aspect-[16/8]" />
+    <Page eyebrow="About" title={p.title} lead={p.lead} cta>
+      {p.body ? <p className="text-text-main whitespace-pre-wrap">{p.body}</p> : <p className="text-text-main">The product already includes Workforce Hub, Chat, Talk, Flow, Canvas, Language Learning, billing, audit, and organization-scoped data isolation. This public site is the front door to that same system.</p>}
+      <img src={p.image || site.brand.workforceHero} alt="WINDELS AI Workforce command environment" className="w-full rounded-2xl border border-white/10 object-cover aspect-[16/8]" />
     </Page>
   );
 }
 
 export function FeaturesPage() {
+  const p = pageCopy(useSitePublic(), "/features");
   const items = [
     { icon: Users, title: "AI Workforce", desc: "Deploy agents with prompts, memory, tools, and an audit trail." },
     { icon: MessageCircle, title: "Chat & Talk", desc: "Multi-model conversations and team channels on the same identity system." },
@@ -42,7 +46,7 @@ export function FeaturesPage() {
     { icon: Lock, title: "Security", desc: "JWT auth, encrypted secrets, CSRF on cookie sessions, rate limits." },
   ];
   return (
-    <Page eyebrow="Features" title="What ships in the platform" lead="These are live modules in WINDELS, not a marketing wishlist." cta>
+    <Page eyebrow="Features" title={p.title} lead={p.lead} cta>
       <div className="grid gap-4 md:grid-cols-2">
         {items.map((it) => (
           <Card key={it.title}><CardContent className="p-5">
@@ -57,22 +61,27 @@ export function FeaturesPage() {
 }
 
 export function WorkforcePage() {
+  const site = useSitePublic();
+  const p = pageCopy(site, "/workforce");
   return (
-    <Page eyebrow="AI Workforce" title="Specialized agents, one organization" lead="Workforce Hub is where your organization assigns agents, memory, and tools. Access requires a signed-in workspace." cta>
-      <p className="text-text-main">After you register, open Workforce Hub at /app/workforce. Agents are organization-scoped. They do not share another tenant’s conversations or files.</p>
+    <Page eyebrow="AI Workforce" title={p.title} lead={p.lead} cta>
+      {p.body ? <p className="text-text-main whitespace-pre-wrap">{p.body}</p> : <p className="text-text-main">After you register, open Workforce Hub at /app/workforce. Agents are organization-scoped. They do not share another tenant’s conversations or files.</p>}
+      {p.image ? <img src={p.image} alt="" className="w-full rounded-2xl border border-white/10 object-cover aspect-[16/8]" /> : null}
     </Page>
   );
 }
 
 export function AgentsPage() {
+  const site = useSitePublic();
+  const p = pageCopy(site, "/agents");
   const roles = [
-    { name: "Ava", role: "Strategist", img: "/avatars/agent-1-strategist.png" },
-    { name: "Leo", role: "Engineer", img: "/avatars/agent-2-engineer.png" },
-    { name: "Maya", role: "Analyst", img: "/avatars/agent-3-analyst.png" },
-    { name: "Sofia", role: "Support", img: "/avatars/agent-5-support.png" },
+    { name: "Ava", role: "Strategist", img: siteImage(site, "agent-1") },
+    { name: "Leo", role: "Engineer", img: siteImage(site, "agent-2") },
+    { name: "Maya", role: "Analyst", img: siteImage(site, "agent-3") },
+    { name: "Sofia", role: "Support", img: siteImage(site, "agent-5") },
   ];
   return (
-    <Page eyebrow="AI Agents" title="Agent roles you can deploy" lead="These portraits are product illustrations of built-in roles, not photographs of customers." cta>
+    <Page eyebrow="AI Agents" title={p.title} lead={p.lead} cta>
       <div className="grid grid-cols-2 gap-6 md:grid-cols-4">
         {roles.map((a) => (
           <div key={a.name} className="text-center">
@@ -87,8 +96,9 @@ export function AgentsPage() {
 }
 
 export function SolutionsPage() {
+  const p = pageCopy(useSitePublic(), "/solutions");
   return (
-    <Page eyebrow="Solutions" title="Where teams use WINDELS" lead="The same platform covers operations, support, and learning — with server-side authorization on every module." cta>
+    <Page eyebrow="Solutions" title={p.title} lead={p.lead} cta>
       <ul className="list-disc space-y-2 pl-5 text-text-main">
         <li>Operations: workflows, helpdesk, CRM, and audit in one org.</li>
         <li>Support: Talk, contact center, and the public assistant that routes to /contact.</li>
@@ -99,6 +109,7 @@ export function SolutionsPage() {
 }
 
 export function HowItWorksPage() {
+  const p = pageCopy(useSitePublic(), "/how-it-works");
   const steps = [
     { n: "1", t: "Create an organization", d: "Register at /auth/register. The first user on a fresh install is Super Admin." },
     { n: "2", t: "Sign in", d: "JWT sessions, optional MFA, password reset through the centralized email service." },
@@ -106,7 +117,7 @@ export function HowItWorksPage() {
     { n: "4", t: "Govern", d: "Admins manage users in their org. Super Admins manage roles, SEO, SMTP, and announcements." },
   ];
   return (
-    <Page eyebrow="How it works" title="From sign-up to a governed workforce" lead="Four steps. No invented onboarding metrics." cta>
+    <Page eyebrow="How it works" title={p.title} lead={p.lead} cta>
       <div className="grid gap-4 md:grid-cols-2">
         {steps.map((s) => (
           <Card key={s.n}><CardContent className="p-5">
@@ -128,7 +139,7 @@ export function FaqPage() {
     { q: "How do I contact you?", a: "Use /contact or the assistant. Support email is sent through the active SMTP provider." },
   ];
   return (
-    <Page eyebrow="FAQ" title="Common questions" lead="Answers match the running software.">
+    <Page eyebrow="FAQ" title={pageCopy(useSitePublic(), "/faq").title} lead={pageCopy(useSitePublic(), "/faq").lead}>
       <div className="divide-y divide-white/10 rounded-xl border border-white/10">
         {faqs.map((f) => (
           <details key={f.q} className="p-5">
@@ -143,7 +154,7 @@ export function FaqPage() {
 
 export function HelpPage() {
   return (
-    <Page eyebrow="Help" title="Help center" lead="Start here, then sign in for product docs and support tickets.">
+    <Page eyebrow="Help" title={pageCopy(useSitePublic(), "/help").title} lead={pageCopy(useSitePublic(), "/help").lead}>
       <div className="grid gap-4 md:grid-cols-3">
         <Card><CardContent className="p-5"><Bot className="mb-2 h-5 w-5 text-azure" /><div className="font-semibold text-text-bright">Ask the assistant</div><p className="text-sm text-text-muted">Use the chat button on the right of public pages.</p></CardContent></Card>
         <Card><CardContent className="p-5"><GitBranch className="mb-2 h-5 w-5 text-azure" /><div className="font-semibold text-text-bright">Docs</div><p className="text-sm text-text-muted"><Link to="/docs" className="text-azure">Product documentation</Link></p></CardContent></Card>

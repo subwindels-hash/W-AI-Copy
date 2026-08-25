@@ -1,31 +1,45 @@
+import { useEffect, useState } from "react";
 import { Card, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Activity, Server, Database, Cpu, Globe } from "lucide-react";
+import { Activity, Mail, MessageCircle, Globe, KeyRound, MapPin } from "lucide-react";
+import { siteAdminApi, type SpControlSummary } from "@/lib/sitePlatform";
+import { SiteControlPage } from "@/pages/admin/SiteControlPage";
 
 export function SuperAdminDashboard() {
+  const [sum, setSum] = useState<SpControlSummary | null>(null);
+  const [err, setErr] = useState<string | null>(null);
+  useEffect(() => {
+    void siteAdminApi.summary().then(setSum).catch((e) => setErr(e instanceof Error ? e.message : String(e)));
+  }, []);
+
   return (
     <div className="space-y-6">
       <div>
-        <Badge variant="crimson" className="mb-2"><Activity className="h-3 w-3 mr-1" /> Super Admin</Badge>
+        <Badge variant="crimson" className="mb-2"><Activity className="mr-1 h-3 w-3" /> Super Admin</Badge>
         <h1 className="text-2xl font-bold text-text-bright">Platform Control Plane</h1>
-        <p className="text-text-muted text-sm mt-1">Global platform health, tenants, and infrastructure.</p>
+        <p className="mt-1 text-sm text-text-muted">Every public-site and integration setting below is enforced on the API. Stats are live reads, not placeholders.</p>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Card><IconStat icon={<Server className="h-5 w-5" />} label="API" value="Online" tint="emerald" /></Card>
-        <Card><IconStat icon={<Database className="h-5 w-5" />} label="Database" value="Healthy" tint="emerald" /></Card>
-        <Card><IconStat icon={<Cpu className="h-5 w-5" />} label="GPU Clusters" value="Provisioned" tint="azure" /></Card>
-        <Card><IconStat icon={<Globe className="h-5 w-5" />} label="Region" value="single" tint="violet" /></Card>
+      {err ? <div className="rounded-lg border border-crimson/30 bg-crimson/10 px-4 py-3 text-sm text-crimson">{err}</div> : null}
+
+      <div className="grid grid-cols-2 gap-4 md:grid-cols-3 lg:grid-cols-6">
+        <Card><IconStat icon={<Globe className="h-5 w-5" />} label="Announcement" value={sum ? (sum.announcementLive ? "Live" : "Off") : "…"} tint="azure" /></Card>
+        <Card><IconStat icon={<Mail className="h-5 w-5" />} label="SMTP" value={sum?.smtpConfigured ? (sum.smtpProvider ?? "set") : "Not set"} tint="emerald" /></Card>
+        <Card><IconStat icon={<KeyRound className="h-5 w-5" />} label="APIs configured" value={sum ? `${sum.apisConfigured}/${sum.apisTotal}` : "…"} tint="violet" /></Card>
+        <Card><IconStat icon={<MessageCircle className="h-5 w-5" />} label="Visitor chat" value={sum ? (sum.chatConfigured ? "Provider" : "Knowledge") : "…"} tint="azure" /></Card>
+        <Card><IconStat icon={<MapPin className="h-5 w-5" />} label="Contact map" value={sum ? (sum.mapEnabled ? "Pinned" : "Unset") : "…"} tint="emerald" /></Card>
+        <Card><IconStat icon={<Globe className="h-5 w-5" />} label="Editable pages" value={sum ? String(sum.pagesEditable) : "…"} tint="violet" /></Card>
       </div>
 
       <Card>
-        <CardTitle>Site control</CardTitle>
+        <CardTitle>Control center</CardTitle>
         <CardDescription>
-          Manage the public announcement ticker, SEO, dual SMTP, and administrator accounts.
-          Role changes are enforced on the API.
+          Change logo, favicon, chat avatar, page copy, review images, the contact map, and API keys from this dashboard.
+          Developer marketplace products remain at /admin/api-platform.
         </CardDescription>
-        <a href="/platform/site" className="mt-3 inline-block text-sm text-azure">Open site administration →</a>
       </Card>
+
+      <SiteControlPage embedded />
     </div>
   );
 }
@@ -38,7 +52,7 @@ function IconStat({ icon, label, value, tint }: { icon: React.ReactNode; label: 
   };
   return (
     <div>
-      <div className={`h-9 w-9 rounded-lg grid place-items-center ${tints[tint]} mb-3`}>{icon}</div>
+      <div className={`mb-3 grid h-9 w-9 place-items-center rounded-lg ${tints[tint]}`}>{icon}</div>
       <div className="text-lg font-bold text-text-bright">{value}</div>
       <div className="text-xs text-text-muted">{label}</div>
     </div>

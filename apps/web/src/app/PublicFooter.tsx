@@ -1,7 +1,9 @@
 import { Link } from "react-router-dom";
 import { GlobalBrandingFooter } from "./GlobalBrandingFooter";
+import { useSitePublic } from "@/lib/useSitePublic";
 
 export function PublicFooter() {
+  const site = useSitePublic();
   const cols = [
     {
       title: "Product",
@@ -36,7 +38,7 @@ export function PublicFooter() {
       <div className="max-w-7xl mx-auto px-6 py-12 grid grid-cols-2 md:grid-cols-5 gap-8">
         <div className="col-span-2">
           <div className="flex items-center gap-2">
-            <img src="/brand/logo-icon.png" alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
+            <img src={site.brand.logo} alt="WINDELS" className="h-8 w-8 rounded-lg object-cover" />
             <span className="font-semibold text-text-bright">WINDELS AI OS</span>
           </div>
           <p className="text-sm text-text-muted mt-3 max-w-sm">The enterprise operating system for AI workforces. Build, deploy, and govern intelligent agents across your organization.</p>

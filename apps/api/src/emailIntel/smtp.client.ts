@@ -217,7 +217,7 @@ export async function sendSmtp(opts: SmtpSendOptions): Promise<SmtpSendResult> {
         // 4. Optional AUTH PLAIN
         if (username && password) {
           currentSocket.write(
-            `AUTH PLAIN ${Buffer.from(`\u0000${username}\u0000${password}`, "utf8").toString("base64")}\r\n`,
+            `AUTH PLAIN ${Buffer.from(`\0${username}\0${password}`, "utf8").toString("base64")}\r\n`,
           );
           try {
             await expectCode(() => reader.nextLine(), "235", "AUTH PLAIN");

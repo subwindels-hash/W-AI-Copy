@@ -8,12 +8,26 @@ import { Role as PrismaRole } from "@prisma/client";
 import type {
   SpAnnouncement,
   SpAnnouncementPatch,
+  SpApiCredentialPublic,
+  SpApiUpsertInput,
+  SpBrand,
+  SpBrandPatch,
   SpChatHealth,
   SpChatMessage,
   SpChatReply,
+  SpContactMap,
+  SpContactMapPatch,
+  SpControlSummary,
   SpCreateAdminInput,
+  SpMediaPublic,
+  SpMediaUploadInput,
+  SpPageContent,
+  SpPageContentInput,
   SpPageSeo,
   SpPageSeoInput,
+  SpPublicSite,
+  SpReview,
+  SpReviewsSaveInput,
   SpSeoPatch,
   SpSeoSettings,
   SpSmtpConfigPublic,
@@ -23,10 +37,17 @@ import type {
   SpSmtpTestResult,
 } from "@windels/shared/sitePlatform";
 import {
+  SP_API_CATALOG,
   SP_DEFAULT_ANNOUNCEMENT,
+  SP_DEFAULT_BRAND,
+  SP_DEFAULT_IMAGES,
+  SP_DEFAULT_MAP,
+  SP_DEFAULT_PAGES,
+  SP_DEFAULT_REVIEWS,
   SP_DEFAULT_SEO,
   SP_PUBLIC_PATHS,
 } from "@windels/shared/sitePlatform";
+import { replacePlatformApiOverlay, resolvePlatformApi, setPlatformApiOverlay } from "./platformApis.runtime.js";
 import { prisma } from "../db/client.js";
 import { env } from "../config/env.js";
 import { logger } from "../config/logger.js";
@@ -93,6 +114,59 @@ function defaultSmtp(): SmtpStored {
     ],
     updatedAt: "1970-01-01T00:00:00.000Z",
     updatedBy: null,
+  };
+}
+
+interface StoredApi {
+  id: string;
+  slot: string;
+  label: string;
+  category: SpApiCredentialPublic["category"];
+  enabled: boolean;
+  baseUrl: string | null;
+  apiKeyEnc: string | null;
+  note: string | null;
+  updatedAt: string;
+  updatedBy: string | null;
+}
+
+function safeDecrypt(enc: string): string | null {
+  try { return decrypt(enc); } catch { return null; }
+}
+
+function catalogEnvConfigured(slot: string): boolean {
+  switch (slot) {
+    case "openai": return Boolean(process.env.OPENAI_API_KEY);
+    case "anthropic": return Boolean(process.env.ANTHROPIC_API_KEY);
+    case "gemini": return Boolean(process.env.GEMINI_API_KEY);
+    case "ollama": return Boolean(process.env.OLLAMA_BASE_URL || process.env.OLLAMA_MODEL);
+    case "openai-compat": return Boolean(process.env.OPENAI_COMPAT_BASE_URL && process.env.OPENAI_COMPAT_API_KEY);
+    case "sports-football": return Boolean(process.env.WINDELS_SPORTS_API_FOOTBALL_KEY);
+    case "sports-odds": return Boolean(process.env.WINDELS_SPORTS_ODDS_API_KEY);
+    case "lottery-euromillions": return Boolean(process.env.WINDELS_LOTTERY_EUROMILLIONS_FEED_URL);
+    default: return false;
+  }
+}
+
+function publicApi(
+  slot: string,
+  rec: StoredApi | undefined,
+  cat: { slot: string; label: string; category: SpApiCredentialPublic["category"]; removable: boolean },
+  envFallback: boolean,
+): SpApiCredentialPublic {
+  return {
+    id: rec?.id ?? slot,
+    slot,
+    label: rec?.label ?? cat.label,
+    category: rec?.category ?? cat.category,
+    enabled: rec?.enabled ?? envFallback,
+    baseUrl: rec?.baseUrl ?? null,
+    keySet: Boolean(rec?.apiKeyEnc),
+    envFallback,
+    removable: rec ? !SP_API_CATALOG.some((c) => c.slot === rec.slot) : false,
+    note: rec?.note ?? null,
+    updatedAt: rec?.updatedAt ?? "1970-01-01T00:00:00.000Z",
+    updatedBy: rec?.updatedBy ?? null,
   };
 }
 
@@ -427,6 +501,282 @@ export const SitePlatformService = {
     const messages = [...history, userMsg, assistantMsg].slice(-24);
     await spSet(SpKeys.chat(id), { messages });
     return { conversationId: id, reply, source, links, messages };
+  },
+
+  async getBrand(): Promise<SpBrand> {
+    const stored = await spGet<SpBrand>(SpKeys.brand);
+    if (stored) return stored;
+    return { ...SP_DEFAULT_BRAND, updatedAt: "1970-01-01T00:00:00.000Z", updatedBy: null };
+  },
+
+  async updateBrand(patch: SpBrandPatch, actorId: string): Promise<SpBrand> {
+    const current = await this.getBrand();
+    const next: SpBrand = { ...current, ...patch, updatedAt: nowIso(), updatedBy: actorId };
+    await spSet(SpKeys.brand, next);
+    const images = await this.getImages();
+    if (patch.logo) images.logo = patch.logo;
+    if (patch.favicon) images.favicon = patch.favicon;
+    if (patch.chatAvatar) images.chatAvatar = patch.chatAvatar;
+    if (patch.chatAvatarFallback) images.chatAvatarFallback = patch.chatAvatarFallback;
+    if (patch.heroImage) images.hero = patch.heroImage;
+    if (patch.workforceHero) images.workforceHero = patch.workforceHero;
+    if (patch.wordmark) images.wordmark = patch.wordmark;
+    await spSet(SpKeys.images, images);
+    if (patch.logo || patch.favicon) {
+      await this.updateSeo({
+        ...(patch.logo ? { siteLogo: patch.logo } : {}),
+        ...(patch.favicon ? { favicon: patch.favicon } : {}),
+      }, actorId);
+    }
+    return next;
+  },
+
+  async getImages(): Promise<Record<string, string>> {
+    const stored = await spGet<Record<string, string>>(SpKeys.images);
+    return { ...SP_DEFAULT_IMAGES, ...(stored ?? {}) };
+  },
+
+  async setImageSlot(slot: string, url: string, actorId: string): Promise<Record<string, string>> {
+    if (!slot.trim()) deny("INVALID", "Image slot is required");
+    const images = await this.getImages();
+    images[slot] = url;
+    await spSet(SpKeys.images, images);
+    const brandPatch: SpBrandPatch = {};
+    if (slot === "logo") brandPatch.logo = url;
+    if (slot === "favicon") brandPatch.favicon = url;
+    if (slot === "chatAvatar") brandPatch.chatAvatar = url;
+    if (slot === "chatAvatarFallback") brandPatch.chatAvatarFallback = url;
+    if (slot === "hero") brandPatch.heroImage = url;
+    if (slot === "workforceHero") brandPatch.workforceHero = url;
+    if (slot === "wordmark") brandPatch.wordmark = url;
+    if (Object.keys(brandPatch).length) await this.updateBrand(brandPatch, actorId);
+    return images;
+  },
+
+  async listPageContent(): Promise<SpPageContent[]> {
+    const stored = await spGet<SpPageContent[]>(SpKeys.content);
+    const byPath = new Map((stored ?? []).map((p) => [p.path, p]));
+    return SP_DEFAULT_PAGES.map((d) => byPath.get(d.path) ?? d);
+  },
+
+  async upsertPageContent(input: SpPageContentInput, _actorId: string): Promise<SpPageContent> {
+    const path = normalizePath(input.path);
+    const rec: SpPageContent = {
+      path,
+      title: input.title,
+      lead: input.lead ?? "",
+      body: input.body ?? "",
+      image: input.image ?? null,
+      enabled: input.enabled ?? true,
+    };
+    const list = await this.listPageContent();
+    const next = list.filter((p) => p.path !== path);
+    next.push(rec);
+    await spSet(SpKeys.content, next);
+    return rec;
+  },
+
+  async getReviews(): Promise<SpReview[]> {
+    const stored = await spGet<SpReview[]>(SpKeys.reviews);
+    const list = stored?.length ? stored : SP_DEFAULT_REVIEWS;
+    return list.map((r) => ({ ...r, illustrative: true as const }));
+  },
+
+  async saveReviews(input: SpReviewsSaveInput, _actorId: string): Promise<SpReview[]> {
+    const next: SpReview[] = input.reviews.map((r, i) => ({
+      id: r.id ?? `rev-${i + 1}`,
+      name: r.name,
+      title: r.title,
+      quote: r.quote,
+      image: r.image,
+      illustrative: true,
+    }));
+    await spSet(SpKeys.reviews, next);
+    return next;
+  },
+
+  async getMap(): Promise<SpContactMap> {
+    const stored = await spGet<SpContactMap & { googleEmbedKeyEnc?: string | null }>(SpKeys.map);
+    if (!stored) return { ...SP_DEFAULT_MAP, updatedAt: "1970-01-01T00:00:00.000Z", updatedBy: null };
+    return {
+      enabled: stored.enabled,
+      label: stored.label,
+      address: stored.address,
+      city: stored.city,
+      country: stored.country,
+      lat: stored.lat,
+      lng: stored.lng,
+      zoom: stored.zoom,
+      provider: stored.provider,
+      googleEmbedKeySet: Boolean(stored.googleEmbedKeyEnc) || stored.googleEmbedKeySet,
+      updatedAt: stored.updatedAt,
+      updatedBy: stored.updatedBy,
+    };
+  },
+
+  async updateMap(patch: SpContactMapPatch, actorId: string): Promise<SpContactMap> {
+    const stored = (await spGet<SpContactMap & { googleEmbedKeyEnc?: string | null }>(SpKeys.map)) ?? {
+      ...SP_DEFAULT_MAP, updatedAt: nowIso(), updatedBy: null, googleEmbedKeyEnc: null,
+    };
+    const next = {
+      ...stored,
+      ...patch,
+      googleEmbedKeyEnc: patch.googleEmbedKey ? encrypt(patch.googleEmbedKey) : stored.googleEmbedKeyEnc ?? null,
+      updatedAt: nowIso(),
+      updatedBy: actorId,
+    };
+    delete (next as { googleEmbedKey?: string }).googleEmbedKey;
+    await spSet(SpKeys.map, next);
+    return this.getMap();
+  },
+
+  async publicMapEmbedKey(): Promise<string | null> {
+    const stored = await spGet<{ googleEmbedKeyEnc?: string | null; provider?: string }>(SpKeys.map);
+    if (stored?.provider !== "google" || !stored.googleEmbedKeyEnc) {
+      const dash = resolvePlatformApi("google-maps");
+      return dash.source === "dashboard" ? dash.apiKey : null;
+    }
+    try { return decrypt(stored.googleEmbedKeyEnc); } catch { return null; }
+  },
+
+  async publicSite(): Promise<SpPublicSite> {
+    const [brand, images, pages, reviews, map] = await Promise.all([
+      this.getBrand(), this.getImages(), this.listPageContent(), this.getReviews(), this.getMap(),
+    ]);
+    const { updatedBy: _b, ...brandPublic } = brand;
+    const { updatedBy: _m, ...mapPublic } = map;
+    return { brand: brandPublic, images, pages, reviews, map: mapPublic };
+  },
+
+  async uploadMedia(input: SpMediaUploadInput, actorId: string): Promise<SpMediaPublic> {
+    const raw = input.dataBase64.includes(",") ? input.dataBase64.split(",").pop()! : input.dataBase64;
+    let buf: Buffer;
+    try { buf = Buffer.from(raw, "base64"); } catch { deny("INVALID", "Image payload is not valid base64"); }
+    if (buf.length < 32) deny("INVALID", "Image is empty");
+    if (buf.length > 1_200_000) deny("TOO_LARGE", "Image must be 1.2MB or smaller");
+    const id = randomUUID();
+    await spSet(SpKeys.media(id), { id, slot: input.slot, mime: input.mime, data: raw, updatedBy: actorId });
+    const url = `/api/v1/site/media/${id}`;
+    await this.setImageSlot(input.slot, url, actorId);
+    return { id, slot: input.slot, mime: input.mime, url };
+  },
+
+  async getMedia(id: string): Promise<{ mime: string; buffer: Buffer } | null> {
+    const stored = await spGet<{ mime: string; data: string }>(SpKeys.media(id));
+    if (!stored?.data) return null;
+    return { mime: stored.mime, buffer: Buffer.from(stored.data, "base64") };
+  },
+
+  async listApis(): Promise<SpApiCredentialPublic[]> {
+    await this.hydrateApiOverlay();
+    const stored = (await spGet<StoredApi[]>(SpKeys.apis)) ?? [];
+    const bySlot = new Map(stored.map((s) => [s.slot, s]));
+    const out: SpApiCredentialPublic[] = [];
+    for (const cat of SP_API_CATALOG) {
+      const rec = bySlot.get(cat.slot);
+      const envHit = catalogEnvConfigured(cat.slot);
+      out.push(publicApi(cat.slot, rec, cat, envHit));
+    }
+    for (const rec of stored) {
+      if (SP_API_CATALOG.some((c) => c.slot === rec.slot)) continue;
+      out.push(publicApi(rec.slot, rec, {
+        slot: rec.slot, label: rec.label, category: rec.category, envHint: "",
+        needsKey: true, needsUrl: true, defaultBaseUrl: null, removable: true,
+      }, false));
+    }
+    return out;
+  },
+
+  async upsertApi(input: SpApiUpsertInput, actorId: string): Promise<SpApiCredentialPublic[]> {
+    const catalog = SP_API_CATALOG.find((c) => c.slot === input.slot);
+    const stored = (await spGet<StoredApi[]>(SpKeys.apis)) ?? [];
+    let rec = input.id ? stored.find((s) => s.id === input.id) : stored.find((s) => s.slot === input.slot);
+    if (!rec) {
+      rec = {
+        id: input.slot.startsWith("custom") || !catalog ? `custom-${randomUUID().slice(0, 8)}` : input.slot,
+        slot: catalog ? catalog.slot : (input.slot.startsWith("custom-") ? input.slot : `custom-${input.slot}`),
+        label: input.label ?? catalog?.label ?? input.slot,
+        category: input.category ?? catalog?.category ?? "custom",
+        enabled: input.enabled ?? true,
+        baseUrl: input.baseUrl ?? catalog?.defaultBaseUrl ?? null,
+        apiKeyEnc: null,
+        note: input.note ?? null,
+        updatedAt: nowIso(),
+        updatedBy: actorId,
+      };
+      stored.push(rec);
+    } else {
+      if (input.label) rec.label = input.label;
+      if (input.category) rec.category = input.category;
+      if (input.enabled !== undefined) rec.enabled = input.enabled;
+      if (input.baseUrl !== undefined) rec.baseUrl = input.baseUrl;
+      if (input.note !== undefined) rec.note = input.note;
+      rec.updatedAt = nowIso();
+      rec.updatedBy = actorId;
+    }
+    if (input.apiKey) rec.apiKeyEnc = encrypt(input.apiKey);
+    await spSet(SpKeys.apis, stored);
+    await this.hydrateApiOverlay();
+    return this.listApis();
+  },
+
+  async removeApi(id: string, actorId: string): Promise<SpApiCredentialPublic[]> {
+    const stored = (await spGet<StoredApi[]>(SpKeys.apis)) ?? [];
+    const rec = stored.find((s) => s.id === id || s.slot === id);
+    if (!rec) deny("NOT_FOUND", "API credential not found", 404);
+    const catalog = SP_API_CATALOG.find((c) => c.slot === rec.slot);
+    const next = stored.filter((s) => s.id !== rec.id);
+    await spSet(SpKeys.apis, next);
+    setPlatformApiOverlay(rec.slot, null);
+    if (catalog && ["openai", "anthropic", "gemini", "ollama", "openai-compat"].includes(rec.slot)) {
+      aiRegistry.applyDashboardProvider(rec.slot, { enabled: false });
+    }
+    void actorId;
+    await this.hydrateApiOverlay();
+    return this.listApis();
+  },
+
+  async hydrateApiOverlay(): Promise<void> {
+    const stored = (await spGet<StoredApi[]>(SpKeys.apis)) ?? [];
+    replacePlatformApiOverlay(stored.map((s) => ({
+      id: s.slot,
+      enabled: s.enabled,
+      apiKey: s.apiKeyEnc ? safeDecrypt(s.apiKeyEnc) : null,
+      baseUrl: s.baseUrl,
+      extra: {},
+    })));
+    for (const s of stored) {
+      if (["openai", "anthropic", "gemini", "ollama", "openai-compat"].includes(s.slot)) {
+        aiRegistry.applyDashboardProvider(s.slot, {
+          enabled: s.enabled,
+          apiKey: s.apiKeyEnc ? safeDecrypt(s.apiKeyEnc) : null,
+          baseUrl: s.baseUrl,
+        });
+      }
+    }
+  },
+
+  async controlSummary(): Promise<SpControlSummary> {
+    const [ann, smtp, apis, pages, reviews, map, chat] = await Promise.all([
+      this.publicAnnouncement(),
+      this.activeSmtpCredentials(),
+      this.listApis(),
+      this.listPageContent(),
+      this.getReviews(),
+      this.getMap(),
+      this.chatHealth(),
+    ]);
+    return {
+      announcementLive: Boolean(ann),
+      smtpConfigured: Boolean(smtp),
+      smtpProvider: smtp?.provider ?? null,
+      apisConfigured: apis.filter((a) => a.keySet || a.envFallback || (a.baseUrl && a.enabled)).length,
+      apisTotal: apis.length,
+      pagesEditable: pages.length,
+      reviews: reviews.length,
+      mapEnabled: Boolean(map.enabled && map.lat != null && map.lng != null),
+      chatConfigured: chat.configured,
+    };
   },
 
   async createAdmin(input: SpCreateAdminInput, actorId: string) {

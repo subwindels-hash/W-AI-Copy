@@ -8,6 +8,13 @@ export const SpKeys = {
   page: (path: string) => `sp:seo:page:${path}`,
   smtp: "sp:smtp",
   chat: (id: string) => `sp:chat:${id}`,
+  brand: "sp:brand",
+  content: "sp:content",
+  reviews: "sp:reviews",
+  map: "sp:map",
+  images: "sp:images",
+  apis: "sp:apis",
+  media: (id: string) => `sp:media:${id}`,
 };
 
 const s2 = (o: unknown) => JSON.stringify(o);

@@ -201,6 +201,50 @@ export class ProviderRegistry {
 
   hasRealModelConfigured(): boolean { return this.hasRealProvider; }
 
+  /**
+   * Super Admin dashboard overlay. Replaces or removes a provider without
+   * restarting the process. Environment-registered providers remain if the
+   * dashboard slot is cleared.
+   */
+  applyDashboardProvider(slot: string, opts: { enabled: boolean; apiKey?: string | null; baseUrl?: string | null; model?: string | null }): void {
+    const enabled = opts.enabled && Boolean(opts.apiKey || (slot === "ollama" && opts.baseUrl));
+    if (!enabled) {
+      if (slot === "openai" || slot === "openai-compat") this.providers.delete("openai");
+      else this.providers.delete(slot);
+      if (process.env.OPENAI_API_KEY && (slot === "openai" || slot === "openai-compat")) {
+        try { this.registerProvider(new OpenAIProvider(process.env.OPENAI_API_KEY), true); } catch { /* keep going */ }
+      }
+      if (process.env.ANTHROPIC_API_KEY && slot === "anthropic") {
+        try { this.registerProvider(new AnthropicProvider(process.env.ANTHROPIC_API_KEY), true); } catch { /* keep going */ }
+      }
+      if (process.env.GEMINI_API_KEY && slot === "gemini") {
+        try { this.registerProvider(new GeminiProvider(process.env.GEMINI_API_KEY), true); } catch { /* keep going */ }
+      }
+      this.hasRealProvider = [...this.providers.values()].some((s) => s.isReal);
+      this.rebuildModelIndex().catch(() => {});
+      return;
+    }
+    try {
+      if (slot === "openai" || slot === "openai-compat") {
+        if (!opts.apiKey) return;
+        this.registerProvider(new OpenAIProvider(opts.apiKey, opts.baseUrl || "https://api.openai.com/v1", opts.model || "default"), true);
+      } else if (slot === "anthropic" && opts.apiKey) {
+        this.registerProvider(new AnthropicProvider(opts.apiKey), true);
+      } else if (slot === "gemini" && opts.apiKey) {
+        this.registerProvider(new GeminiProvider(opts.apiKey), true);
+      } else if (slot === "ollama") {
+        this.registerProvider(new OllamaProvider({
+          baseUrl: opts.baseUrl || "http://127.0.0.1:11434",
+          model: opts.model || process.env.OLLAMA_MODEL || "llama3",
+        }), true);
+      }
+    } catch (e) {
+      logger.warn("failed to apply dashboard AI provider", { slot, err: e });
+    }
+    this.hasRealProvider = [...this.providers.values()].some((s) => s.isReal);
+    this.rebuildModelIndex().catch(() => {});
+  }
+
   /** Refresh and return only configured, healthy, real model entries for public routing. */
   async listPublicRoutableModels(): Promise<ModelInfo[]> {
     await this.healthSweep();

@@ -7,6 +7,7 @@
  */
 
 import { env } from "../config/env.js";
+import { resolvePlatformApi } from "../sitePlatform/platformApis.runtime.js";
 import type {
   LiDataClass,
   LiLotteryRules,
@@ -164,27 +165,43 @@ export const SandboxLotteryProvider: LotteryProvider = {
   },
 };
 
+function lotteryFeed() {
+  const dash = resolvePlatformApi("lottery-euromillions");
+  if (dash.source === "dashboard" && dash.baseUrl) {
+    return {
+      configured: true,
+      baseUrl: dash.baseUrl,
+      apiKey: dash.apiKey ?? env.WINDELS_LOTTERY_EUROMILLIONS_FEED_TOKEN ?? null,
+    };
+  }
+  const url = env.WINDELS_LOTTERY_EUROMILLIONS_FEED_URL;
+  return {
+    configured: Boolean(url),
+    baseUrl: url ?? null,
+    apiKey: env.WINDELS_LOTTERY_EUROMILLIONS_FEED_TOKEN ?? null,
+  };
+}
+
 export const OfficialFeedProvider: LotteryProvider = {
   id: "official-feed",
   name: "Configured official EuroMillions feed",
   lotteryId: "euromillions",
   rules: EUROMILLIONS_RULES,
   configured() {
-    return Boolean(env.WINDELS_LOTTERY_EUROMILLIONS_FEED_URL);
+    return lotteryFeed().configured;
   },
   async health() {
     if (!this.configured()) {
       return snapshotHealth({
         providerId: this.id, name: this.name, status: "NOT_CONFIGURED",
-        lastError: "WINDELS_LOTTERY_EUROMILLIONS_FEED_URL is not set",
+        lastError: "EuroMillions feed is not configured (dashboard or WINDELS_LOTTERY_EUROMILLIONS_FEED_URL)",
       });
     }
     const started = Date.now();
+    const feed = lotteryFeed();
     try {
-      const res = await fetch(env.WINDELS_LOTTERY_EUROMILLIONS_FEED_URL!, {
-        headers: env.WINDELS_LOTTERY_EUROMILLIONS_FEED_TOKEN
-          ? { Authorization: `Bearer ${env.WINDELS_LOTTERY_EUROMILLIONS_FEED_TOKEN}` }
-          : {},
+      const res = await fetch(feed.baseUrl!, {
+        headers: feed.apiKey ? { Authorization: `Bearer ${feed.apiKey}` } : {},
         signal: AbortSignal.timeout(12_000),
       });
       const status: LiProviderStatus = res.ok ? "ONLINE" : res.status >= 500 ? "OFFLINE" : "DATA_ERROR";

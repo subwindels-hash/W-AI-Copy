@@ -663,6 +663,13 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "sp:seo", scope: "platform_global" },
   { prefix: "sp:smtp", scope: "platform_global" },
   { prefix: "sp:chat", scope: "shared" },
+  { prefix: "sp:brand", scope: "platform_global" },
+  { prefix: "sp:content", scope: "platform_global" },
+  { prefix: "sp:reviews", scope: "platform_global" },
+  { prefix: "sp:map", scope: "platform_global" },
+  { prefix: "sp:images", scope: "platform_global" },
+  { prefix: "sp:apis", scope: "platform_global" },
+  { prefix: "sp:media", scope: "platform_global" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {
