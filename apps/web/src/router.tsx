@@ -125,6 +125,7 @@ const DisasterRecoveryPage = lazy(() => import("./pages/disasterRecovery/Disaste
 const FinancialPage = lazy(() => import("./pages/financial/FinancialPage").then((m) => ({ default: m.FinancialPage })));
 const DataMarketplacePage = lazy(() => import("./pages/dataMarketplace/DataMarketplacePage").then((m) => ({ default: m.DataMarketplacePage })));
 const ReviewsPage = lazy(() => import("./pages/reviews/ReviewsPage").then((m) => ({ default: m.ReviewsPage })));
+const BenchmarksPage = lazy(() => import("./pages/benchmarks/BenchmarksPage").then((m) => ({ default: m.BenchmarksPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -454,6 +455,7 @@ export const router = createBrowserRouter([
       { path: "disaster-recovery", element: withSuspense(<DisasterRecoveryPage />) },
       { path: "financial", element: withSuspense(<FinancialPage />) },
       { path: "data-marketplace", element: withSuspense(<DataMarketplacePage />) },
+      { path: "benchmarks", element: withSuspense(<BenchmarksPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },

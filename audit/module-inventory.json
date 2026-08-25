@@ -1707,8 +1707,10 @@
     ],
     "sharedTypes": "packages/shared/src/benchmarks.ts (106 LOC)",
     "web": {
-      "client": "apps/web/src/lib/benchmarks.ts (13 LOC)",
-      "pages": []
+      "client": "apps/web/src/lib/benchmarks.ts (25 LOC)",
+      "pages": [
+        "apps/web/src/pages/benchmarks/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
