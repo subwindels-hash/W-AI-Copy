@@ -180,6 +180,7 @@ const navItems = [
   { to: "/app/financial", icon: Database, label: "Financial Policy" },
   { to: "/app/data-marketplace", icon: Package, label: "Data Marketplace" },
   { to: "/app/benchmarks", icon: Gauge, label: "Benchmarks" },
+  { to: "/app/ml-ops", icon: Boxes, label: "ML Ops" },
   { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },
