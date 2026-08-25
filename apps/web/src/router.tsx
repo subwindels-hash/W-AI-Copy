@@ -140,6 +140,7 @@ const SelfHostedPage = lazy(() => import("./pages/selfHosted/SelfHostedPage").th
 const QaPage = lazy(() => import("./pages/qa/QaPage").then((m) => ({ default: m.QaPage })));
 const ReleasePage = lazy(() => import("./pages/release/ReleasePage").then((m) => ({ default: m.ReleasePage })));
 const ProgramPage = lazy(() => import("./pages/program/ProgramPage").then((m) => ({ default: m.ProgramPage })));
+const DevportalPage = lazy(() => import("./pages/devportal/DevportalPage").then((m) => ({ default: m.DevportalPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -484,6 +485,7 @@ export const router = createBrowserRouter([
       { path: "qa", element: withSuspense(<QaPage />) },
       { path: "releases", element: withSuspense(<ReleasePage />) },
       { path: "program", element: withSuspense(<ProgramPage />) },
+      { path: "dev-portal-tools", element: withSuspense(<DevportalPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },

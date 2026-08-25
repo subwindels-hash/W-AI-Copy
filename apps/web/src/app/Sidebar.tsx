@@ -198,6 +198,7 @@ const navItems = [
   { to: "/app/qa", icon: FlaskConical, label: "QA Platform" },
   { to: "/app/releases", icon: Rocket, label: "Releases" },
   { to: "/app/program", icon: ClipboardList, label: "Program Management" },
+  { to: "/app/dev-portal-tools", icon: Code2, label: "Dev Portal (SDK/CLI)" },
   { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },

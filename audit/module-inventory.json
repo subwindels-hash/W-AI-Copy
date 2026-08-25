@@ -4719,7 +4719,9 @@
     "sharedTypes": "packages/shared/src/developerPlatform.ts (265 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/devPortal.ts (34 LOC, serves /dev-portal)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/devportal/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
