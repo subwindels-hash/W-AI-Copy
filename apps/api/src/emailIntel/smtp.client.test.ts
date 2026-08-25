@@ -17,11 +17,13 @@ async function startFakeSmtp(opts: {
   port?: number;
   rejectRcpt?: boolean;
   auth?: boolean;
+  rejectPlain?: boolean;
   noGreeting?: boolean;
 } = {}): Promise<{ server: Server; port: number; transcript: string[] }> {
   const transcript: string[] = [];
   const server = net.createServer((sock) => {
     let dataMode = false;
+    let authStep: "user" | "pass" | null = null;
     let buffer = "";
     const send = (line: string) => sock.write(`${line}\r\n`);
 
@@ -41,13 +43,32 @@ async function startFakeSmtp(opts: {
           continue;
         }
         transcript.push(line);
+        if (authStep === "user") {
+          send("334 UGFzc3dvcmQ6");
+          authStep = "pass";
+          continue;
+        }
+        if (authStep === "pass") {
+          send("235 2.7.0 Authentication successful");
+          authStep = null;
+          continue;
+        }
         const cmd = line.split(" ")[0].toUpperCase();
         if (cmd === "EHLO") {
           send("250-fake.example greets you");
           send("250-AUTH PLAIN LOGIN");
           send("250 OK");
         } else if (cmd === "AUTH") {
-          send(opts.auth === false ? "503 5.5.1 Unrecognized command" : "235 2.7.0 Authentication successful");
+          if (opts.auth === false) {
+            send("503 5.5.1 Unrecognized command");
+          } else if (/^AUTH LOGIN/i.test(line)) {
+            send("334 VXNlcm5hbWU6");
+            authStep = "user";
+          } else if (opts.rejectPlain && /^AUTH PLAIN/i.test(line)) {
+            send("535 5.7.8 Authentication failed");
+          } else {
+            send("235 2.7.0 Authentication successful");
+          }
         } else if (cmd === "MAIL") {
           send("250 2.1.0 Ok");
         } else if (cmd === "RCPT") {
@@ -115,6 +136,12 @@ describe("sendSmtp — real wire protocol against an in-process SMTP server", ()
 
   it("performs AUTH PLAIN when credentials are supplied", async () => {
     const { port } = await makeServer({ auth: true });
+    const res = await sendSmtp(baseOpts(port, { username: "user", password: "pass" }));
+    expect(res.ok).toBe(true);
+  });
+
+  it("falls back to AUTH LOGIN when AUTH PLAIN is rejected", async () => {
+    const { port } = await makeServer({ auth: true, rejectPlain: true });
     const res = await sendSmtp(baseOpts(port, { username: "user", password: "pass" }));
     expect(res.ok).toBe(true);
   });

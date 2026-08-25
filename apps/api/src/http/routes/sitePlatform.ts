@@ -10,6 +10,7 @@ import {
   SpBrandPatchSchema,
   SpChatMessageSchema,
   SpChatStartSchema,
+  SpChatStreamSchema,
   SpContactMapPatchSchema,
   SpCreateAdminSchema,
   SpMediaUploadSchema,

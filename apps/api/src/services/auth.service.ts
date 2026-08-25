@@ -211,6 +211,17 @@ export async function registerUser(input: {
     await storeIssuedPinAfterRegister(user.id, issuedPin, pinExpiresAt!);
   }
 
+  try {
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    const creds = await EmailService.getActiveProvider();
+    if (creds) {
+      const loginUrl = `${process.env.WINDELS_WEB_ORIGIN ?? "http://localhost:5173"}/auth/login`;
+      await EmailService.sendTemplate("welcome", input.email, { loginUrl });
+    }
+  } catch (e) {
+    logger.warn("[auth] welcome email skipped", { userId: user.id, err: (e as Error)?.message });
+  }
+
   return { userId: user.id, role: toPublicRole(prismaRole), publicUserId, username, issuedPin };
 }
 
@@ -568,12 +579,22 @@ export interface PasswordResetRequestResult {
   smtpConfigured: boolean;
 }
 
+async function smtpIsConfigured(): Promise<boolean> {
+  try {
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    return Boolean(await EmailService.getActiveProvider());
+  } catch {
+    return Boolean(process.env.WINDELS_SMTP_HOST);
+  }
+}
+
 export async function requestPasswordReset(email: string): Promise<PasswordResetRequestResult> {
   const normalized = email.trim().toLowerCase();
+  const smtpConfigured = await smtpIsConfigured();
   const user = await prisma.user.findUnique({ where: { email: normalized } });
   if (!user) {
     // Fail-open: identical response whether or not the account exists.
-    return { ok: true, email: normalized, sent: false, smtpConfigured: Boolean(process.env.WINDELS_SMTP_HOST) };
+    return { ok: true, email: normalized, sent: false, smtpConfigured };
   }
 
   const token = randomBytes(32).toString("base64url");

@@ -22,6 +22,7 @@ vi.mock("../services/ai/registry.js", () => ({
     hasRealModelConfigured: () => false,
     providerHealth: () => [],
     complete: async () => { throw new Error("not configured"); },
+    guardedStream: async function* () { throw new Error("not configured"); },
     applyDashboardProvider: () => {},
   },
 }));

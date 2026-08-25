@@ -25,6 +25,8 @@ export interface SmtpSendOptions {
   username?: string | null;
   password?: string | null;
   from: string;
+  /** Display name for the From header. Never required for delivery. */
+  fromName?: string | null;
   to: string[];
   cc?: string[];
   subject: string;
@@ -121,9 +123,17 @@ async function expectCode(
   throw new Error(`${CODES.PROTOCOL}: ${step} — response did not terminate`);
 }
 
+function formatFrom(from: string, fromName?: string | null): string {
+  const name = (fromName ?? "").replace(/[\r\n"]/g, "").trim();
+  if (!name) return from;
+  return `"${name}" <${from}>`;
+}
+
 export async function sendSmtp(opts: SmtpSendOptions): Promise<SmtpSendResult> {
-  const { host, port, secure, requireStartTls, username, password, from, to, cc, subject, text } = opts;
+  const { host, port, username, password, from, to, cc, subject, text } = opts;
   const timeoutMs = opts.timeoutMs ?? 10_000;
+  const secure = opts.secure ?? port === 465;
+  const requireStartTls = opts.requireStartTls ?? (!secure && (port === 587 || port === 25));
 
   // Enforce certificate validation by default in production
   const isProd = process.env.NODE_ENV === "production" || process.env.WINDELS_RUNTIME_MODE === "production";
@@ -214,15 +224,29 @@ export async function sendSmtp(opts: SmtpSendOptions): Promise<SmtpSendResult> {
           throw new Error(`${CODES.TLS}: Server does not support STARTTLS but requireStartTls is true`);
         }
 
-        // 4. Optional AUTH PLAIN
+        // 4. AUTH PLAIN, then AUTH LOGIN if the server refuses PLAIN
         if (username && password) {
+          let authed = false;
           currentSocket.write(
             `AUTH PLAIN ${Buffer.from(`\0${username}\0${password}`, "utf8").toString("base64")}\r\n`,
           );
           try {
             await expectCode(() => reader.nextLine(), "235", "AUTH PLAIN");
-          } catch (e) {
-            throw new Error(`${CODES.AUTH}: ${(e as Error).message}`);
+            authed = true;
+          } catch {
+            authed = false;
+          }
+          if (!authed) {
+            currentSocket.write("AUTH LOGIN\r\n");
+            try {
+              await expectCode(() => reader.nextLine(), "334", "AUTH LOGIN");
+              currentSocket.write(`${Buffer.from(username, "utf8").toString("base64")}\r\n`);
+              await expectCode(() => reader.nextLine(), "334", "AUTH LOGIN username");
+              currentSocket.write(`${Buffer.from(password, "utf8").toString("base64")}\r\n`);
+              await expectCode(() => reader.nextLine(), "235", "AUTH LOGIN password");
+            } catch (e) {
+              throw new Error(`${CODES.AUTH}: ${(e as Error).message}`);
+            }
           }
         }
 

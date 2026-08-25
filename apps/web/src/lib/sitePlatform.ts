@@ -37,6 +37,49 @@ export const siteApi = {
   startChat: (message: string) => api<SpChatReply>("/site/chat", { method: "POST", json: { message }, skipAuth: true }),
   chatMessage: (id: string, message: string) =>
     api<SpChatReply>(`/site/chat/${id}/message`, { method: "POST", json: { message }, skipAuth: true }),
+  streamChat: async (
+    message: string,
+    conversationId: string | undefined,
+    onEvent: (event: string, data: any) => void,
+  ): Promise<SpChatReply> => {
+    const BASE = import.meta.env.VITE_API_URL ?? "/api/v1";
+    const res = await fetch(`${BASE}/site/chat/stream`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ message, conversationId }),
+    });
+    if (!res.ok || !res.body) {
+      throw new Error(res.statusText || "Chat stream unavailable");
+    }
+    const reader = res.body.getReader();
+    const decoder = new TextDecoder();
+    let buf = "";
+    let doneReply: SpChatReply | null = null;
+    while (true) {
+      const { value, done } = await reader.read();
+      if (done) break;
+      buf += decoder.decode(value, { stream: true });
+      let sep: number;
+      while ((sep = buf.indexOf("\n\n")) !== -1) {
+        const block = buf.slice(0, sep);
+        buf = buf.slice(sep + 2);
+        let event = "message";
+        const dataLines: string[] = [];
+        for (const line of block.split("\n")) {
+          if (line.startsWith("event:")) event = line.slice(6).trim();
+          else if (line.startsWith("data:")) dataLines.push(line.slice(5).trim());
+        }
+        if (!dataLines.length) continue;
+        try {
+          const data = JSON.parse(dataLines.join("\n"));
+          onEvent(event, data);
+          if (event === "done" && data?.reply) doneReply = data.reply as SpChatReply;
+        } catch { /* ignore a truncated frame; next read will complete it */ }
+      }
+    }
+    if (!doneReply) throw new Error("Chat stream ended without a reply");
+    return doneReply;
+  },
   clearChat: (id: string) => api<{ cleared: boolean }>(`/site/chat/${id}`, { method: "DELETE", skipAuth: true }),
 };
 

@@ -32,23 +32,53 @@ export function VisitorChat() {
     if (!msg || busy) return;
     setBusy(true);
     setText("");
+    const startedAt = new Date().toISOString();
+    setSession((prev) => ({
+      conversationId: prev?.conversationId ?? "pending",
+      reply: "",
+      source: prev?.source ?? "UNCONFIGURED",
+      links: prev?.links ?? [],
+      messages: [
+        ...(prev?.messages ?? []),
+        { role: "user", content: msg, at: startedAt },
+        { role: "assistant", content: "", at: startedAt },
+      ],
+    }));
     try {
-      const next = session
-        ? await siteApi.chatMessage(session.conversationId, msg)
-        : await siteApi.startChat(msg);
+      const next = await siteApi.streamChat(msg, session?.conversationId, (event, data) => {
+        if (event === "token" && typeof data?.text === "string") {
+          setSession((prev) => {
+            if (!prev) return prev;
+            const messages = prev.messages.slice();
+            const last = messages[messages.length - 1];
+            if (last?.role === "assistant") messages[messages.length - 1] = { ...last, content: last.content + data.text };
+            return { ...prev, reply: (prev.reply ?? "") + data.text, messages };
+          });
+        }
+        if (event === "meta" && data?.conversationId) {
+          setSession((prev) => prev ? { ...prev, conversationId: data.conversationId, source: data.source ?? prev.source, links: data.links ?? prev.links } : prev);
+        }
+      });
       setSession(next);
-    } catch (e) {
-      setSession((prev) => ({
-        conversationId: prev?.conversationId ?? "local",
-        reply: e instanceof Error ? e.message : "The assistant is unavailable.",
-        source: "UNCONFIGURED",
-        links: [{ href: "/contact", label: "Contact" }],
-        messages: [
-          ...(prev?.messages ?? []),
-          { role: "user", content: msg, at: new Date().toISOString() },
-          { role: "assistant", content: e instanceof Error ? e.message : "Unavailable.", at: new Date().toISOString() },
-        ],
-      }));
+    } catch {
+      try {
+        const fallback = session
+          ? await siteApi.chatMessage(session.conversationId, msg)
+          : await siteApi.startChat(msg);
+        setSession(fallback);
+      } catch (e) {
+        setSession((prev) => ({
+          conversationId: prev?.conversationId ?? "local",
+          reply: e instanceof Error ? e.message : "The assistant is unavailable.",
+          source: "UNCONFIGURED",
+          links: [{ href: "/contact", label: "Contact" }],
+          messages: [
+            ...(prev?.messages ?? []).filter((m) => m.content),
+            { role: "user", content: msg, at: startedAt },
+            { role: "assistant", content: e instanceof Error ? e.message : "Unavailable.", at: new Date().toISOString() },
+          ],
+        }));
+      }
     } finally {
       setBusy(false);
     }
@@ -72,11 +102,13 @@ export function VisitorChat() {
           <div ref={scroller} className="max-h-80 space-y-2 overflow-y-auto px-3 py-3 text-sm">
             <div className="rounded-xl bg-white/5 px-3 py-2 text-text-main">Hello! How can I help you today?</div>
             {(session?.messages ?? []).map((m, i) => (
+              m.content || (busy && i === (session?.messages.length ?? 0) - 1) ? (
               <div key={i} className={`rounded-xl px-3 py-2 ${m.role === "user" ? "ml-8 bg-azure/20 text-white" : "mr-4 bg-white/5 text-text-main"}`}>
-                {m.content}
+                {m.content || "…"}
               </div>
+              ) : null
             ))}
-            {busy ? <div className="text-xs text-text-muted">Thinking…</div> : null}
+            {busy ? <div className="text-xs text-text-muted">{session?.reply ? "Streaming…" : "Thinking…"}</div> : null}
           </div>
           <form className="flex gap-2 border-t border-white/10 p-2" onSubmit={(e) => { e.preventDefault(); void send(); }}>
             <input

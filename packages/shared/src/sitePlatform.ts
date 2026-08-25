@@ -173,6 +173,10 @@ export const SpChatStartSchema = z.object({
 export const SpChatMessageSchema = z.object({
   message: z.string().trim().min(1).max(2000),
 });
+export const SpChatStreamSchema = z.object({
+  message: z.string().trim().min(1).max(2000),
+  conversationId: z.string().trim().min(8).max(80).optional(),
+});
 
 export interface SpChatMessage {
   role: "user" | "assistant";
@@ -191,6 +195,7 @@ export interface SpChatReply {
 export interface SpChatHealth {
   configured: boolean;
   provider: string | null;
+  streaming: boolean;
   note: string;
 }
 

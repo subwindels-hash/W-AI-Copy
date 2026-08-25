@@ -338,6 +338,8 @@ export const SitePlatformService = {
       if (patch.host !== undefined) slot.host = patch.host;
       if (patch.port !== undefined) slot.port = patch.port;
       if (patch.secure !== undefined) slot.secure = patch.secure;
+      else if (patch.port === 465) slot.secure = true;
+      else if (patch.port === 587) slot.secure = false;
       if (patch.username !== undefined) slot.username = patch.username;
       if (patch.fromEmail !== undefined) slot.fromEmail = patch.fromEmail;
       if (patch.fromName !== undefined) slot.fromName = patch.fromName;
@@ -384,10 +386,12 @@ export const SitePlatformService = {
       const res = await sendSmtp({
         host: creds.host,
         port: creds.port,
-        secure: creds.secure,
+        secure: creds.secure || creds.port === 465,
+        requireStartTls: !creds.secure && creds.port !== 465,
         username: creds.username,
         password: creds.password,
         from: creds.from,
+        fromName: creds.fromName,
         to: Array.isArray(input.to) ? input.to : [input.to],
         subject: input.subject,
         text: input.text,
@@ -435,8 +439,9 @@ export const SitePlatformService = {
     return {
       configured,
       provider: providers[0]?.id ?? null,
+      streaming: configured,
       note: configured
-        ? "Visitor chat uses the platform AI registry."
+        ? "Visitor chat streams tokens from the platform AI registry."
         : "No real AI provider is configured. The assistant will answer from the public site knowledge base and will not pretend to be a live model.",
     };
   },
@@ -499,8 +504,96 @@ export const SitePlatformService = {
 
     const assistantMsg: SpChatMessage = { role: "assistant", content: reply, at: nowIso() };
     const messages = [...history, userMsg, assistantMsg].slice(-24);
-    await spSet(SpKeys.chat(id), { messages });
+    await spSet(SpKeys.chat(id), { messages, source });
     return { conversationId: id, reply, source, links, messages };
+  },
+
+  /**
+   * SSE token stream. Real-model tokens come from aiRegistry.guardedStream.
+   * Unconfigured deployments emit the site-knowledge reply as a single token
+   * and label the source UNCONFIGURED — never as a live model.
+   */
+  async *streamChat(
+    message: string,
+    conversationId?: string,
+  ): AsyncGenerator<
+    | { type: "meta"; conversationId: string; source: SpChatReply["source"]; links: Array<{ href: string; label: string }> }
+    | { type: "token"; text: string }
+    | { type: "done"; reply: SpChatReply }
+    | { type: "error"; message: string }
+  > {
+    let id = conversationId ?? "";
+    let history: SpChatMessage[] = [];
+    if (id) {
+      const stored = await spGet<{ messages: SpChatMessage[] }>(SpKeys.chat(id));
+      if (!stored) {
+        yield { type: "error", message: "Conversation not found or expired" };
+        return;
+      }
+      history = stored.messages;
+    } else {
+      id = randomUUID();
+    }
+    const userMsg: SpChatMessage = { role: "user", content: message, at: nowIso() };
+    const links = suggestLinks(message);
+    const health = await this.chatHealth();
+    let source: SpChatReply["source"] = health.configured ? "AI_PROVIDER" : "UNCONFIGURED";
+    yield { type: "meta", conversationId: id, source, links };
+
+    let reply = "";
+    if (health.configured) {
+      try {
+        for await (const chunk of aiRegistry.guardedStream(
+          {
+            model: "windels-assistant",
+            messages: [
+              { role: "system", content: VISITOR_SYSTEM },
+              ...history.map((m) => ({ role: m.role, content: m.content })),
+              { role: "user", content: message },
+            ],
+            temperature: 0.4,
+            maxTokens: 500,
+            stream: true,
+          },
+          { channel: "chat", feature: "visitor-chat" },
+        )) {
+          if (chunk.type === "token" && chunk.text) {
+            reply += chunk.text;
+            yield { type: "token", text: chunk.text };
+            if (chunk.modelSource === "echo-demo") source = "SITE_KNOWLEDGE";
+            else if (chunk.modelSource === "real") source = "AI_PROVIDER";
+          } else if (chunk.type === "error") {
+            if (!reply.trim()) {
+              reply = knowledgeReply(message, links);
+              source = "SITE_KNOWLEDGE";
+              yield { type: "token", text: reply };
+            }
+            break;
+          }
+        }
+      } catch {
+        if (!reply.trim()) {
+          reply = knowledgeReply(message, links);
+          source = "SITE_KNOWLEDGE";
+          yield { type: "token", text: reply };
+        }
+      }
+    } else {
+      reply = knowledgeReply(message, links);
+      source = "UNCONFIGURED";
+      yield { type: "token", text: reply };
+    }
+
+    if (!reply.trim()) {
+      reply = knowledgeReply(message, links);
+      source = health.configured ? "SITE_KNOWLEDGE" : "UNCONFIGURED";
+      yield { type: "token", text: reply };
+    }
+
+    const assistantMsg: SpChatMessage = { role: "assistant", content: reply, at: nowIso() };
+    const messages = [...history, userMsg, assistantMsg].slice(-24);
+    await spSet(SpKeys.chat(id), { messages, source });
+    yield { type: "done", reply: { conversationId: id, reply, source, links, messages } };
   },
 
   async getBrand(): Promise<SpBrand> {
