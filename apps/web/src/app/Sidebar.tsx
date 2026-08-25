@@ -207,6 +207,7 @@ const navItems = [
   { to: "/app/publishing", icon: Megaphone, label: "Publishing" },
   { to: "/app/google-identity", icon: Fingerprint, label: "Google Identity" },
   { to: "/admin", icon: UserCog, label: "Admin Console" },
+  { to: "/platform/site", icon: Globe2, label: "Site & SMTP" },
   { to: "/admin/modules", icon: Blocks, label: "Module & Plugin Center" },
   { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/platform/blockonomics", icon: Bitcoin, label: "Blockonomics Control" },

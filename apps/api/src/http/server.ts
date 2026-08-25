@@ -89,6 +89,7 @@ import { registerTradingIntelRoutes } from "./routes/tradingIntel.js";
 import { registerSportsIntelligenceRoutes } from "./routes/sportsIntelligence.js";
 import { registerLotteryIntelligenceRoutes } from "./routes/lotteryIntelligence.js";
 import { registerLanguageLearningRoutes } from "./routes/languageLearning.js";
+import { registerSitePlatformAdminRoutes, registerSitePlatformPublicRoutes, sendPublicSeoDocuments } from "./routes/sitePlatform.js";
 import { registerExpertsPlatformRoutes } from "./routes/expertsPlatform.js";
 import { registerMediaFactoryRoutes } from "./routes/mediaFactory.js";
 import { registerUxIntelligenceRoutes } from "./routes/uxIntelligence.js";
@@ -240,6 +241,11 @@ export function createApp() {
 
   const v1 = express.Router();
   registerHealthRoutes(v1);
+
+  // Public website platform (announcement, SEO, visitor chat) — no JWT.
+  const sitePublic = express.Router();
+  v1.use("/site", sitePublic);
+  registerSitePlatformPublicRoutes(sitePublic);
   registerAuthRoutes(v1);
   // Session 116 — MFA assurance (policy, coverage, throttle, ledger) on a
   // `/mfa` sub-router registered ahead of the original six endpoints. The
@@ -1539,7 +1545,12 @@ export function createApp() {
   });
 
   app.get("/healthz", (_req, res) => res.send("ok"));
+  void sendPublicSeoDocuments(app);
   app.use("/api/v1", v1);
+
+  const siteAdmin = express.Router();
+  v1.use("/site-admin", siteAdmin);
+  registerSitePlatformAdminRoutes(siteAdmin);
 
   // Native AI provider surface. It deliberately lives at top-level /v1 while
   // the existing /api/rest/v1 gateway remains mounted and unchanged.

@@ -3,14 +3,14 @@ import { cn } from "@/lib/cn";
 import { Button } from "@/components/ui/Button";
 
 const links = [
+  { to: "/about", label: "About" },
+  { to: "/features", label: "Features" },
+  { to: "/workforce", label: "Workforce" },
+  { to: "/agents", label: "Agents" },
   { to: "/pricing", label: "Pricing" },
-  { to: "/enterprise", label: "Enterprise" },
-  { to: "/api", label: "API" },
-  { to: "/docs/api", label: "API Docs" },
-  { to: "/developers", label: "Developers" },
+  { to: "/faq", label: "FAQ" },
   { to: "/docs", label: "Docs" },
-  { to: "/blog", label: "Blog" },
-  { to: "/support", label: "Contact" },
+  { to: "/contact", label: "Contact" },
 ];
 
 export function PublicNav() {

@@ -150,6 +150,16 @@ const MarketingApiDocs = lazy(() => import("./pages/marketing/ApiDocsPage"));
 const MarketingDocs = lazy(() => import("./pages/marketing/DocsPage"));
 const MarketingBlog = lazy(() => import("./pages/marketing/BlogPage"));
 const ContactPage = lazy(() => import("./pages/contact/ContactPage").then((m) => ({ default: m.ContactPage })));
+const AboutPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.AboutPage })));
+const FeaturesPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.FeaturesPage })));
+const WorkforcePage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.WorkforcePage })));
+const AgentsPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.AgentsPage })));
+const SolutionsPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.SolutionsPage })));
+const HowItWorksPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.HowItWorksPage })));
+const FaqPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.FaqPage })));
+const HelpPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.HelpPage })));
+const SiteControlPage = lazy(() => import("./pages/admin/SiteControlPage").then((m) => ({ default: m.SiteControlPage })));
+const PublicShell = lazy(() => import("./app/PublicShell").then((m) => ({ default: m.PublicShell })));
 const MySupportPage = lazy(() => import("./pages/support/MySupportPage").then((m) => ({ default: m.MySupportPage })));
 const ContactCenterPage = lazy(() => import("./pages/support/ContactCenterPage").then((m) => ({ default: m.ContactCenterPage })));
 const MarketingLegal = lazy(() => import("./pages/marketing/LegalPage"));
@@ -254,16 +264,25 @@ export const router = createBrowserRouter([
   { path: "/docs/api", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingApiDocs/>) }] },
   { path: "/blog", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
   { path: "/blog/:slug", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingBlog/>) }] },
-  { path: "/support", element: withSuspense(<ContactPage />) },
+  { path: "/about", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<AboutPage/>) }] },
+  { path: "/features", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FeaturesPage/>) }] },
+  { path: "/workforce", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<WorkforcePage/>) }] },
+  { path: "/agents", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<AgentsPage/>) }] },
+  { path: "/solutions", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<SolutionsPage/>) }] },
+  { path: "/how-it-works", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<HowItWorksPage/>) }] },
+  { path: "/faq", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FaqPage/>) }] },
+  { path: "/help", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<HelpPage/>) }] },
+  { path: "/contact", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
+  { path: "/support", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
   { path: "/legal", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingLegal/>) }] },
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },
-  { path: "/auth/login", element: withSuspense(<LoginPage />) },
-  { path: "/auth/register", element: withSuspense(<RegisterPage />) },
+  { path: "/auth/login", element: withSuspense(<PublicShell><LoginPage /></PublicShell>) },
+  { path: "/auth/register", element: withSuspense(<PublicShell><RegisterPage /></PublicShell>) },
   // Session 114 — the API has always redirected here after a Google sign-in;
   // until now the route did not exist and the token in the fragment was lost.
   { path: "/auth/callback", element: withSuspense(<GoogleCallbackPage />) },
-  { path: "/auth/forgot", element: withSuspense(<ForgotPasswordPage />) },
-  { path: "/auth/reset", element: withSuspense(<ResetPasswordPage />) },
+  { path: "/auth/forgot", element: withSuspense(<PublicShell><ForgotPasswordPage /></PublicShell>) },
+  { path: "/auth/reset", element: withSuspense(<PublicShell><ResetPasswordPage /></PublicShell>) },
 
   // Public shared-conversation view (no auth required for anyone_with_link).
   { path: "/share/:token", element: withSuspense(<SharePage />) },
@@ -488,6 +507,7 @@ export const router = createBrowserRouter([
       { path: "platform", element: withSuspense(<PlatformPage />) },
       { path: "security", element: withSuspense(<SecurityPage />) },
       { path: "api-platform", element: withSuspense(<AdminApiControlPage />) },
+      { path: "site", element: withSuspense(<SiteControlPage />) },
     ],
   },
   {
@@ -500,6 +520,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(<SuperAdminDashboard />) },
       { path: "blockonomics", element: withSuspense(<BlockonomicsAdminPage />) },
+      { path: "site", element: withSuspense(<SiteControlPage />) },
     ],
   },
   { path: "*", element: withSuspense(<NotFoundPage />) },

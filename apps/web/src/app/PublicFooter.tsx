@@ -6,10 +6,10 @@ export function PublicFooter() {
     {
       title: "Product",
       links: [
+        { to: "/features", label: "Features" },
+        { to: "/workforce", label: "AI Workforce" },
         { to: "/pricing", label: "Pricing" },
-        { to: "/enterprise", label: "Enterprise" },
-        { to: "/docs", label: "Documentation" },
-        { to: "/changelog", label: "Changelog" },
+        { to: "/how-it-works", label: "How it works" },
       ],
     },
     {

@@ -23,31 +23,12 @@ export interface MailResult {
 }
 
 export async function sendContactMail(msg: MailMessage): Promise<MailResult> {
-  const host = env.WINDELS_SMTP_HOST;
-  const port = env.WINDELS_SMTP_PORT;
-  if (!host || !port) {
-    logger.warn("[contact] SMTP not configured — contact email skipped", { to: msg.to, subject: msg.subject });
-    return { ok: true, sent: false, reason: "SMTP_NOT_CONFIGURED" };
-  }
   try {
-    const { sendSmtp } = await import("../emailIntel/smtp.client.js");
-    const res = await sendSmtp({
-      host,
-      port,
-      secure: env.WINDELS_SMTP_SECURE,
-      username: env.WINDELS_SMTP_USER ?? null,
-      password: env.WINDELS_SMTP_PASS ?? null,
-      from: env.WINDELS_MAIL_FROM,
-      to: [msg.to],
-      subject: msg.subject,
-      text: msg.text,
-    });
-    if (res.ok) {
-      logger.info("[contact] email sent", { to: msg.to, subject: msg.subject, response: res.response });
-      return { ok: true, sent: true, reason: res.response ?? "sent" };
-    }
-    logger.warn("[contact] email delivery failed", { to: msg.to, errorCode: res.errorCode, error: res.error });
-    return { ok: false, sent: false, reason: res.errorCode, error: res.error ?? undefined };
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    const res = await EmailService.sendEmail({ to: msg.to, subject: msg.subject, text: msg.text });
+    if (res.sent) logger.info("[contact] email sent", { to: msg.to, subject: msg.subject });
+    else logger.warn("[contact] email not sent", { to: msg.to, reason: res.reason, error: res.error });
+    return { ok: res.ok, sent: res.sent, reason: res.reason, error: res.error };
   } catch (err) {
     logger.warn("[contact] email send error", { to: msg.to, err: (err as Error)?.message });
     return { ok: false, sent: false, reason: "SMTP_ERROR", error: (err as Error)?.message };

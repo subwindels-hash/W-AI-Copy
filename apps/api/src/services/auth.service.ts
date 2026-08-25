@@ -478,42 +478,17 @@ export async function requestPasswordReset(email: string): Promise<PasswordReset
     },
   }).catch(() => {});
 
-  const host = process.env.WINDELS_SMTP_HOST;
-  const port = Number(process.env.WINDELS_SMTP_PORT || 0);
-  if (!host || !port) {
-    logger.warn("[auth] SMTP not configured — password reset email skipped", { userId: user.id });
-    return { ok: true, email: normalized, sent: false, smtpConfigured: false };
-  }
-
   try {
-    const { sendSmtp } = await import("../emailIntel/smtp.client.js");
-    const from = process.env.WINDELS_MAIL_FROM ?? "no-reply@windels.ai";
-    const fromName = process.env.WINDELS_MAIL_FROM_NAME ?? "WINDELS AI OS";
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    const creds = await EmailService.getActiveProvider();
+    if (!creds) {
+      logger.warn("[auth] SMTP not configured — password reset email skipped", { userId: user.id });
+      return { ok: true, email: normalized, sent: false, smtpConfigured: false };
+    }
     const resetUrl = `${process.env.WINDELS_WEB_ORIGIN ?? "http://localhost:5173"}/auth/reset?token=${token}`;
-    await sendSmtp({
-      host,
-      port,
-      secure: process.env.WINDELS_SMTP_SECURE === "true",
-      username: process.env.WINDELS_SMTP_USER ?? null,
-      password: process.env.WINDELS_SMTP_PASS ?? null,
-      from,
-      to: [normalized],
-      subject: "Reset your WINDELS AI OS password",
-      text: [
-        `Hello,`,
-        ``,
-        `We received a request to reset your WINDELS AI OS password.`,
-        ``,
-        `Reset your password here (valid for ${Math.round(PASSWORD_RESET_TTL_SECONDS / 60)} minutes):`,
-        resetUrl,
-        ``,
-        `If you did not request this, you can safely ignore this email.`,
-        ``,
-        fromName,
-      ].join("\n"),
-    });
-    logger.info("[auth] password reset email sent", { userId: user.id });
-    return { ok: true, email: normalized, sent: true, smtpConfigured: true };
+    const sent = await EmailService.sendTemplate("password_reset", normalized, { resetUrl });
+    logger.info("[auth] password reset email attempted", { userId: user.id, sent: sent.sent });
+    return { ok: true, email: normalized, sent: sent.sent, smtpConfigured: true };
   } catch (err) {
     logger.warn("[auth] password reset email send failed", { userId: user.id, err: (err as Error)?.message });
     return { ok: true, email: normalized, sent: false, smtpConfigured: true };

@@ -30,7 +30,7 @@ export default function LandingPage() {
               <div className="flex -space-x-2">
                 {[1,2,3,4].map(i=> <img key={i} src={`/reviews/reviewer-${i}.png`} alt="" className="h-8 w-8 rounded-full object-cover ring-2 ring-bg-dark" />)}
               </div>
-              <div className="text-xs text-text-muted"><span className="text-text-bright font-semibold flex items-center gap-1"><Star className="h-3 w-3 fill-amber-400 text-amber-400"/> 4.9/5</span> Trusted by 2,400+ teams</div>
+              <div className="text-xs text-text-muted">Illustrative product portraits — not customer photos or ratings.</div>
             </div>
           </div>
           <div className="relative">
@@ -84,8 +84,8 @@ export default function LandingPage() {
       {/* Testimonials */}
       <section className="py-20">
         <div className="max-w-6xl mx-auto px-6">
-          <h2 className="text-3xl font-bold text-text-bright text-center">Loved by operators, builders and founders</h2>
-          <p className="text-text-muted text-center mt-2 mb-10">Real teams running WINDELS in production.</p>
+          <h2 className="text-3xl font-bold text-text-bright text-center">How teams describe the product</h2>
+          <p className="text-text-muted text-center mt-2 mb-10">Illustrative quotes for the product story. They are not verified customer endorsements.</p>
           <div className="grid md:grid-cols-3 gap-6">
             {testimonials.map(t=>(
               <Card key={t.name} className="p-6">

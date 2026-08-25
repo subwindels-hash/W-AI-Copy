@@ -19,11 +19,12 @@ export function SuperAdminDashboard() {
       </div>
 
       <Card>
-        <CardTitle>Platform notice</CardTitle>
+        <CardTitle>Site control</CardTitle>
         <CardDescription>
-          Session 1 ships the baseline platform. Cross-region, observability, governance,
-          and the global operations center are built out in Sessions 12, 17, 31, and 70.
+          Manage the public announcement ticker, SEO, dual SMTP, and administrator accounts.
+          Role changes are enforced on the API.
         </CardDescription>
+        <a href="/platform/site" className="mt-3 inline-block text-sm text-azure">Open site administration →</a>
       </Card>
     </div>
   );

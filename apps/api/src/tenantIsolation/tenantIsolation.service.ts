@@ -658,6 +658,11 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "ll:rec", scope: "org_scoped" },
   { prefix: "ll:audit", scope: "org_scoped" },
   { prefix: "ll:event", scope: "org_scoped" },
+  // Public website platform is global by design (marketing site, not tenant data).
+  { prefix: "sp:announcement", scope: "platform_global" },
+  { prefix: "sp:seo", scope: "platform_global" },
+  { prefix: "sp:smtp", scope: "platform_global" },
+  { prefix: "sp:chat", scope: "shared" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {
