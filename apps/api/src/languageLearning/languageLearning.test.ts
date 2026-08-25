@@ -37,6 +37,15 @@ const { fake } = vi.hoisted(() => {
 
 vi.mock("../db/redis.js", () => ({ redisCmd: fake }));
 
+// Session 199 — the service now imports the translation module, which pulls in
+// the AI fabric (and, transitively, the Prisma client). Mock the registry so
+// this suite stays hermetic and never reaches a real provider or the DB layer.
+vi.mock("../services/ai/registry.js", () => ({
+  aiRegistry: {
+    complete: async () => { throw new Error("no AI provider configured in test"); },
+  },
+}));
+
 import { LanguageLearningService as Ll } from "./languageLearning.service.js";
 import { acceptedAnswers } from "./engines.js";
 import { getPack } from "./curriculum.js";

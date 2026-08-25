@@ -520,10 +520,17 @@ function findWebClient(modKey) {
  * previous page detection checked directory names only, so it could not tell
  * a routed console from a dead directory — the pages/businessIntelligence,
  * pages/enterpriseSearch, pages/enterpriseFinOps, pages/mediaFactory,
- * pages/promptTemplates, pages/apiKeys and pages/canvasCollab alias folders
- * (one-file re-exports nothing imports) were all counted as module pages,
- * and the `engineering` module was credited with the `events/` and
- * `webhook/` consoles, which belong to other modules.
+ * pages/promptTemplates and pages/canvasCollab alias folders (one-file
+ * re-exports nothing imports) were all counted as module pages, and the
+ * `engineering` module was credited with the `events/` and `webhook/`
+ * consoles, which belong to other modules.
+ *
+ * Session 199 — those six dead alias directories were deleted from disk (the
+ * router already rendered the real consoles from their canonical dirs: bi/,
+ * search/, finops/, media/, admin/, canvas/). NOTE: pages/apiKeys/ was listed
+ * with them in the S198 write-up by mistake — it is NOT a dead alias. It holds
+ * the real ApiKeysPage implementation that pages/apikey/ApiKeyPage.tsx and
+ * pages/developerPortal/DeveloperPortalPage.tsx import, so it stays on disk.
  *
  * The table is built once from the router source:
  *   routesOfPage  component page file -> the route paths rendering it

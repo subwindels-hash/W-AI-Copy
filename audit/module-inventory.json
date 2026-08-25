@@ -7713,13 +7713,14 @@
       "serviceFile": {
         "file": "languageLearning.service.ts",
         "path": "/home/user/WINDELS-AI-OS/apps/api/src/languageLearning/languageLearning.service.ts",
-        "sloc": 1046,
+        "sloc": 1079,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 5652,
+      "serviceTotalSloc": 6778,
       "serviceFiles": [
         "bootstrap.ts",
+        "catalog.data.ts",
         "curriculum.ts",
         "curriculumB2.ts",
         "engines.test.ts",
@@ -7730,6 +7731,8 @@
         "registry.ts",
         "store.ts",
         "teacher.ts",
+        "translate.test.ts",
+        "translate.ts",
         "languageLearning/languageLearning.service.ts"
       ],
       "importedServiceFiles": [
@@ -7740,11 +7743,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/languageLearning.ts",
-        "sloc": 260,
+        "sloc": 274,
         "counts": {
-          "total": 43,
+          "total": 45,
           "GET": 24,
-          "POST": 17,
+          "POST": 19,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 1
@@ -7752,6 +7755,8 @@
         "endpoints": [
           "GET /languages",
           "GET /languages/:languageCode",
+          "POST /detect",
+          "POST /translate",
           "GET /dashboard",
           "GET /profiles",
           "POST /profiles",
@@ -7796,9 +7801,9 @@
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/languageLearning.ts (615 LOC)",
+    "sharedTypes": "packages/shared/src/languageLearning.ts (729 LOC)",
     "web": {
-      "client": "apps/web/src/lib/languageLearning.ts (99 LOC)",
+      "client": "apps/web/src/lib/languageLearning.ts (114 LOC)",
       "pages": [
         "apps/web/src/pages/languages/LanguageLearningPage.tsx (routes: languages, languages/:view)",
         "apps/web/src/pages/mobile/MobileLanguagesPage.tsx (routes: languages)"
@@ -7818,10 +7823,13 @@
     },
     "tests": [
       "languageLearning/engines.test.ts",
-      "languageLearning/languageLearning.test.ts"
+      "languageLearning/languageLearning.test.ts",
+      "languageLearning/translate.test.ts"
     ],
     "syntheticData": [],
-    "externalIntegrations": [],
+    "externalIntegrations": [
+      "Google"
+    ],
     "status": "COMPLETE"
   },
   {

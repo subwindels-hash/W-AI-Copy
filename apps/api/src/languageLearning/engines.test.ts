@@ -12,7 +12,7 @@ import {
   streakFromDates,
 } from "./engines.js";
 import { REQUIRED_CATALOG_CODES, getLanguage, listLanguages, registerLanguage } from "./registry.js";
-import { conversationBeats, curriculumCeiling, getPack, listPackCodes, pathForLevel } from "./curriculum.js";
+import { conversationBeats, curriculumCeiling, getPack, pathForLevel } from "./curriculum.js";
 import { detectIntent } from "./teacher.js";
 
 describe("Language registry", () => {
@@ -35,29 +35,99 @@ describe("Language registry", () => {
     expect(getLanguage("he")?.textDirection).toBe("RTL");
   });
 
+  it("ships the full ~250-language library with translation on every entry", () => {
+    const all = listLanguages();
+    expect(all.length).toBeGreaterThanOrEqual(240);
+    for (const l of all) {
+      expect(l.translationSupported).toBe(true);
+      expect(l.supportedFeatures).toContain("TRANSLATION");
+      expect(l.supportedFeatures).toContain("LANGUAGE_DETECTION");
+      expect(l.bcp47).toBeTruthy();
+      expect(l.nativeName).toBeTruthy();
+    }
+  });
+
+  it("preserves regional and script variants as distinct catalog entries", () => {
+    for (const code of ["zh-Hans", "zh-Hant", "pt-BR", "pt-PT", "fr-CA", "pa", "pa-Arab", "ms", "ms-Arab", "sat", "sat-Latn", "tzm", "zgh", "iu", "iu-Latn", "crh-Cyrl", "crh-Latn", "kmr", "ckb"]) {
+      const lang = getLanguage(code);
+      expect(lang, `missing variant ${code}`).toBeTruthy();
+      expect(lang!.code).toBe(code);
+    }
+    // Distinct scripts/directions where it matters.
+    expect(getLanguage("pa-Arab")?.textDirection).toBe("RTL");
+    expect(getLanguage("pa")?.textDirection).toBe("LTR");
+    expect(getLanguage("zh-Hant")?.variantLabel).toBe("Traditional");
+  });
+
+  it("resolves base ISO codes and aliases to a stable primary entry", () => {
+    // Bare 'pt'/'zh' resolve to a learning-enabled variant.
+    expect(getLanguage("pt")?.learningSupported).toBe(true);
+    expect(getLanguage("zh")?.learningSupported).toBe(true);
+    // Common aliases resolve.
+    expect(getLanguage("mandarin")?.iso6391).toBe("zh");
+    expect(getLanguage("farsi")?.code).toBe("fa");
+    expect(getLanguage("tagalog")?.code).toBe("fil");
+    // German/Spanish display cleanly.
+    expect(getLanguage("de")?.name).toBe("German");
+    expect(getLanguage("es")?.name).toBe("Spanish");
+    // 'history' / 'check' are NOT languages.
+    expect(getLanguage("history")).toBeNull();
+    expect(getLanguage("check")).toBeNull();
+  });
+
   it("allows a new language to be registered without hard-coding it elsewhere", () => {
+    // `qtx` is a private-use test code that is not part of the shipped catalog.
     const added = registerLanguage({
-      code: "cy",
-      name: "Welsh",
-      nativeName: "Cymraeg",
-      iso6391: "cy",
+      code: "qtx",
+      name: "Testlingua",
+      nativeName: "Testlingua",
+      iso6391: "qtx",
+      bcp47: "qtx",
       writingSystem: "LATIN",
       textDirection: "LTR",
-      family: "Celtic",
+      family: "Constructed",
       supportedFeatures: ["LESSONS", "ASSESSMENT"],
       active: true,
       scriptNotes: null,
+      translationSupported: true,
+      learningSupported: false,
+      region: null,
+      variantLabel: null,
+      aliases: [],
     });
-    expect(getLanguage("cy")?.name).toBe("Welsh");
-    expect(added.code).toBe("cy");
+    expect(getLanguage("qtx")?.name).toBe("Testlingua");
+    expect(added.code).toBe("qtx");
+    // Universal features are always present, even when the caller omits them.
+    expect(getLanguage("qtx")?.supportedFeatures).toContain("TRANSLATION");
+  });
+
+  it("locks built-in catalog languages against being overwritten", () => {
+    expect(() => registerLanguage({
+      code: "cy",
+      name: "Welsh (spoof)",
+      nativeName: "Cymraeg",
+      iso6391: "cy",
+      bcp47: "cy",
+      writingSystem: "LATIN",
+      textDirection: "LTR",
+      family: "Celtic",
+      supportedFeatures: ["LESSONS"],
+      active: true,
+      scriptNotes: null,
+      translationSupported: true,
+      learningSupported: false,
+      region: null,
+      variantLabel: null,
+      aliases: [],
+    })).toThrow(/cannot be overwritten/);
   });
 });
 
 describe("Curriculum packs", () => {
   it("ships a pack for every required language", () => {
-    const packs = listPackCodes();
     for (const code of REQUIRED_CATALOG_CODES) {
-      expect(packs).toContain(code);
+      // getPack resolves catalog variant codes (pt-BR, zh-Hans) to their base
+      // curriculum pack (pt, zh) — every required catalog code has a pack.
       const pack = getPack(code);
       expect(pack.vocab.length).toBeGreaterThanOrEqual(15);
       expect(pack.grammar.length).toBeGreaterThanOrEqual(2);

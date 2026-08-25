@@ -16,9 +16,11 @@ import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { Input } from "@/components/ui/Input";
 import { Select } from "@/components/ui/Select";
+import { TranslateView } from "./TranslateView";
 
 const VIEWS = [
   { id: "home", label: "My Languages" },
+  { id: "translate", label: "Translate" },
   { id: "catalog", label: "Catalog" },
   { id: "teacher", label: "AI Teacher" },
   { id: "assess", label: "Assessment" },
@@ -89,6 +91,7 @@ export function LanguageLearningPage() {
   const [plan, setPlan] = useState<LlDailyPlan | null>(null);
   const [progress, setProgress] = useState<LlProgress | null>(null);
   const [recs, setRecs] = useState<any[]>([]);
+  const [catalogQuery, setCatalogQuery] = useState("");
 
   const flash = (m: string) => { setNotice(m); setTimeout(() => setNotice(null), 4000); };
   const fail = (e: unknown) => setErr(e instanceof Error ? e.message : String(e));
@@ -233,6 +236,10 @@ export function LanguageLearningPage() {
         </div>
       ) : null}
 
+      {active === "translate" && dash ? (
+        <TranslateView languages={dash.languages} />
+      ) : null}
+
       {(active === "home" || active === "catalog") && (
         <div className="space-y-4">
           <Card>
@@ -255,17 +262,36 @@ export function LanguageLearningPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Language catalog</CardTitle><CardDescription>Registry-driven. Authored lessons go through B2 workplace language. C1/C2 is not invented. Pronunciation scores stay hidden until a speech-assessment provider is configured.</CardDescription></CardHeader>
-            <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
-              {(dash?.languages ?? []).map((l) => (
-                <div key={l.code} className="rounded-lg border border-white/10 px-3 py-2 text-sm flex justify-between gap-2">
-                  <div>
-                    <div className="text-text-bright">{l.name} · {l.nativeName}</div>
-                    <div className="text-[11px] text-text-muted">{l.iso6391} · {l.writingSystem} · {l.textDirection}</div>
+            <CardHeader>
+              <CardTitle>Language catalog</CardTitle>
+              <CardDescription>
+                {(dash?.languages ?? []).length} languages and regional/script variants, registry-driven. Every language supports translation and AI practice; languages with an authored curriculum (vocabulary, grammar, lessons through B2) can also be learned step by step.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Input value={catalogQuery} onChange={(e) => setCatalogQuery(e.target.value)} placeholder="Search languages (name, native name, code)…" />
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[28rem] overflow-auto">
+                {(dash?.languages ?? []).filter((l) => {
+                  const q = catalogQuery.trim().toLowerCase();
+                  if (!q) return true;
+                  return l.name.toLowerCase().includes(q) || l.nativeName.toLowerCase().includes(q) || l.code.toLowerCase().includes(q) || l.aliases.some((a) => a.toLowerCase().includes(q));
+                }).map((l) => (
+                  <div key={l.code} className="rounded-lg border border-white/10 px-3 py-2 text-sm flex justify-between gap-2">
+                    <div className="min-w-0">
+                      <div className="text-text-bright truncate" dir={l.textDirection === "RTL" ? "rtl" : "ltr"}>{l.name} <span className="text-text-muted">· {l.nativeName}</span></div>
+                      <div className="text-[11px] text-text-muted">
+                        {l.bcp47} · {l.writingSystem} · {l.textDirection}
+                        {l.learningSupported ? <Badge variant="emerald" className="ml-1">curriculum</Badge> : <Badge variant="slate" className="ml-1">translate</Badge>}
+                      </div>
+                    </div>
+                    {l.learningSupported ? (
+                      <Button size="sm" variant="outline" onClick={() => void enroll(l.code)}>Learn</Button>
+                    ) : (
+                      <Button size="sm" variant="ghost" onClick={() => go("translate")}>Translate</Button>
+                    )}
                   </div>
-                  <Button size="sm" variant="outline" onClick={() => void enroll(l.code)}>Learn</Button>
-                </div>
-              ))}
+                ))}
+              </div>
             </CardContent>
           </Card>
         </div>

@@ -1402,8 +1402,20 @@ export function curriculumCeiling(code: string): LlCefrLevel {
 
 const extraPacks = new Map<string, LangPack>();
 
+/**
+ * Session 199 — the full catalog uses variant codes for the authored packs
+ * that live under a base code: Brazilian Portuguese (`pt-BR`) and Simplified
+ * Chinese (`zh-Hans`) reuse the `pt` / `zh` curricula. Map variant → base so
+ * `getPack("pt-BR")` resolves without duplicating content.
+ */
+const PACK_ALIASES: Record<string, string> = {
+  "pt-br": "pt",
+  "zh-hans": "zh",
+};
+
 export function getPack(code: string): LangPack {
-  const key = code.toLowerCase();
+  const raw = code.toLowerCase();
+  const key = PACK_ALIASES[raw] ?? raw;
   const found = PACKS[key] ?? extraPacks.get(key);
   if (!found) {
     const err: any = new Error(`No curriculum pack is registered for '${code}'`);

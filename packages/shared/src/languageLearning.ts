@@ -31,6 +31,30 @@ export const LL_WRITING_SYSTEMS = [
   "HEBREW",
   "THAI",
   "GREEK",
+  // Session 199 — scripts required by the full ~250-language catalog.
+  "LAO",
+  "BENGALI",
+  "GUJARATI",
+  "GURMUKHI",
+  "KANNADA",
+  "TELUGU",
+  "TAMIL",
+  "MALAYALAM",
+  "ODIA",
+  "SINHALA",
+  "ETHIOPIC",
+  "ARMENIAN",
+  "GEORGIAN",
+  "KHMER",
+  "MYANMAR",
+  "TIBETAN",
+  "TIFINAGH",
+  "SYLLABICS",
+  "OL_CHIKI",
+  "NKO",
+  "THAANA",
+  "MEITEI",
+  "MONGOLIAN",
   "MIXED",
 ] as const;
 export type LlWritingSystem = (typeof LL_WRITING_SYSTEMS)[number];
@@ -48,6 +72,10 @@ export const LL_FEATURES = [
   "SPEAKING_PRONUNCIATION",
   "DAILY_PLAN",
   "WEAKNESS_DETECTION",
+  // Session 199 — available for every catalog language, not just those with an
+  // authored curriculum pack. Translation & detection run through the AI fabric.
+  "TRANSLATION",
+  "LANGUAGE_DETECTION",
 ] as const;
 export type LlFeature = (typeof LL_FEATURES)[number];
 
@@ -144,16 +172,36 @@ export const LL_TEACHER_SOURCES = ["STRUCTURED_TEACHER", "LLM_AUGMENTED"] as con
 export type LlTeacherSource = (typeof LL_TEACHER_SOURCES)[number];
 
 export interface LlLanguage {
+  /** Stable internal key. Regional/script variants use a suffixed code, e.g. `zh-Hant`, `pt-BR`, `pa-Arab`. */
   code: string;
+  /** English display name, e.g. "Chinese (Traditional)". */
   name: string;
+  /** Endonym / native-script name where known; falls back to `name`. */
   nativeName: string;
+  /** Best-effort ISO 639-1 (2-letter) code, or the base ISO 639-3 code when no 639-1 exists. */
   iso6391: string;
+  /** BCP-47 tag used for TTS/locale and passed to the translation provider, e.g. `zh-Hant`, `pt-BR`, `ar`. */
+  bcp47: string;
   writingSystem: LlWritingSystem;
   textDirection: LlTextDirection;
   family: string;
   supportedFeatures: LlFeature[];
   active: boolean;
   scriptNotes: string | null;
+  /**
+   * Session 199 — capability flags kept in the catalog so languages can be
+   * enabled/disabled and their surfaces toggled without a rebuild.
+   */
+  /** Translation + detection are available (AI-fabric powered) for this entry. */
+  translationSupported: boolean;
+  /** A structured learning curriculum (vocab/grammar/lessons) is authored for this entry. */
+  learningSupported: boolean;
+  /** Region subtag, e.g. "BR", "PT", "CA" — null for non-regional entries. */
+  region: string | null;
+  /** Human label for the script/regional variant, e.g. "Simplified", "Jawi" — null for the default form. */
+  variantLabel: string | null;
+  /** Alternate spellings/aliases used by search and free-text language detection. */
+  aliases: string[];
 }
 
 export interface LlUserLanguageProfile {
@@ -612,3 +660,69 @@ export const LlSpeakingSchema = z.object({
 
 export const LL_DISCLAIMER =
   "Progress, levels and recommendations are computed from your stored answers and reviews. The teacher does not invent fluency scores or pronunciation grades.";
+
+/* ─────────────────────────── Translation & detection ─────────────────────── */
+/**
+ * Session 199 — context-aware translation and automatic language detection.
+ *
+ * Honesty rules carried over:
+ *  - The engine source is always reported (`REAL` vs `DEMO`); a DEMO/echo
+ *    result is never presented as a real translation.
+ *  - When a provider fails or a language/direction is unavailable, the API
+ *    returns a clear error — it never silently returns the input or a guess.
+ */
+export const LL_TRANSLATION_FORMALITIES = ["AUTO", "FORMAL", "INFORMAL"] as const;
+export type LlTranslationFormality = (typeof LL_TRANSLATION_FORMALITIES)[number];
+
+export const LL_ENGINE_SOURCES = ["REAL", "DEMO"] as const;
+export type LlEngineSource = (typeof LL_ENGINE_SOURCES)[number];
+
+export const AUTO_DETECT_CODE = "auto" as const;
+
+export interface LlDetectedLanguage {
+  /** Catalog code of the best guess, or null when detection is inconclusive. */
+  code: string | null;
+  /** English display name of the best guess, or null. */
+  name: string | null;
+  /** 0..1 confidence. */
+  confidence: number;
+  /** Whether the detector considers the guess reliable enough to translate from. */
+  reliable: boolean;
+  /** Ranked alternatives (excluding the winner). */
+  alternatives: Array<{ code: string; name: string; confidence: number }>;
+  /** How the detection was produced. */
+  source: LlEngineSource | "HEURISTIC";
+}
+
+export interface LlTranslation {
+  sourceText: string;
+  translatedText: string;
+  sourceLanguage: LlDetectedLanguage;
+  targetLanguage: { code: string; name: string; bcp47: string };
+  formality: LlTranslationFormality;
+  /** Optional alternative renderings the model offered. */
+  alternatives: string[];
+  /** Optional short note (e.g. idiom handling, transliteration). */
+  note: string | null;
+  source: LlEngineSource;
+  model: string;
+  createdAt: string;
+}
+
+export const LlDetectLanguageSchema = z.object({
+  text: z.string().trim().min(1).max(20000),
+});
+
+export const LlTranslateSchema = z.object({
+  text: z.string().trim().min(1).max(20000),
+  /** Target catalog code (required). */
+  targetLanguage: z.string().min(2).max(24),
+  /** Source catalog code, or "auto" to detect. Defaults to auto-detect. */
+  sourceLanguage: z.string().min(2).max(24).default(AUTO_DETECT_CODE),
+  formality: z.enum(LL_TRANSLATION_FORMALITIES).default("AUTO"),
+  /** Preserve line breaks / markup layout where possible. */
+  preserveFormatting: z.boolean().default(true),
+  /** Include 1–2 alternative renderings when useful. */
+  includeAlternatives: z.boolean().default(false),
+});
+export type LlTranslateInput = z.infer<typeof LlTranslateSchema>;
