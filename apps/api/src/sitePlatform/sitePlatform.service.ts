@@ -144,6 +144,9 @@ function catalogEnvConfigured(slot: string): boolean {
     case "sports-football": return Boolean(process.env.WINDELS_SPORTS_API_FOOTBALL_KEY);
     case "sports-odds": return Boolean(process.env.WINDELS_SPORTS_ODDS_API_KEY);
     case "lottery-euromillions": return Boolean(process.env.WINDELS_LOTTERY_EUROMILLIONS_FEED_URL);
+    case "lottery-powerball": return Boolean(process.env.WINDELS_LOTTERY_POWERBALL_FEED_URL);
+    case "github-client-id": return Boolean(process.env.GITHUB_CLIENT_ID);
+    case "github-oauth": return Boolean(process.env.GITHUB_CLIENT_SECRET);
     default: return false;
   }
 }

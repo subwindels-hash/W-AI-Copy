@@ -14,7 +14,7 @@ import {
   validateDrawPayload,
   validateLine,
 } from "./engines.js";
-import { EUROMILLIONS_RULES } from "@windels/shared/lotteryIntelligence";
+import { EUROMILLIONS_RULES, POWERBALL_RULES } from "@windels/shared/lotteryIntelligence";
 import type { LiDraw } from "@windels/shared/lotteryIntelligence";
 
 const rules = EUROMILLIONS_RULES;
@@ -166,5 +166,13 @@ describe("Result matching", () => {
     expect(hit.main).toBe(2);
     expect(hit.bonus).toBe(1);
     expect(hit.tier).toBe("2+1");
+  });
+
+  it("maps Powerball prize tiers from 5+1 rules, not EuroMillions 5+2", () => {
+    expect(prizeTier(5, 1, POWERBALL_RULES)).toBe("5+1");
+    expect(prizeTier(0, 1, POWERBALL_RULES)).toBe("0+1");
+    expect(prizeTier(2, 0, POWERBALL_RULES)).toBe("NONE");
+    expect(validateLine([4, 18, 29, 41, 62], [12], POWERBALL_RULES)).toEqual([]);
+    expect(validateLine([4, 18, 29, 41, 62], [12, 3], POWERBALL_RULES).join(" ")).toMatch(/Expected 1/);
   });
 });

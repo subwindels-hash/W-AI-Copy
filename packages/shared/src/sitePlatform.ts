@@ -406,6 +406,9 @@ export const SP_API_CATALOG: SpApiCatalogItem[] = [
   { slot: "sports-football", label: "API-Football", category: "sports", envHint: "WINDELS_SPORTS_API_FOOTBALL_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://v3.football.api-sports.io", removable: false },
   { slot: "sports-odds", label: "The Odds API", category: "sports", envHint: "WINDELS_SPORTS_ODDS_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.the-odds-api.com/v4", removable: false },
   { slot: "lottery-euromillions", label: "EuroMillions official feed", category: "lottery", envHint: "WINDELS_LOTTERY_EUROMILLIONS_FEED_URL", needsKey: false, needsUrl: true, defaultBaseUrl: null, removable: false },
+  { slot: "lottery-powerball", label: "Powerball official feed", category: "lottery", envHint: "WINDELS_LOTTERY_POWERBALL_FEED_URL", needsKey: false, needsUrl: true, defaultBaseUrl: null, removable: false },
+  { slot: "github-client-id", label: "GitHub OAuth client id", category: "integrations", envHint: "GITHUB_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "github-oauth", label: "GitHub OAuth client secret", category: "integrations", envHint: "GITHUB_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
   { slot: "google-maps", label: "Google Maps Embed (browser key)", category: "maps", envHint: "public embed key", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
 ];
 

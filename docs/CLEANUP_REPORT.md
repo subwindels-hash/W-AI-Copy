@@ -65,3 +65,11 @@ and deployment).
 - Language packs now include authored B2 workplace vocab, grammar, writing
   and BUSINESS conversation. Catalog reports `curriculumCeiling: B2`.
   Pronunciation remains `NOT_AVAILABLE`.
+
+## Lottery game 2 — Powerball (follow-up)
+
+- Catalog is registry-driven: EuroMillions plus Powerball (5/69 + 1/26).
+- Official Powerball results require `WINDELS_LOTTERY_POWERBALL_FEED_URL` or the
+  Super Admin `lottery-powerball` slot. Missing feed → no invented draws.
+- SANDBOX emits labelled fictional Powerball history, never mixed into
+  EuroMillions statistics or tickets.

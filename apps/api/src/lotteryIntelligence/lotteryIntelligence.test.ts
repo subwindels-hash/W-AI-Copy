@@ -41,6 +41,8 @@ vi.mock("../config/env.js", () => ({
     WINDELS_LOTTERY_MODE: "SANDBOX",
     WINDELS_LOTTERY_EUROMILLIONS_FEED_URL: undefined,
     WINDELS_LOTTERY_EUROMILLIONS_FEED_TOKEN: undefined,
+    WINDELS_LOTTERY_POWERBALL_FEED_URL: undefined,
+    WINDELS_LOTTERY_POWERBALL_FEED_TOKEN: undefined,
     WINDELS_DEMO_DATA: true,
     NODE_ENV: "test",
   },
@@ -53,7 +55,7 @@ vi.mock("../config/demoData.js", () => ({
 import { LotteryIntelligenceService as Li } from "./lotteryIntelligence.service.js";
 import { combinations } from "./engines.js";
 import { parseOfficialFeed } from "./providers.js";
-import { EUROMILLIONS_RULES } from "@windels/shared/lotteryIntelligence";
+import { EUROMILLIONS_RULES, POWERBALL_RULES } from "@windels/shared/lotteryIntelligence";
 
 const ORG_A = "org-a";
 const ORG_B = "org-b";
@@ -157,5 +159,72 @@ describe("Lottery Intelligence — backtest honesty", () => {
     expect(dash.performance.savedTickets).toBe(0);
     expect(dash.rules.mainCount).toBe(5);
     expect(dash.rules.bonusLabel).toBe("Lucky Stars");
+    expect(dash.lotteries.map((l) => l.lotteryId)).toEqual(["euromillions", "powerball"]);
+  });
+});
+
+describe("Lottery Intelligence — Powerball (game 2)", () => {
+  it("catalogues Powerball as 5 from 1–69 plus one Powerball from 1–26", () => {
+    const rules = Li.rules("powerball");
+    expect(rules.lotteryId).toBe("powerball");
+    expect(rules.mainMax).toBe(69);
+    expect(rules.bonusCount).toBe(1);
+    expect(rules.bonusMax).toBe(26);
+    expect(rules.bonusLabel).toBe("Powerball");
+  });
+
+  it("rejects an unknown lottery instead of inventing rules", () => {
+    expect(() => Li.rules("made-up-lotto")).toThrow(/not in the WINDELS catalog/i);
+  });
+
+  it("syncs labelled sandbox Powerball draws separately from EuroMillions", async () => {
+    await Li.updateConfig(ORG_A, { mode: "SANDBOX", reason: "pb" }, "admin");
+    const sync = await Li.syncDraws(ORG_A);
+    expect(sync.created).toBeGreaterThan(20);
+    const em = await Li.listDraws(ORG_A, "euromillions");
+    const pb = await Li.listDraws(ORG_A, "powerball");
+    expect(em.length).toBeGreaterThan(10);
+    expect(pb.length).toBeGreaterThan(10);
+    expect(pb.every((d) => d.lotteryId === "powerball" && d.dataClass === "SANDBOX")).toBe(true);
+    expect(pb.every((d) => d.bonusNumbers.length === 1 && d.mainNumbers.length === 5)).toBe(true);
+    const dash = await Li.dashboard(ORG_A, "powerball");
+    expect(dash.lotteryId).toBe("powerball");
+    expect(dash.rules.bonusLabel).toBe("Powerball");
+    expect(dash.performance.drawsTracked).toBe(pb.length);
+  });
+
+  it("refuses a EuroMillions-shaped line against Powerball rules", async () => {
+    await Li.updateConfig(ORG_A, { mode: "SANDBOX", reason: "pb-line" }, "admin");
+    await expect(Li.saveTicket(ORG_A, "user-1", {
+      lotteryId: "powerball", name: "Bad", generationMode: "RANDOM",
+      lockedMain: [], excludedMain: [], lockedBonus: [], excludedBonus: [],
+      lines: [{ mainNumbers: [7, 18, 24, 36, 49], bonusNumbers: [3, 11] }],
+    })).rejects.toMatchObject({ code: "INVALID_COMBINATION" });
+  });
+
+  it("system plan for Powerball uses C(n,5) × C(s,1)", async () => {
+    const plan = await Li.systemPlan(ORG_A, {
+      lotteryId: "powerball",
+      mainPool: [1, 2, 3, 4, 5, 6],
+      bonusPool: [1, 2],
+      expand: true,
+    });
+    expect(plan.mainCombinations).toBe(combinations(6, 5));
+    expect(plan.bonusCombinations).toBe(2);
+    expect(plan.totalLines).toBe(12);
+    expect(plan.lines.every((l) => l.bonusNumbers.length === 1)).toBe(true);
+  });
+
+  it("parses official Powerball JSON and rejects invalid rows", () => {
+    const ok = parseOfficialFeed(JSON.stringify([
+      { drawId: "20260103-pb", date: "2026-01-03", numbers: [4, 18, 29, 41, 62], powerball: [12] },
+    ]), POWERBALL_RULES);
+    expect(ok).toHaveLength(1);
+    expect(ok[0]!.lotteryId).toBe("powerball");
+    expect(ok[0]!.bonusNumbers).toEqual([12]);
+    const bad = parseOfficialFeed(JSON.stringify([
+      { drawId: "x", date: "2026-01-03", numbers: [1, 2, 3, 4, 5], stars: [1, 2] },
+    ]), POWERBALL_RULES);
+    expect(bad).toHaveLength(0);
   });
 });

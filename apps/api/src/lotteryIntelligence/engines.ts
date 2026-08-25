@@ -307,10 +307,10 @@ export function profileCombination(
   }
   const flags: string[] = [];
   if (groups.length) flags.push("has_consecutive");
-  if (m.filter((n) => n <= 31).length >= 4) flags.push("birthday_heavy");
-  if (odd === 5 || even === 5) flags.push("all_same_parity");
-  if (low === 5 || high === 5) flags.push("all_same_half");
-  if (m.length === 5 && m[4]! - m[0]! <= 10) flags.push("tight_cluster");
+  if (m.filter((n) => n <= 31).length >= Math.max(4, rules.mainCount - 1)) flags.push("birthday_heavy");
+  if (odd === m.length || even === m.length) flags.push("all_same_parity");
+  if (low === m.length || high === m.length) flags.push("all_same_half");
+  if (m.length >= 4 && m[m.length - 1]! - m[0]! <= 10) flags.push("tight_cluster");
 
   let fit = 50;
   let assessment: LiCombinationProfile["assessment"] = "INSUFFICIENT_DATA";
@@ -375,26 +375,29 @@ export function diversityAmong(lines: Array<{ mainNumbers: number[]; bonusNumber
     for (let j = i + 1; j < lines.length; j++) {
       const om = overlapScore(lines[i]!.mainNumbers, lines[j]!.mainNumbers);
       const ob = overlapScore(lines[i]!.bonusNumbers, lines[j]!.bonusNumbers);
-      acc += 1 - (om / 5) * 0.75 - (ob / 2) * 0.25;
+      const mainN = Math.max(1, lines[i]!.mainNumbers.length);
+      const bonusN = Math.max(1, lines[i]!.bonusNumbers.length);
+      acc += 1 - (om / mainN) * 0.75 - (ob / bonusN) * 0.25;
       pair += 1;
     }
   }
   return Math.round((acc / pair) * 100);
 }
 
-export function prizeTier(mainHits: number, bonusHits: number): LiPrizeTier {
+export function prizeTier(mainHits: number, bonusHits: number, rules?: LiLotteryRules): LiPrizeTier {
   const key = `${mainHits}+${bonusHits}`;
-  return (EUROMILLIONS_PRIZE_TIERS as readonly string[]).includes(key) ? (key as LiPrizeTier) : "NONE";
+  const tiers = rules?.prizeTiers ?? EUROMILLIONS_PRIZE_TIERS;
+  return (tiers as readonly string[]).includes(key) ? (key as LiPrizeTier) : "NONE";
 }
 
-export function matchLine(lineMain: number[], lineBonus: number[], draw: LiDraw): {
+export function matchLine(lineMain: number[], lineBonus: number[], draw: LiDraw, rules?: LiLotteryRules): {
   main: number;
   bonus: number;
   tier: LiPrizeTier;
 } {
   const main = lineMain.filter((n) => draw.mainNumbers.includes(n)).length;
   const bonus = lineBonus.filter((n) => draw.bonusNumbers.includes(n)).length;
-  return { main, bonus, tier: prizeTier(main, bonus) };
+  return { main, bonus, tier: prizeTier(main, bonus, rules) };
 }
 
 function availablePool(min: number, max: number, locked: number[], excluded: number[]): number[] {

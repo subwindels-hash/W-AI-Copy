@@ -18,6 +18,7 @@ import { Select } from "@/components/ui/Select";
 const VIEWS = [
   { id: "dashboard", label: "Dashboard" },
   { id: "euromillions", label: "EuroMillions" },
+  { id: "powerball", label: "Powerball" },
   { id: "results", label: "Draw Results" },
   { id: "history", label: "Historical Results" },
   { id: "numbers", label: "Number Intelligence" },
@@ -73,20 +74,22 @@ export function LotteryIntelligencePage() {
   const [analyzeStars, setAnalyzeStars] = useState("3,11");
   const [analysis, setAnalysis] = useState<any>(null);
   const [ticketName, setTicketName] = useState("EuroMillions line set");
+  const [lotteryId, setLotteryId] = useState<"euromillions" | "powerball">("euromillions");
+  const bonusLabel = dash?.rules.bonusLabel ?? (lotteryId === "powerball" ? "Powerball" : "Lucky Stars");
 
   const parseList = (s: string) => s.split(/[,\s]+/).map(Number).filter((n) => Number.isFinite(n));
 
   const load = useCallback(async () => {
     try {
       const [d, dr, n, s, di, t, p, pr, c] = await Promise.all([
-        lotteryApi.dashboard(), lotteryApi.draws(), lotteryApi.numbers({ lastN: windowN }),
-        lotteryApi.stars({ lastN: windowN }), lotteryApi.distribution({ lastN: windowN }),
-        lotteryApi.tickets(), lotteryApi.performance(), lotteryApi.providers(), lotteryApi.config(),
+        lotteryApi.dashboard(lotteryId), lotteryApi.draws(lotteryId), lotteryApi.numbers({ lastN: windowN, lotteryId }),
+        lotteryApi.stars({ lastN: windowN, lotteryId }), lotteryApi.distribution({ lastN: windowN, lotteryId }),
+        lotteryApi.tickets(), lotteryApi.performance(lotteryId), lotteryApi.providers(), lotteryApi.config(),
       ]);
       setDash(d); setDraws(dr); setNums(n); setStars(s); setDist(di);
       setTickets(t); setPerf(p); setProviders(pr); setCfg(c); setErr(null);
     } catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
-  }, [windowN]);
+  }, [windowN, lotteryId]);
   useEffect(() => { void load(); }, [load]);
 
   const flash = (m: string) => { setNotice(m); setTimeout(() => setNotice(null), 4000); };
@@ -94,7 +97,7 @@ export function LotteryIntelligencePage() {
   const generate = async () => {
     try {
       const data = await lotteryApi.generate({
-        lotteryId: "euromillions", mode, count,
+        lotteryId, mode, count,
         window: windowN,
         lockedMain: parseList(lockMain), excludedMain: parseList(exMain),
         lockedBonus: [], excludedBonus: [],
@@ -108,7 +111,7 @@ export function LotteryIntelligencePage() {
     if (!generated.length) return;
     try {
       await lotteryApi.saveTicket({
-        lotteryId: "euromillions", name: ticketName, generationMode: mode,
+        lotteryId, name: ticketName, generationMode: mode,
         lockedMain: parseList(lockMain), excludedMain: parseList(exMain),
         lockedBonus: [], excludedBonus: [],
         lines: generated.map((l) => ({ mainNumbers: l.mainNumbers, bonusNumbers: l.bonusNumbers, mode: l.mode })),
@@ -123,13 +126,13 @@ export function LotteryIntelligencePage() {
       <div>
         <h1 className="text-2xl font-black text-text-bright">Lottery Intelligence</h1>
         <p className="text-sm text-text-muted max-w-3xl">
-          EuroMillions statistical analysis, combination building and historical simulation.
+          EuroMillions and Powerball statistical analysis, combination building and historical simulation.
           Lottery draws are random — this module does not predict winning numbers.
         </p>
       </div>
       <div className={`rounded-lg border px-4 py-2 text-sm ${dash?.mode === "SANDBOX" ? "border-amber/40 bg-amber/10 text-amber" : "border-azure/30 bg-azure/10 text-azure"}`}>
         <span className="font-semibold mr-2">{dash?.mode ?? "…"}</span>
-        {dash?.mode === "SANDBOX" ? "DEMO / SANDBOX DATA — fictional draws for development. Not official EuroMillions results." : dash?.disclaimer}
+        {dash?.mode === "SANDBOX" ? `DEMO / SANDBOX DATA — fictional ${dash.rules.name} draws for development. Not official results.` : dash?.disclaimer}
       </div>
       {dash?.stale ? <div className="rounded-lg border border-amber/30 bg-amber/10 px-4 py-2 text-sm text-amber">STALE DATA — last retrieved result is older than the configured freshness window.</div> : null}
       {err ? <div className="rounded-lg border border-crimson/30 bg-crimson/10 px-4 py-3 text-sm text-crimson">{err}</div> : null}
@@ -143,12 +146,12 @@ export function LotteryIntelligencePage() {
         ))}
       </div>
 
-      {(active === "dashboard" || active === "euromillions") && (
+      {(active === "dashboard" || active === "euromillions" || active === "powerball") && (
         <div className="space-y-4">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-            <Stat label="Last result" value={dash?.lastDraw ? fmtNums(dash.lastDraw.mainNumbers) : "—"} sub={dash?.lastDraw ? `Stars ${fmtNums(dash.lastDraw.bonusNumbers)}` : "No official/sandbox draw stored"} />
+            <Stat label="Last result" value={dash?.lastDraw ? fmtNums(dash.lastDraw.mainNumbers) : "—"} sub={dash?.lastDraw ? `${bonusLabel} ${fmtNums(dash.lastDraw.bonusNumbers)}` : "No official/sandbox draw stored"} />
             <Stat label="Jackpot" value={dash?.jackpotMinor == null ? "unavailable" : `${dash.currency ?? ""} ${(dash.jackpotMinor / 100).toLocaleString()}`} />
-            <Stat label="Next draw" value="Tue / Fri" sub={dash?.nextDrawHint} />
+            <Stat label="Next draw" value={dash?.rules.drawWeekdays.map((d) => ["Sun","Mon","Tue","Wed","Thu","Fri","Sat"][d]).join(" / ") ?? "—"} sub={dash?.nextDrawHint} />
             <Stat label="Draws stored" value={String(dash?.performance.drawsTracked ?? 0)} />
           </div>
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
@@ -161,7 +164,7 @@ export function LotteryIntelligencePage() {
               </CardContent>
             </Card>
             <Card>
-              <CardHeader><CardTitle>Lucky Stars</CardTitle><CardDescription>Same honesty rule as main numbers.</CardDescription></CardHeader>
+              <CardHeader><CardTitle>{bonusLabel}</CardTitle><CardDescription>Same honesty rule as main numbers.</CardDescription></CardHeader>
               <CardContent className="text-sm space-y-2">
                 <div>Hot: {dash?.hotBonus.map((n) => String(n).padStart(2, "0")).join(" · ") || "—"}</div>
                 <div>Cold: {dash?.coldBonus.map((n) => String(n).padStart(2, "0")).join(" · ") || "—"}</div>
@@ -194,7 +197,7 @@ export function LotteryIntelligencePage() {
       {(active === "numbers" || active === "stars") && (
         <Card>
           <CardHeader>
-            <CardTitle>{active === "stars" ? "Lucky Star intelligence" : "Number intelligence"}</CardTitle>
+            <CardTitle>{active === "stars" ? `${bonusLabel} intelligence` : "Number intelligence"}</CardTitle>
             <CardDescription>STATISTICAL OBSERVATION over the selected window. Not a next-draw forecast.</CardDescription>
           </CardHeader>
           <CardContent>
@@ -274,14 +277,14 @@ export function LotteryIntelligencePage() {
 
       {active === "system" && (
         <Card>
-          <CardHeader><CardTitle>System builder</CardTitle><CardDescription>Line count is C(N,5) × C(S,2). Large systems are truncated to the configured limit.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>System builder</CardTitle><CardDescription>Line count is C(N,{dash?.rules.mainCount ?? 5}) × C(S,{dash?.rules.bonusCount ?? 2}). Large systems are truncated to the configured limit.</CardDescription></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Input value={poolMain} onChange={(e) => setPoolMain(e.target.value)} />
               <Input value={poolStars} onChange={(e) => setPoolStars(e.target.value)} />
             </div>
             <Button onClick={async () => {
-              try { setPlan(await lotteryApi.system({ lotteryId: "euromillions", mainPool: parseList(poolMain), bonusPool: parseList(poolStars), expand: true })); }
+              try { setPlan(await lotteryApi.system({ lotteryId, mainPool: parseList(poolMain), bonusPool: parseList(poolStars), expand: true })); }
               catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
             }}>Calculate system</Button>
             {plan ? (
@@ -299,14 +302,14 @@ export function LotteryIntelligencePage() {
 
       {active === "analyzer" && (
         <Card>
-          <CardHeader><CardTitle>Combination analyzer</CardTitle><CardDescription>Profile a 5+2 line. The fit score is not a win chance.</CardDescription></CardHeader>
+          <CardHeader><CardTitle>Combination analyzer</CardTitle><CardDescription>Profile a {dash?.rules.mainCount ?? 5}+{dash?.rules.bonusCount ?? 2} line. The fit score is not a win chance.</CardDescription></CardHeader>
           <CardContent className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
               <Input value={analyzeMain} onChange={(e) => setAnalyzeMain(e.target.value)} />
               <Input value={analyzeStars} onChange={(e) => setAnalyzeStars(e.target.value)} />
             </div>
             <Button onClick={async () => {
-              try { setAnalysis(await lotteryApi.analyze({ lotteryId: "euromillions", mainNumbers: parseList(analyzeMain), bonusNumbers: parseList(analyzeStars), window: windowN })); }
+              try { setAnalysis(await lotteryApi.analyze({ lotteryId, mainNumbers: parseList(analyzeMain), bonusNumbers: parseList(analyzeStars), window: windowN })); }
               catch (e) { setErr(e instanceof Error ? e.message : String(e)); }
             }}>Analyze</Button>
             {analysis ? (
@@ -329,7 +332,7 @@ export function LotteryIntelligencePage() {
           <CardContent className="space-y-3">
             <div className="flex flex-wrap gap-2">
               <Button onClick={async () => {
-                const r = await lotteryApi.backtest({ lotteryId: "euromillions", strategy: mode, linesPerDraw: 1, lastN: windowN });
+                const r = await lotteryApi.backtest({ lotteryId, strategy: mode, linesPerDraw: 1, lastN: windowN });
                 setBacktests([r, ...backtests]);
                 flash("Simulation stored.");
               }}>Backtest current mode</Button>

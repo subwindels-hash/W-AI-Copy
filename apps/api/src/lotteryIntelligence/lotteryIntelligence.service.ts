@@ -34,10 +34,11 @@ import type {
   LiTicketLine,
 } from "@windels/shared/lotteryIntelligence";
 import {
-  EUROMILLIONS_RULES,
   LI_CURRENT_MODEL,
   LI_DEFAULT_CONFIG,
   LI_DISCLAIMER,
+  LI_LOTTERY_CATALOG,
+  requireLotteryRules,
 } from "@windels/shared/lotteryIntelligence";
 import {
   datasetVersion,
@@ -78,6 +79,13 @@ function dataClassFor(mode: LiOperatingMode): LiDraw["dataClass"] {
   return mode === "SANDBOX" ? "SANDBOX" : "OFFICIAL";
 }
 
+function lotteryEnabled(cfg: LiConfig, lotteryId: string): boolean {
+  if (!cfg.enabled) return false;
+  if (lotteryId === "euromillions") return cfg.euromillionsEnabled !== false;
+  if (lotteryId === "powerball") return cfg.powerballEnabled !== false;
+  return false;
+}
+
 async function emitKernel(kind: string, payload: Record<string, unknown>) {
   try {
     const { KernelService } = await import("../kernel/kernel.service.js");
@@ -102,8 +110,12 @@ async function audit(org: string, actorId: string | null, action: string, resour
 }
 
 export const LotteryIntelligenceService = {
-  rules() {
-    return { ...EUROMILLIONS_RULES };
+  rules(lotteryId = "euromillions") {
+    return { ...requireLotteryRules(lotteryId) };
+  },
+
+  listLotteries() {
+    return LI_LOTTERY_CATALOG.map((r) => ({ ...r }));
   },
 
   async getConfig(org: string): Promise<LiConfig> {
@@ -138,35 +150,41 @@ export const LotteryIntelligenceService = {
     return liRead<LiDraw>("draw", org, id);
   },
 
-  async windowedDraws(org: string, q?: { lastN?: number; from?: string; to?: string; window?: string }): Promise<LiDraw[]> {
+  async windowedDraws(org: string, q?: { lotteryId?: string; lastN?: number; from?: string; to?: string; window?: string }): Promise<LiDraw[]> {
     const cfg = await this.getConfig(org);
-    const all = (await this.listDraws(org)).filter((d) => d.validationStatus === "VALID" && d.dataClass === dataClassFor(cfg.mode));
+    const lotteryId = q?.lotteryId ?? "euromillions";
+    const all = (await this.listDraws(org, lotteryId)).filter((d) => d.validationStatus === "VALID" && d.dataClass === dataClassFor(cfg.mode));
     const lastN = q?.lastN ?? (q?.window && q.window !== "all" && q.window !== "custom" ? Number(q.window) : cfg.defaultWindow);
     return pickWindow(all, lastN, q?.from, q?.to);
   },
 
-  async dashboard(org: string): Promise<LiDashboard> {
+  async dashboard(org: string, lotteryId = "euromillions"): Promise<LiDashboard> {
+    const rules = this.rules(lotteryId);
     const cfg = await this.getConfig(org);
-    const draws = await this.listDraws(org);
+    const draws = await this.listDraws(org, lotteryId);
     const valid = draws.filter((d) => d.validationStatus === "VALID");
     const last = valid[0] ?? null;
     const window = pickWindow(valid, cfg.defaultWindow);
-    const mainStats = numberStats(window, "MAIN", EUROMILLIONS_RULES.mainMin, EUROMILLIONS_RULES.mainMax, Math.min(10, window.length));
-    const bonusStats = numberStats(window, "BONUS", EUROMILLIONS_RULES.bonusMin, EUROMILLIONS_RULES.bonusMax, Math.min(10, window.length));
+    const mainStats = numberStats(window, "MAIN", rules.mainMin, rules.mainMax, Math.min(10, window.length));
+    const bonusStats = numberStats(window, "BONUS", rules.bonusMin, rules.bonusMax, Math.min(10, window.length));
     const hc = hotCold(mainStats, 6);
-    const hb = hotCold(bonusStats, 4);
-    const providers = await this.providerHealth();
+    const hb = hotCold(bonusStats, Math.min(4, rules.bonusMax - rules.bonusMin + 1));
+    const providers = (await this.providerHealth()).filter((p) =>
+      p.providerId.includes(lotteryId) || (lotteryId === "euromillions" && (p.providerId === "sandbox" || p.providerId === "official-feed")),
+    );
     const stale = last
       ? (Date.now() - Date.parse(last.retrievedAt)) / 36e5 > cfg.staleHours
       : cfg.mode !== "SANDBOX";
     return {
       mode: cfg.mode,
       moduleEnabled: cfg.enabled,
-      lotteryEnabled: cfg.euromillionsEnabled,
+      lotteryEnabled: lotteryEnabled(cfg, lotteryId),
+      lotteryId,
+      lotteries: this.listLotteries(),
       dataClass: dataClassFor(cfg.mode),
       disclaimer: LI_DISCLAIMER,
-      rules: this.rules(),
-      nextDrawHint: "EuroMillions draws are typically Tuesday and Friday evenings. Confirm locally — this is not an official countdown feed.",
+      rules,
+      nextDrawHint: rules.nextDrawHint,
       lastDraw: last,
       jackpotMinor: last?.jackpotMinor ?? null,
       currency: last?.currency ?? cfg.currency,
@@ -179,50 +197,53 @@ export const LotteryIntelligenceService = {
       coldBonus: hb.cold,
       recentBonus: last?.bonusNumbers ?? [],
       providers,
-      performance: await this.performance(org),
+      performance: await this.performance(org, lotteryId),
     };
   },
 
-  async numberIntelligence(org: string, kind: "MAIN" | "BONUS", q?: { lastN?: number; from?: string; to?: string; window?: string }): Promise<LiNumberStat[]> {
-    const draws = await this.windowedDraws(org, q);
-    const rules = this.rules();
+  async numberIntelligence(org: string, kind: "MAIN" | "BONUS", q?: { lotteryId?: string; lastN?: number; from?: string; to?: string; window?: string }): Promise<LiNumberStat[]> {
+    const lotteryId = q?.lotteryId ?? "euromillions";
+    const draws = await this.windowedDraws(org, { ...q, lotteryId });
+    const rules = this.rules(lotteryId);
     if (kind === "BONUS") return numberStats(draws, "BONUS", rules.bonusMin, rules.bonusMax, Math.min(10, draws.length));
     return numberStats(draws, "MAIN", rules.mainMin, rules.mainMax, Math.min(10, draws.length));
   },
 
-  async distribution(org: string, q?: { lastN?: number; from?: string; to?: string; window?: string }): Promise<LiDistributionSnapshot> {
-    return distribution(await this.windowedDraws(org, q), this.rules());
+  async distribution(org: string, q?: { lotteryId?: string; lastN?: number; from?: string; to?: string; window?: string }): Promise<LiDistributionSnapshot> {
+    const lotteryId = q?.lotteryId ?? "euromillions";
+    return distribution(await this.windowedDraws(org, { ...q, lotteryId }), this.rules(lotteryId));
   },
 
-  async pairs(org: string, kind: "MAIN" | "BONUS", q?: { lastN?: number }): Promise<LiPairStat[]> {
-    return pairStats(await this.windowedDraws(org, q), kind, Math.min(10, q?.lastN ?? 25)).slice(0, 40);
+  async pairs(org: string, kind: "MAIN" | "BONUS", q?: { lotteryId?: string; lastN?: number }): Promise<LiPairStat[]> {
+    const lotteryId = q?.lotteryId ?? "euromillions";
+    return pairStats(await this.windowedDraws(org, { lotteryId, lastN: q?.lastN }), kind, Math.min(10, q?.lastN ?? 25)).slice(0, 40);
   },
 
   async analyze(org: string, input: LiAnalyzeInput) {
-    const rules = this.rules();
+    const rules = this.rules(input.lotteryId);
     const errors = validateLine(input.mainNumbers, input.bonusNumbers, rules);
     if (errors.length) {
       throw Object.assign(new Error(errors.join("; ")), { code: "INVALID_COMBINATION" });
     }
-    const draws = await this.windowedDraws(org, { lastN: input.window });
+    const draws = await this.windowedDraws(org, { lotteryId: input.lotteryId, lastN: input.window });
     const stats = numberStats(draws, "MAIN", rules.mainMin, rules.mainMax, Math.min(10, draws.length));
     const dist = distribution(draws, rules);
     const profile = profileCombination(input.mainNumbers, input.bonusNumbers, rules, stats, dist);
     return {
       profile,
       disclaimer: LI_DISCLAIMER,
-      note: "Statistical-fit score is not a win probability. Every valid 5+2 line has the same mathematical chance of being drawn.",
+      note: `Statistical-fit score is not a win probability. Every valid ${rules.mainCount}+${rules.bonusCount} line has the same mathematical chance of being drawn.`,
     };
   },
 
   async generate(org: string, input: LiGenerateInput): Promise<{ lines: LiGeneratedLine[]; disclaimer: string }> {
     const cfg = await this.getConfig(org);
-    if (!cfg.enabled || !cfg.euromillionsEnabled) {
-      throw Object.assign(new Error("Lottery Intelligence is disabled"), { code: "MODULE_DISABLED" });
+    const rules = this.rules(input.lotteryId);
+    if (!lotteryEnabled(cfg, rules.lotteryId)) {
+      throw Object.assign(new Error(`${rules.name} is disabled`), { code: "MODULE_DISABLED" });
     }
     const count = Math.min(input.count, cfg.maxGenerateLines);
-    const draws = await this.windowedDraws(org, { lastN: input.window ?? cfg.defaultWindow });
-    const rules = this.rules();
+    const draws = await this.windowedDraws(org, { lotteryId: rules.lotteryId, lastN: input.window ?? cfg.defaultWindow });
     const stats = [
       ...numberStats(draws, "MAIN", rules.mainMin, rules.mainMax, Math.min(10, draws.length)),
       ...numberStats(draws, "BONUS", rules.bonusMin, rules.bonusMax, Math.min(10, draws.length)),
@@ -239,7 +260,7 @@ export const LotteryIntelligenceService = {
 
   async systemPlan(org: string, input: LiSystemInput): Promise<LiSystemPlan> {
     const cfg = await this.getConfig(org);
-    const rules = this.rules();
+    const rules = this.rules(input.lotteryId);
     for (const n of input.mainPool) {
       if (n < rules.mainMin || n > rules.mainMax) throw Object.assign(new Error(`Invalid main number ${n}`), { code: "INVALID_COMBINATION" });
     }
@@ -265,8 +286,11 @@ export const LotteryIntelligenceService = {
 
   async saveTicket(org: string, userId: string, input: LiTicketCreateInput): Promise<LiTicket> {
     const cfg = await this.getConfig(org);
-    const rules = this.rules();
-    const draws = await this.windowedDraws(org, { lastN: cfg.defaultWindow });
+    const rules = this.rules(input.lotteryId);
+    if (!lotteryEnabled(cfg, rules.lotteryId)) {
+      throw Object.assign(new Error(`${rules.name} is disabled`), { code: "MODULE_DISABLED" });
+    }
+    const draws = await this.windowedDraws(org, { lotteryId: rules.lotteryId, lastN: cfg.defaultWindow });
     const stats = numberStats(draws, "MAIN", rules.mainMin, rules.mainMax, 10);
     const dist = distribution(draws, rules);
     const lines: LiTicketLine[] = input.lines.map((l, i) => {
@@ -342,18 +366,22 @@ export const LotteryIntelligenceService = {
   },
 
   async checkTickets(org: string) {
-    const draws = (await this.listDraws(org)).filter((d) => d.verified && d.validationStatus === "VALID");
+    const cfg = await this.getConfig(org);
+    const draws = (await liList<LiDraw>("draw", org)).filter((d) =>
+      d.verified && d.validationStatus === "VALID" && (d.dataClass === dataClassFor(cfg.mode) || d.dataClass === "UNVERIFIED"),
+    );
     const tickets = await liList<LiTicket>("ticket", org);
     let updated = 0;
     for (const t of tickets) {
       const draw = t.drawId
-        ? draws.find((d) => d.id === t.drawId)
+        ? draws.find((d) => d.id === t.drawId && d.lotteryId === t.lotteryId)
         : t.drawDate
-          ? draws.find((d) => d.drawDate.slice(0, 10) === t.drawDate!.slice(0, 10))
-          : draws[0];
+          ? draws.find((d) => d.lotteryId === t.lotteryId && d.drawDate.slice(0, 10) === t.drawDate!.slice(0, 10))
+          : draws.find((d) => d.lotteryId === t.lotteryId);
       if (!draw) continue;
+      const ticketRules = this.rules(t.lotteryId);
       const lines = t.lines.map((l) => {
-        const m = matchLine(l.mainNumbers, l.bonusNumbers, draw);
+        const m = matchLine(l.mainNumbers, l.bonusNumbers, draw, ticketRules);
         return { ...l, matchMain: m.main, matchBonus: m.bonus, prizeTier: m.tier };
       });
       await liWrite("ticket", org, {
@@ -366,8 +394,8 @@ export const LotteryIntelligenceService = {
 
   async backtest(org: string, params: LiBacktestParams, actorId: string | null): Promise<LiBacktestResult> {
     const cfg = await this.getConfig(org);
-    const rules = this.rules();
-    const draws = await this.windowedDraws(org, { lastN: params.lastN, from: params.from, to: params.to });
+    const rules = this.rules(params.lotteryId);
+    const draws = await this.windowedDraws(org, { lotteryId: rules.lotteryId, lastN: params.lastN, from: params.from, to: params.to });
     const statsAll = [
       ...numberStats(draws, "MAIN", rules.mainMin, rules.mainMax, 10),
       ...numberStats(draws, "BONUS", rules.bonusMin, rules.bonusMax, 10),
@@ -400,7 +428,7 @@ export const LotteryIntelligenceService = {
         let bestMain = 0, bestBonus = 0;
         let bestTier: LiBacktestResult["drawResults"][number]["bestTier"] = "NONE";
         for (const g of generated) {
-          const hit = matchLine(g.mainNumbers, g.bonusNumbers, target);
+          const hit = matchLine(g.mainNumbers, g.bonusNumbers, target, rules);
           mAcc[`${hit.main}+`] = (mAcc[`${hit.main}+`] ?? 0) + 1;
           tAcc[hit.tier] = (tAcc[hit.tier] ?? 0) + 1;
           if (hit.main > bestMain || (hit.main === bestMain && hit.bonus > bestBonus)) {
@@ -451,10 +479,10 @@ export const LotteryIntelligenceService = {
     return result;
   },
 
-  async compareStrategies(org: string, strategies: LiBacktestParams["strategy"][], lastN: number, actorId: string | null) {
+  async compareStrategies(org: string, strategies: LiBacktestParams["strategy"][], lastN: number, actorId: string | null, lotteryId = "euromillions") {
     const runs: LiBacktestResult[] = [];
     for (const strategy of strategies) {
-      runs.push(await this.backtest(org, { lotteryId: "euromillions", strategy, linesPerDraw: 1, lastN }, actorId));
+      runs.push(await this.backtest(org, { lotteryId, strategy, linesPerDraw: 1, lastN }, actorId));
     }
     return {
       label: "HISTORICAL_SIMULATION",
@@ -467,10 +495,10 @@ export const LotteryIntelligenceService = {
     return (await liList<LiBacktestResult>("backtest", org)).sort((a, b) => b.createdAt.localeCompare(a.createdAt));
   },
 
-  async performance(org: string): Promise<LiPerformance> {
+  async performance(org: string, lotteryId = "euromillions"): Promise<LiPerformance> {
     const cfg = await this.getConfig(org);
-    const tickets = (await liList<LiTicket>("ticket", org)).filter((t) => t.dataClass === dataClassFor(cfg.mode));
-    const draws = (await this.listDraws(org)).filter((d) => d.validationStatus === "VALID");
+    const tickets = (await liList<LiTicket>("ticket", org)).filter((t) => t.dataClass === dataClassFor(cfg.mode) && t.lotteryId === lotteryId);
+    const draws = (await this.listDraws(org, lotteryId)).filter((d) => d.validationStatus === "VALID");
     const prizeTiers: Record<string, number> = {};
     const mainUsage: Record<string, number> = {};
     const bonusUsage: Record<string, number> = {};
@@ -559,7 +587,7 @@ export const LotteryIntelligenceService = {
       case "STRATEGY_PERF": return { processed: 0, created: 0, updated: 0, errors: [], providerId: null };
       case "PROVIDER_HEALTH": {
         for (const p of allLotteryProviders()) await p.health();
-        return { processed: 2, created: 0, updated: 2, errors: [], providerId: null };
+        return { processed: allLotteryProviders().length, created: 0, updated: allLotteryProviders().length, errors: [], providerId: null };
       }
       case "DATA_CLEANUP": {
         const jobs = await this.listJobs(org);
@@ -573,10 +601,10 @@ export const LotteryIntelligenceService = {
 
   async syncDraws(org: string) {
     const cfg = await this.getConfig(org);
-    if (!cfg.enabled || !cfg.euromillionsEnabled) {
+    if (!cfg.enabled) {
       return { processed: 0, created: 0, updated: 0, errors: ["MODULE_DISABLED"], providerId: null };
     }
-    const providers = providersForMode(cfg.mode);
+    const providers = providersForMode(cfg.mode).filter((p) => lotteryEnabled(cfg, p.lotteryId));
     if (!providers.length) {
       return { processed: 0, created: 0, updated: 0, errors: ["No lottery data provider is configured. Official results will not be invented."], providerId: null };
     }
@@ -601,7 +629,7 @@ export const LotteryIntelligenceService = {
   },
 
   async upsertDraw(org: string, raw: NormalizedDraw): Promise<"created" | "updated" | "rejected"> {
-    const rules = this.rules();
+    const rules = this.rules(raw.lotteryId);
     const validationErrors = validateDrawPayload(raw, rules);
     const now = new Date().toISOString();
     const natural = `${raw.lotteryId}:${raw.providerId}:${raw.providerDrawId}`;
@@ -685,7 +713,7 @@ export const LotteryIntelligenceService = {
   },
 
   async verifyDraws(org: string) {
-    const draws = await this.listDraws(org);
+    const draws = await liList<LiDraw>("draw", org);
     let updated = 0;
     for (const d of draws) {
       if (d.verified || d.validationStatus !== "VALID") continue;

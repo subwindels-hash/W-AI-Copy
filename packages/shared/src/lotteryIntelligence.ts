@@ -82,7 +82,23 @@ export const EUROMILLIONS_PRIZE_TIERS = [
   "2+1",
   "2+0",
 ] as const;
-export type LiPrizeTier = (typeof EUROMILLIONS_PRIZE_TIERS)[number] | "NONE";
+
+export const POWERBALL_PRIZE_TIERS = [
+  "5+1",
+  "5+0",
+  "4+1",
+  "4+0",
+  "3+1",
+  "3+0",
+  "2+1",
+  "1+1",
+  "0+1",
+] as const;
+
+export type LiPrizeTier =
+  | (typeof EUROMILLIONS_PRIZE_TIERS)[number]
+  | (typeof POWERBALL_PRIZE_TIERS)[number]
+  | "NONE";
 
 export interface LiLotteryRules {
   lotteryId: string;
@@ -94,7 +110,9 @@ export interface LiLotteryRules {
   bonusCount: number;
   bonusMax: number;
   bonusLabel: string;
+  prizeTiers: readonly string[];
   drawWeekdays: number[];
+  nextDrawHint: string;
   linePriceMinor: number | null;
   currency: string | null;
   lowHighSplit: number;
@@ -112,13 +130,56 @@ export const EUROMILLIONS_RULES: LiLotteryRules = {
   bonusMax: 12,
   bonusCount: 2,
   bonusLabel: "Lucky Stars",
+  prizeTiers: EUROMILLIONS_PRIZE_TIERS,
   drawWeekdays: [2, 5],
+  nextDrawHint: "EuroMillions draws are typically Tuesday and Friday evenings. Confirm locally — this is not an official countdown feed.",
   linePriceMinor: null,
   currency: null,
   lowHighSplit: 25,
   version: "rules-v1.0",
   updatedAt: "2026-08-25T00:00:00.000Z",
 };
+
+/** US Powerball — second catalogued lottery. 5 from 1–69 + 1 Powerball from 1–26. */
+export const POWERBALL_RULES: LiLotteryRules = {
+  lotteryId: "powerball",
+  name: "Powerball",
+  mainMin: 1,
+  mainMax: 69,
+  mainCount: 5,
+  bonusMin: 1,
+  bonusMax: 26,
+  bonusCount: 1,
+  bonusLabel: "Powerball",
+  prizeTiers: POWERBALL_PRIZE_TIERS,
+  drawWeekdays: [1, 3, 6],
+  nextDrawHint: "US Powerball draws are typically Monday, Wednesday and Saturday evenings (US time). Confirm locally — this is not an official countdown feed.",
+  linePriceMinor: null,
+  currency: null,
+  lowHighSplit: 34,
+  version: "rules-v1.0",
+  updatedAt: "2026-08-25T00:00:00.000Z",
+};
+
+export const LI_LOTTERY_CATALOG: LiLotteryRules[] = [EUROMILLIONS_RULES, POWERBALL_RULES];
+
+export function getLotteryRules(lotteryId: string): LiLotteryRules | null {
+  const key = lotteryId.trim().toLowerCase();
+  return LI_LOTTERY_CATALOG.find((r) => r.lotteryId === key) ?? null;
+}
+
+export function requireLotteryRules(lotteryId: string): LiLotteryRules {
+  const found = getLotteryRules(lotteryId);
+  if (!found) {
+    const err: Error & { code?: string; status?: number } = new Error(
+      `Lottery '${lotteryId}' is not in the WINDELS catalog`,
+    );
+    err.code = "LOTTERY_NOT_SUPPORTED";
+    err.status = 400;
+    throw err;
+  }
+  return found;
+}
 
 export interface LiDraw {
   id: string;
@@ -351,6 +412,7 @@ export interface LiAuditEntry {
 export interface LiConfig {
   enabled: boolean;
   euromillionsEnabled: boolean;
+  powerballEnabled: boolean;
   mode: LiOperatingMode;
   staleHours: number;
   maxSystemLines: number;
@@ -367,6 +429,7 @@ export interface LiConfig {
 export const LI_DEFAULT_CONFIG: Omit<LiConfig, "updatedAt" | "updatedBy"> = {
   enabled: true,
   euromillionsEnabled: true,
+  powerballEnabled: true,
   mode: "PAPER",
   staleHours: 80,
   maxSystemLines: 500,
@@ -395,6 +458,8 @@ export interface LiDashboard {
   mode: LiOperatingMode;
   moduleEnabled: boolean;
   lotteryEnabled: boolean;
+  lotteryId: string;
+  lotteries: LiLotteryRules[];
   dataClass: LiDataClass;
   disclaimer: string;
   rules: LiLotteryRules;
@@ -417,6 +482,7 @@ export interface LiDashboard {
 export const LiConfigPatchSchema = z.object({
   enabled: z.boolean().optional(),
   euromillionsEnabled: z.boolean().optional(),
+  powerballEnabled: z.boolean().optional(),
   mode: z.enum(LI_OPERATING_MODES).optional(),
   staleHours: z.number().int().min(1).max(24 * 30).optional(),
   maxSystemLines: z.number().int().min(1).max(5000).optional(),

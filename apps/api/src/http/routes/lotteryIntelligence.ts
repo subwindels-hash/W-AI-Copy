@@ -46,13 +46,20 @@ async function isAdmin(req: any): Promise<boolean> {
 export function registerLotteryIntelligenceRoutes(router: Router) {
   router.use(authenticate);
 
+  const lotteryQ = (req: any) => typeof req.query.lotteryId === "string" ? req.query.lotteryId : "euromillions";
+
+  router.get("/lotteries", async (req, res, next) => {
+    try { res.json({ ok: true, data: Li.listLotteries(), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+
   router.get("/dashboard", async (req, res, next) => {
-    try { res.json({ ok: true, data: await Li.dashboard(orgOf(req)), meta: { requestId: req.requestId } }); }
+    try { res.json({ ok: true, data: await Li.dashboard(orgOf(req), lotteryQ(req)), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
   });
 
   router.get("/rules", async (req, res, next) => {
-    try { res.json({ ok: true, data: Li.rules(), meta: { requestId: req.requestId } }); }
+    try { res.json({ ok: true, data: Li.rules(lotteryQ(req)), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
   });
 
@@ -67,7 +74,7 @@ export function registerLotteryIntelligenceRoutes(router: Router) {
   });
 
   router.get("/draws", async (req, res, next) => {
-    try { res.json({ ok: true, data: await Li.listDraws(orgOf(req)), meta: { requestId: req.requestId } }); }
+    try { res.json({ ok: true, data: await Li.listDraws(orgOf(req), lotteryQ(req)), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
   });
 
@@ -83,7 +90,7 @@ export function registerLotteryIntelligenceRoutes(router: Router) {
     try {
       const lastN = req.query.lastN ? Number(req.query.lastN) : undefined;
       const window = typeof req.query.window === "string" ? req.query.window : undefined;
-      res.json({ ok: true, data: await Li.numberIntelligence(orgOf(req), "MAIN", { lastN, window }), meta: { requestId: req.requestId } });
+      res.json({ ok: true, data: await Li.numberIntelligence(orgOf(req), "MAIN", { lotteryId: lotteryQ(req), lastN, window }), meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
 
@@ -91,21 +98,21 @@ export function registerLotteryIntelligenceRoutes(router: Router) {
     try {
       const lastN = req.query.lastN ? Number(req.query.lastN) : undefined;
       const window = typeof req.query.window === "string" ? req.query.window : undefined;
-      res.json({ ok: true, data: await Li.numberIntelligence(orgOf(req), "BONUS", { lastN, window }), meta: { requestId: req.requestId } });
+      res.json({ ok: true, data: await Li.numberIntelligence(orgOf(req), "BONUS", { lotteryId: lotteryQ(req), lastN, window }), meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
 
   router.get("/distribution", async (req, res, next) => {
     try {
       const lastN = req.query.lastN ? Number(req.query.lastN) : undefined;
-      res.json({ ok: true, data: await Li.distribution(orgOf(req), { lastN }), meta: { requestId: req.requestId } });
+      res.json({ ok: true, data: await Li.distribution(orgOf(req), { lotteryId: lotteryQ(req), lastN }), meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
 
   router.get("/pairs", async (req, res, next) => {
     try {
       const kind = req.query.kind === "BONUS" ? "BONUS" : "MAIN";
-      res.json({ ok: true, data: await Li.pairs(orgOf(req), kind), meta: { requestId: req.requestId } });
+      res.json({ ok: true, data: await Li.pairs(orgOf(req), kind, { lotteryId: lotteryQ(req) }), meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
 
@@ -169,7 +176,7 @@ export function registerLotteryIntelligenceRoutes(router: Router) {
   });
 
   router.get("/performance", async (req, res, next) => {
-    try { res.json({ ok: true, data: await Li.performance(orgOf(req)), meta: { requestId: req.requestId } }); }
+    try { res.json({ ok: true, data: await Li.performance(orgOf(req), lotteryQ(req)), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
   });
 

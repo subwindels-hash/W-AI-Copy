@@ -335,6 +335,8 @@ const EnvSchema = z.object({
   WINDELS_LOTTERY_MODE: z.enum(["SANDBOX", "PAPER", "PRODUCTION"]).optional(),
   WINDELS_LOTTERY_EUROMILLIONS_FEED_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
   WINDELS_LOTTERY_EUROMILLIONS_FEED_TOKEN: z.string().min(8).optional(),
+  WINDELS_LOTTERY_POWERBALL_FEED_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  WINDELS_LOTTERY_POWERBALL_FEED_TOKEN: z.string().min(8).optional(),
 
   // ── Language Learning (optional speech providers — never invent scores) ──
   WINDELS_LANGUAGE_TTS_PROVIDER: z.string().max(80).optional(),
