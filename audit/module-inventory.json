@@ -4204,7 +4204,9 @@
     "sharedTypes": "packages/shared/src/dataMarketplace.ts (132 LOC)",
     "web": {
       "client": "apps/web/src/lib/dataMarketplace.ts (18 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/dataMarketplace/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
