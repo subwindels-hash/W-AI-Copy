@@ -22,6 +22,12 @@ const DeveloperPage = lazy(() => import("./pages/developers/DeveloperPage"));
 const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
 const AnalyticsPage = lazy(() => import("./pages/analytics/AnalyticsPage"));
 const TradingIntelPage = lazy(() => import("./pages/trading/TradingIntelPage").then((m) => ({ default: m.TradingIntelPage })));
+const SportsIntelligencePage = lazy(() => import("./pages/sports/SportsIntelligencePage").then((m) => ({ default: m.SportsIntelligencePage })));
+const MobileSportsPage = lazy(() => import("./pages/mobile/MobileSportsPage").then((m) => ({ default: m.MobileSportsPage })));
+const LotteryIntelligencePage = lazy(() => import("./pages/lottery/LotteryIntelligencePage").then((m) => ({ default: m.LotteryIntelligencePage })));
+const MobileLotteryPage = lazy(() => import("./pages/mobile/MobileLotteryPage").then((m) => ({ default: m.MobileLotteryPage })));
+const LanguageLearningPage = lazy(() => import("./pages/languages/LanguageLearningPage").then((m) => ({ default: m.LanguageLearningPage })));
+const MobileLanguagesPage = lazy(() => import("./pages/mobile/MobileLanguagesPage").then((m) => ({ default: m.MobileLanguagesPage })));
 const VoiceStudioPage = lazy(() => import("./pages/voice/VoiceStudioPage").then((m) => ({ default: m.VoiceStudioPage })));
 const VoiceConsolePage = lazy(() => import("./pages/voice/VoiceConsolePage").then((m) => ({ default: m.VoiceConsolePage })));
 const MediaFactoryPage = lazy(() => import("./pages/media/MediaFactoryPage").then((m) => ({ default: m.MediaFactoryPage })));
@@ -309,6 +315,9 @@ export const router = createBrowserRouter([
       { path: "offline", element: withSuspense(<MobileOfflinePage />) },
       { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
       { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
+      { path: "sports", element: withSuspense(<MobileSportsPage />) },
+      { path: "lottery", element: withSuspense(<MobileLotteryPage />) },
+      { path: "languages", element: withSuspense(<MobileLanguagesPage />) },
     ],
   },
   {
@@ -333,6 +342,12 @@ export const router = createBrowserRouter([
       { path: "trading", element: withSuspense(<TradingIntelPage />) },
       { path: "trading/brokers", element: withSuspense(<BrokerCommandCenterPage />) },
       { path: "trading/dashboard", element: withSuspense(<TradingDashboardPage />) },
+      { path: "sports", element: withSuspense(<SportsIntelligencePage />) },
+      { path: "sports/:view", element: withSuspense(<SportsIntelligencePage />) },
+      { path: "lottery", element: withSuspense(<LotteryIntelligencePage />) },
+      { path: "lottery/:view", element: withSuspense(<LotteryIntelligencePage />) },
+      { path: "languages", element: withSuspense(<LanguageLearningPage />) },
+      { path: "languages/:view", element: withSuspense(<LanguageLearningPage />) },
       { path: "marketing", element: withSuspense(<MarketingDashboardPage />) },
       { path: "voice", element: withSuspense(<VoiceStudioPage />) },
       { path: "voice-console", element: withSuspense(<VoiceConsolePage />) },

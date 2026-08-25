@@ -1,0 +1,57 @@
+import { api } from "./api";
+import type {
+  LiBacktestParams,
+  LiBacktestResult,
+  LiConfig,
+  LiConfigPatch,
+  LiDashboard,
+  LiDistributionSnapshot,
+  LiDraw,
+  LiGenerateInput,
+  LiGeneratedLine,
+  LiJobRun,
+  LiNumberStat,
+  LiPairStat,
+  LiPerformance,
+  LiProviderHealth,
+  LiSystemInput,
+  LiSystemPlan,
+  LiTicket,
+  LiTicketCreateInput,
+  LiAuditEntry,
+  LiAnalyzeInput,
+} from "@windels/shared/lotteryIntelligence";
+
+export type {
+  LiDashboard, LiDraw, LiNumberStat, LiTicket, LiGeneratedLine, LiSystemPlan,
+  LiBacktestResult, LiConfig, LiProviderHealth, LiDistributionSnapshot, LiPerformance,
+};
+
+export const lotteryApi = {
+  dashboard: () => api<LiDashboard>("/lottery-intel/dashboard"),
+  rules: () => api<LiDashboard["rules"]>("/lottery-intel/rules"),
+  config: () => api<LiConfig>("/lottery-intel/config"),
+  updateConfig: (patch: LiConfigPatch) => api<LiConfig>("/lottery-intel/config", { method: "PATCH", json: patch }),
+  draws: () => api<LiDraw[]>("/lottery-intel/draws"),
+  draw: (id: string) => api<LiDraw>(`/lottery-intel/draws/${id}`),
+  numbers: (params?: { lastN?: number; window?: string }) => api<LiNumberStat[]>("/lottery-intel/numbers", { params }),
+  stars: (params?: { lastN?: number; window?: string }) => api<LiNumberStat[]>("/lottery-intel/stars", { params }),
+  distribution: (params?: { lastN?: number }) => api<LiDistributionSnapshot>("/lottery-intel/distribution", { params }),
+  pairs: (kind?: "MAIN" | "BONUS") => api<LiPairStat[]>("/lottery-intel/pairs", { params: { kind } }),
+  analyze: (input: LiAnalyzeInput) => api<{ profile: any; disclaimer: string; note: string }>("/lottery-intel/analyze", { method: "POST", json: input }),
+  generate: (input: LiGenerateInput) => api<{ lines: LiGeneratedLine[]; disclaimer: string }>("/lottery-intel/generate", { method: "POST", json: input }),
+  system: (input: LiSystemInput) => api<LiSystemPlan>("/lottery-intel/system", { method: "POST", json: input }),
+  tickets: () => api<LiTicket[]>("/lottery-intel/tickets"),
+  saveTicket: (input: LiTicketCreateInput) => api<LiTicket>("/lottery-intel/tickets", { method: "POST", json: input }),
+  ticket: (id: string) => api<LiTicket>(`/lottery-intel/tickets/${id}`),
+  deleteTicket: (id: string) => api<{ deleted: boolean }>(`/lottery-intel/tickets/${id}`, { method: "DELETE" }),
+  performance: () => api<LiPerformance>("/lottery-intel/performance"),
+  backtest: (params: LiBacktestParams) => api<LiBacktestResult>("/lottery-intel/backtests", { method: "POST", json: params }),
+  backtests: () => api<LiBacktestResult[]>("/lottery-intel/backtests"),
+  compare: (strategies?: string[], lastN?: number) =>
+    api<{ label: string; note: string; runs: LiBacktestResult[] }>("/lottery-intel/strategies/compare", { method: "POST", json: { strategies, lastN } }),
+  providers: () => api<LiProviderHealth[]>("/lottery-intel/providers"),
+  jobs: () => api<LiJobRun[]>("/lottery-intel/jobs"),
+  pipeline: () => api<{ jobs: LiJobRun[] }>("/lottery-intel/pipeline", { method: "POST" }),
+  audit: () => api<LiAuditEntry[]>("/lottery-intel/audit"),
+};

@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Bell, Bot, Calendar, FileText, MessageSquare, MonitorSmartphone, Nfc, Plus, Sparkles, Zap } from "lucide-react";
+import { Bell, Bot, Calendar, FileText, Languages, MessageSquare, MonitorSmartphone, Nfc, Plus, Sparkles, Ticket, Trophy, Zap } from "lucide-react";
 import { MobileTopBar } from "@/app/mobile/MobileTopBar";
 import { MAvatar } from "@/components/mobile/MAvatar";
 import { MButton } from "@/components/mobile/MButton";
@@ -25,6 +25,9 @@ const QUICK_ACTIONS = [
   { to: "/m/files", label: "Files", icon: FileText, color: "from-amber-500 to-orange-500" },
   { to: "/m/nfc", label: "NFC Cards", icon: Nfc, color: "from-sky-500 to-cyan-500" },
   { to: "/m/cloud-android", label: "Cloud Android", icon: MonitorSmartphone, color: "from-emerald-500 to-teal-500" },
+  { to: "/m/sports", label: "Sports Intel", icon: Trophy, color: "from-sky-500 to-blue-600" },
+  { to: "/m/lottery", label: "Lottery", icon: Ticket, color: "from-amber-500 to-yellow-500" },
+  { to: "/m/languages", label: "Languages", icon: Languages, color: "from-cyan-500 to-sky-600" },
 ];
 
 export function MobileHomePage() {

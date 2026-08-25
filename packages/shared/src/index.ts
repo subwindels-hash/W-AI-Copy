@@ -159,3 +159,6 @@ export * from "./nativeAiApi.js";
 export * from "./nativeAi.js";
 export * from "./cloudAndroid.js";
 export * from "./financialPolicy.js";
+export * from "./sportsIntelligence.js";
+export * from "./lotteryIntelligence.js";
+export * from "./languageLearning.js";

@@ -323,6 +323,23 @@ const EnvSchema = z.object({
   BLOCKONOMICS_RECONCILIATION_ENABLED: z.union([z.boolean(), z.enum(["true", "false"])]).transform((value) => typeof value === "boolean" ? value : value === "true").default(true),
   BLOCKONOMICS_RECONCILIATION_INTERVAL_MINUTES: z.coerce.number().int().min(5).max(1440).default(15),
 
+  // ── Sports Intelligence (provider credentials never belong in the frontend) ──
+  WINDELS_SPORTS_MODE: z.enum(["SANDBOX", "PAPER", "PRODUCTION"]).optional(),
+  WINDELS_SPORTS_API_FOOTBALL_KEY: z.string().min(8).optional(),
+  WINDELS_SPORTS_API_FOOTBALL_BASE_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  WINDELS_SPORTS_ODDS_API_KEY: z.string().min(8).optional(),
+  WINDELS_SPORTS_ODDS_API_BASE_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  WINDELS_SPORTS_ODDS_SPORT: z.string().max(80).default("soccer_epl"),
+
+  // ── Lottery Intelligence (official feed URL only — never frontend) ──
+  WINDELS_LOTTERY_MODE: z.enum(["SANDBOX", "PAPER", "PRODUCTION"]).optional(),
+  WINDELS_LOTTERY_EUROMILLIONS_FEED_URL: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  WINDELS_LOTTERY_EUROMILLIONS_FEED_TOKEN: z.string().min(8).optional(),
+
+  // ── Language Learning (optional speech providers — never invent scores) ──
+  WINDELS_LANGUAGE_TTS_PROVIDER: z.string().max(80).optional(),
+  WINDELS_LANGUAGE_PRONUNCIATION_PROVIDER: z.string().max(80).optional(),
+
   WINDELS_CRYPTO_HTTP_TIMEOUT_MS: z.preprocess(
     (v) => {
       if (v === undefined || v === "" || v === null) return 10000;

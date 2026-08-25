@@ -265,6 +265,40 @@ custodian; users connect their own external accounts.
 Do not use synthetic or stale reference data for order execution, payment
 conversion, accounting, or valuation.
 
+## 9.5 Sports data (Sports Intelligence)
+
+Sports Intelligence is provider-agnostic. The rest of WINDELS never depends on a
+vendor response shape. Credentials stay in environment/secret storage — never
+in frontend JavaScript.
+
+| Provider | Why | Configuration | Current status |
+|---|---|---|---|
+| API-Football (api-sports) | Fixtures, statuses and finished scores | `WINDELS_SPORTS_API_FOOTBALL_KEY`, optional `WINDELS_SPORTS_API_FOOTBALL_BASE_URL` | Implemented adapter. Unconfigured → `NOT_CONFIGURED`. No invented fixtures. |
+| The Odds API | Decimal odds and market lists | `WINDELS_SPORTS_ODDS_API_KEY`, optional base URL and `WINDELS_SPORTS_ODDS_SPORT` | Implemented adapter. Odds-dependent tickets are refused when this (or another odds provider) is unavailable. |
+| WINDELS Sandbox Sports Feed | Local development only | `WINDELS_SPORTS_MODE=SANDBOX` or `WINDELS_DEMO_DATA=true` | Fictional clubs, always labelled `SANDBOX`. Never mixed into production statistics. |
+
+`WINDELS_SPORTS_MODE` is `PAPER` by default (real data if keys exist, no external
+execution). Automated ticket execution cannot be enabled through the API.
+
+## 9.6 Lottery data (Lottery Intelligence)
+
+| Provider | Why | Configuration | Current status |
+|---|---|---|---|
+| Configured official EuroMillions feed | Verified historical/new draw results | `WINDELS_LOTTERY_EUROMILLIONS_FEED_URL`, optional bearer token | Implemented parser (JSON array or CSV). Unconfigured → `NOT_CONFIGURED`. Invalid rows are rejected, never stored as official. |
+| WINDELS Sandbox Lottery Feed | Local development only | `WINDELS_LOTTERY_MODE=SANDBOX` or `WINDELS_DEMO_DATA=true` | Fictional EuroMillions-format draws, always labelled `SANDBOX`. |
+
+## 9.7 Language Learning speech (optional)
+
+The AI Language Teacher is curriculum-first. It works without any speech vendor.
+Listening audio defaults to the browser SpeechSynthesis API. Pronunciation
+scores stay `NOT_AVAILABLE` until a real assessment provider is wired.
+
+| Provider | Why | Configuration | Current status |
+|---|---|---|---|
+| Browser SpeechSynthesis | Speak listening prompts and vocab | None | Implemented on the client. |
+| Existing WINDELS TTS (OpenAI/ElevenLabs) | Optional server audio | Same keys as Voice Studio | Not required. Module does not invent audio. |
+| Pronunciation assessment vendor | Phoneme/fluency scores | `WINDELS_LANGUAGE_PRONUNCIATION_PROVIDER` | **Not configured.** Scores are omitted, never fabricated. |
+
 ## 9.2 MT4/MT5
 
 Choose one transport:
