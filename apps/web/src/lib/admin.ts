@@ -13,4 +13,8 @@ export const adminApi = {
     api<AdmUserMutationResult>(`/admin/users/${id}/suspension`, { method: "POST", json: { suspended } }),
   setRole: (id: string, role: AdmRole) =>
     api<AdmUserMutationResult>(`/admin/users/${id}/role`, { method: "PATCH", json: { role } }),
+  impersonate: (id: string) => api<{ token: string; refreshToken: string; user: any; expiresIn?: number }>(`/admin/users/${id}/impersonate`, { method: "POST", json: {} }),
+  resetPin: (id: string) => api<{ ok: true; pinCleared: boolean }>(`/admin/users/${id}/pin-reset`, { method: "POST", json: {} }),
+  resetPassword: (id: string) => api<{ ok: true; temporaryPassword: string }>(`/admin/users/${id}/password-reset`, { method: "POST", json: {} }),
+  activity: (page = 1) => api<{ events: Array<{ id: string; action: string; actorUserId: string | null; resourceId: string | null; createdAt: string; ipAddress: string | null; metadata: Record<string, unknown> }>; pagination: { page: number; total: number } }>("/admin/activity", { params: { page, perPage: 30 } }),
 };

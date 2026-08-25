@@ -22,12 +22,17 @@ function iso(value: Date | string): string {
 }
 
 function toUserRow(user: any): AdmUserRow {
+  const pinExpires = user.pinExpiresAt ? Date.parse(String(user.pinExpiresAt)) : 0;
   return {
     id: user.id,
     email: user.email,
+    publicUserId: user.publicUserId ?? null,
+    username: user.username ?? null,
     role: prismaToPublic[user.role],
     isActive: user.isActive,
     isSuspended: user.isSuspended,
+    pinSet: Boolean(user.pinHash),
+    pinExpired: !user.pinHash || !pinExpires || pinExpires <= Date.now(),
     createdAt: iso(user.createdAt),
     profile: user.profile ? { displayName: user.profile.displayName ?? null } : null,
   };
@@ -127,4 +132,58 @@ export async function promoteUser(scope: AdminScope, userId: string, role: AdmRo
   const updated = await prisma.user.update({ where: { id: userId }, data: { role: publicToPrisma[role] } });
   await prisma.auditLog.create({ data: { userId: access.actor.id, action: "admin.user.role_changed", resourceType: "User", resourceId: userId, metadata: { newRole: role } } });
   return { id: updated.id, role: prismaToPublic[updated.role] };
+}
+
+export async function impersonateUser(scope: AdminScope, userId: string, metadata?: { ip?: string; ua?: string }) {
+  const access = await scopeFor(scope);
+  await assertTargetInScope(access, userId);
+  const { startImpersonation } = await import("./auth.service.js");
+  return startImpersonation(access.actor.id, userId, metadata);
+}
+
+export async function resetUserPin(scope: AdminScope, userId: string) {
+  const access = await scopeFor(scope);
+  await assertTargetInScope(access, userId);
+  const { adminResetPin } = await import("./account.service.js");
+  return adminResetPin(access.actor.id, userId);
+}
+
+export async function resetUserPassword(scope: AdminScope, userId: string) {
+  const access = await scopeFor(scope);
+  await assertTargetInScope(access, userId);
+  const { adminResetPassword } = await import("./account.service.js");
+  return adminResetPassword(access.actor.id, userId);
+}
+
+export async function listAdminActivity(scope: AdminScope, page = 1, perPage = 40) {
+  const access = await scopeFor(scope);
+  const where = {
+    action: { in: [
+      "admin.user.impersonate.start",
+      "admin.user.impersonate.end",
+      "admin.user.pin_reset",
+      "admin.user.password_reset",
+      "admin.user.suspend",
+      "admin.user.unsuspend",
+      "admin.user.role_changed",
+      "admin.create",
+    ] },
+    ...(access.organizationId ? { organizationId: access.organizationId } : {}),
+  };
+  const [rows, total] = await prisma.$transaction([
+    prisma.auditLog.findMany({ where, orderBy: { createdAt: "desc" }, skip: (page - 1) * perPage, take: perPage }),
+    prisma.auditLog.count({ where }),
+  ]);
+  return {
+    events: rows.map((r) => ({
+      id: r.id,
+      action: r.action,
+      actorUserId: r.userId,
+      resourceId: r.resourceId,
+      ipAddress: r.ipAddress,
+      createdAt: iso(r.createdAt),
+      metadata: (r.metadata ?? {}) as Record<string, unknown>,
+    })),
+    pagination: { page, perPage, total, totalPages: Math.ceil(total / perPage) },
+  };
 }

@@ -12,6 +12,10 @@ export interface AuthUser {
   email: string;
   role: PublicRole;
   organizationId: string | null;
+  publicUserId?: string | null;
+  username?: string | null;
+  impersonatorId?: string;
+  impersonationId?: string;
 }
 
 declare global {
@@ -39,6 +43,10 @@ export function authenticate(
       email: payload.email,
       role: payload.role,
       organizationId: payload.organizationId,
+      publicUserId: (payload as any).publicUserId ?? null,
+      username: (payload as any).username ?? null,
+      impersonatorId: (payload as any).impersonatorId,
+      impersonationId: (payload as any).impersonationId,
     };
     next();
   } catch {

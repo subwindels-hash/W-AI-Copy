@@ -12,6 +12,8 @@ export function RegisterPage() {
     password: "",
     displayName: "",
     organizationName: "",
+    username: "",
+    pin: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -55,6 +57,10 @@ export function RegisterPage() {
           <div>
             <label className="text-xs text-text-muted mb-1.5 block">Your name</label>
             <Input value={form.displayName} onChange={(e) => update("displayName", e.target.value)} required />
+          </div>
+          <div>
+            <label className="text-xs text-text-muted mb-1.5 block">Username</label>
+            <Input value={form.username} onChange={(e) => update("username", e.target.value)} required minLength={3} placeholder="ada.l" />
           </div>
           <div>
             <label className="text-xs text-text-muted mb-1.5 block">Work email</label>

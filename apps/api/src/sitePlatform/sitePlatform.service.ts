@@ -789,6 +789,9 @@ export const SitePlatformService = {
     while (await prisma.organization.findUnique({ where: { slug } })) {
       slug = `${slugBase}-${randomUUID().slice(0, 6)}`;
     }
+    const { allocatePublicUserId, allocateUsername } = await import("../services/account.service.js");
+    const publicUserId = await allocatePublicUserId();
+    const username = await allocateUsername(input.displayName || input.email.split("@")[0] || "admin");
     const created = await prisma.$transaction(async (tx) => {
       const u = await tx.user.create({
         data: {
@@ -796,8 +799,10 @@ export const SitePlatformService = {
           passwordHash,
           role: PrismaRole.ADMIN,
           emailVerifiedAt: new Date(),
+          publicUserId,
+          username,
           profile: { create: { displayName: input.displayName, theme: "dark" } },
-        },
+        } as any,
       });
       const org = await tx.organization.create({
         data: { name: orgName, slug, workspaces: { create: { name: "Default Workspace", slug: "default" } } },

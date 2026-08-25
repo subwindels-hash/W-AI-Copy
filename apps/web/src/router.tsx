@@ -20,6 +20,7 @@ const WorkflowPage = lazy(() => import("./pages/workflow/WorkflowPage"));
 const NotFoundPage = lazy(() => import("./pages/errors/NotFoundPage").then((m) => ({ default: m.NotFoundPage })));
 const DeveloperPage = lazy(() => import("./pages/developers/DeveloperPage"));
 const SettingsPage = lazy(() => import("./pages/settings/SettingsPage"));
+const MyAccountPage = lazy(() => import("./pages/account/MyAccountPage").then((m) => ({ default: m.MyAccountPage })));
 const AnalyticsPage = lazy(() => import("./pages/analytics/AnalyticsPage"));
 const TradingIntelPage = lazy(() => import("./pages/trading/TradingIntelPage").then((m) => ({ default: m.TradingIntelPage })));
 const SportsIntelligencePage = lazy(() => import("./pages/sports/SportsIntelligencePage").then((m) => ({ default: m.SportsIntelligencePage })));
@@ -401,6 +402,7 @@ export const router = createBrowserRouter([
       { path: "developer-portal", element: withSuspense(<DeveloperPortalPage />) },
       { path: "files", element: withSuspense(<FilesPage />) },
       { path: "settings", element: withSuspense(<SettingsPage />) },
+      { path: "account", element: withSuspense(<MyAccountPage />) },
       { path: "my-support", element: withSuspense(<MySupportPage />) },
       { path: "enterprise", element: withSuspense(<EnterprisePage />) },
       { path: "governance", element: withSuspense(<GovernancePage />) },

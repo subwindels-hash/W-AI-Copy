@@ -105,6 +105,10 @@ interface TokenPayload {
   email: string;
   role: PublicRole;
   organizationId: string | null;
+  publicUserId?: string | null;
+  username?: string | null;
+  impersonatorId?: string;
+  impersonationId?: string;
 }
 
 function signToken(payload: TokenPayload) {
@@ -119,6 +123,8 @@ export async function registerUser(input: {
   password: string;
   displayName: string;
   organizationName: string;
+  username?: string;
+  pin?: string;
 }) {
   const existing = await prisma.user.findUnique({ where: { email: input.email } });
   if (existing) throw AppError.conflict("An account with this email already exists");
@@ -129,6 +135,19 @@ export async function registerUser(input: {
     userCount === 0 ? PrismaRole.SUPER_ADMIN : PrismaRole.USER;
 
   const passwordHash = await bcrypt.hash(input.password, 12);
+  const { allocatePublicUserId, allocateUsername, validatePin } = await import("./account.service.js");
+  const publicUserId = await allocatePublicUserId();
+  const username = await allocateUsername(input.username || input.displayName || input.email.split("@")[0] || "user");
+  let pinHash: string | null = null;
+  let pinSetAt: Date | null = null;
+  let pinExpiresAt: Date | null = null;
+  if (input.pin) {
+    validatePin(input.pin);
+    const { PIN_TTL_MS } = await import("@windels/shared/account");
+    pinHash = await bcrypt.hash(input.pin, 12);
+    pinSetAt = new Date();
+    pinExpiresAt = new Date(pinSetAt.getTime() + PIN_TTL_MS);
+  }
 
   // Generate a unique org slug.
   let orgSlug = slugify(input.organizationName) || "org";
@@ -143,8 +162,13 @@ export async function registerUser(input: {
         passwordHash,
         role: prismaRole,
         emailVerifiedAt: new Date(),
+        publicUserId,
+        username,
+        pinHash,
+        pinSetAt,
+        pinExpiresAt,
         profile: { create: { displayName: input.displayName, theme: "dark" } },
-      },
+      } as any,
     });
     const org = await tx.organization.create({
       data: {
@@ -174,19 +198,22 @@ export async function registerUser(input: {
     return u;
   });
 
-  return { userId: user.id, role: toPublicRole(prismaRole) };
+  return { userId: user.id, role: toPublicRole(prismaRole), publicUserId, username };
 }
 
 export async function loginUser(
-  input: { email: string; password: string },
+  input: { email?: string; identifier?: string; password: string },
   metadata?: { ip?: string; ua?: string }
 ) {
+  const identifier = (input.identifier ?? input.email ?? "").trim();
+  if (!identifier) throw AppError.unauthorized("Invalid email or password");
+  const { findUserByIdentifier, ensureAccountIdentity } = await import("./account.service.js");
+  const found = await findUserByIdentifier(identifier);
+  if (!found) throw AppError.unauthorized("Invalid email or password");
+  await ensureAccountIdentity(found.id);
   const user = await prisma.user.findUnique({
-    where: { email: input.email },
-    include: {
-      memberships: { take: 1, orderBy: { joinedAt: "asc" } },
-      profile: true,
-    },
+    where: { id: found.id },
+    include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true },
   });
   if (!user) throw AppError.unauthorized("Invalid email or password");
   if (user.isSuspended || !user.isActive) {
@@ -346,12 +373,19 @@ async function issueSession(
   publicRole: PublicRole,
   primaryMembership: any,
   metadata?: { ip?: string; ua?: string },
+  extra?: { impersonatorId?: string; impersonationId?: string },
 ) {
+  const { pinStatusOf, ensureAccountIdentity } = await import("./account.service.js");
+  const identified = await ensureAccountIdentity(user.id);
   const tokenPayload: TokenPayload = {
-    id: user.id,
-    email: user.email,
+    id: identified.id,
+    email: identified.email,
     role: publicRole,
     organizationId: primaryMembership?.organizationId ?? null,
+    publicUserId: (identified as any).publicUserId ?? null,
+    username: (identified as any).username ?? null,
+    impersonatorId: extra?.impersonatorId,
+    impersonationId: extra?.impersonationId,
   };
   const token = signToken(tokenPayload);
   // Generate and store a refresh token (opaque, one-time-use, Redis-backed)
@@ -378,13 +412,79 @@ async function issueSession(
     refreshToken,
     expiresIn: 900, // 15 minutes in seconds — client should refresh before this
     user: {
-      id: user.id,
-      email: user.email,
+      id: identified.id,
+      email: identified.email,
       role: publicRole,
-      displayName: user.profile?.displayName ?? null,
+      displayName: identified.profile?.displayName ?? user.profile?.displayName ?? null,
       organizationId: primaryMembership?.organizationId ?? null,
+      publicUserId: (identified as any).publicUserId ?? null,
+      username: (identified as any).username ?? null,
+      ...pinStatusOf(identified as any),
+      impersonatorId: extra?.impersonatorId ?? null,
+      impersonationId: extra?.impersonationId ?? null,
     },
   };
+}
+
+export async function startImpersonation(adminId: string, targetId: string, metadata?: { ip?: string; ua?: string }) {
+  if (adminId === targetId) throw AppError.badRequest("You cannot impersonate yourself");
+  const admin = await prisma.user.findUnique({ where: { id: adminId }, include: { memberships: { take: 1 } } });
+  if (!admin) throw AppError.unauthorized();
+  if (admin.role !== PrismaRole.SUPER_ADMIN && admin.role !== PrismaRole.ADMIN) {
+    throw AppError.forbidden("Only authorized administrators can log in as a user");
+  }
+  const target = await prisma.user.findUnique({
+    where: { id: targetId },
+    include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true },
+  });
+  if (!target) throw AppError.notFound("User not found");
+  if (admin.role === PrismaRole.ADMIN) {
+    const adminOrg = admin.memberships[0]?.organizationId;
+    const targetOrg = target.memberships[0]?.organizationId;
+    if (!adminOrg || adminOrg !== targetOrg) throw AppError.forbidden("You can only view users in your organization");
+  }
+  const impersonationId = randomUUID();
+  const session = await issueSession(target, toPublicRole(target.role), target.memberships[0], metadata, {
+    impersonatorId: admin.id,
+    impersonationId,
+  });
+  await prisma.auditLog.create({
+    data: {
+      userId: admin.id,
+      action: "admin.user.impersonate.start",
+      resourceType: "User",
+      resourceId: target.id,
+      ipAddress: metadata?.ip,
+      metadata: {
+        impersonationId,
+        targetPublicUserId: (target as any).publicUserId ?? null,
+        targetUsername: (target as any).username ?? null,
+        targetEmail: target.email,
+        userAgent: metadata?.ua,
+      },
+    },
+  }).catch(() => {});
+  return session;
+}
+
+export async function endImpersonation(actor: { id: string; impersonatorId?: string; impersonationId?: string }, metadata?: { ip?: string; ua?: string }) {
+  if (!actor.impersonatorId) throw AppError.badRequest("You are not in an impersonation session");
+  const admin = await prisma.user.findUnique({
+    where: { id: actor.impersonatorId },
+    include: { memberships: { take: 1, orderBy: { joinedAt: "asc" } }, profile: true },
+  });
+  if (!admin || admin.isSuspended || !admin.isActive) throw AppError.forbidden("Administrator session cannot be restored");
+  await prisma.auditLog.create({
+    data: {
+      userId: admin.id,
+      action: "admin.user.impersonate.end",
+      resourceType: "User",
+      resourceId: actor.id,
+      ipAddress: metadata?.ip,
+      metadata: { impersonationId: actor.impersonationId ?? null },
+    },
+  }).catch(() => {});
+  return issueSession(admin, toPublicRole(admin.role), admin.memberships[0], metadata);
 }
 
 /**

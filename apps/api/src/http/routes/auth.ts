@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { validate } from "../middleware/validate.js";
-import { registerUser, loginUser, completeMfaLogin, refreshAccessToken, logoutUser, requestPasswordReset, resetPassword } from "../../services/auth.service.js";
+import { registerUser, loginUser, completeMfaLogin, refreshAccessToken, logoutUser, requestPasswordReset, resetPassword, endImpersonation } from "../../services/auth.service.js";
 import type { ApiEnvelope } from "@windels/shared/api";
 import { rateLimit } from "../middleware/rateLimit.js";
 import { assessPassword } from "../../security/passwords.js";
@@ -13,14 +13,17 @@ const registerSchema = {
     password: z.string().min(10).max(200).refine((pw) => assessPassword(pw).meetsPolicy, (pw) => ({ message: "Password does not meet policy: " + assessPassword(pw).issues.join(", ") })),
     displayName: z.string().min(1).max(100),
     organizationName: z.string().min(1).max(100),
+    username: z.string().trim().min(3).max(30).regex(/^[a-zA-Z0-9._-]+$/).optional(),
+    pin: z.string().regex(/^\d{4}$/).optional(),
   }),
 };
 
 const loginSchema = {
   body: z.object({
-    email: z.string().email(),
+    identifier: z.string().trim().min(1).max(200).optional(),
+    email: z.string().trim().min(1).max(200).optional(),
     password: z.string().min(1),
-  }),
+  }).refine((d) => Boolean(d.identifier || d.email), { message: "Username, email or User ID is required" }),
 };
 
 const mfaCompleteSchema = {
@@ -173,6 +176,17 @@ export function registerAuthRoutes(router: Router) {
   // verification path (previously this handler re-implemented Bearer parsing
   // and JWT verification inline). It is also used by the Google OAuth fragment
   // flow, which passes the token via the Authorization header.
+  router.post("/auth/impersonation/end", authenticate, async (req, res, next) => {
+    try {
+      const result = await endImpersonation({
+        id: req.user!.id,
+        impersonatorId: req.user!.impersonatorId,
+        impersonationId: req.user!.impersonationId,
+      }, { ip: req.ip, ua: req.headers["user-agent"] });
+      res.json({ ok: true, data: result, meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
   router.get("/auth/me", authenticate, async (req, res, next) => {
     try {
       const { prisma } = await import("../../db/client.js");

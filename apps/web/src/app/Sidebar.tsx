@@ -214,6 +214,7 @@ const navItems = [
   { to: "/platform/blockonomics", icon: Bitcoin, label: "Blockonomics Control" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/extensions", icon: Puzzle, label: "Extensions" },
+  { to: "/app/account", icon: UserCircle, label: "My Account" },
   { to: "/app/settings", icon: Settings, label: "Settings" },
   { to: "/d", icon: Monitor, label: "Desktop" },
 ];

@@ -12,7 +12,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const [search] = useSearchParams();
   const setAuth = useAuthStore((s) => s.setAuth);
-  const [email, setEmail] = useState("");
+  const [identifier, setIdentifier] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -65,7 +65,7 @@ export function LoginPage() {
       }
       const res = await api<any>("/auth/login", {
         method: "POST",
-        json: { email, password },
+        json: { identifier, password },
       });
       if (res.mfa_required) {
         setMfaChallenge({ mfaToken: res.mfaToken, challengeId: res.challengeId });
@@ -107,8 +107,8 @@ export function LoginPage() {
           {!mfaChallenge ? (
             <>
               <div>
-                <label className="text-xs text-text-muted mb-1.5 block">Email</label>
-                <Input type="email" value={email} onChange={(e) => setEmail(e.target.value)} required autoComplete="email" placeholder="you@company.com" />
+                <label className="text-xs text-text-muted mb-1.5 block">Username, Email or User ID</label>
+                <Input value={identifier} onChange={(e) => setIdentifier(e.target.value)} required autoComplete="username" placeholder="Enter username, email or User ID" />
               </div>
               <div>
                 <div className="flex items-center justify-between mb-1.5">

@@ -6,6 +6,7 @@ import { DesktopTitleBar } from "./desktop/DesktopTitleBar";
 import { GlobalBrandingFooter } from "./GlobalBrandingFooter";
 import { useLocation, useNavigate } from "react-router-dom";
 import { useDesktop } from "./desktop/hooks/useDesktop";
+import { ImpersonationBanner } from "./ImpersonationBanner";
 
 export function AppLayout({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useState(false);
@@ -37,6 +38,7 @@ export function AppLayout({ children }: { children: ReactNode }) {
           <Sidebar collapsed={collapsed} />
         </div>
         <div className="flex-1 flex flex-col min-w-0">
+          <ImpersonationBanner />
           <TopBar onToggleSidebar={() => setCollapsed((c) => !c)} />
           <main className="flex-1 overflow-y-auto">
             <div className={isFullChat ? "p-0 h-full" : "p-6 max-w-[1600px] mx-auto w-full"}>{children}</div>

@@ -8,6 +8,12 @@ export interface AuthUser {
   role: Role;
   displayName?: string | null;
   organizationId?: string | null;
+  publicUserId?: string | null;
+  username?: string | null;
+  pinExpired?: boolean;
+  pinExpiresAt?: string | null;
+  impersonatorId?: string | null;
+  impersonationId?: string | null;
 }
 
 interface AuthState {

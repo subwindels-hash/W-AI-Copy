@@ -219,6 +219,15 @@ model User {
   email                   String                 @unique
   emailVerifiedAt         DateTime?
   passwordHash            String
+  /// Public six-digit account number. Never the internal cuid.
+  publicUserId            String?                @unique
+  /// Unique login handle, stored lowercase. Independent of displayName.
+  username                String?                @unique
+  /// bcrypt of the 4-digit PIN. Never returned to clients.
+  pinHash                 String?
+  pinSetAt                DateTime?
+  pinExpiresAt            DateTime?
+  emailPending            String?
   role                    Role                   @default(USER)
   isActive                Boolean                @default(true)
   isSuspended             Boolean                @default(false)
