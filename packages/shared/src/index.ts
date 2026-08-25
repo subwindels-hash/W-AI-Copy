@@ -166,3 +166,5 @@ export * from "./sitePlatform.js";
 export * from "./account.js";
 export * from "./githubConnector.js";
 export * from "./financial.js";
+
+export * from "./reviews.js";

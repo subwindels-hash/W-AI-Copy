@@ -124,6 +124,7 @@ const UniversityEnginePage = lazy(() => import("./pages/universityEngine/Univers
 const DisasterRecoveryPage = lazy(() => import("./pages/disasterRecovery/DisasterRecoveryPage").then((m) => ({ default: m.DisasterRecoveryPage })));
 const FinancialPage = lazy(() => import("./pages/financial/FinancialPage").then((m) => ({ default: m.FinancialPage })));
 const DataMarketplacePage = lazy(() => import("./pages/dataMarketplace/DataMarketplacePage").then((m) => ({ default: m.DataMarketplacePage })));
+const ReviewsPage = lazy(() => import("./pages/reviews/ReviewsPage").then((m) => ({ default: m.ReviewsPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -277,6 +278,8 @@ export const router = createBrowserRouter([
   { path: "/faq", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FaqPage/>) }] },
   { path: "/help", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<HelpPage/>) }] },
   { path: "/contact", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
+  // Platform Reviews — public read; writing requires a signed-in account.
+  { path: "/reviews", element: withSuspense(<ReviewsPage />) },
   { path: "/support", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
   { path: "/legal", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingLegal/>) }] },
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },

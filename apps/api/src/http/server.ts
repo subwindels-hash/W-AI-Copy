@@ -117,6 +117,7 @@ import { registerConstitutionRoutes } from "./routes/constitution.js";
 import { registerComposerRoutes } from "./routes/composer.js";
 import { registerBenchmarksRoutes } from "./routes/benchmarks.js";
 import { registerFinancialRoutes } from "./routes/financial.js";
+import { registerReviewsRoutes } from "./routes/reviews.js";
 import { registerDisasterRecoveryRoutes } from "./routes/disasterRecovery.js";
 import { registerLicensingRoutes } from "./routes/licensing.js";
 import { registerDeploymentRoutes } from "./routes/deployment.js";
@@ -1598,6 +1599,8 @@ export function createApp() {
   registerBlockonomicsAdminRoutes(v1);
   // Contact & Support Center (public form, AI assistant, my-requests, admin).
   registerContactRoutes(v1);
+  // Platform Reviews (public aggregate + authenticated write/rate, admin moderation).
+  registerReviewsRoutes(v1);
 
   app.use((req, res) => {
     res.status(404).json({

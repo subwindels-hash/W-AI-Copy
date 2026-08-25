@@ -88,6 +88,7 @@ import {
   Cpu,
   ClipboardCheck,
   Database,
+  MessageSquareQuote,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSitePublic } from "@/lib/useSitePublic";
@@ -178,6 +179,7 @@ const navItems = [
   { to: "/app/disaster-recovery", icon: ShieldAlert, label: "Disaster Recovery" },
   { to: "/app/financial", icon: Database, label: "Financial Policy" },
   { to: "/app/data-marketplace", icon: Package, label: "Data Marketplace" },
+  { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },
   { to: "/app/hybrid-execution", icon: Cpu, label: "Hybrid Execution" },

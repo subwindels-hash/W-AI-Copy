@@ -11622,6 +11622,69 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "reviews",
+    "title": "reviews",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/reviews",
+    "backend": {
+      "serviceDir": "apps/api/src/reviews",
+      "serviceFile": {
+        "file": "reviews.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/reviews/reviews.service.ts",
+        "sloc": 164,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 433,
+      "serviceFiles": [
+        "reviews.service.ts",
+        "reviews.test.ts",
+        "reviews/reviews.service.ts"
+      ],
+      "importedServiceFiles": [
+        "reviews/reviews.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/reviews.ts",
+        "sloc": 124,
+        "counts": {
+          "total": 8,
+          "GET": 4,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 1
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/reviews.ts (53 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/reviews.ts (38 LOC)",
+      "pages": [
+        "apps/web/src/pages/reviews/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "dataMarketplace.spec.ts",
+      "reviews/reviews.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "robotics",
     "title": "Robotics (S57)",
     "sessions": [
@@ -11889,7 +11952,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2517,
+      "serviceTotalSloc": 2521,
       "serviceFiles": [
         "csrf.ts",
         "encryption.test.ts",
