@@ -61,8 +61,12 @@ export const PluginConnections = {
     };
     await redis.set(K.detail(oid, id), JSON.stringify(conn));
     await redis.sadd(K.list(oid), id);
-    // Stash the encrypted blob keyed by the credentialRef so runtime can resolve it.
-    await redis.set(`pluginos:cred:${blob.kid}:${blob.data.slice(0, 24)}`, JSON.stringify(blob), "EX", 0);
+    // Stash the encrypted blob under the connection-scoped secret key so
+    // `resolveSecret(oid, id)` (and `remove`, which deletes the same key) can
+    // find it — matching the OAuth/MCP connection paths below. (Previously this
+    // wrote to a `pluginos:cred:*` key nothing ever read, leaving API-key
+    // secrets unresolvable at runtime.)
+    await redis.set(K.secretBlob(id), JSON.stringify(blob));
     await this.attachToPlugin(oid, pluginId, id);
     await PluginRegistry.setStatus(oid, pluginId, "enabled");
     await PluginRegistry.audit(oid, { pluginId, event: "connected", message: `api-key connection ${input.displayName}` });
