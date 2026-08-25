@@ -16,12 +16,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Check, ChevronDown, Search, Sparkles, Star, X } from "lucide-react";
 import type { LlLanguage } from "@/lib/languageLearning";
 import { cn } from "@/lib/cn";
+import {
+  DETECT_CODE, RECENTS_KEY, FAVS_KEY,
+  buildRecents, toggleFavorite, buildPickerRows, selectableIndices,
+  type PickerRow,
+} from "./languageSelector";
 
-export const DETECT_CODE = "auto";
-
-const RECENTS_KEY = "wnd.lang.recents";
-const FAVS_KEY = "wnd.lang.favorites";
-const MAX_RECENTS = 6;
+export { DETECT_CODE };
 
 function readList(key: string): string[] {
   try {
@@ -38,19 +39,7 @@ function writeList(key: string, list: string[]) {
 
 export function pushRecentLanguage(code: string) {
   if (!code || code === DETECT_CODE) return;
-  const next = [code, ...readList(RECENTS_KEY).filter((c) => c !== code)].slice(0, MAX_RECENTS);
-  writeList(RECENTS_KEY, next);
-}
-
-function matches(lang: LlLanguage, q: string): boolean {
-  if (!q) return true;
-  const needle = q.toLowerCase();
-  if (lang.name.toLowerCase().includes(needle)) return true;
-  if (lang.nativeName.toLowerCase().includes(needle)) return true;
-  if (lang.code.toLowerCase().includes(needle)) return true;
-  if (lang.bcp47.toLowerCase().includes(needle)) return true;
-  if (lang.family.toLowerCase().includes(needle)) return true;
-  return lang.aliases.some((a) => a.toLowerCase().includes(needle));
+  writeList(RECENTS_KEY, buildRecents(readList(RECENTS_KEY), code));
 }
 
 export interface LanguagePickerProps {
@@ -101,41 +90,14 @@ export function LanguagePicker({
   const selected = value === DETECT_CODE ? null : byCode.get(value) ?? null;
 
   // Build the flat, ordered option list used for keyboard nav + rendering.
-  type Row =
-    | { kind: "detect" }
-    | { kind: "header"; label: string }
-    | { kind: "lang"; lang: LlLanguage };
+  type Row = PickerRow;
 
-  const rows: Row[] = useMemo(() => {
-    const out: Row[] = [];
-    const q = query.trim();
-    if (allowDetect && (!q || matches({ name: "Detect language", nativeName: "auto", code: DETECT_CODE, bcp47: "auto", family: "", aliases: ["detect", "auto"] } as LlLanguage, q))) {
-      out.push({ kind: "detect" });
-    }
-    const filtered = languages.filter((l) => matches(l, q));
-    if (!q) {
-      const favLangs = favs.map((c) => byCode.get(c)).filter(Boolean) as LlLanguage[];
-      const recentLangs = recents.map((c) => byCode.get(c)).filter((l): l is LlLanguage => Boolean(l) && !favs.includes(l!.code));
-      if (favLangs.length) {
-        out.push({ kind: "header", label: "Favorites" });
-        for (const l of favLangs) out.push({ kind: "lang", lang: l });
-      }
-      if (recentLangs.length) {
-        out.push({ kind: "header", label: "Recently used" });
-        for (const l of recentLangs) out.push({ kind: "lang", lang: l });
-      }
-      out.push({ kind: "header", label: "All languages" });
-      for (const l of filtered) out.push({ kind: "lang", lang: l });
-    } else {
-      for (const l of filtered) out.push({ kind: "lang", lang: l });
-    }
-    return out;
-  }, [allowDetect, languages, query, favs, recents, byCode]);
-
-  const selectableIdxs = useMemo(
-    () => rows.map((r, i) => (r.kind === "lang" || r.kind === "detect" ? i : -1)).filter((i) => i >= 0),
-    [rows],
+  const rows: Row[] = useMemo(
+    () => buildPickerRows({ languages, query, favorites: favs, recents, allowDetect }),
+    [allowDetect, languages, query, favs, recents],
   );
+
+  const selectableIdxs = useMemo(() => selectableIndices(rows), [rows]);
 
   const close = useCallback(() => { setOpen(false); setQuery(""); }, []);
 
@@ -162,7 +124,7 @@ export function LanguagePicker({
   const toggleFav = useCallback((code: string, e: React.MouseEvent) => {
     e.stopPropagation();
     setFavs((cur) => {
-      const next = cur.includes(code) ? cur.filter((c) => c !== code) : [...cur, code];
+      const next = toggleFavorite(cur, code);
       writeList(FAVS_KEY, next);
       return next;
     });
