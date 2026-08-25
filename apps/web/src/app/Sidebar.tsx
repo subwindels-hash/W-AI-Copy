@@ -91,6 +91,7 @@ import {
   MessageSquareQuote,
   Gift,
   UserCheck,
+  ArrowDownToLine,
 } from "lucide-react";
 import { cn } from "@/lib/cn";
 import { useSitePublic } from "@/lib/useSitePublic";
@@ -185,6 +186,12 @@ const navItems = [
   { to: "/app/ml-ops", icon: Boxes, label: "ML Ops" },
   { to: "/app/gift-cards", icon: Gift, label: "Gift Cards" },
   { to: "/app/experts", icon: UserCheck, label: "Experts Platform" },
+  { to: "/app/training", icon: BookOpen, label: "Training & Fine-Tuning" },
+  { to: "/app/etl", icon: Workflow, label: "ETL & Pipelines" },
+  { to: "/app/fabric", icon: Cpu, label: "Intelligence Fabric" },
+  { to: "/app/updates", icon: ArrowDownToLine, label: "Updates & Lifecycle" },
+  { to: "/app/voice-foundry", icon: Mic, label: "Voice Foundry" },
+  { to: "/app/voice-ownership", icon: Fingerprint, label: "Voice Ownership" },
   { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },

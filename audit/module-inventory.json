@@ -5863,7 +5863,9 @@
     "sharedTypes": "packages/shared/src/etl.ts (120 LOC)",
     "web": {
       "client": "apps/web/src/lib/etl.ts (33 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/etl/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6237,7 +6239,9 @@
     "sharedTypes": "packages/shared/src/fabric.ts (222 LOC)",
     "web": {
       "client": "apps/web/src/lib/fabric.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/fabric/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13063,7 +13067,9 @@
     "sharedTypes": "packages/shared/src/training.ts (90 LOC)",
     "web": {
       "client": "apps/web/src/lib/training.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/training/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13299,7 +13305,9 @@
     "sharedTypes": "packages/shared/src/updates.ts (100 LOC)",
     "web": {
       "client": "apps/web/src/lib/updates.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/updates/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -14038,7 +14046,9 @@
     "sharedTypes": "packages/shared/src/voiceFoundry.ts (118 LOC)",
     "web": {
       "client": "apps/web/src/lib/voiceFoundry.ts (20 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/voiceFoundry/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -14117,7 +14127,9 @@
     "sharedTypes": "packages/shared/src/voiceOwnership.ts (56 LOC)",
     "web": {
       "client": "apps/web/src/lib/voiceOwnership.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/voiceOwnership/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [

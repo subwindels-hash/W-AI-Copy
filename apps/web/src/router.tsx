@@ -129,6 +129,12 @@ const BenchmarksPage = lazy(() => import("./pages/benchmarks/BenchmarksPage").th
 const MlOpsPage = lazy(() => import("./pages/mlOps/MlOpsPage").then((m) => ({ default: m.MlOpsPage })));
 const GiftCardsPage = lazy(() => import("./pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
 const ExpertsPlatformPage = lazy(() => import("./pages/expertsPlatform/ExpertsPlatformPage").then((m) => ({ default: m.ExpertsPlatformPage })));
+const TrainingPage = lazy(() => import("./pages/training/TrainingPage").then((m) => ({ default: m.TrainingPage })));
+const EtlPage = lazy(() => import("./pages/etl/EtlPage").then((m) => ({ default: m.EtlPage })));
+const FabricPage = lazy(() => import("./pages/fabric/FabricPage").then((m) => ({ default: m.FabricPage })));
+const UpdatesPage = lazy(() => import("./pages/updates/UpdatesPage").then((m) => ({ default: m.UpdatesPage })));
+const VoiceFoundryPage = lazy(() => import("./pages/voiceFoundry/VoiceFoundryPage").then((m) => ({ default: m.VoiceFoundryPage })));
+const VoiceOwnershipPage = lazy(() => import("./pages/voiceOwnership/VoiceOwnershipPage").then((m) => ({ default: m.VoiceOwnershipPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -462,6 +468,12 @@ export const router = createBrowserRouter([
       { path: "ml-ops", element: withSuspense(<MlOpsPage />) },
       { path: "gift-cards", element: withSuspense(<GiftCardsPage />) },
       { path: "experts", element: withSuspense(<ExpertsPlatformPage />) },
+      { path: "training", element: withSuspense(<TrainingPage />) },
+      { path: "etl", element: withSuspense(<EtlPage />) },
+      { path: "fabric", element: withSuspense(<FabricPage />) },
+      { path: "updates", element: withSuspense(<UpdatesPage />) },
+      { path: "voice-foundry", element: withSuspense(<VoiceFoundryPage />) },
+      { path: "voice-ownership", element: withSuspense(<VoiceOwnershipPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },
