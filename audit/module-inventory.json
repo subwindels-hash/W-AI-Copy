@@ -42,7 +42,7 @@
     "web": {
       "client": "apps/web/src/lib/account.ts (24 LOC)",
       "pages": [
-        "apps/web/src/pages/account/ (1 file)"
+        "apps/web/src/pages/account/MyAccountPage.tsx (routes: account)"
       ]
     },
     "db": {
@@ -103,7 +103,9 @@
     "web": {
       "client": "apps/web/src/lib/admin.ts (21 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/AdminPage.tsx (routes: /admin)",
+        "apps/web/src/pages/admin/ModuleCenterPage.tsx (routes: /admin/modules)",
+        "apps/web/src/pages/admin/SiteControlPage.tsx (routes: site)"
       ]
     },
     "db": {
@@ -166,7 +168,7 @@
     "web": {
       "client": "apps/web/src/lib/adminApiControl.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/AdminApiControlPage.tsx (routes: api-platform)"
       ]
     },
     "db": {
@@ -260,7 +262,7 @@
     "web": {
       "client": "apps/web/src/lib/advertising.ts (247 LOC)",
       "pages": [
-        "apps/web/src/pages/advertising/ (1 file)"
+        "apps/web/src/pages/advertising/AdsPage.tsx (routes: ads)"
       ]
     },
     "db": {
@@ -419,7 +421,7 @@
     "web": {
       "client": "apps/web/src/lib/agentComm.ts (128 LOC)",
       "pages": [
-        "apps/web/src/pages/agents/ (1 file)"
+        "apps/web/src/pages/admin/EnterprisePage.tsx (routes: enterprise)"
       ]
     },
     "db": {
@@ -511,7 +513,8 @@
     "web": {
       "client": "apps/web/src/lib/agents.ts (54 LOC)",
       "pages": [
-        "apps/web/src/pages/agents/ (1 file)"
+        "apps/web/src/pages/agents/AgentsPage.tsx (routes: workforce)",
+        "apps/web/src/pages/mobile/MobileAgentsPage.tsx (routes: agents)"
       ]
     },
     "db": {
@@ -640,7 +643,7 @@
     "web": {
       "client": "apps/web/src/lib/aiCommerce.ts (117 LOC)",
       "pages": [
-        "apps/web/src/pages/aiCommerce/ (1 file)"
+        "apps/web/src/pages/aiCommerce/AiCommercePage.tsx (routes: ai-commerce)"
       ]
     },
     "db": {
@@ -724,7 +727,7 @@
     "web": {
       "client": "apps/web/src/lib/aiEconomy.ts (29 LOC)",
       "pages": [
-        "apps/web/src/pages/aiEconomy/ (1 file)"
+        "apps/web/src/pages/aiEconomy/AiEconomyPage.tsx (routes: ai-economy)"
       ]
     },
     "db": {
@@ -832,7 +835,7 @@
     "web": {
       "client": "apps/web/src/lib/aiEcosystem.ts (73 LOC)",
       "pages": [
-        "apps/web/src/pages/aiEcosystem/ (1 file)"
+        "apps/web/src/pages/aiEcosystem/AiEcosystemPage.tsx (routes: ai-ecosystem)"
       ]
     },
     "db": {
@@ -961,7 +964,7 @@
     "web": {
       "client": "apps/web/src/lib/aiEngineering.ts (79 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/AiEngineeringPage.tsx (routes: ai-engineering)"
       ]
     },
     "db": {
@@ -1035,7 +1038,7 @@
     "web": {
       "client": "apps/web/src/lib/apikey.ts (3 LOC)",
       "pages": [
-        "apps/web/src/pages/apikey/ (1 file)"
+        "apps/web/src/pages/apikey/ApiKeyPage.tsx (routes: api-keys)"
       ]
     },
     "db": {
@@ -1133,7 +1136,8 @@
     "web": {
       "client": "apps/web/src/lib/appBuilder.ts (164 LOC)",
       "pages": [
-        "apps/web/src/pages/appBuilder/ (1 file)"
+        "apps/web/src/pages/appBuilder/SoftwareFactoryPage.tsx (routes: app-builder)",
+        "apps/web/src/pages/softwareFactory/StudiosPage.tsx (routes: software-factory)"
       ]
     },
     "db": {
@@ -1217,7 +1221,7 @@
     "web": {
       "client": "apps/web/src/lib/architecture.ts (35 LOC)",
       "pages": [
-        "apps/web/src/pages/architecture/ (1 file)"
+        "apps/web/src/pages/architecture/ArchitecturePage.tsx (routes: architecture)"
       ]
     },
     "db": {
@@ -1285,7 +1289,7 @@
     "web": {
       "client": "apps/web/src/lib/attachments.ts (3 LOC)",
       "pages": [
-        "apps/web/src/pages/attachments/ (1 file)"
+        "apps/web/src/pages/attachments/AttachmentsPage.tsx (routes: attachments)"
       ]
     },
     "db": {
@@ -1363,7 +1367,7 @@
     "web": {
       "client": "apps/web/src/lib/audit.ts (64 LOC)",
       "pages": [
-        "apps/web/src/pages/audit/ (1 file)"
+        "apps/web/src/pages/audit/AuditConsolePage.tsx (routes: audit)"
       ]
     },
     "db": {
@@ -1478,7 +1482,12 @@
     "web": {
       "client": "apps/web/src/lib/api.ts (262 LOC, serves /auth)",
       "pages": [
-        "apps/web/src/pages/auth/ (5 files)"
+        "apps/web/src/pages/auth/ForgotPasswordPage.tsx (routes: /auth/forgot)",
+        "apps/web/src/pages/auth/GoogleCallbackPage.tsx (routes: /auth/callback)",
+        "apps/web/src/pages/auth/LoginPage.tsx (routes: /auth/login)",
+        "apps/web/src/pages/auth/RegisterPage.tsx (routes: /auth/register)",
+        "apps/web/src/pages/auth/ResetPasswordPage.tsx (routes: /auth/reset)",
+        "apps/web/src/pages/mobile/MobileAuthPage.tsx (routes: /m/auth, /m/auth/register)"
       ]
     },
     "db": {
@@ -1637,7 +1646,7 @@
     "web": {
       "client": "apps/web/src/lib/autonomous.ts (15 LOC)",
       "pages": [
-        "apps/web/src/pages/autonomous/ (1 file)"
+        "apps/web/src/pages/autonomous/AutonomousPage.tsx (routes: autonomous)"
       ]
     },
     "db": {
@@ -1715,7 +1724,7 @@
     "web": {
       "client": "apps/web/src/lib/benchmarks.ts (25 LOC)",
       "pages": [
-        "apps/web/src/pages/benchmarks/ (1 file)"
+        "apps/web/src/pages/benchmarks/BenchmarksPage.tsx (routes: benchmarks)"
       ]
     },
     "db": {
@@ -1790,7 +1799,10 @@
     "web": {
       "client": "apps/web/src/lib/billing.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/billing/ (6 files)"
+        "apps/web/src/pages/analytics/AnalyticsPage.tsx (routes: analytics)",
+        "apps/web/src/pages/billing/BillingPage.tsx (routes: billing)",
+        "apps/web/src/pages/billing/PaymentGatewaysPage.tsx (routes: payments)",
+        "apps/web/src/pages/settings/SettingsPage.tsx (routes: settings)"
       ]
     },
     "db": {
@@ -1877,7 +1889,7 @@
     "web": {
       "client": "apps/web/src/lib/biomedical.ts (37 LOC)",
       "pages": [
-        "apps/web/src/pages/biomedical/ (1 file)"
+        "apps/web/src/pages/biomedical/BiomedicalPage.tsx (routes: biomedical)"
       ]
     },
     "db": {
@@ -1948,7 +1960,7 @@
     "web": {
       "client": "apps/web/src/lib/blockonomicsAdmin.ts (24 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/BlockonomicsAdminPage.tsx (routes: blockonomics)"
       ]
     },
     "db": {
@@ -2069,7 +2081,9 @@
     "web": {
       "client": "apps/web/src/lib/brokerIntegration.ts (274 LOC)",
       "pages": [
-        "apps/web/src/pages/brokerIntegration/ (1 file)"
+        "apps/web/src/pages/brokerIntegration/BrokerIntegrationPage.tsx (routes: broker-integration)",
+        "apps/web/src/pages/trading/BrokerCommandCenterPage.tsx (routes: trading/brokers)",
+        "apps/web/src/pages/trading/TradingDashboardPage.tsx (routes: trading/dashboard)"
       ]
     },
     "db": {
@@ -2158,8 +2172,7 @@
     "web": {
       "client": "apps/web/src/lib/businessIntelligence.ts (103 LOC)",
       "pages": [
-        "apps/web/src/pages/bi/ (1 file)",
-        "apps/web/src/pages/businessIntelligence/ (1 file)"
+        "apps/web/src/pages/bi/BusinessIntelligencePage.tsx (routes: bi, businessIntelligence)"
       ]
     },
     "db": {
@@ -2234,7 +2247,7 @@
     "web": {
       "client": "apps/web/src/lib/camera.ts (19 LOC)",
       "pages": [
-        "apps/web/src/pages/camera/ (1 file)"
+        "apps/web/src/pages/camera/CameraPage.tsx (routes: camera)"
       ]
     },
     "db": {
@@ -2314,7 +2327,7 @@
     "web": {
       "client": "apps/web/src/lib/canvasCollab.ts (13 LOC)",
       "pages": [
-        "apps/web/src/pages/canvas/ (1 file)"
+        "apps/web/src/pages/canvas/CanvasPage.tsx (routes: canvas, canvas/:id)"
       ]
     },
     "db": {
@@ -2450,7 +2463,7 @@
     "web": {
       "client": "apps/web/src/lib/telegram.ts (41 LOC, serves /channels)",
       "pages": [
-        "apps/web/src/pages/channels/ (1 file)"
+        "apps/web/src/pages/channels/ChannelsPage.tsx (routes: channels)"
       ]
     },
     "db": {
@@ -2583,7 +2596,7 @@
     "web": {
       "client": "apps/web/src/lib/cinematic.ts (58 LOC)",
       "pages": [
-        "apps/web/src/pages/cinematic/ (1 file)"
+        "apps/web/src/pages/cinematic/CinematicStudioPage.tsx (routes: cinematic-studio)"
       ]
     },
     "db": {
@@ -2688,7 +2701,7 @@
     "web": {
       "client": "apps/web/src/lib/cloudAndroid.ts (32 LOC)",
       "pages": [
-        "apps/web/src/pages/cloudAndroid/ (1 file)"
+        "apps/web/src/pages/cloudAndroid/CloudAndroidPage.tsx (routes: cloud-android)"
       ]
     },
     "db": {
@@ -2781,8 +2794,7 @@
     "web": {
       "client": "apps/web/src/lib/cloudAndroidPublic.ts (10 LOC)",
       "pages": [
-        "apps/web/src/pages/cloudAndroid/ (1 file)",
-        "apps/web/src/pages/cloudAndroidPublic/ (1 file)"
+        "apps/web/src/pages/cloudAndroidPublic/CloudAndroidPublicPage.tsx (routes: cloud-android-public)"
       ]
     },
     "db": {
@@ -2868,7 +2880,7 @@
     "web": {
       "client": "apps/web/src/lib/cognitive.ts (64 LOC)",
       "pages": [
-        "apps/web/src/pages/cognitive/ (1 file)"
+        "apps/web/src/pages/cognitive/CognitivePage.tsx (routes: cognitive)"
       ]
     },
     "db": {
@@ -3054,8 +3066,8 @@
     "web": {
       "client": "apps/web/src/lib/collaboration.ts (73 LOC)",
       "pages": [
-        "apps/web/src/pages/canvas/ (1 file)",
-        "apps/web/src/pages/workflow/ (1 file)"
+        "apps/web/src/pages/canvas/CanvasPage.tsx (routes: canvas, canvas/:id)",
+        "apps/web/src/pages/workflow/WorkflowPage.tsx (routes: flow, flow/:id, workflow)"
       ]
     },
     "db": {
@@ -3169,7 +3181,7 @@
     "web": {
       "client": "apps/web/src/lib/command.ts (97 LOC)",
       "pages": [
-        "apps/web/src/pages/command/ (1 file)"
+        "apps/web/src/pages/command/CommandCenterPage.tsx (routes: command)"
       ]
     },
     "db": {
@@ -3266,7 +3278,7 @@
     "web": {
       "client": "apps/web/src/lib/commerce.ts (18 LOC)",
       "pages": [
-        "apps/web/src/pages/commerce/ (1 file)"
+        "apps/web/src/pages/commerce/CommercePage.tsx (routes: commerce)"
       ]
     },
     "db": {
@@ -3378,7 +3390,7 @@
     "web": {
       "client": "apps/web/src/lib/composer.ts (24 LOC)",
       "pages": [
-        "apps/web/src/pages/composer/ (1 file)"
+        "apps/web/src/pages/composer/ComposerPage.tsx (routes: composer)"
       ]
     },
     "db": {
@@ -3460,7 +3472,7 @@
     "web": {
       "client": "apps/web/src/lib/constitution.ts (22 LOC)",
       "pages": [
-        "apps/web/src/pages/constitution/ (1 file)"
+        "apps/web/src/pages/constitution/ConstitutionPage.tsx (routes: constitution)"
       ]
     },
     "db": {
@@ -3531,7 +3543,9 @@
     "web": {
       "client": "apps/web/src/lib/contact.ts (46 LOC)",
       "pages": [
-        "apps/web/src/pages/contact/ (1 file)"
+        "apps/web/src/pages/contact/ContactPage.tsx (routes: /contact, /support)",
+        "apps/web/src/pages/support/ContactCenterPage.tsx (routes: contact-center)",
+        "apps/web/src/pages/support/MySupportPage.tsx (routes: my-support)"
       ]
     },
     "db": {
@@ -3660,7 +3674,8 @@
     "web": {
       "client": "apps/web/src/lib/conversations.ts (94 LOC)",
       "pages": [
-        "apps/web/src/pages/conversations/ (1 file)"
+        "apps/web/src/pages/chat/ChatPage.tsx (routes: chat, chat/:id)",
+        "apps/web/src/pages/conversations/ConversationsPage.tsx (routes: conversations)"
       ]
     },
     "db": {
@@ -3747,7 +3762,7 @@
     "web": {
       "client": "apps/web/src/lib/coreIntegration.ts (9 LOC)",
       "pages": [
-        "apps/web/src/pages/coreIntegration/ (1 file)"
+        "apps/web/src/pages/coreIntegration/CoreIntegrationPage.tsx (routes: core-integration)"
       ]
     },
     "db": {
@@ -3839,7 +3854,8 @@
     "web": {
       "client": "apps/web/src/lib/crm.ts (191 LOC)",
       "pages": [
-        "apps/web/src/pages/crm/ (1 file)"
+        "apps/web/src/pages/crm/CrmPage.tsx (routes: crm)",
+        "apps/web/src/pages/erp/ErpPage.tsx (routes: erp)"
       ]
     },
     "db": {
@@ -3929,7 +3945,7 @@
     "web": {
       "client": "apps/web/src/lib/cryptoIntelligence.ts (27 LOC)",
       "pages": [
-        "apps/web/src/pages/cryptoIntelligence/ (1 file)"
+        "apps/web/src/pages/cryptoIntelligence/CryptoIntelligencePage.tsx (routes: crypto-intel)"
       ]
     },
     "db": {
@@ -4021,7 +4037,7 @@
     "web": {
       "client": "apps/web/src/lib/cyber.ts (65 LOC)",
       "pages": [
-        "apps/web/src/pages/cyber/ (1 file)"
+        "apps/web/src/pages/cyber/CyberPage.tsx (routes: cyber)"
       ]
     },
     "db": {
@@ -4098,7 +4114,7 @@
     "web": {
       "client": "apps/web/src/lib/cyberCloudAcademy.ts (68 LOC)",
       "pages": [
-        "apps/web/src/pages/cyberCloudAcademy/ (1 file)"
+        "apps/web/src/pages/cyberCloudAcademy/CyberCloudAcademyPage.tsx (routes: cyber-cloud-academy)"
       ]
     },
     "db": {
@@ -4226,7 +4242,7 @@
     "web": {
       "client": "apps/web/src/lib/dataMarketplace.ts (18 LOC)",
       "pages": [
-        "apps/web/src/pages/dataMarketplace/ (1 file)"
+        "apps/web/src/pages/dataMarketplace/DataMarketplacePage.tsx (routes: data-marketplace)"
       ]
     },
     "db": {
@@ -4315,7 +4331,7 @@
     "web": {
       "client": "apps/web/src/lib/deployment.ts (22 LOC)",
       "pages": [
-        "apps/web/src/pages/deployment/ (1 file)"
+        "apps/web/src/pages/deployment/DeploymentPage.tsx (routes: deployment)"
       ]
     },
     "db": {
@@ -4409,7 +4425,7 @@
     "web": {
       "client": "apps/web/src/lib/derivatives.ts (115 LOC)",
       "pages": [
-        "apps/web/src/pages/derivatives/ (1 file)"
+        "apps/web/src/pages/derivatives/DerivativesPage.tsx (routes: derivatives)"
       ]
     },
     "db": {
@@ -4565,7 +4581,7 @@
     "web": {
       "client": "apps/web/src/lib/developerPlatform.ts (96 LOC)",
       "pages": [
-        "apps/web/src/pages/developerPortal/ (1 file)"
+        "apps/web/src/pages/developerPortal/DeveloperPortalPage.tsx (routes: developer-portal)"
       ]
     },
     "db": {
@@ -4647,7 +4663,7 @@
     "web": {
       "client": "apps/web/src/lib/developers.ts (71 LOC)",
       "pages": [
-        "apps/web/src/pages/developers/ (1 file)"
+        "apps/web/src/pages/developers/DeveloperPage.tsx (routes: developers)"
       ]
     },
     "db": {
@@ -4741,7 +4757,7 @@
     "web": {
       "client": "apps/web/src/lib/devPortal.ts (34 LOC, serves /dev-portal)",
       "pages": [
-        "apps/web/src/pages/devportal/ (1 file)"
+        "apps/web/src/pages/devportal/DevportalPage.tsx (routes: dev-portal-tools)"
       ]
     },
     "db": {
@@ -4837,7 +4853,7 @@
     "web": {
       "client": "apps/web/src/lib/digitalHumans.ts (23 LOC)",
       "pages": [
-        "apps/web/src/pages/digitalHumans/ (1 file)"
+        "apps/web/src/pages/digitalHumans/DigitalHumansPage.tsx (routes: digital-humans)"
       ]
     },
     "db": {
@@ -4923,7 +4939,7 @@
     "web": {
       "client": "apps/web/src/lib/disasterRecovery.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/disasterRecovery/ (1 file)"
+        "apps/web/src/pages/disasterRecovery/DisasterRecoveryPage.tsx (routes: disaster-recovery)"
       ]
     },
     "db": {
@@ -4996,7 +5012,7 @@
     "web": {
       "client": "apps/web/src/lib/ea.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/ea/ (1 file)"
+        "apps/web/src/pages/ea/EaPage.tsx (routes: ea)"
       ]
     },
     "db": {
@@ -5091,7 +5107,7 @@
     "web": {
       "client": "apps/web/src/lib/education.ts (29 LOC)",
       "pages": [
-        "apps/web/src/pages/education/ (1 file)"
+        "apps/web/src/pages/education/EducationPage.tsx (routes: education)"
       ]
     },
     "db": {
@@ -5190,7 +5206,7 @@
     "web": {
       "client": "apps/web/src/lib/emailIntel.ts (194 LOC)",
       "pages": [
-        "apps/web/src/pages/emailIntel/ (1 file)"
+        "apps/web/src/pages/emailIntel/EmailIntelPage.tsx (routes: email-intel)"
       ]
     },
     "db": {
@@ -5290,10 +5306,7 @@
     "sharedTypes": "packages/shared/src/engMetrics.ts (160 LOC, supplies SLOTier/ServiceMetric)",
     "web": {
       "client": "apps/web/src/lib/engineering.ts (46 LOC)",
-      "pages": [
-        "apps/web/src/pages/events/ (1 file)",
-        "apps/web/src/pages/webhook/ (1 file)"
-      ]
+      "pages": []
     },
     "db": {
       "prismaModels": [],
@@ -5420,7 +5433,7 @@
     "web": {
       "client": "apps/web/src/lib/enterprise.ts (161 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/EnterprisePage.tsx (routes: enterprise)"
       ]
     },
     "db": {
@@ -5512,8 +5525,7 @@
     "web": {
       "client": "apps/web/src/lib/enterpriseFinOps.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/finops/ (1 file)",
-        "apps/web/src/pages/enterpriseFinOps/ (1 file)"
+        "apps/web/src/pages/finops/EnterpriseFinOpsPage.tsx (routes: enterpriseFinOps, finops)"
       ]
     },
     "db": {
@@ -5638,7 +5650,7 @@
     "web": {
       "client": "apps/web/src/lib/enterpriseFoundation.ts (83 LOC)",
       "pages": [
-        "apps/web/src/pages/enterpriseFoundation/ (1 file)"
+        "apps/web/src/pages/enterpriseFoundation/EnterpriseFoundationPage.tsx (routes: enterprise-foundation)"
       ]
     },
     "db": {
@@ -5718,8 +5730,7 @@
     "web": {
       "client": "apps/web/src/lib/enterpriseSearch.ts (52 LOC)",
       "pages": [
-        "apps/web/src/pages/search/ (1 file)",
-        "apps/web/src/pages/enterpriseSearch/ (1 file)"
+        "apps/web/src/pages/search/EnterpriseSearchPage.tsx (routes: enterpriseSearch, search)"
       ]
     },
     "db": {
@@ -5821,7 +5832,7 @@
     "web": {
       "client": "apps/web/src/lib/erp.ts (233 LOC)",
       "pages": [
-        "apps/web/src/pages/erp/ (1 file)"
+        "apps/web/src/pages/erp/ErpPage.tsx (routes: erp)"
       ]
     },
     "db": {
@@ -5892,7 +5903,7 @@
     "web": {
       "client": "apps/web/src/lib/etl.ts (33 LOC)",
       "pages": [
-        "apps/web/src/pages/etl/ (1 file)"
+        "apps/web/src/pages/etl/EtlPage.tsx (routes: etl)"
       ]
     },
     "db": {
@@ -5965,7 +5976,7 @@
     "web": {
       "client": "apps/web/src/lib/events.ts (109 LOC)",
       "pages": [
-        "apps/web/src/pages/events/ (1 file)"
+        "apps/web/src/pages/events/EventsPage.tsx (routes: events)"
       ]
     },
     "db": {
@@ -6058,7 +6069,7 @@
     "web": {
       "client": "apps/web/src/lib/expertsPlatform.ts (16 LOC)",
       "pages": [
-        "apps/web/src/pages/expertsPlatform/ (1 file)"
+        "apps/web/src/pages/expertsPlatform/ExpertsPlatformPage.tsx (routes: experts)"
       ]
     },
     "db": {
@@ -6178,7 +6189,7 @@
     "web": {
       "client": "apps/web/src/lib/extensions.ts (70 LOC)",
       "pages": [
-        "apps/web/src/pages/plugins/ (1 file)"
+        "apps/web/src/pages/plugins/ExtensionsPage.tsx (routes: extensions)"
       ]
     },
     "db": {
@@ -6270,7 +6281,7 @@
     "web": {
       "client": "apps/web/src/lib/fabric.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/fabric/ (1 file)"
+        "apps/web/src/pages/fabric/FabricPage.tsx (routes: fabric)"
       ]
     },
     "db": {
@@ -6351,7 +6362,7 @@
     "web": {
       "client": "apps/web/src/lib/financial.ts (39 LOC)",
       "pages": [
-        "apps/web/src/pages/financial/ (1 file)"
+        "apps/web/src/pages/financial/FinancialPage.tsx (routes: financial)"
       ]
     },
     "db": {
@@ -6418,7 +6429,7 @@
     "web": {
       "client": "apps/web/src/lib/geoBilling.ts (115 LOC)",
       "pages": [
-        "apps/web/src/pages/billing/ (6 files)"
+        "apps/web/src/pages/billing/GeoBillingConsolePage.tsx (routes: geo-billing)"
       ]
     },
     "db": {
@@ -6506,7 +6517,7 @@
     "web": {
       "client": "apps/web/src/lib/giftCards.ts (28 LOC)",
       "pages": [
-        "apps/web/src/pages/giftCards/ (1 file)"
+        "apps/web/src/pages/giftCards/GiftCardsPage.tsx (routes: gift-cards)"
       ]
     },
     "db": {
@@ -6577,7 +6588,8 @@
     "web": {
       "client": "apps/web/src/lib/githubConnector.ts (20 LOC)",
       "pages": [
-        "apps/web/src/pages/githubConnector/ (1 file)"
+        "apps/web/src/pages/github/GitHubConnectorPage.tsx (routes: github)",
+        "apps/web/src/pages/githubConnector/GithubConnectorPage.tsx (routes: github-connector)"
       ]
     },
     "db": {
@@ -6668,7 +6680,7 @@
     "web": {
       "client": "apps/web/src/lib/globalCurrency.ts (54 LOC)",
       "pages": [
-        "apps/web/src/pages/globalCurrency/ (1 file)"
+        "apps/web/src/pages/globalCurrency/GlobalCurrencyPage.tsx (routes: global-currency)"
       ]
     },
     "db": {
@@ -6774,7 +6786,7 @@
     "web": {
       "client": "apps/web/src/lib/googleAuth.ts (115 LOC)",
       "pages": [
-        "apps/web/src/pages/googleAuth/ (1 file)"
+        "apps/web/src/pages/googleAuth/GoogleIdentityPage.tsx (routes: google-identity)"
       ]
     },
     "db": {
@@ -6893,7 +6905,7 @@
     "web": {
       "client": "apps/web/src/lib/governance.ts (84 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/GovernancePage.tsx (routes: governance)"
       ]
     },
     "db": {
@@ -7022,7 +7034,7 @@
     "web": {
       "client": "apps/web/src/lib/healthEcosystem.ts (74 LOC)",
       "pages": [
-        "apps/web/src/pages/healthEcosystem/ (1 file)"
+        "apps/web/src/pages/healthEcosystem/HealthEcosystemPage.tsx (routes: health-ecosystem)"
       ]
     },
     "db": {
@@ -7104,7 +7116,7 @@
     "web": {
       "client": "apps/web/src/lib/helpdesk.ts (95 LOC)",
       "pages": [
-        "apps/web/src/pages/helpdesk/ (1 file)"
+        "apps/web/src/pages/helpdesk/HelpdeskPage.tsx (routes: helpdesk)"
       ]
     },
     "db": {
@@ -7189,7 +7201,7 @@
     "web": {
       "client": "apps/web/src/lib/hybridExec.ts (25 LOC)",
       "pages": [
-        "apps/web/src/pages/hybridExec/ (1 file)"
+        "apps/web/src/pages/hybridExec/HybridExecPage.tsx (routes: hybrid-execution)"
       ]
     },
     "db": {
@@ -7279,7 +7291,7 @@
     "web": {
       "client": "apps/web/src/lib/identityKnowledge.ts (89 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/IdentityKnowledgePage.tsx (routes: identity-knowledge)"
       ]
     },
     "db": {
@@ -7359,7 +7371,7 @@
     "web": {
       "client": "apps/web/src/lib/industry.ts (33 LOC)",
       "pages": [
-        "apps/web/src/pages/industry/ (1 file)"
+        "apps/web/src/pages/industry/IndustryPage.tsx (routes: industry)"
       ]
     },
     "db": {
@@ -7466,7 +7478,7 @@
     "web": {
       "client": "apps/web/src/lib/infrastructure.ts (65 LOC)",
       "pages": [
-        "apps/web/src/pages/infrastructure/ (1 file)"
+        "apps/web/src/pages/infrastructure/InfrastructurePage.tsx (routes: infrastructure)"
       ]
     },
     "db": {
@@ -7654,7 +7666,7 @@
     "web": {
       "client": "apps/web/src/lib/knowledge.ts (247 LOC)",
       "pages": [
-        "apps/web/src/pages/knowledge/ (1 file)"
+        "apps/web/src/pages/knowledge/KnowledgePage.tsx (routes: knowledge)"
       ]
     },
     "db": {
@@ -7788,7 +7800,8 @@
     "web": {
       "client": "apps/web/src/lib/languageLearning.ts (99 LOC)",
       "pages": [
-        "apps/web/src/pages/languages/ (1 file)"
+        "apps/web/src/pages/languages/LanguageLearningPage.tsx (routes: languages, languages/:view)",
+        "apps/web/src/pages/mobile/MobileLanguagesPage.tsx (routes: languages)"
       ]
     },
     "db": {
@@ -7901,7 +7914,8 @@
     "web": {
       "client": "apps/web/src/lib/leadDiscovery.ts (192 LOC)",
       "pages": [
-        "apps/web/src/pages/leads/ (2 files)"
+        "apps/web/src/pages/leads/LeadPipelinePage.tsx (routes: lead-pipeline)",
+        "apps/web/src/pages/leads/LeadsPage.tsx (routes: leads)"
       ]
     },
     "db": {
@@ -7983,7 +7997,8 @@
     "web": {
       "client": "apps/web/src/lib/legal.ts (56 LOC)",
       "pages": [
-        "apps/web/src/pages/legal/ (1 file)"
+        "apps/web/src/pages/legal/LegalPage.tsx (routes: legal)",
+        "apps/web/src/pages/marketing/LegalPage.tsx (routes: /legal)"
       ]
     },
     "db": {
@@ -8063,7 +8078,7 @@
     "web": {
       "client": "apps/web/src/lib/licensing.ts (24 LOC)",
       "pages": [
-        "apps/web/src/pages/licensing/ (1 file)"
+        "apps/web/src/pages/licensing/LicensingPage.tsx (routes: licensing)"
       ]
     },
     "db": {
@@ -8149,7 +8164,7 @@
     "web": {
       "client": "apps/web/src/lib/lifePrinciples.ts (166 LOC)",
       "pages": [
-        "apps/web/src/pages/lifePrinciples/ (1 file)"
+        "apps/web/src/pages/lifePrinciples/LifePrinciplesPage.tsx (routes: life-principles)"
       ]
     },
     "db": {
@@ -8257,7 +8272,8 @@
     "web": {
       "client": "apps/web/src/lib/lotteryIntelligence.ts (59 LOC)",
       "pages": [
-        "apps/web/src/pages/lottery/ (1 file)"
+        "apps/web/src/pages/lottery/LotteryIntelligencePage.tsx (routes: lottery, lottery/:view)",
+        "apps/web/src/pages/mobile/MobileLotteryPage.tsx (routes: lottery)"
       ]
     },
     "db": {
@@ -8348,7 +8364,7 @@
     "web": {
       "client": "apps/web/src/lib/marketing.ts (146 LOC)",
       "pages": [
-        "apps/web/src/pages/marketing/ (13 files)"
+        "apps/web/src/pages/marketing/MarketingDashboardPage.tsx (routes: marketing)"
       ]
     },
     "db": {
@@ -8458,7 +8474,7 @@
     "web": {
       "client": "apps/web/src/lib/marketplace.ts (72 LOC)",
       "pages": [
-        "apps/web/src/pages/marketplace/ (1 file)"
+        "apps/web/src/pages/marketplace/MarketplacePage.tsx (routes: marketplace)"
       ]
     },
     "db": {
@@ -8581,8 +8597,7 @@
     "web": {
       "client": "apps/web/src/lib/mediaFactory.ts (110 LOC)",
       "pages": [
-        "apps/web/src/pages/media/ (2 files)",
-        "apps/web/src/pages/mediaFactory/ (1 file)"
+        "apps/web/src/pages/media/MediaFactoryPage.tsx (routes: media, mediaFactory)"
       ]
     },
     "db": {
@@ -8681,8 +8696,7 @@
     "web": {
       "client": "apps/web/src/lib/mediaGen.ts (13 LOC)",
       "pages": [
-        "apps/web/src/pages/media/ (2 files)",
-        "apps/web/src/pages/mediaGen/ (1 file)"
+        "apps/web/src/pages/mediaGen/MediaGenPage.tsx (routes: mediaGen)"
       ]
     },
     "db": {
@@ -8757,7 +8771,7 @@
     "web": {
       "client": "apps/web/src/lib/memoryEvolution.ts (18 LOC)",
       "pages": [
-        "apps/web/src/pages/memoryEvolution/ (1 file)"
+        "apps/web/src/pages/memoryEvolution/MemoryEvolutionPage.tsx (routes: memoryEvolution)"
       ]
     },
     "db": {
@@ -8863,7 +8877,7 @@
     "web": {
       "client": "apps/web/src/lib/mfa.ts (149 LOC)",
       "pages": [
-        "apps/web/src/pages/security/ (1 file)"
+        "apps/web/src/pages/security/MfaAssurancePage.tsx (routes: mfa-assurance)"
       ]
     },
     "db": {
@@ -8977,7 +8991,7 @@
     "web": {
       "client": "apps/web/src/lib/mlOps.ts (114 LOC)",
       "pages": [
-        "apps/web/src/pages/mlOps/ (1 file)"
+        "apps/web/src/pages/mlOps/MlOpsPage.tsx (routes: ml-ops)"
       ]
     },
     "db": {
@@ -9108,7 +9122,10 @@
     "web": {
       "client": "apps/web/src/lib/mobile/biometrics.ts (100 LOC, serves /mobile)",
       "pages": [
-        "apps/web/src/pages/mobile/ (16 files)"
+        "apps/web/src/pages/mobile/MobileAuthPage.tsx (routes: /m/auth, /m/auth/register)",
+        "apps/web/src/pages/mobile/MobileDevicesPage.tsx (routes: mobile-devices)",
+        "apps/web/src/pages/mobile/MobileOfflinePage.tsx (routes: offline)",
+        "apps/web/src/pages/mobile/MobileSettingsPage.tsx (routes: settings)"
       ]
     },
     "db": {
@@ -9198,7 +9215,7 @@
     "web": {
       "client": "apps/web/src/lib/modelFactory.ts (19 LOC)",
       "pages": [
-        "apps/web/src/pages/modelFactory/ (1 file)"
+        "apps/web/src/pages/modelFactory/ModelFactoryPage.tsx (routes: modelFactory)"
       ]
     },
     "db": {
@@ -9281,8 +9298,8 @@
     "web": {
       "client": "apps/web/src/lib/moduleCenter.ts (46 LOC)",
       "pages": [
-        "apps/web/src/pages/moduleRuntime/ (1 file)",
-        "apps/web/src/pages/modules/ (1 file)"
+        "apps/web/src/pages/admin/ModuleCenterPage.tsx (routes: /admin/modules)",
+        "apps/web/src/pages/modules/ModuleRuntimePage.tsx (routes: modules/:moduleId/*)"
       ]
     },
     "db": {
@@ -9359,8 +9376,7 @@
     "web": {
       "client": "apps/web/src/lib/moduleRuntime.ts (10 LOC)",
       "pages": [
-        "apps/web/src/pages/modules/ (1 file)",
-        "apps/web/src/pages/moduleRuntime/ (1 file)"
+        "apps/web/src/pages/moduleRuntime/ModuleRuntimePage.tsx (routes: module-runtime)"
       ]
     },
     "db": {
@@ -9443,7 +9459,8 @@
     "web": {
       "client": "apps/web/src/lib/musicGen.ts (63 LOC)",
       "pages": [
-        "apps/web/src/pages/music/ (1 file)"
+        "apps/web/src/pages/media/MusicVideoPage.tsx (routes: music-video)",
+        "apps/web/src/pages/music/MusicStudioPage.tsx (routes: music)"
       ]
     },
     "db": {
@@ -9524,7 +9541,7 @@
     "web": {
       "client": "apps/web/src/lib/musicVideo.ts (180 LOC)",
       "pages": [
-        "apps/web/src/pages/media/ (2 files)"
+        "apps/web/src/pages/media/MusicVideoPage.tsx (routes: music-video)"
       ]
     },
     "db": {
@@ -9610,7 +9627,7 @@
     "web": {
       "client": "apps/web/src/lib/nativeAi.ts (45 LOC)",
       "pages": [
-        "apps/web/src/pages/nativeAi/ (1 file)"
+        "apps/web/src/pages/nativeAi/NativeAiPage.tsx (routes: native-ai)"
       ]
     },
     "db": {
@@ -9719,7 +9736,7 @@
     "web": {
       "client": "apps/web/src/lib/nativeAiApi.ts (53 LOC)",
       "pages": [
-        "apps/web/src/pages/nativeAiApi/ (1 file)"
+        "apps/web/src/pages/nativeAiApi/NativeAiApiPage.tsx (routes: native-ai-api)"
       ]
     },
     "db": {
@@ -9812,7 +9829,7 @@
     "web": {
       "client": "apps/web/src/lib/nfc.ts (283 LOC)",
       "pages": [
-        "apps/web/src/pages/nfc/ (1 file)"
+        "apps/web/src/pages/nfc/NfcCardManagerPage.tsx (routes: nfc)"
       ]
     },
     "db": {
@@ -9898,8 +9915,7 @@
     "web": {
       "client": "apps/web/src/lib/nfcPublic.ts (9 LOC)",
       "pages": [
-        "apps/web/src/pages/nfc/ (1 file)",
-        "apps/web/src/pages/nfcPublic/ (1 file)"
+        "apps/web/src/pages/nfcPublic/NfcPublicPage.tsx (routes: nfc-public)"
       ]
     },
     "db": {
@@ -9970,7 +9986,8 @@
     "web": {
       "client": "apps/web/src/lib/notifications.ts (16 LOC)",
       "pages": [
-        "apps/web/src/pages/notifications/ (1 file)"
+        "apps/web/src/pages/mobile/MobileNotificationsPage.tsx (routes: notifications)",
+        "apps/web/src/pages/notifications/NotificationsPage.tsx (routes: notifications)"
       ]
     },
     "db": {
@@ -10085,7 +10102,7 @@
     "web": {
       "client": "apps/web/src/lib/opex.ts (160 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/OpexAssurancePage.tsx (routes: opex)"
       ]
     },
     "db": {
@@ -10192,7 +10209,7 @@
     "web": {
       "client": "apps/web/src/lib/payments.ts (122 LOC)",
       "pages": [
-        "apps/web/src/pages/billing/ (6 files)"
+        "apps/web/src/pages/billing/PaymentGatewaysPage.tsx (routes: payments)"
       ]
     },
     "db": {
@@ -10289,7 +10306,7 @@
     "web": {
       "client": "apps/web/src/lib/permissions.ts (8 LOC)",
       "pages": [
-        "apps/web/src/pages/permissions/ (1 file)"
+        "apps/web/src/pages/permissions/PermissionsPage.tsx (routes: permissions)"
       ]
     },
     "db": {
@@ -10383,7 +10400,10 @@
     "sharedTypes": "packages/shared/src/infrastructure.ts (271 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/platform.ts (62 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/PlatformPage.tsx (routes: platform)",
+        "apps/web/src/pages/dashboard/SuperAdminDashboard.tsx (routes: /platform)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10617,7 +10637,8 @@
     "web": {
       "client": "apps/web/src/lib/pluginOs.ts (36 LOC)",
       "pages": [
-        "apps/web/src/pages/pluginOs/ (1 file)"
+        "apps/web/src/pages/pluginOs/PluginOsPage.tsx (routes: plugin-os)",
+        "apps/web/src/pages/plugins/ExtensionsPage.tsx (routes: extensions)"
       ]
     },
     "db": {
@@ -10718,7 +10739,7 @@
     "web": {
       "client": "apps/web/src/lib/politics.ts (195 LOC)",
       "pages": [
-        "apps/web/src/pages/politics/ (1 file)"
+        "apps/web/src/pages/politics/PoliticsPage.tsx (routes: politics)"
       ]
     },
     "db": {
@@ -10831,7 +10852,7 @@
     "web": {
       "client": "apps/web/src/lib/program.ts (47 LOC)",
       "pages": [
-        "apps/web/src/pages/program/ (1 file)"
+        "apps/web/src/pages/program/ProgramPage.tsx (routes: program)"
       ]
     },
     "db": {
@@ -10905,7 +10926,7 @@
     "web": {
       "client": "apps/web/src/lib/projectContinuity.ts (75 LOC)",
       "pages": [
-        "apps/web/src/pages/projects/ (1 file)"
+        "apps/web/src/pages/projects/ProjectsPage.tsx (routes: projects)"
       ]
     },
     "db": {
@@ -10989,8 +11010,7 @@
     "web": {
       "client": "apps/web/src/lib/promptTemplates.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)",
-        "apps/web/src/pages/promptTemplates/ (1 file)"
+        "apps/web/src/pages/admin/PromptTemplatesPage.tsx (routes: prompt-templates, promptTemplates)"
       ]
     },
     "db": {
@@ -11076,7 +11096,7 @@
     "web": {
       "client": "apps/web/src/lib/publicApi.ts (41 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/PublicApiPage.tsx (routes: public-api)"
       ]
     },
     "db": {
@@ -11177,7 +11197,7 @@
     "web": {
       "client": "apps/web/src/lib/publishing.ts (9 LOC)",
       "pages": [
-        "apps/web/src/pages/publishing/ (1 file)"
+        "apps/web/src/pages/publishing/PublishingPage.tsx (routes: publishing)"
       ]
     },
     "db": {
@@ -11271,7 +11291,7 @@
     "web": {
       "client": "apps/web/src/lib/qa.ts (34 LOC)",
       "pages": [
-        "apps/web/src/pages/qa/ (1 file)"
+        "apps/web/src/pages/qa/QaPage.tsx (routes: qa)"
       ]
     },
     "db": {
@@ -11354,7 +11374,7 @@
     "web": {
       "client": "apps/web/src/lib/quantum.ts (29 LOC)",
       "pages": [
-        "apps/web/src/pages/quantum/ (1 file)"
+        "apps/web/src/pages/quantum/QuantumPage.tsx (routes: quantum)"
       ]
     },
     "db": {
@@ -11447,7 +11467,7 @@
     "web": {
       "client": "apps/web/src/lib/release.ts (60 LOC)",
       "pages": [
-        "apps/web/src/pages/release/ (1 file)"
+        "apps/web/src/pages/release/ReleasePage.tsx (routes: releases)"
       ]
     },
     "db": {
@@ -11559,7 +11579,7 @@
     "web": {
       "client": "apps/web/src/lib/religions.ts (341 LOC)",
       "pages": [
-        "apps/web/src/pages/religions/ (1 file)"
+        "apps/web/src/pages/religions/ReligionsPage.tsx (routes: religions)"
       ]
     },
     "db": {
@@ -11671,7 +11691,7 @@
     "web": {
       "client": "apps/web/src/lib/revenueGuardian.ts (147 LOC)",
       "pages": [
-        "apps/web/src/pages/revenueGuardian/ (1 file)"
+        "apps/web/src/pages/revenueGuardian/RevenueGuardianPage.tsx (routes: revenue-guardian)"
       ]
     },
     "db": {
@@ -11739,7 +11759,7 @@
     "web": {
       "client": "apps/web/src/lib/reviews.ts (38 LOC)",
       "pages": [
-        "apps/web/src/pages/reviews/ (1 file)"
+        "apps/web/src/pages/reviews/ReviewsPage.tsx (routes: /reviews)"
       ]
     },
     "db": {
@@ -11822,7 +11842,7 @@
     "web": {
       "client": "apps/web/src/lib/robotics.ts (38 LOC)",
       "pages": [
-        "apps/web/src/pages/robotics/ (1 file)"
+        "apps/web/src/pages/robotics/RoboticsPage.tsx (routes: robotics)"
       ]
     },
     "db": {
@@ -11907,7 +11927,7 @@
     "web": {
       "client": "apps/web/src/lib/scientific.ts (28 LOC)",
       "pages": [
-        "apps/web/src/pages/scientific/ (1 file)"
+        "apps/web/src/pages/scientific/ScientificPage.tsx (routes: scientific)"
       ]
     },
     "db": {
@@ -11989,7 +12009,7 @@
     "web": {
       "client": "apps/web/src/lib/sdk.ts (14 LOC)",
       "pages": [
-        "apps/web/src/pages/sdk/ (1 file)"
+        "apps/web/src/pages/sdk/SdkPage.tsx (routes: sdk)"
       ]
     },
     "db": {
@@ -12102,7 +12122,7 @@
     "web": {
       "client": "apps/web/src/lib/security.ts (42 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/SecurityPage.tsx (routes: security)"
       ]
     },
     "db": {
@@ -12199,7 +12219,7 @@
     "web": {
       "client": "apps/web/src/lib/selfHosted.ts (22 LOC)",
       "pages": [
-        "apps/web/src/pages/selfHosted/ (1 file)"
+        "apps/web/src/pages/selfHosted/SelfHostedPage.tsx (routes: self-hosted)"
       ]
     },
     "db": {
@@ -12300,7 +12320,9 @@
     "web": {
       "client": "apps/web/src/lib/sitePlatform.ts (115 LOC)",
       "pages": [
-        "apps/web/src/pages/sitePlatform/ (1 file)"
+        "apps/web/src/pages/admin/SiteControlPage.tsx (routes: site)",
+        "apps/web/src/pages/dashboard/SuperAdminDashboard.tsx (routes: /platform)",
+        "apps/web/src/pages/sitePlatform/SitePlatformPage.tsx (routes: site-platform)"
       ]
     },
     "db": {
@@ -12391,7 +12413,7 @@
     "web": {
       "client": "apps/web/src/lib/socialPlatform.ts (99 LOC)",
       "pages": [
-        "apps/web/src/pages/socialPlatform/ (1 file)"
+        "apps/web/src/pages/socialPlatform/SocialPlatformPage.tsx (routes: social)"
       ]
     },
     "db": {
@@ -12464,7 +12486,7 @@
     "web": {
       "client": "apps/web/src/lib/softwareFactory.ts (92 LOC)",
       "pages": [
-        "apps/web/src/pages/softwareFactory/ (1 file)"
+        "apps/web/src/pages/softwareFactory/StudiosPage.tsx (routes: software-factory)"
       ]
     },
     "db": {
@@ -12541,7 +12563,7 @@
     "web": {
       "client": "apps/web/src/lib/spatial.ts (26 LOC)",
       "pages": [
-        "apps/web/src/pages/spatial/ (1 file)"
+        "apps/web/src/pages/spatial/SpatialPage.tsx (routes: spatial)"
       ]
     },
     "db": {
@@ -12643,7 +12665,8 @@
     "web": {
       "client": "apps/web/src/lib/sportsIntelligence.ts (81 LOC)",
       "pages": [
-        "apps/web/src/pages/sports/ (1 file)"
+        "apps/web/src/pages/mobile/MobileSportsPage.tsx (routes: sports)",
+        "apps/web/src/pages/sports/SportsIntelligencePage.tsx (routes: sports, sports/:view)"
       ]
     },
     "db": {
@@ -12719,7 +12742,7 @@
     "web": {
       "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/SustainabilityPage.tsx (routes: sustainability)"
       ]
     },
     "db": {
@@ -12813,7 +12836,8 @@
     "web": {
       "client": "apps/web/src/lib/talk.ts (117 LOC)",
       "pages": [
-        "apps/web/src/pages/talk/ (1 file)"
+        "apps/web/src/pages/mobile/MobileMeetingsPage.tsx (routes: talk, talk/meetings)",
+        "apps/web/src/pages/talk/TalkPage.tsx (routes: talk)"
       ]
     },
     "db": {
@@ -12889,7 +12913,7 @@
     "web": {
       "client": "apps/web/src/lib/tenantIsolation.ts (66 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/TenantIsolationPage.tsx (routes: tenant-isolation)"
       ]
     },
     "db": {
@@ -13018,7 +13042,9 @@
     "web": {
       "client": "apps/web/src/lib/tradingIntel.ts (69 LOC)",
       "pages": [
-        "apps/web/src/pages/trading/ (3 files)"
+        "apps/web/src/pages/trading/BrokerCommandCenterPage.tsx (routes: trading/brokers)",
+        "apps/web/src/pages/trading/TradingDashboardPage.tsx (routes: trading/dashboard)",
+        "apps/web/src/pages/trading/TradingIntelPage.tsx (routes: trading)"
       ]
     },
     "db": {
@@ -13139,7 +13165,7 @@
     "web": {
       "client": "apps/web/src/lib/training.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/training/ (1 file)"
+        "apps/web/src/pages/training/TrainingPage.tsx (routes: training)"
       ]
     },
     "db": {
@@ -13219,7 +13245,7 @@
     "web": {
       "client": "apps/web/src/lib/university.ts (94 LOC)",
       "pages": [
-        "apps/web/src/pages/university/ (1 file)"
+        "apps/web/src/pages/university/UniversityPage.tsx (routes: university)"
       ]
     },
     "db": {
@@ -13300,7 +13326,7 @@
     "web": {
       "client": "apps/web/src/lib/universityEngine.ts (152 LOC)",
       "pages": [
-        "apps/web/src/pages/universityEngine/ (1 file)"
+        "apps/web/src/pages/universityEngine/UniversityEnginePage.tsx (routes: education-engine)"
       ]
     },
     "db": {
@@ -13377,7 +13403,7 @@
     "web": {
       "client": "apps/web/src/lib/updates.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/updates/ (1 file)"
+        "apps/web/src/pages/updates/UpdatesPage.tsx (routes: updates)"
       ]
     },
     "db": {
@@ -13454,7 +13480,7 @@
     "web": {
       "client": "apps/web/src/lib/usage.ts (49 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (17 files)"
+        "apps/web/src/pages/admin/UsagePage.tsx (routes: usage)"
       ]
     },
     "db": {
@@ -13552,7 +13578,7 @@
     "web": {
       "client": "apps/web/src/lib/uxIntelligence.ts (18 LOC)",
       "pages": [
-        "apps/web/src/pages/uxIntelligence/ (1 file)"
+        "apps/web/src/pages/uxIntelligence/UxIntelligencePage.tsx (routes: ux-intelligence)"
       ]
     },
     "db": {
@@ -13631,7 +13657,7 @@
     "web": {
       "client": "apps/web/src/lib/v76validation.ts (48 LOC)",
       "pages": [
-        "apps/web/src/pages/v76validation/ (1 file)"
+        "apps/web/src/pages/v76validation/V76ValidationPage.tsx (routes: v76-validation)"
       ]
     },
     "db": {
@@ -13749,7 +13775,7 @@
     "web": {
       "client": "apps/web/src/lib/video.ts (85 LOC, serves /video)",
       "pages": [
-        "apps/web/src/pages/video/ (1 file)"
+        "apps/web/src/pages/video/VideoStudioPage.tsx (routes: video-studio)"
       ]
     },
     "db": {
@@ -13859,8 +13885,7 @@
     "web": {
       "client": "apps/web/src/lib/videoTransform.ts (62 LOC)",
       "pages": [
-        "apps/web/src/pages/videoTransform/ (4 files)",
-        "apps/web/src/pages/videoTransform/ (4 files)"
+        "apps/web/src/pages/videoTransform/VideoTransformStudioPage.tsx (routes: video-transform)"
       ]
     },
     "db": {
@@ -13951,8 +13976,7 @@
     "web": {
       "client": "apps/web/src/lib/videoTransformer.ts (33 LOC)",
       "pages": [
-        "apps/web/src/pages/videoTransformer/ (1 file)",
-        "apps/web/src/pages/videoTransformer/ (1 file)"
+        "apps/web/src/pages/videoTransformer/VideoTransformerPage.tsx (routes: video-editor)"
       ]
     },
     "db": {
@@ -14036,7 +14060,8 @@
     "web": {
       "client": "apps/web/src/lib/voice.ts (10 LOC)",
       "pages": [
-        "apps/web/src/pages/voice/ (2 files)"
+        "apps/web/src/pages/voice/VoiceConsolePage.tsx (routes: voice-console)",
+        "apps/web/src/pages/voice/VoiceStudioPage.tsx (routes: voice)"
       ]
     },
     "db": {
@@ -14122,7 +14147,7 @@
     "web": {
       "client": "apps/web/src/lib/voiceFoundry.ts (20 LOC)",
       "pages": [
-        "apps/web/src/pages/voiceFoundry/ (1 file)"
+        "apps/web/src/pages/voiceFoundry/VoiceFoundryPage.tsx (routes: voice-foundry)"
       ]
     },
     "db": {
@@ -14203,7 +14228,7 @@
     "web": {
       "client": "apps/web/src/lib/voiceOwnership.ts (17 LOC)",
       "pages": [
-        "apps/web/src/pages/voiceOwnership/ (1 file)"
+        "apps/web/src/pages/voiceOwnership/VoiceOwnershipPage.tsx (routes: voice-ownership)"
       ]
     },
     "db": {
@@ -14290,8 +14315,7 @@
     "web": {
       "client": "apps/web/src/lib/voiceStudio.ts (31 LOC)",
       "pages": [
-        "apps/web/src/pages/voiceStudio/ (1 file)",
-        "apps/web/src/pages/voice/ (2 files)"
+        "apps/web/src/pages/voiceStudio/VoiceStudioPage.tsx (routes: voice-studio)"
       ]
     },
     "db": {
@@ -14404,7 +14428,7 @@
     "web": {
       "client": "apps/web/src/lib/wakeIntel.ts (30 LOC)",
       "pages": [
-        "apps/web/src/pages/wakeIntel/ (1 file)"
+        "apps/web/src/pages/wakeIntel/WakeIntelPage.tsx (routes: wake-intel)"
       ]
     },
     "db": {
@@ -14472,7 +14496,7 @@
     "web": {
       "client": "apps/web/src/lib/webhook.ts (60 LOC)",
       "pages": [
-        "apps/web/src/pages/webhook/ (1 file)"
+        "apps/web/src/pages/webhook/WebhookInboxPage.tsx (routes: webhook)"
       ]
     },
     "db": {
@@ -14566,7 +14590,7 @@
     "web": {
       "client": "apps/web/src/lib/websiteBuilder.ts (131 LOC)",
       "pages": [
-        "apps/web/src/pages/websiteBuilder/ (1 file)"
+        "apps/web/src/pages/websiteBuilder/WebsiteBuilderPage.tsx (routes: website-builder)"
       ]
     },
     "db": {

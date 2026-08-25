@@ -186,7 +186,12 @@ const ContactPage = lazy(() => import("./pages/contact/ContactPage").then((m) =>
 const AboutPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.AboutPage })));
 const FeaturesPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.FeaturesPage })));
 const WorkforcePage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.WorkforcePage })));
-const AgentsPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.AgentsPage })));
+// Session 198 — renamed from `AgentsPage`. The marketing section's lazy
+// binding was declared as `const AgentsPage`, colliding with the app console
+// binding for `pages/agents/AgentsPage` ten lines above: a duplicate-const
+// SyntaxError that broke the web build, and — before the build break — the
+// shadowing silently redirected /app/workforce to a marketing page.
+const MarketingAgentsPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.AgentsPage })));
 const SolutionsPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.SolutionsPage })));
 const HowItWorksPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.HowItWorksPage })));
 const FaqPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.FaqPage })));
@@ -300,7 +305,7 @@ export const router = createBrowserRouter([
   { path: "/about", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<AboutPage/>) }] },
   { path: "/features", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FeaturesPage/>) }] },
   { path: "/workforce", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<WorkforcePage/>) }] },
-  { path: "/agents", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<AgentsPage/>) }] },
+  { path: "/agents", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingAgentsPage/>) }] },
   { path: "/solutions", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<SolutionsPage/>) }] },
   { path: "/how-it-works", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<HowItWorksPage/>) }] },
   { path: "/faq", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FaqPage/>) }] },
