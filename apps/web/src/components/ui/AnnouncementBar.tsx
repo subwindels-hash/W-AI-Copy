@@ -4,7 +4,8 @@ import { siteApi, type SpAnnouncement } from "@/lib/sitePlatform";
 
 const APP_PREFIXES = ["/app", "/admin", "/platform", "/m", "/d"];
 
-function isPublicPath(pathname: string) {
+/** A path is "public" (marketing/site) when it is not under an authed app prefix. */
+export function isPublicPath(pathname: string) {
   return !APP_PREFIXES.some((p) => pathname === p || pathname.startsWith(`${p}/`));
 }
 
