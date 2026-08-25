@@ -19,7 +19,11 @@ import { Mic, Play, Square, Volume2, Loader2, RefreshCw, Globe2, ShieldCheck } f
 
 interface VModel { id: string; name: string; gender: "male"|"female"|"neutral"; language: string; dialect?: string; provider: string; isRegional?: boolean; isNigerian?: boolean; emotions?: string[]; }
 interface TtsJobResp { id: string; voiceId: string; status: "ready"|"queued"|"synthesizing"|"failed"|"demo"; audioUrl?: string; durationMs?: number; error?: string; provider?: string; clientSide?: boolean; language: string; }
-interface RegistryResp { voices: VModel[]; configuredProviders: { elevenlabs: boolean; playht: boolean; espeak: boolean; }; }
+interface RegistryResp {
+  voices: VModel[];
+  configuredProviders?: { elevenlabs: boolean; playht: boolean; espeak: boolean; openai?: boolean };
+  providers?: { elevenlabs: boolean; playht: boolean; espeak: boolean; openai?: boolean };
+}
 
 const SAMPLE_TEXTS = [
   "Good afternoon. Markets are showing mixed signals today as traders weigh inflation data against earnings reports.",
@@ -53,7 +57,8 @@ export function VoiceStudioPage() {
   }, []);
   useEffect(() => { void loadRegistry(); }, [loadRegistry]);
 
-  const anyServerConfigured = registry?.configuredProviders.elevenlabs || registry?.configuredProviders.playht || registry?.configuredProviders.espeak;
+  const providers = registry?.configuredProviders ?? registry?.providers;
+  const anyServerConfigured = Boolean(providers?.elevenlabs || providers?.playht || providers?.espeak || providers?.openai);
 
   const voicesByGroup = useMemo(() => {
     if (!registry) return { nigerian: [] as VModel[], builtin: [] as VModel[], server: [] as VModel[] };
@@ -158,7 +163,7 @@ export function VoiceStudioPage() {
 
       {regErr && <DataBanner variant="no-creds" title="FAILED TO LOAD VOICES" message={regErr}/>}
       {!anyServerConfigured && !regErr && (
-        <DataBanner variant="no-model" message="ElevenLabs and Play.ht are not configured. Browser SpeechSynthesis works out-of-the-box for all built-in voices. Set ELEVENLABS_API_KEY or PLAYHT_API_KEY + PLAYHT_USER_ID for premium server-side rendering."/>
+        <DataBanner variant="no-model" message="No server TTS provider is configured. Browser SpeechSynthesis still works for built-in voices. Set OPENAI_API_KEY (optional WINDELS_SPEECH_MODEL), ELEVENLABS_API_KEY, or PLAYHT_API_KEY + PLAYHT_USER_ID — or install espeak-ng — for downloadable server audio. A missing provider never produces a fake audio file."/>
       )}
       {err?.includes("NOT CONFIGURED") && <DataBanner variant="no-model"/>}
       {err && !err.includes("NOT CONFIGURED") && (

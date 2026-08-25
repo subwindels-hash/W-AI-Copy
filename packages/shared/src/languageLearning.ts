@@ -13,7 +13,7 @@ import { z } from "zod";
 export const LL_CURRENT_MODEL = {
   name: "WINDELS Language Teacher",
   version: "1.0",
-  curriculumVersion: "curriculum-v1.0",
+  curriculumVersion: "curriculum-v1.1",
   srsVersion: "srs-sm2-v1",
 } as const;
 

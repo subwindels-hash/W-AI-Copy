@@ -11,6 +11,8 @@ coverage
 .DS_Store
 apps/api/prisma/migrations/dev.db*
 apps/api/uploads
+apps/api/audio-cache
+audio-cache
 
 # Test artifacts
 tests/reports/

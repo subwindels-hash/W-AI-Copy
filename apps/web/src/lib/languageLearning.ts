@@ -34,7 +34,17 @@ export type {
 
 export const languageApi = {
   languages: () => api<LlLanguage[]>("/language-learning/languages"),
-  catalog: (code: string) => api<{ language: LlLanguage; vocabCount: number; grammarCount: number; lessonCount: number; assessmentItems: number }>(`/language-learning/languages/${code}`),
+  catalog: (code: string) => api<{
+    language: LlLanguage;
+    vocabCount: number;
+    grammarCount: number;
+    lessonCount: number;
+    assessmentItems: number;
+    conversationModes: string[];
+    curriculumCeiling: string;
+    nextUnauthoredLevel: string | null;
+    note: string;
+  }>(`/language-learning/languages/${code}`),
   dashboard: () => api<LlDashboard>("/language-learning/dashboard"),
   profiles: () => api<LlUserLanguageProfile[]>("/language-learning/profiles"),
   enroll: (input: LlEnrollInput) => api<LlUserLanguageProfile>("/language-learning/profiles", { method: "POST", json: input }),

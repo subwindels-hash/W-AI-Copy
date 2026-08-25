@@ -214,8 +214,9 @@ export function VoiceStudioPage() {
                   Synthesize
                 </Button>
                 <p className="text-[10px] text-slate-500">
-                  Requires ELEVENLABS_API_KEY or PLAYHT_API_KEY. Without one the job is returned
-                  as <code>demo</code> and no audio is produced.
+                  Requires OPENAI_API_KEY, ELEVENLABS_API_KEY, PLAYHT_API_KEY, or a local
+                  espeak-ng binary. Without one the job is returned as <code>failed</code> with
+                  VOICE_MODEL_NOT_CONFIGURED and no audio file is written.
                 </p>
               </CardContent>
             </Card>

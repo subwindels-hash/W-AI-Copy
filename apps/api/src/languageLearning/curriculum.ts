@@ -15,6 +15,7 @@ import type {
   LlVocabItem,
 } from "@windels/shared/languageLearning";
 import { requireLanguage } from "./registry.js";
+import { B2_EXTRAS } from "./curriculumB2.js";
 
 export interface Lexeme {
   word: string;
@@ -1226,6 +1227,178 @@ PACKS.fil = romanceLike("fil", ["Kumusta", "Magandang umaga", "Kamusta ka?"], [
   { mode: "TRAVEL", teacher: "Nasaan ang istasyon?", expected: ["doon", "sa kanan", "sa kaliwa"], natural: "Doon.", hint: "doon." },
   { mode: "EMERGENCY", teacher: "Kailangan mo ba ng tulong?", expected: ["oo", "oo po", "kailangan ko ng tulong"], natural: "Oo, kailangan ko ng tulong.", hint: "Oo." },
 ]);
+
+function mergeB2Extras(pack: LangPack, extra: {
+  lexemes: Lexeme[];
+  grammar: GrammarSeed[];
+  conversations: ConversationBeat[];
+  writing: WritingPrompt[];
+}): void {
+  const code = pack.code;
+  const vocabStart = pack.vocab.length;
+  const newVocab: LlVocabItem[] = extra.lexemes.map((lx, i) => ({
+    id: vid(code, vocabStart + i),
+    languageCode: code,
+    word: lx.word,
+    translation: lx.translation,
+    pronunciation: lx.pronunciation,
+    exampleSentence: lx.example,
+    exampleTranslation: lx.exampleTranslation,
+    difficulty: lx.difficulty,
+    category: lx.category,
+  }));
+  pack.vocab.push(...newVocab);
+
+  const grammarStart = pack.grammar.length;
+  const newGrammar: LlGrammarRule[] = extra.grammar.map((g, i) => ({
+    id: gid(code, grammarStart + i),
+    languageCode: code,
+    title: g.title,
+    level: g.level,
+    rule: g.rule,
+    simpleRule: g.simpleRule,
+    examples: g.examples,
+  }));
+  pack.grammar.push(...newGrammar);
+
+  let lessonN = pack.lessons.length;
+  let week = Math.max(1, ...pack.modules.map((m) => m.week), Math.ceil(lessonN / 3));
+  const workItems = newVocab.filter((v) => v.category === "work");
+  if (workItems.length) {
+    const practice = workItems.slice(0, 5).map((v, i) => ({
+      id: `p_${code}_${lessonN}_${i}`,
+      skill: "VOCABULARY" as LlSkill,
+      kind: "TRANSLATE_TO_EXPLANATION" as LlItemKind,
+      prompt: `What does “${v.word}” mean?`,
+      accepted: [v.translation.toLowerCase(), ...v.translation.toLowerCase().split("/").map((s) => s.trim())],
+      hint: v.pronunciation,
+      explanation: `“${v.word}” (${v.pronunciation}) means “${v.translation}”. Example: ${v.exampleSentence} — ${v.exampleTranslation}`,
+    }));
+    const lesson: LlLesson = {
+      id: lid(code, lessonN),
+      languageCode: code,
+      moduleId: `mod_${code}_${lessonN}`,
+      title: "Workplace language",
+      topic: "work",
+      level: "B2",
+      explanation: "This lesson introduces workplace vocabulary at B2. These words are authored in the curriculum — the teacher does not invent them.",
+      examples: workItems.slice(0, 4).map((v) => ({
+        target: `${v.word} — ${v.exampleSentence}`,
+        explanation: `${v.translation}. ${v.exampleTranslation}`,
+      })),
+      practice,
+      estimatedMinutes: 12,
+    };
+    pack.lessons.push(lesson);
+    pack.modules.push({
+      id: lesson.moduleId,
+      languageCode: code,
+      title: lesson.title,
+      topic: "work",
+      level: "B2",
+      skills: ["VOCABULARY", "READING"],
+      lessonIds: [lesson.id],
+      week,
+      order: lessonN,
+    });
+    lessonN += 1;
+    if (lessonN % 3 === 0) week += 1;
+  }
+
+  extra.grammar.forEach((g, i) => {
+    const rule = newGrammar[i]!;
+    const lesson: LlLesson = {
+      id: lid(code, lessonN),
+      languageCode: code,
+      moduleId: `mod_${code}_${lessonN}`,
+      title: g.title,
+      topic: "grammar",
+      level: g.level,
+      explanation: g.rule,
+      examples: g.examples,
+      practice: [{
+        id: `p_${code}_${lessonN}_0`,
+        skill: "GRAMMAR",
+        kind: "FILL_BLANK",
+        prompt: g.exercise.prompt,
+        accepted: g.exercise.accepted.map((a) => a.toLowerCase()),
+        hint: g.simpleRule,
+        explanation: g.exercise.explanation,
+      }],
+      estimatedMinutes: 12,
+    };
+    pack.lessons.push(lesson);
+    pack.modules.push({
+      id: lesson.moduleId,
+      languageCode: code,
+      title: g.title,
+      topic: "grammar",
+      level: g.level,
+      skills: ["GRAMMAR", "WRITING"],
+      lessonIds: [lesson.id],
+      week,
+      order: lessonN,
+    });
+    lessonN += 1;
+    void rule;
+  });
+
+  newVocab.forEach((v, i) => {
+    pack.assessment.push({
+      id: `q_${code}_b2_${String(i).padStart(2, "0")}`,
+      skill: i % 2 === 0 ? "VOCABULARY" : "WRITING",
+      level: v.difficulty,
+      kind: i % 2 === 0 ? "TRANSLATE_TO_EXPLANATION" : "TRANSLATE_TO_TARGET",
+      prompt: i % 2 === 0 ? `What does “${v.word}” mean?` : `Write the target-language word for “${v.translation}”.`,
+      promptLanguage: "en",
+      targetText: i % 2 === 0 ? v.translation : v.word,
+    });
+  });
+  extra.grammar.forEach((g, i) => {
+    pack.assessment.push({
+      id: `qg_${code}_b2_${String(i).padStart(2, "0")}`,
+      skill: "GRAMMAR",
+      level: g.level,
+      kind: "FILL_BLANK",
+      prompt: g.exercise.prompt,
+      promptLanguage: "en",
+      targetText: g.exercise.accepted[0],
+    });
+  });
+
+  pack.listening.push(...newVocab.slice(0, 3).map((v, i) => ({
+    id: `lis_${code}_b2_${String(i).padStart(2, "0")}`,
+    transcript: v.exampleSentence,
+    translation: v.exampleTranslation,
+    prompt: "What did you hear? (meaning in English)",
+    accepted: [v.exampleTranslation.toLowerCase(), v.translation.toLowerCase()],
+    level: v.difficulty,
+  })));
+
+  pack.conversations.push(...extra.conversations);
+  pack.writing.push(...extra.writing);
+}
+
+for (const [code, extra] of Object.entries(B2_EXTRAS)) {
+  const target = PACKS[code];
+  if (target) mergeB2Extras(target, extra);
+}
+
+export function packCeiling(pack: LangPack): LlCefrLevel {
+  let max: LlCefrLevel = "A1";
+  const consider = (level: LlCefrLevel) => {
+    if (levelIndex(level) > levelIndex(max)) max = level;
+  };
+  for (const v of pack.vocab) consider(v.difficulty);
+  for (const g of pack.grammar) consider(g.level);
+  for (const l of pack.lessons) consider(l.level);
+  for (const w of pack.writing) consider(w.level);
+  return max;
+}
+
+export function curriculumCeiling(code: string): LlCefrLevel {
+  return packCeiling(getPack(code));
+}
 
 const extraPacks = new Map<string, LangPack>();
 

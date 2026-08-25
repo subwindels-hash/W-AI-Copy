@@ -33,7 +33,7 @@ import type {
 import { LL_CURRENT_MODEL, LL_DISCLAIMER } from "@windels/shared/languageLearning";
 import { listLanguages, requireLanguage } from "./registry.js";
 import {
-  conversationBeats,
+  curriculumCeiling,
   getPack,
   grammarById,
   lessonById,
@@ -1034,7 +1034,10 @@ export const LanguageLearningService = {
       grammarCount: pack.grammar.length,
       lessonCount: pack.lessons.length,
       assessmentItems: pack.assessment.length,
-      conversationModes: [...new Set(conversationBeats(languageCode, "BEGINNER").map((c) => c.mode))],
+      conversationModes: [...new Set(pack.conversations.map((c) => c.mode))],
+      curriculumCeiling: curriculumCeiling(languageCode),
+      nextUnauthoredLevel: curriculumCeiling(languageCode) === "B2" ? "C1" : null,
+      note: "Curriculum is authored through B2 workplace language. C1/C2 lessons are not invented. Pronunciation scores stay NOT_AVAILABLE without a provider.",
     };
   },
 };

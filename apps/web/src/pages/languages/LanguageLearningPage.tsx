@@ -255,7 +255,7 @@ export function LanguageLearningPage() {
             </CardContent>
           </Card>
           <Card>
-            <CardHeader><CardTitle>Language catalog</CardTitle><CardDescription>Registry-driven. New languages are added in one place.</CardDescription></CardHeader>
+            <CardHeader><CardTitle>Language catalog</CardTitle><CardDescription>Registry-driven. Authored lessons go through B2 workplace language. C1/C2 is not invented. Pronunciation scores stay hidden until a speech-assessment provider is configured.</CardDescription></CardHeader>
             <CardContent className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
               {(dash?.languages ?? []).map((l) => (
                 <div key={l.code} className="rounded-lg border border-white/10 px-3 py-2 text-sm flex justify-between gap-2">

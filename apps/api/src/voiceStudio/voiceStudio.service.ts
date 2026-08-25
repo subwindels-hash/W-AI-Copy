@@ -339,7 +339,11 @@ export const VoiceStudioService = {
     if (job.clientSide) legacy.clientSide = true;
     legacy.provider = job.provider;
     legacy.language = job.language;
-    if (job.status === "failed" && !job.audioUrl) legacy.warning = "VOICE MODEL NOT CONFIGURED — server-side audio unavailable. Use browser speech synthesis (clientSide=true) or configure ELEVENLABS_API_KEY / PLAYHT_API_KEY.";
+    if (job.status === "failed" && !job.audioUrl) {
+      legacy.warning = job.error?.includes("VOICE_MODEL_NOT_CONFIGURED")
+        ? job.error
+        : "VOICE MODEL NOT CONFIGURED — server-side audio unavailable. Use browser speech synthesis (clientSide=true) or configure OPENAI_API_KEY, ELEVENLABS_API_KEY, or PLAYHT_API_KEY + PLAYHT_USER_ID.";
+    }
     return legacy;
   },
 

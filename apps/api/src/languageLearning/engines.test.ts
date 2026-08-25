@@ -12,7 +12,7 @@ import {
   streakFromDates,
 } from "./engines.js";
 import { REQUIRED_CATALOG_CODES, getLanguage, listLanguages, registerLanguage } from "./registry.js";
-import { getPack, listPackCodes, pathForLevel } from "./curriculum.js";
+import { conversationBeats, curriculumCeiling, getPack, listPackCodes, pathForLevel } from "./curriculum.js";
 import { detectIntent } from "./teacher.js";
 
 describe("Language registry", () => {
@@ -72,6 +72,21 @@ describe("Curriculum packs", () => {
     expect(a1.length).toBeGreaterThan(0);
     expect(b1.length).toBeGreaterThanOrEqual(a1.length);
     expect(a1.every((m) => m.languageCode === "nl")).toBe(true);
+  });
+
+  it("authors B2 workplace content and reports that ceiling honestly", () => {
+    for (const code of REQUIRED_CATALOG_CODES) {
+      const pack = getPack(code);
+      expect(curriculumCeiling(code)).toBe("B2");
+      expect(pack.vocab.some((v) => v.difficulty === "B2" && v.category === "work")).toBe(true);
+      expect(pack.grammar.some((g) => g.level === "B2")).toBe(true);
+      expect(pack.writing.some((w) => w.level === "B2")).toBe(true);
+      expect(pack.lessons.some((l) => l.level === "B2" && l.topic === "work")).toBe(true);
+      expect(conversationBeats(code, "BUSINESS").some((b) => b.mode === "BUSINESS")).toBe(true);
+      expect(pack.vocab.some((v) => v.difficulty === "C1" || v.difficulty === "C2")).toBe(false);
+    }
+    const workPath = pathForLevel("nl", "B2", "WORK");
+    expect(workPath[0]?.topic === "work" || workPath.some((m) => m.topic === "work")).toBe(true);
   });
 });
 
