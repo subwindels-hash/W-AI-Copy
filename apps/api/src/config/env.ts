@@ -340,6 +340,12 @@ const EnvSchema = z.object({
   WINDELS_LANGUAGE_TTS_PROVIDER: z.string().max(80).optional(),
   WINDELS_LANGUAGE_PRONUNCIATION_PROVIDER: z.string().max(80).optional(),
 
+  // ── GitHub user connector (OAuth App). PAT connect works without these. ──
+  GITHUB_CLIENT_ID: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(4).optional()),
+  GITHUB_CLIENT_SECRET: z.preprocess((v) => (v === "" ? undefined : v), z.string().min(8).optional()),
+  GITHUB_REDIRECT_URI: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+  WINDELS_WEB_ORIGIN: z.preprocess((v) => (v === "" ? undefined : v), z.string().url().optional()),
+
   WINDELS_CRYPTO_HTTP_TIMEOUT_MS: z.preprocess(
     (v) => {
       if (v === undefined || v === "" || v === null) return 10000;

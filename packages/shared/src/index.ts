@@ -164,3 +164,4 @@ export * from "./lotteryIntelligence.js";
 export * from "./languageLearning.js";
 export * from "./sitePlatform.js";
 export * from "./account.js";
+export * from "./githubConnector.js";

@@ -13,10 +13,10 @@ export function RegisterPage() {
     displayName: "",
     organizationName: "",
     username: "",
-    pin: "",
   });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [issuedPin, setIssuedPin] = useState<string | null>(null);
 
   function update<K extends keyof typeof form>(k: K, v: string) {
     setForm((f) => ({ ...f, [k]: v }));
@@ -27,7 +27,12 @@ export function RegisterPage() {
     setLoading(true);
     setError(null);
     try {
-      await api("/auth/register", { method: "POST", json: form });
+      const { pin: _unusedPin, ...rest } = form;
+      const created = await api<{ issuedPin?: string | null }>("/auth/register", { method: "POST", json: rest });
+      if (created.issuedPin) {
+        setIssuedPin(created.issuedPin);
+        return;
+      }
       navigate("/auth/login", { state: { registered: true } });
     } catch (err) {
       setError(err instanceof ApiError ? err.message : "Registration failed");
@@ -53,6 +58,14 @@ export function RegisterPage() {
         <CardTitle className="text-xl">Get started</CardTitle>
         <CardDescription>Set up your organization in under a minute</CardDescription>
 
+        {issuedPin ? (
+          <div className="mt-6 space-y-3">
+            <p className="text-sm text-text-bright">Account created. Copy your system PIN now — it will not be shown again after you leave this page.</p>
+            <div className="rounded-lg border border-azure/30 bg-azure/10 px-4 py-3 font-mono text-2xl tracking-[0.4em] text-text-bright">{issuedPin}</div>
+            <p className="text-xs text-text-muted">It expires in 24 hours. The system then generates a new one automatically.</p>
+            <Button className="w-full" onClick={() => navigate("/auth/login", { state: { registered: true } })}>Continue to sign in</Button>
+          </div>
+        ) : (
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
             <label className="text-xs text-text-muted mb-1.5 block">Your name</label>
@@ -84,6 +97,7 @@ export function RegisterPage() {
 
           <Button type="submit" loading={loading} className="w-full">Create account</Button>
         </form>
+        )}
 
         <div className="mt-6 text-center text-sm text-text-muted">
           Already have an account? <Link to="/auth/login" className="text-azure hover:underline">Sign in</Link>

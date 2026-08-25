@@ -16,7 +16,9 @@ import {
   changePassword,
   changeUsername,
   confirmEmailChange,
+  consumeIssuedPin,
   getAccount,
+  rotateSystemPin,
   setPin,
   updateProfile,
   uploadAvatar,
@@ -63,6 +65,23 @@ export function registerAccountRoutes(router: Router) {
   account.post("/pin", rateLimit("apiGlobal"), validate({ body: AccountPinSetSchema }), async (req, res, next) => {
     try {
       res.json({ ok: true, data: await setPin(req.user!.id, req.body), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
+  account.post("/pin/rotate", rateLimit("apiGlobal"), async (req, res, next) => {
+    try {
+      res.json({ ok: true, data: await rotateSystemPin(req.user!.id), meta: { requestId: req.requestId } });
+    } catch (e) { next(e); }
+  });
+
+  account.post("/pin/issued", rateLimit("apiGlobal"), async (req, res, next) => {
+    try {
+      const issuedPin = await consumeIssuedPin(req.user!.id);
+      res.json({
+        ok: true,
+        data: { issuedPin, account: await getAccount(req.user!.id) },
+        meta: { requestId: req.requestId },
+      });
     } catch (e) { next(e); }
   });
 

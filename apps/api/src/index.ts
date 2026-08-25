@@ -19,6 +19,7 @@ let blockonomicsReconciliationTicker: NodeJS.Timeout | null = null;
 let sportsJobTicker: NodeJS.Timeout | null = null;
 let lotteryJobTicker: NodeJS.Timeout | null = null;
 let languageLearningTicker: NodeJS.Timeout | null = null;
+let pinRotationTicker: NodeJS.Timeout | null = null;
 let stopWhatsAppWorker: (() => void) | null = null;
 
 async function main() {
@@ -724,6 +725,13 @@ async function main() {
     } catch (e) {
       logger.warn("language learning ticker failed to start", { err: e });
     }
+    try {
+      const { startPinRotationTicker } = await import("./services/account.jobs.js");
+      pinRotationTicker = startPinRotationTicker();
+      logger.info("account PIN rotation ticker started");
+    } catch (e) {
+      logger.warn("account PIN rotation ticker failed to start", { err: e });
+    }
     if (env.BLOCKONOMICS_RECONCILIATION_ENABLED) {
       blockonomicsReconciliationTicker = setInterval(() => {
         void (async () => {
@@ -770,6 +778,7 @@ async function main() {
     if (sportsJobTicker) clearInterval(sportsJobTicker);
     if (lotteryJobTicker) clearInterval(lotteryJobTicker);
     if (languageLearningTicker) clearInterval(languageLearningTicker);
+    if (pinRotationTicker) clearInterval(pinRotationTicker);
     if (stopWhatsAppWorker) stopWhatsAppWorker();
 
     // Stop accepting new connections and drain in-flight requests

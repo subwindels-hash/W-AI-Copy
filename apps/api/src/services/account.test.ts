@@ -69,12 +69,34 @@ describe("account identity", () => {
     const row = db.tables.get("User")!.find((u) => u.id === created.userId)!;
     row.pinExpiresAt = new Date(Date.now() - 1000);
     const snap = await account.getAccount(created.userId);
-    expect(snap.pinExpired).toBe(true);
     expect(snap.pinSet).toBe(true);
+    expect(snap.pinExpired).toBe(false);
+    expect(snap.pinIssuedPending).toBe(true);
     expect(JSON.stringify(snap)).not.toContain("1111");
-    const next = await account.setPin(created.userId, { newPin: "9999", confirmPin: "9999" });
-    expect(next.pinExpired).toBe(false);
-    expect(next.pinSet).toBe(true);
+    const issued = await account.consumeIssuedPin(created.userId);
+    expect(issued).toMatch(/^\d{4}$/);
+    expect(issued).not.toBe("1111");
+    expect(await account.consumeIssuedPin(created.userId)).toBeNull();
+  });
+
+  it("issues a system PIN on register and rotates expired PINs", async () => {
+    const created = await registerUser({
+      email: "auto-pin@example.com", password: PASSWORD, displayName: "Auto", organizationName: "Org",
+    });
+    expect(created.issuedPin).toMatch(/^\d{4}$/);
+    const user = db.tables.get("User")!.find((u) => u.id === created.userId)!;
+    expect(user.pinHash).toBeTruthy();
+    expect(user.pinHash).not.toBe(created.issuedPin);
+    expect(JSON.stringify(user)).not.toContain(created.issuedPin);
+    const previousHash = user.pinHash;
+    user.pinExpiresAt = new Date(Date.now() - 1000);
+    const job = await account.rotateExpiredPins();
+    expect(job.rotated).toBeGreaterThanOrEqual(1);
+    const after = db.tables.get("User")!.find((u) => u.id === created.userId)!;
+    expect(after.pinHash).not.toBe(previousHash);
+    const next = await account.consumeIssuedPin(created.userId);
+    expect(next).toMatch(/^\d{4}$/);
+    expect(next).not.toBe(created.issuedPin);
   });
 
   it("requires the current password to change password", async () => {

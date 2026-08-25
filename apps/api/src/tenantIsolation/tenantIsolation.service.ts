@@ -670,6 +670,14 @@ export const TI_NAMESPACE_CATALOG: ReadonlyArray<{ prefix: string; scope: TiName
   { prefix: "sp:images", scope: "platform_global" },
   { prefix: "sp:apis", scope: "platform_global" },
   { prefix: "sp:media", scope: "platform_global" },
+  // User GitHub connector. Connection records are `ghc:conn:<org>:<userId>`
+  // and the org index is `ghc:idx:<org>`. OAuth CSRF state has no org
+  // (issued before the callback session) and is catalogued as shared.
+  { prefix: "ghc:conn", scope: "org_scoped" },
+  { prefix: "ghc:idx", scope: "org_scoped" },
+  { prefix: "ghc:state", scope: "shared" },
+  // One-time system PIN reveal, keyed by user id (not an org).
+  { prefix: "pinreveal", scope: "shared" },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, unknown>) {

@@ -1,6 +1,8 @@
 import { z } from "zod";
 
 export const PIN_TTL_MS = 24 * 60 * 60 * 1000;
+/** One-time issued PIN is held this long for reveal / email, then discarded. */
+export const PIN_REVEAL_TTL_SECONDS = 24 * 60 * 60;
 
 export const UsernameSchema = z
   .string()
@@ -27,6 +29,8 @@ export interface AccountSnapshot {
   pinSet: boolean;
   pinExpired: boolean;
   pinExpiresAt: string | null;
+  /** True when a newly issued PIN is waiting to be shown once. The PIN itself is never in this snapshot. */
+  pinIssuedPending: boolean;
 }
 
 export const AccountUsernameSchema = z.object({ username: UsernameSchema });
@@ -41,6 +45,15 @@ export const AccountPinSetSchema = z.object({
   newPin: PinSchema,
   confirmPin: PinSchema,
 });
+
+export interface IssuedPinResult {
+  account: AccountSnapshot;
+  /** Present only on the issuing response. Never stored in HTML, localStorage, or later API reads. */
+  issuedPin: string;
+  deliveredByEmail: boolean;
+  smtpConfigured: boolean;
+  expiresAt: string;
+}
 export const AccountProfileSchema = z.object({
   displayName: z.string().trim().min(1).max(100).optional(),
   avatarUrl: z.string().trim().max(500).nullable().optional(),

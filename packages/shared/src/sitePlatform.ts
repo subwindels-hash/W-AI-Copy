@@ -378,7 +378,7 @@ export const SpContactMapPatchSchema = z.object({
 });
 export type SpContactMapPatch = z.infer<typeof SpContactMapPatchSchema>;
 
-export const SP_API_CATEGORIES = ["ai", "sports", "lottery", "maps", "email", "custom"] as const;
+export const SP_API_CATEGORIES = ["ai", "sports", "lottery", "maps", "email", "integrations", "custom"] as const;
 export type SpApiCategory = (typeof SP_API_CATEGORIES)[number];
 
 export interface SpApiCatalogItem {

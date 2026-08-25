@@ -141,10 +141,18 @@ export async function registerUser(input: {
   let pinHash: string | null = null;
   let pinSetAt: Date | null = null;
   let pinExpiresAt: Date | null = null;
+  let issuedPin: string | null = null;
   if (input.pin) {
     validatePin(input.pin);
     const { PIN_TTL_MS } = await import("@windels/shared/account");
     pinHash = await bcrypt.hash(input.pin, 12);
+    pinSetAt = new Date();
+    pinExpiresAt = new Date(pinSetAt.getTime() + PIN_TTL_MS);
+  } else {
+    const { generateSystemPin } = await import("./account.service.js");
+    const { PIN_TTL_MS } = await import("@windels/shared/account");
+    issuedPin = generateSystemPin();
+    pinHash = await bcrypt.hash(issuedPin, 12);
     pinSetAt = new Date();
     pinExpiresAt = new Date(pinSetAt.getTime() + PIN_TTL_MS);
   }
@@ -198,7 +206,12 @@ export async function registerUser(input: {
     return u;
   });
 
-  return { userId: user.id, role: toPublicRole(prismaRole), publicUserId, username };
+  if (issuedPin) {
+    const { storeIssuedPinAfterRegister } = await import("./account.service.js");
+    await storeIssuedPinAfterRegister(user.id, issuedPin, pinExpiresAt!);
+  }
+
+  return { userId: user.id, role: toPublicRole(prismaRole), publicUserId, username, issuedPin };
 }
 
 export async function loginUser(
@@ -375,8 +388,10 @@ async function issueSession(
   metadata?: { ip?: string; ua?: string },
   extra?: { impersonatorId?: string; impersonationId?: string },
 ) {
-  const { pinStatusOf, ensureAccountIdentity } = await import("./account.service.js");
-  const identified = await ensureAccountIdentity(user.id);
+  const { pinStatusOf, ensureAccountIdentity, ensureCurrentPin } = await import("./account.service.js");
+  await ensureAccountIdentity(user.id);
+  await ensureCurrentPin(user.id).catch(() => {});
+  const identified = await prisma.user.findUnique({ where: { id: user.id }, include: { profile: true } }) ?? user;
   const tokenPayload: TokenPayload = {
     id: identified.id,
     email: identified.email,

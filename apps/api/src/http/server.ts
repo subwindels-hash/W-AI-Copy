@@ -18,6 +18,7 @@ import { registerDerivativesDeskRoutes } from "./routes/derivativesDesk.js";
 import { registerAdminRoutes } from "./routes/admin.js";
 import { registerMeRoutes } from "./routes/me.js";
 import { registerAccountRoutes } from "./routes/account.js";
+import { registerGithubConnectorRoutes } from "./routes/githubConnector.js";
 import { registerWebhookRoutes } from "./routes/webhook.js";
 import { registerWhatsAppRoutes } from "../channels/whatsapp/whatsapp.routes.js";
 import { registerWhatsAppWebhookRoutes } from "../channels/whatsapp/whatsappWebhook.routes.js";
@@ -281,6 +282,7 @@ export function createApp() {
   registerAdminRoutes(v1);
   registerMeRoutes(v1);
   registerAccountRoutes(v1);
+  registerGithubConnectorRoutes(v1);
   registerWebhookRoutes(v1);
   registerApiKeyRoutes(v1);
   registerProfileRoutes(v1);

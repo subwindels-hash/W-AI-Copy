@@ -90,9 +90,9 @@ export function MyAccountPage() {
       </div>
       {err ? <div className="rounded-lg border border-crimson/30 bg-crimson/10 px-4 py-3 text-sm text-crimson">{err}</div> : null}
       {notice ? <div className="rounded-lg border border-emerald/30 bg-emerald/10 px-4 py-3 text-sm text-emerald">{notice}</div> : null}
-      {acct.pinExpired ? (
+      {acct.pinIssuedPending ? (
         <div className="rounded-lg border border-amber/30 bg-amber/10 px-4 py-3 text-sm text-amber-200">
-          Your security PIN has expired. Please create a new 4-digit PIN.
+          The system issued a new 4-digit PIN. Reveal it once below — it is not stored in this page after you leave.
         </div>
       ) : null}
 
@@ -166,24 +166,50 @@ export function MyAccountPage() {
       <Card>
         <CardHeader>
           <CardTitle>4-digit security PIN</CardTitle>
-          <CardDescription>Separate from your User ID. Expires 24 hours after it is set. The current PIN is never shown.</CardDescription>
+          <CardDescription>
+            Separate from your User ID. The system generates and rotates this PIN every 24 hours (server clock). It is hashed with bcrypt and is never stored in HTML, localStorage, or later API reads.
+          </CardDescription>
         </CardHeader>
         <CardContent className="grid max-w-md gap-2">
           <div className="text-xs text-text-muted">
-            {acct.pinSet ? (acct.pinExpired ? "PIN expired." : `Expires ${acct.pinExpiresAt ? new Date(acct.pinExpiresAt).toLocaleString() : "soon"}.`) : "No PIN set."}
+            {acct.pinSet ? `Expires ${acct.pinExpiresAt ? new Date(acct.pinExpiresAt).toLocaleString() : "soon"}.` : "No PIN yet — the system will issue one."}
           </div>
-          {acct.pinSet && !acct.pinExpired ? (
-            <label className="text-xs">Current PIN<Input inputMode="numeric" maxLength={4} value={pin.current} onChange={(e) => setPin({ ...pin, current: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></label>
+          {acct.pinIssuedPending ? (
+            <Button variant="outline" onClick={async () => {
+              try {
+                const r = await accountApi.consumeIssuedPin();
+                syncSession(r.account);
+                if (r.issuedPin) flash(`New PIN (shown once): ${r.issuedPin}`);
+                else flash("No pending PIN to reveal.");
+              } catch (e) { fail(e); }
+            }}>Reveal new PIN once</Button>
           ) : null}
-          <label className="text-xs">New PIN<Input inputMode="numeric" maxLength={4} value={pin.next} onChange={(e) => setPin({ ...pin, next: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></label>
-          <label className="text-xs">Confirm new PIN<Input inputMode="numeric" maxLength={4} value={pin.confirm} onChange={(e) => setPin({ ...pin, confirm: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></label>
           <Button onClick={async () => {
             try {
-              syncSession(await accountApi.setPin({ currentPin: pin.current || undefined, newPin: pin.next, confirmPin: pin.confirm }));
-              setPin({ current: "", next: "", confirm: "" });
-              flash("PIN saved. It will expire in 24 hours.");
+              const r = await accountApi.rotatePin();
+              syncSession(r.account);
+              flash(r.deliveredByEmail
+                ? `New PIN issued and emailed. Shown once: ${r.issuedPin}`
+                : `New PIN issued${r.smtpConfigured ? " (email send failed)" : " (SMTP not configured)"}. Shown once: ${r.issuedPin}`);
             } catch (e) { fail(e); }
-          }}>{acct.pinSet && !acct.pinExpired ? "Change PIN" : "Create PIN"}</Button>
+          }}>Generate a new system PIN</Button>
+          <details className="rounded-lg border border-white/10 p-3">
+            <summary className="cursor-pointer text-xs text-text-muted">Set your own PIN (optional override)</summary>
+            <div className="mt-2 grid gap-2">
+              {acct.pinSet && !acct.pinExpired ? (
+                <label className="text-xs">Current PIN<Input inputMode="numeric" maxLength={4} value={pin.current} onChange={(e) => setPin({ ...pin, current: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></label>
+              ) : null}
+              <label className="text-xs">New PIN<Input inputMode="numeric" maxLength={4} value={pin.next} onChange={(e) => setPin({ ...pin, next: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></label>
+              <label className="text-xs">Confirm new PIN<Input inputMode="numeric" maxLength={4} value={pin.confirm} onChange={(e) => setPin({ ...pin, confirm: e.target.value.replace(/\D/g, "").slice(0, 4) })} /></label>
+              <Button variant="outline" onClick={async () => {
+                try {
+                  syncSession(await accountApi.setPin({ currentPin: pin.current || undefined, newPin: pin.next, confirmPin: pin.confirm }));
+                  setPin({ current: "", next: "", confirm: "" });
+                  flash("PIN saved. The system will still rotate it after 24 hours.");
+                } catch (e) { fail(e); }
+              }}>Save my PIN</Button>
+            </div>
+          </details>
         </CardContent>
       </Card>
     </div>

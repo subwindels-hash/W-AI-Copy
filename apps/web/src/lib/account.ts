@@ -12,6 +12,10 @@ export const accountApi = {
     api<{ ok: true }>("/account/password", { method: "POST", json: { currentPassword, newPassword, confirmPassword } }),
   setPin: (input: { currentPin?: string; newPin: string; confirmPin: string }) =>
     api<AccountSnapshot>("/account/pin", { method: "POST", json: input }),
+  rotatePin: () =>
+    api<{ account: AccountSnapshot; issuedPin: string; deliveredByEmail: boolean; smtpConfigured: boolean; expiresAt: string }>("/account/pin/rotate", { method: "POST" }),
+  consumeIssuedPin: () =>
+    api<{ issuedPin: string | null; account: AccountSnapshot }>("/account/pin/issued", { method: "POST" }),
   updateProfile: (patch: { displayName?: string; avatarUrl?: string | null; bio?: string }) =>
     api<AccountSnapshot>("/account/profile", { method: "PATCH", json: patch }),
   uploadAvatar: (mime: "image/png" | "image/jpeg" | "image/webp" | "image/gif", dataBase64: string) =>

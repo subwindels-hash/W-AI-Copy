@@ -9,12 +9,13 @@ import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
 import { assessPassword } from "../security/passwords.js";
 import { logger } from "../config/logger.js";
-import { PIN_TTL_MS } from "@windels/shared/account";
-import type { AccountSnapshot } from "@windels/shared/account";
+import { PIN_REVEAL_TTL_SECONDS, PIN_TTL_MS } from "@windels/shared/account";
+import type { AccountSnapshot, IssuedPinResult } from "@windels/shared/account";
 import type { PublicRole } from "./auth.service.js";
 
 const EMAIL_CHANGE_TTL = 3600;
 const EMAIL_CHANGE_KEY = (token: string) => `emailchange:${token}`;
+const PIN_REVEAL_KEY = (userId: string) => `pinreveal:${userId}`;
 
 export function pinStatusOf(user: { pinHash?: string | null; pinExpiresAt?: Date | string | null }): {
   pinSet: boolean;
@@ -41,6 +42,155 @@ export function validateUsername(raw: string): string {
 export function validatePin(pin: string): string {
   if (!/^\d{4}$/.test(pin)) throw AppError.validation("PIN must be exactly 4 digits");
   return pin;
+}
+
+/** Cryptographically random 4-digit PIN. Never user-selected. */
+export function generateSystemPin(): string {
+  return String(randomInt(0, 10000)).padStart(4, "0");
+}
+
+async function storePinReveal(userId: string, pin: string): Promise<void> {
+  await redis.set(PIN_REVEAL_KEY(userId), pin, "EX", PIN_REVEAL_TTL_SECONDS);
+}
+
+/** Called from register after the hashed PIN is already written. */
+export async function storeIssuedPinAfterRegister(userId: string, pin: string, expiresAt: Date): Promise<void> {
+  await storePinReveal(userId, pin);
+  const delivery = await deliverPinEmail(userId, pin, expiresAt);
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      action: "user.account.pin_issued",
+      resourceType: "User",
+      resourceId: userId,
+      metadata: { reason: "register", expiresAt: expiresAt.toISOString(), deliveredByEmail: delivery.sent },
+    },
+  }).catch(() => {});
+}
+
+export async function peekPinIssuedPending(userId: string): Promise<boolean> {
+  const raw = await redis.get(PIN_REVEAL_KEY(userId));
+  return Boolean(raw);
+}
+
+export async function consumeIssuedPin(userId: string): Promise<string | null> {
+  const pin = await redis.get(PIN_REVEAL_KEY(userId));
+  if (!pin) return null;
+  await redis.del(PIN_REVEAL_KEY(userId));
+  return pin;
+}
+
+async function deliverPinEmail(userId: string, pin: string, expiresAt: Date): Promise<{ smtpConfigured: boolean; sent: boolean }> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) return { smtpConfigured: false, sent: false };
+  try {
+    const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+    const creds = await EmailService.getActiveProvider();
+    if (!creds) return { smtpConfigured: false, sent: false };
+    const sent = await EmailService.sendEmail({
+      to: user.email,
+      subject: "Your WINDELS security PIN",
+      text: [
+        "WINDELS generated a new 4-digit security PIN for your account.",
+        "",
+        `PIN: ${pin}`,
+        `Expires: ${expiresAt.toISOString()} (24 hours from issue, server clock).`,
+        "",
+        "Do not share this PIN. It will not be shown again after you view it once in My Account.",
+        "If you did not expect this message, contact an administrator.",
+      ].join("\n"),
+    });
+    return { smtpConfigured: true, sent: Boolean((sent as any)?.sent ?? sent) };
+  } catch (e) {
+    logger.warn("[account] PIN email delivery failed", { userId, err: (e as Error)?.message });
+    return { smtpConfigured: true, sent: false };
+  }
+}
+
+/**
+ * System-issued PIN: generate, bcrypt-hash, 24h expiry, one-time Redis reveal.
+ * The plaintext PIN never lands in the User row, logs, or later API reads.
+ */
+export async function applySystemPin(
+  userId: string,
+  reason: "register" | "rotate" | "missing",
+): Promise<IssuedPinResult> {
+  const pin = generateSystemPin();
+  const pinHash = await bcrypt.hash(pin, 12);
+  const pinSetAt = new Date();
+  const pinExpiresAt = new Date(pinSetAt.getTime() + PIN_TTL_MS);
+  await prisma.user.update({
+    where: { id: userId },
+    data: { pinHash, pinSetAt, pinExpiresAt } as any,
+  });
+  await storePinReveal(userId, pin);
+  const delivery = await deliverPinEmail(userId, pin, pinExpiresAt);
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      action: reason === "register" ? "user.account.pin_issued" : "user.account.pin_rotated",
+      resourceType: "User",
+      resourceId: userId,
+      metadata: { reason, expiresAt: pinExpiresAt.toISOString(), deliveredByEmail: delivery.sent },
+    },
+  }).catch(() => {});
+  logger.info("[account] system PIN issued", { userId, reason, expiresAt: pinExpiresAt.toISOString(), deliveredByEmail: delivery.sent });
+  const account = await getAccount(userId);
+  return {
+    account,
+    issuedPin: pin,
+    deliveredByEmail: delivery.sent,
+    smtpConfigured: delivery.smtpConfigured,
+    expiresAt: pinExpiresAt.toISOString(),
+  };
+}
+
+/** Assign or rotate the PIN when it is missing or past server-clock expiry. */
+export async function ensureCurrentPin(userId: string): Promise<{ rotated: boolean }> {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw AppError.notFound("User not found");
+  const status = pinStatusOf(user as any);
+  if (!status.pinSet) {
+    await applySystemPin(userId, "missing");
+    return { rotated: true };
+  }
+  if (status.pinExpired) {
+    await applySystemPin(userId, "rotate");
+    return { rotated: true };
+  }
+  return { rotated: false };
+}
+
+export async function rotateSystemPin(userId: string): Promise<IssuedPinResult> {
+  return applySystemPin(userId, "rotate");
+}
+
+/** Scheduled job: rotate every PIN that has expired (or was never set). */
+export async function rotateExpiredPins(limit = 200): Promise<{ scanned: number; rotated: number }> {
+  const now = new Date();
+  const candidates = await prisma.user.findMany({
+    where: {
+      OR: [
+        { pinHash: null } as any,
+        { pinExpiresAt: null } as any,
+        { pinExpiresAt: { lte: now } } as any,
+      ],
+    } as any,
+    take: limit,
+    select: { id: true, pinHash: true, pinExpiresAt: true } as any,
+  });
+  let rotated = 0;
+  for (const row of candidates as Array<{ id: string; pinHash?: string | null; pinExpiresAt?: Date | string | null }>) {
+    const status = pinStatusOf(row);
+    if (status.pinSet && !status.pinExpired) continue;
+    try {
+      await applySystemPin(row.id, status.pinSet ? "rotate" : "missing");
+      rotated += 1;
+    } catch (e) {
+      logger.warn("[account] PIN rotation failed", { userId: row.id, err: (e as Error)?.message });
+    }
+  }
+  return { scanned: candidates.length, rotated };
 }
 
 export async function allocatePublicUserId(): Promise<string> {
@@ -92,14 +242,18 @@ export function toAccountSnapshot(user: any): AccountSnapshot {
     pinSet: pin.pinSet,
     pinExpired: pin.pinExpired,
     pinExpiresAt: pin.pinExpiresAt,
+    pinIssuedPending: false,
   };
 }
 
 export async function getAccount(userId: string): Promise<AccountSnapshot> {
-  const user = await ensureAccountIdentity(userId);
+  await ensureAccountIdentity(userId);
+  await ensureCurrentPin(userId);
   const full = await prisma.user.findUnique({ where: { id: userId }, include: { profile: true } });
   if (!full) throw AppError.notFound("User not found");
-  return toAccountSnapshot(full);
+  const snap = toAccountSnapshot(full);
+  snap.pinIssuedPending = await peekPinIssuedPending(userId);
+  return snap;
 }
 
 export async function changeUsername(userId: string, nextRaw: string): Promise<AccountSnapshot> {

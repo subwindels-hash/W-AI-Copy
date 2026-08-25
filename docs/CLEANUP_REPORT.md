@@ -38,3 +38,11 @@ and deployment).
 - Super Admin dashboard (`/platform` and `/platform/site`) is the editor.
   Developer marketplace products stay at `/admin/api-platform`.
 - No session modules were flattened or deleted.
+
+## GitHub connector + system PIN (follow-up)
+
+- User GitHub connect lives at `/api/v1/github` and `/app/github`.
+  Keys: `ghc:conn:<org>:<userId>`, `ghc:idx:<org>`, `ghc:state:<nonce>`.
+- 4-digit PINs are generated and rotated by the server after 24 hours.
+  One-time reveal is `pinreveal:<userId>` (never persisted on the User row).
+- Existing AI Engineering GitHub PAT connections are unchanged.
