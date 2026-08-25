@@ -213,6 +213,8 @@ const navItems = [
   { to: "/app/plugin-os", icon: Puzzle, label: "Plugin OS" },
   { to: "/app/wake-intel", icon: Mic, label: "Wake Intelligence" },
   { to: "/app/enterprise-foundation", icon: Database, label: "Enterprise Foundation" },
+  { to: "/app/infrastructure", icon: Server, label: "Infrastructure" },
+  { to: "/app/site-platform", icon: Globe2, label: "Site Platform" },
   { to: "/reviews", icon: MessageSquareQuote, label: "Customer Reviews" },
   { to: "/app/ux-intelligence", icon: ComponentIcon, label: "UX Intelligence" },
   { to: "/app/architecture", icon: Boxes, label: "Architecture" },

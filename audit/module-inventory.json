@@ -7449,7 +7449,9 @@
     "sharedTypes": "packages/shared/src/infrastructure.ts (271 LOC)",
     "web": {
       "client": "apps/web/src/lib/infrastructure.ts (65 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/infrastructure/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12264,7 +12266,9 @@
     "sharedTypes": "packages/shared/src/sitePlatform.ts (503 LOC)",
     "web": {
       "client": "apps/web/src/lib/sitePlatform.ts (115 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/sitePlatform/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [

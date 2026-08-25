@@ -151,6 +151,8 @@ const ChannelsPage = lazy(() => import("./pages/channels/ChannelsPage").then((m)
 const PluginOsPage = lazy(() => import("./pages/pluginOs/PluginOsPage").then((m) => ({ default: m.PluginOsPage })));
 const WakeIntelPage = lazy(() => import("./pages/wakeIntel/WakeIntelPage").then((m) => ({ default: m.WakeIntelPage })));
 const EnterpriseFoundationPage = lazy(() => import("./pages/enterpriseFoundation/EnterpriseFoundationPage").then((m) => ({ default: m.EnterpriseFoundationPage })));
+const InfrastructurePage = lazy(() => import("./pages/infrastructure/InfrastructurePage").then((m) => ({ default: m.InfrastructurePage })));
+const SitePlatformPage = lazy(() => import("./pages/sitePlatform/SitePlatformPage").then((m) => ({ default: m.SitePlatformPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -506,6 +508,8 @@ export const router = createBrowserRouter([
       { path: "plugin-os", element: withSuspense(<PluginOsPage />) },
       { path: "wake-intel", element: withSuspense(<WakeIntelPage />) },
       { path: "enterprise-foundation", element: withSuspense(<EnterpriseFoundationPage />) },
+      { path: "infrastructure", element: withSuspense(<InfrastructurePage />) },
+      { path: "site-platform", element: withSuspense(<SitePlatformPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },
