@@ -575,6 +575,31 @@ function findWebPages(modKey) {
     modelFactory: ["modelFactory"],
     memoryEvolution: ["memoryEvolution"],
     marketplace: ["marketplace"],
+    // ── Consoles that live under a differently-named page directory ──────
+    // Session completion pass: these modules already ship a dedicated page,
+    // just under a directory the module-key convention does not match. Mapping
+    // them here so the inventory stops reporting a missing console.
+    tradingIntel: ["trading", "tradingIntel"],
+    musicGen: ["music", "musicGen"],
+    musicVideo: ["media", "musicVideo"],
+    videoEngine: ["video", "videoEngine"],
+    videoTransform: ["videoTransform", "videoTransform"],
+    videoTransformer: ["videoTransformer", "videoTransformer"],
+    lotteryIntelligence: ["lottery", "lotteryIntelligence"],
+    sportsIntelligence: ["sports", "sportsIntelligence"],
+    languageLearning: ["languages", "languageLearning"],
+    leadDiscovery: ["leads", "leadDiscovery"],
+    projectContinuity: ["projects", "projectContinuity"],
+    payments: ["billing", "payments"],
+    geoBilling: ["billing", "geoBilling"],
+    collaboration: ["canvas", "workflow", "collaboration"],
+    extensions: ["plugins", "extensions"],
+    moduleCenter: ["moduleRuntime", "modules", "moduleCenter"],
+    agentComm: ["agents", "agentComm"],
+    engineering: ["events", "webhook", "engineering"],
+    blockonomicsAdmin: ["admin", "blockonomicsAdmin"],
+    developerPlatform: ["developerPortal", "developerPlatform"],
+    cinematic: ["cinematic"],
     // The rest use the module key as the directory name.
   };
 

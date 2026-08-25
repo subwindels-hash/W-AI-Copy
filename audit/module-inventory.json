@@ -1,5 +1,66 @@
 [
   {
+    "moduleKey": "account",
+    "title": "account",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/account",
+    "backend": {
+      "serviceDir": null,
+      "serviceFile": {
+        "file": "account.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/services/account.service.ts",
+        "sloc": 429,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 429,
+      "serviceFiles": [
+        "services/account.service.ts"
+      ],
+      "importedServiceFiles": [
+        "services/account.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/account.ts",
+        "sloc": 102,
+        "counts": {
+          "total": 10,
+          "GET": 1,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 3,
+          "DELETE": 0
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/account.ts (92 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/account.ts (24 LOC)",
+      "pages": [
+        "apps/web/src/pages/account/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "enterpriseFoundation.spec.ts",
+      "services/account.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "admin",
     "title": "Admin Utilities",
     "sessions": [],
@@ -9,12 +70,12 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "admin.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/admin.service.ts",
-        "sloc": 131,
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/services/admin.service.ts",
+        "sloc": 190,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 131,
+      "serviceTotalSloc": 190,
       "serviceFiles": [
         "services/admin.service.ts"
       ],
@@ -26,11 +87,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/admin.ts",
-        "sloc": 41,
+        "sloc": 67,
         "counts": {
-          "total": 5,
-          "GET": 3,
-          "POST": 1,
+          "total": 9,
+          "GET": 4,
+          "POST": 4,
           "PUT": 0,
           "PATCH": 1,
           "DELETE": 0
@@ -38,16 +99,18 @@
         "endpoints": []
       }
     ],
-    "sharedTypes": "packages/shared/src/admin.ts (67 LOC)",
+    "sharedTypes": "packages/shared/src/admin.ts (71 LOC)",
     "web": {
-      "client": "apps/web/src/lib/admin.ts (17 LOC)",
+      "client": "apps/web/src/lib/admin.ts (21 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
       "prismaModels": [
-        "User"
+        "User",
+        "Agent",
+        "Activity"
       ],
       "migrations": [],
       "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
@@ -70,7 +133,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "adminApiControl.service.ts",
-        "path": "/home/user/WIN/apps/api/src/devportal/adminApiControl.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/devportal/adminApiControl.service.ts",
         "sloc": 185,
         "mathRandom": false,
         "externalFetch": false
@@ -103,7 +166,7 @@
     "web": {
       "client": "apps/web/src/lib/adminApiControl.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -130,7 +193,7 @@
       "serviceDir": "apps/api/src/advertising",
       "serviceFile": {
         "file": "advertising.service.ts",
-        "path": "/home/user/WIN/apps/api/src/advertising/advertising.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/advertising/advertising.service.ts",
         "sloc": 869,
         "mathRandom": false,
         "externalFetch": false
@@ -232,7 +295,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "agentIdentity.service.ts",
-        "path": "/home/user/WIN/apps/api/src/enterprise/agentComm/agentIdentity.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/enterprise/agentComm/agentIdentity.service.ts",
         "sloc": 195,
         "mathRandom": false,
         "externalFetch": false
@@ -355,7 +418,9 @@
     "sharedTypes": "packages/shared/src/agentComm.ts (310 LOC)",
     "web": {
       "client": "apps/web/src/lib/agentComm.ts (128 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/agents/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -390,12 +455,12 @@
       "serviceDir": "apps/api/src/agents",
       "serviceFile": {
         "file": "agents.service.ts",
-        "path": "/home/user/WIN/apps/api/src/agents/agents.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/agents/agents.service.ts",
         "sloc": 208,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1997,
+      "serviceTotalSloc": 2041,
       "serviceFiles": [
         "agents.service.ts",
         "agents.test.ts",
@@ -489,7 +554,7 @@
       "serviceDir": "apps/api/src/aiCommerce",
       "serviceFile": {
         "file": "commerceAgent.service.ts",
-        "path": "/home/user/WIN/apps/api/src/aiCommerce/commerceAgent.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/aiCommerce/commerceAgent.service.ts",
         "sloc": 156,
         "mathRandom": false,
         "externalFetch": false
@@ -574,7 +639,9 @@
     "sharedTypes": "packages/shared/src/aiCommerce.ts (623 LOC)",
     "web": {
       "client": "apps/web/src/lib/aiCommerce.ts (117 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/aiCommerce/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -609,7 +676,7 @@
       "serviceDir": "apps/api/src/aiEconomy",
       "serviceFile": {
         "file": "aiEconomy.service.ts",
-        "path": "/home/user/WIN/apps/api/src/aiEconomy/aiEconomy.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/aiEconomy/aiEconomy.service.ts",
         "sloc": 258,
         "mathRandom": false,
         "externalFetch": false
@@ -687,7 +754,7 @@
       "serviceDir": "apps/api/src/aiEcosystem",
       "serviceFile": {
         "file": "personalityStudio.service.ts",
-        "path": "/home/user/WIN/apps/api/src/aiEcosystem/personalityStudio.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/aiEcosystem/personalityStudio.service.ts",
         "sloc": 244,
         "mathRandom": false,
         "externalFetch": false
@@ -764,7 +831,9 @@
     "sharedTypes": "packages/shared/src/aiEcosystem.ts (341 LOC)",
     "web": {
       "client": "apps/web/src/lib/aiEcosystem.ts (73 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/aiEcosystem/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -798,7 +867,7 @@
       "serviceDir": "apps/api/src/aiEngineering",
       "serviceFile": {
         "file": "commandCenter.service.ts",
-        "path": "/home/user/WIN/apps/api/src/aiEngineering/commandCenter.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/aiEngineering/commandCenter.service.ts",
         "sloc": 117,
         "mathRandom": false,
         "externalFetch": false
@@ -892,7 +961,7 @@
     "web": {
       "client": "apps/web/src/lib/aiEngineering.ts (79 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -929,7 +998,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "publicApi.service.ts",
-        "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/publicApi/publicApi.service.ts",
         "sloc": 286,
         "mathRandom": false,
         "externalFetch": false
@@ -1003,7 +1072,7 @@
       "serviceDir": "apps/api/src/appBuilder",
       "serviceFile": {
         "file": "appBuilder.service.ts",
-        "path": "/home/user/WIN/apps/api/src/appBuilder/appBuilder.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/appBuilder/appBuilder.service.ts",
         "sloc": 603,
         "mathRandom": false,
         "externalFetch": false
@@ -1096,7 +1165,7 @@
       "serviceDir": "apps/api/src/architecture",
       "serviceFile": {
         "file": "architecture.service.ts",
-        "path": "/home/user/WIN/apps/api/src/architecture/architecture.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/architecture/architecture.service.ts",
         "sloc": 127,
         "mathRandom": false,
         "externalFetch": false
@@ -1181,7 +1250,7 @@
       "serviceDir": "apps/api/src/attachments",
       "serviceFile": {
         "file": "attachments.service.ts",
-        "path": "/home/user/WIN/apps/api/src/attachments/attachments.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/attachments/attachments.service.ts",
         "sloc": 168,
         "mathRandom": false,
         "externalFetch": false
@@ -1252,7 +1321,7 @@
       "serviceDir": "apps/api/src/audit",
       "serviceFile": {
         "file": "audit.service.ts",
-        "path": "/home/user/WIN/apps/api/src/audit/audit.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/audit/audit.service.ts",
         "sloc": 551,
         "mathRandom": false,
         "externalFetch": false
@@ -1338,12 +1407,12 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "auth.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/auth.service.ts",
-        "sloc": 556,
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/services/auth.service.ts",
+        "sloc": 667,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 606,
+      "serviceTotalSloc": 717,
       "serviceFiles": [
         "services/auth.service.ts",
         "security/passwords.ts"
@@ -1357,11 +1426,11 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/auth.ts",
-        "sloc": 197,
+        "sloc": 211,
         "counts": {
-          "total": 8,
+          "total": 9,
           "GET": 1,
-          "POST": 7,
+          "POST": 8,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 0
@@ -1374,12 +1443,13 @@
           "POST /auth/mfa/complete",
           "POST /auth/refresh",
           "POST /auth/logout",
+          "POST /auth/impersonation/end",
           "GET /auth/me"
         ]
       },
       {
         "file": "apps/api/src/http/routes/me.ts",
-        "sloc": 67,
+        "sloc": 76,
         "counts": {
           "total": 1,
           "GET": 1,
@@ -1502,6 +1572,7 @@
       "universityEngine.spec.ts",
       "usage.spec.ts",
       "voiceStudio.spec.ts",
+      "services/account.test.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts"
     ],
@@ -1523,7 +1594,7 @@
       "serviceDir": "apps/api/src/autonomous",
       "serviceFile": {
         "file": "autonomous.service.ts",
-        "path": "/home/user/WIN/apps/api/src/autonomous/autonomous.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/autonomous/autonomous.service.ts",
         "sloc": 188,
         "mathRandom": false,
         "externalFetch": false
@@ -1598,7 +1669,7 @@
       "serviceDir": "apps/api/src/benchmarks",
       "serviceFile": {
         "file": "benchmarks.service.ts",
-        "path": "/home/user/WIN/apps/api/src/benchmarks/benchmarks.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/benchmarks/benchmarks.service.ts",
         "sloc": 102,
         "mathRandom": false,
         "externalFetch": false
@@ -1642,8 +1713,10 @@
     ],
     "sharedTypes": "packages/shared/src/benchmarks.ts (106 LOC)",
     "web": {
-      "client": "apps/web/src/lib/benchmarks.ts (13 LOC)",
-      "pages": []
+      "client": "apps/web/src/lib/benchmarks.ts (25 LOC)",
+      "pages": [
+        "apps/web/src/pages/benchmarks/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1673,7 +1746,7 @@
       "serviceDir": "apps/api/src/billing",
       "serviceFile": {
         "file": "exchangeRates.ts",
-        "path": "/home/user/WIN/apps/api/src/billing/exchangeRates.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/billing/exchangeRates.ts",
         "sloc": 141,
         "mathRandom": false,
         "externalFetch": true
@@ -1757,7 +1830,7 @@
       "serviceDir": "apps/api/src/biomedical",
       "serviceFile": {
         "file": "biomedical.service.ts",
-        "path": "/home/user/WIN/apps/api/src/biomedical/biomedical.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/biomedical/biomedical.service.ts",
         "sloc": 278,
         "mathRandom": false,
         "externalFetch": false
@@ -1838,7 +1911,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "blockonomics.service.ts",
-        "path": "/home/user/WIN/apps/api/src/payments/blockonomics.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/payments/blockonomics.service.ts",
         "sloc": 334,
         "mathRandom": false,
         "externalFetch": true
@@ -1874,7 +1947,9 @@
     "sharedTypes": "packages/shared/src/payments.ts (243 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/blockonomicsAdmin.ts (24 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/admin/ (17 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -1904,7 +1979,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
-        "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/tradingIntel/brokerIntegration.service.ts",
         "sloc": 1561,
         "mathRandom": false,
         "externalFetch": true
@@ -1993,7 +2068,9 @@
     "sharedTypes": "packages/shared/src/brokerIntegration.ts (606 LOC)",
     "web": {
       "client": "apps/web/src/lib/brokerIntegration.ts (274 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/brokerIntegration/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2025,7 +2102,7 @@
       "serviceDir": "apps/api/src/businessIntelligence",
       "serviceFile": {
         "file": "businessIntelligence.service.ts",
-        "path": "/home/user/WIN/apps/api/src/businessIntelligence/businessIntelligence.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/businessIntelligence/businessIntelligence.service.ts",
         "sloc": 485,
         "mathRandom": false,
         "externalFetch": false
@@ -2110,7 +2187,7 @@
       "serviceDir": "apps/api/src/camera",
       "serviceFile": {
         "file": "camera.service.ts",
-        "path": "/home/user/WIN/apps/api/src/camera/camera.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/camera/camera.service.ts",
         "sloc": 166,
         "mathRandom": false,
         "externalFetch": false
@@ -2190,7 +2267,7 @@
       "serviceDir": "apps/api/src/canvasCollab",
       "serviceFile": {
         "file": "canvasCollab.service.ts",
-        "path": "/home/user/WIN/apps/api/src/canvasCollab/canvasCollab.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/canvasCollab/canvasCollab.service.ts",
         "sloc": 3,
         "mathRandom": false,
         "externalFetch": false
@@ -2268,7 +2345,7 @@
       "serviceDir": "apps/api/src/channels",
       "serviceFile": {
         "file": "telegramChannel.service.ts",
-        "path": "/home/user/WIN/apps/api/src/channels/telegram/telegramChannel.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/channels/telegram/telegramChannel.service.ts",
         "sloc": 139,
         "mathRandom": false,
         "externalFetch": false
@@ -2372,7 +2449,9 @@
     "sharedTypes": "packages/shared/src/whatsapp.ts (267 LOC, supplies WhatsAppChannelSettings)",
     "web": {
       "client": "apps/web/src/lib/telegram.ts (41 LOC, serves /channels)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/channels/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -2429,7 +2508,7 @@
       "serviceDir": "apps/api/src/cinematic",
       "serviceFile": {
         "file": "cinematic.service.ts",
-        "path": "/home/user/WIN/apps/api/src/cinematic/cinematic.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/cinematic/cinematic.service.ts",
         "sloc": 395,
         "mathRandom": false,
         "externalFetch": false
@@ -2540,7 +2619,7 @@
       "serviceDir": "apps/api/src/cloudAndroid",
       "serviceFile": {
         "file": "orchestrator.service.ts",
-        "path": "/home/user/WIN/apps/api/src/cloudAndroid/orchestrator.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/cloudAndroid/orchestrator.service.ts",
         "sloc": 372,
         "mathRandom": false,
         "externalFetch": false
@@ -2652,7 +2731,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "orchestrator.service.ts",
-        "path": "/home/user/WIN/apps/api/src/cloudAndroid/orchestrator.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/cloudAndroid/orchestrator.service.ts",
         "sloc": 372,
         "mathRandom": false,
         "externalFetch": false
@@ -2732,7 +2811,7 @@
       "serviceDir": "apps/api/src/cognitive",
       "serviceFile": {
         "file": "cognitive.service.ts",
-        "path": "/home/user/WIN/apps/api/src/cognitive/cognitive.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/cognitive/cognitive.service.ts",
         "sloc": 115,
         "mathRandom": false,
         "externalFetch": false
@@ -2833,7 +2912,7 @@
       "serviceDir": "apps/api/src/collaboration",
       "serviceFile": {
         "file": "cameraIntel.service.ts",
-        "path": "/home/user/WIN/apps/api/src/collaboration/cameraIntel.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/collaboration/cameraIntel.service.ts",
         "sloc": 167,
         "mathRandom": false,
         "externalFetch": false
@@ -2974,7 +3053,10 @@
     "sharedTypes": "packages/shared/src/collaboration.ts (363 LOC)",
     "web": {
       "client": "apps/web/src/lib/collaboration.ts (73 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/canvas/ (1 file)",
+        "apps/web/src/pages/workflow/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3017,7 +3099,7 @@
       "serviceDir": "apps/api/src/command",
       "serviceFile": {
         "file": "command.service.ts",
-        "path": "/home/user/WIN/apps/api/src/command/command.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/command/command.service.ts",
         "sloc": 132,
         "mathRandom": false,
         "externalFetch": false
@@ -3132,7 +3214,7 @@
       "serviceDir": "apps/api/src/commerce",
       "serviceFile": {
         "file": "commerce.service.ts",
-        "path": "/home/user/WIN/apps/api/src/commerce/commerce.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/commerce/commerce.service.ts",
         "sloc": 197,
         "mathRandom": false,
         "externalFetch": false
@@ -3215,7 +3297,7 @@
       "serviceDir": "apps/api/src/composer",
       "serviceFile": {
         "file": "composer.service.ts",
-        "path": "/home/user/WIN/apps/api/src/composer/composer.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/composer/composer.service.ts",
         "sloc": 459,
         "mathRandom": false,
         "externalFetch": false
@@ -3334,7 +3416,7 @@
       "serviceDir": "apps/api/src/constitution",
       "serviceFile": {
         "file": "constitution.service.ts",
-        "path": "/home/user/WIN/apps/api/src/constitution/constitution.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/constitution/constitution.service.ts",
         "sloc": 427,
         "mathRandom": false,
         "externalFetch": false
@@ -3410,12 +3492,12 @@
       "serviceDir": "apps/api/src/contact",
       "serviceFile": {
         "file": "contact.service.ts",
-        "path": "/home/user/WIN/apps/api/src/contact/contact.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/contact/contact.service.ts",
         "sloc": 422,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1439,
+      "serviceTotalSloc": 1420,
       "serviceFiles": [
         "aiAssistant.ts",
         "contact.service.ts",
@@ -3491,7 +3573,7 @@
       "serviceDir": "apps/api/src/conversations",
       "serviceFile": {
         "file": "conversationManage.service.ts",
-        "path": "/home/user/WIN/apps/api/src/conversations/conversationManage.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/conversations/conversationManage.service.ts",
         "sloc": 538,
         "mathRandom": false,
         "externalFetch": false
@@ -3623,7 +3705,7 @@
       "serviceDir": "apps/api/src/coreIntegration",
       "serviceFile": {
         "file": "coreIntegration.service.ts",
-        "path": "/home/user/WIN/apps/api/src/coreIntegration/coreIntegration.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/coreIntegration/coreIntegration.service.ts",
         "sloc": 118,
         "mathRandom": false,
         "externalFetch": false
@@ -3664,7 +3746,9 @@
     "sharedTypes": "packages/shared/src/coreIntegration.ts (31 LOC)",
     "web": {
       "client": "apps/web/src/lib/coreIntegration.ts (9 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/coreIntegration/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3697,7 +3781,7 @@
       "serviceDir": "apps/api/src/crm",
       "serviceFile": {
         "file": "crm.service.ts",
-        "path": "/home/user/WIN/apps/api/src/crm/crm.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/crm/crm.service.ts",
         "sloc": 552,
         "mathRandom": false,
         "externalFetch": true
@@ -3789,7 +3873,7 @@
       "serviceDir": "apps/api/src/cryptoIntelligence",
       "serviceFile": {
         "file": "cryptoIntelligence.service.ts",
-        "path": "/home/user/WIN/apps/api/src/cryptoIntelligence/cryptoIntelligence.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/cryptoIntelligence/cryptoIntelligence.service.ts",
         "sloc": 166,
         "mathRandom": false,
         "externalFetch": false
@@ -3844,7 +3928,9 @@
     "sharedTypes": "packages/shared/src/cryptoIntelligence.ts (165 LOC)",
     "web": {
       "client": "apps/web/src/lib/cryptoIntelligence.ts (27 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/cryptoIntelligence/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -3877,7 +3963,7 @@
       "serviceDir": "apps/api/src/cyber",
       "serviceFile": {
         "file": "cyber.service.ts",
-        "path": "/home/user/WIN/apps/api/src/cyber/cyber.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/cyber/cyber.service.ts",
         "sloc": 479,
         "mathRandom": false,
         "externalFetch": false
@@ -3973,7 +4059,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "cyberCloudAcademy.service.ts",
-        "path": "/home/user/WIN/apps/api/src/education/cyberCloudAcademy.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/education/cyberCloudAcademy.service.ts",
         "sloc": 168,
         "mathRandom": false,
         "externalFetch": false
@@ -4042,7 +4128,7 @@
       "serviceDir": "apps/api/src/dataMarketplace",
       "serviceFile": {
         "file": "dataMarketplace.service.ts",
-        "path": "/home/user/WIN/apps/api/src/dataMarketplace/dataMarketplace.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/dataMarketplace/dataMarketplace.service.ts",
         "sloc": 271,
         "mathRandom": false,
         "externalFetch": false
@@ -4139,7 +4225,9 @@
     "sharedTypes": "packages/shared/src/dataMarketplace.ts (132 LOC)",
     "web": {
       "client": "apps/web/src/lib/dataMarketplace.ts (18 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/dataMarketplace/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4178,7 +4266,7 @@
       "serviceDir": "apps/api/src/deployment",
       "serviceFile": {
         "file": "deployment.service.ts",
-        "path": "/home/user/WIN/apps/api/src/deployment/deployment.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/deployment/deployment.service.ts",
         "sloc": 278,
         "mathRandom": false,
         "externalFetch": false
@@ -4266,7 +4354,7 @@
       "serviceDir": "apps/api/src/derivatives",
       "serviceFile": {
         "file": "derivativesDesk.service.ts",
-        "path": "/home/user/WIN/apps/api/src/derivatives/derivativesDesk.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/derivatives/derivativesDesk.service.ts",
         "sloc": 886,
         "mathRandom": false,
         "externalFetch": false
@@ -4352,12 +4440,12 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "registry.ts",
-        "path": "/home/user/WIN/apps/api/src/services/ai/registry.ts",
-        "sloc": 615,
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/services/ai/registry.ts",
+        "sloc": 659,
         "mathRandom": false,
-        "externalFetch": false
+        "externalFetch": true
       },
-      "serviceTotalSloc": 2019,
+      "serviceTotalSloc": 2063,
       "serviceFiles": [
         "services/ai/registry.ts",
         "services/workflow.service.ts",
@@ -4436,7 +4524,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "developerApp.service.ts",
-        "path": "/home/user/WIN/apps/api/src/devportal/developerApp.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/devportal/developerApp.service.ts",
         "sloc": 265,
         "mathRandom": false,
         "externalFetch": false
@@ -4476,7 +4564,9 @@
     "sharedTypes": "packages/shared/src/developerPlatform.ts (265 LOC)",
     "web": {
       "client": "apps/web/src/lib/developerPlatform.ts (96 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/developerPortal/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4512,7 +4602,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "publicApi.service.ts",
-        "path": "/home/user/WIN/apps/api/src/publicApi/publicApi.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/publicApi/publicApi.service.ts",
         "sloc": 286,
         "mathRandom": false,
         "externalFetch": false
@@ -4588,7 +4678,7 @@
       "serviceDir": "apps/api/src/devportal",
       "serviceFile": {
         "file": "adminApiControl.service.ts",
-        "path": "/home/user/WIN/apps/api/src/devportal/adminApiControl.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/devportal/adminApiControl.service.ts",
         "sloc": 185,
         "mathRandom": false,
         "externalFetch": false
@@ -4650,7 +4740,9 @@
     "sharedTypes": "packages/shared/src/developerPlatform.ts (265 LOC, imported)",
     "web": {
       "client": "apps/web/src/lib/devPortal.ts (34 LOC, serves /dev-portal)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/devportal/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -4696,7 +4788,7 @@
       "serviceDir": "apps/api/src/digitalHumans",
       "serviceFile": {
         "file": "digitalHumans.service.ts",
-        "path": "/home/user/WIN/apps/api/src/digitalHumans/digitalHumans.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/digitalHumans/digitalHumans.service.ts",
         "sloc": 266,
         "mathRandom": false,
         "externalFetch": false
@@ -4781,7 +4873,7 @@
       "serviceDir": "apps/api/src/disasterRecovery",
       "serviceFile": {
         "file": "disasterRecovery.service.ts",
-        "path": "/home/user/WIN/apps/api/src/disasterRecovery/disasterRecovery.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/disasterRecovery/disasterRecovery.service.ts",
         "sloc": 214,
         "mathRandom": false,
         "externalFetch": false
@@ -4862,7 +4954,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "ea.service.ts",
-        "path": "/home/user/WIN/apps/api/src/tradingIntel/ea.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/tradingIntel/ea.service.ts",
         "sloc": 443,
         "mathRandom": false,
         "externalFetch": false
@@ -4935,7 +5027,7 @@
       "serviceDir": "apps/api/src/education",
       "serviceFile": {
         "file": "cyberCloudAcademy.service.ts",
-        "path": "/home/user/WIN/apps/api/src/education/cyberCloudAcademy.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/education/cyberCloudAcademy.service.ts",
         "sloc": 168,
         "mathRandom": false,
         "externalFetch": false
@@ -5042,12 +5134,12 @@
       "serviceDir": "apps/api/src/emailIntel",
       "serviceFile": {
         "file": "emailIntel.service.ts",
-        "path": "/home/user/WIN/apps/api/src/emailIntel/emailIntel.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/emailIntel/emailIntel.service.ts",
         "sloc": 757,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2272,
+      "serviceTotalSloc": 2404,
       "serviceFiles": [
         "bootstrap.ts",
         "emailIntel.service.ts",
@@ -5134,7 +5226,7 @@
       "serviceDir": "apps/api/src/engineering",
       "serviceFile": {
         "file": "deployments.service.ts",
-        "path": "/home/user/WIN/apps/api/src/engineering/deployments.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/engineering/deployments.service.ts",
         "sloc": 104,
         "mathRandom": false,
         "externalFetch": false
@@ -5198,7 +5290,10 @@
     "sharedTypes": "packages/shared/src/engMetrics.ts (160 LOC, supplies SLOTier/ServiceMetric)",
     "web": {
       "client": "apps/web/src/lib/engineering.ts (46 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/events/ (1 file)",
+        "apps/web/src/pages/webhook/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [],
@@ -5222,7 +5317,7 @@
       "serviceDir": "apps/api/src/enterprise",
       "serviceFile": {
         "file": "modelRegistry.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/modelRegistry.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/services/modelRegistry.service.ts",
         "sloc": 78,
         "mathRandom": false,
         "externalFetch": false
@@ -5325,7 +5420,7 @@
     "web": {
       "client": "apps/web/src/lib/enterprise.ts (161 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -5361,7 +5456,7 @@
       "serviceDir": "apps/api/src/enterpriseFinOps",
       "serviceFile": {
         "file": "enterpriseFinOps.service.ts",
-        "path": "/home/user/WIN/apps/api/src/enterpriseFinOps/enterpriseFinOps.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/enterpriseFinOps/enterpriseFinOps.service.ts",
         "sloc": 546,
         "mathRandom": false,
         "externalFetch": false
@@ -5451,7 +5546,7 @@
       "serviceDir": "apps/api/src/enterpriseFoundation",
       "serviceFile": {
         "file": "dataFabric.service.ts",
-        "path": "/home/user/WIN/apps/api/src/enterpriseFoundation/dataFabric.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/enterpriseFoundation/dataFabric.service.ts",
         "sloc": 111,
         "mathRandom": false,
         "externalFetch": false
@@ -5542,7 +5637,9 @@
     "sharedTypes": "packages/shared/src/enterpriseFoundation.ts (302 LOC)",
     "web": {
       "client": "apps/web/src/lib/enterpriseFoundation.ts (83 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/enterpriseFoundation/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5579,7 +5676,7 @@
       "serviceDir": "apps/api/src/enterpriseSearch",
       "serviceFile": {
         "file": "enterpriseSearch.service.ts",
-        "path": "/home/user/WIN/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/enterpriseSearch/enterpriseSearch.service.ts",
         "sloc": 456,
         "mathRandom": false,
         "externalFetch": false
@@ -5655,7 +5752,7 @@
       "serviceDir": "apps/api/src/erp",
       "serviceFile": {
         "file": "erp.service.ts",
-        "path": "/home/user/WIN/apps/api/src/erp/erp.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/erp/erp.service.ts",
         "sloc": 736,
         "mathRandom": false,
         "externalFetch": false
@@ -5752,7 +5849,7 @@
       "serviceDir": "apps/api/src/etl",
       "serviceFile": {
         "file": "etl.service.ts",
-        "path": "/home/user/WIN/apps/api/src/etl/etl.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/etl/etl.service.ts",
         "sloc": 313,
         "mathRandom": false,
         "externalFetch": false
@@ -5794,7 +5891,9 @@
     "sharedTypes": "packages/shared/src/etl.ts (120 LOC)",
     "web": {
       "client": "apps/web/src/lib/etl.ts (33 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/etl/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5822,7 +5921,7 @@
       "serviceDir": "apps/api/src/events",
       "serviceFile": {
         "file": "events.service.ts",
-        "path": "/home/user/WIN/apps/api/src/events/events.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/events/events.service.ts",
         "sloc": 235,
         "mathRandom": false,
         "externalFetch": false
@@ -5913,7 +6012,7 @@
       "serviceDir": "apps/api/src/expertsPlatform",
       "serviceFile": {
         "file": "expertsPlatform.service.ts",
-        "path": "/home/user/WIN/apps/api/src/expertsPlatform/expertsPlatform.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/expertsPlatform/expertsPlatform.service.ts",
         "sloc": 155,
         "mathRandom": false,
         "externalFetch": false
@@ -5958,7 +6057,9 @@
     "sharedTypes": "packages/shared/src/expertsPlatform.ts (93 LOC)",
     "web": {
       "client": "apps/web/src/lib/expertsPlatform.ts (16 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/expertsPlatform/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5991,7 +6092,7 @@
       "serviceDir": "apps/api/src/extensions",
       "serviceFile": {
         "file": "agents.service.ts",
-        "path": "/home/user/WIN/apps/api/src/extensions/agents.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/extensions/agents.service.ts",
         "sloc": 41,
         "mathRandom": false,
         "externalFetch": false
@@ -6076,7 +6177,9 @@
     "sharedTypes": "packages/shared/src/extensions.ts (278 LOC)",
     "web": {
       "client": "apps/web/src/lib/extensions.ts (70 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/plugins/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6118,7 +6221,7 @@
       "serviceDir": "apps/api/src/fabric",
       "serviceFile": {
         "file": "fabric.service.ts",
-        "path": "/home/user/WIN/apps/api/src/fabric/fabric.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/fabric/fabric.service.ts",
         "sloc": 416,
         "mathRandom": false,
         "externalFetch": true
@@ -6166,7 +6269,9 @@
     "sharedTypes": "packages/shared/src/fabric.ts (222 LOC)",
     "web": {
       "client": "apps/web/src/lib/fabric.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/fabric/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6189,6 +6294,86 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "financial",
+    "title": "financial",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/financial",
+    "backend": {
+      "serviceDir": "apps/api/src/financial",
+      "serviceFile": {
+        "file": "financial.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/financial/financial.service.ts",
+        "sloc": 223,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 767,
+      "serviceFiles": [
+        "financial.service.ts",
+        "financial.test.ts",
+        "financialPolicy.service.ts",
+        "financial/financial.service.ts"
+      ],
+      "importedServiceFiles": [
+        "financial/financial.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/financial.ts",
+        "sloc": 129,
+        "counts": {
+          "total": 11,
+          "GET": 4,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /health",
+          "GET /status",
+          "GET /dashboard/rollup",
+          "GET /ledger",
+          "POST /check",
+          "POST /decide",
+          "POST /provenance/real",
+          "POST /provenance/simulated",
+          "POST /provenance/unavailable",
+          "POST /ledger",
+          "DELETE /ledger/:id"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/financial.ts (78 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/financial.ts (39 LOC)",
+      "pages": [
+        "apps/web/src/pages/financial/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message",
+        "Invoice"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "financial/financial.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "Stripe"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "geoBilling",
     "title": "geoBilling",
     "sessions": [],
@@ -6198,7 +6383,7 @@
       "serviceDir": "apps/api/src/geoBilling",
       "serviceFile": {
         "file": "geoBilling.service.ts",
-        "path": "/home/user/WIN/apps/api/src/geoBilling/geoBilling.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/geoBilling/geoBilling.service.ts",
         "sloc": 617,
         "mathRandom": false,
         "externalFetch": false
@@ -6232,7 +6417,9 @@
     "sharedTypes": "packages/shared/src/geoBilling.ts (157 LOC)",
     "web": {
       "client": "apps/web/src/lib/geoBilling.ts (115 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/billing/ (6 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6265,7 +6452,7 @@
       "serviceDir": "apps/api/src/giftCards",
       "serviceFile": {
         "file": "giftCards.service.ts",
-        "path": "/home/user/WIN/apps/api/src/giftCards/giftCards.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/giftCards/giftCards.service.ts",
         "sloc": 495,
         "mathRandom": false,
         "externalFetch": false
@@ -6318,7 +6505,9 @@
     "sharedTypes": "packages/shared/src/wmpcGiftCards.ts (70 LOC, supplies WmpcGiftCard/GcTransaction/GcFraudFlag)",
     "web": {
       "client": "apps/web/src/lib/giftCards.ts (28 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/giftCards/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -6344,6 +6533,72 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "githubConnector",
+    "title": "githubConnector",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/githubConnector",
+    "backend": {
+      "serviceDir": "apps/api/src/githubConnector",
+      "serviceFile": {
+        "file": "githubConnector.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/githubConnector/githubConnector.service.ts",
+        "sloc": 365,
+        "mathRandom": false,
+        "externalFetch": true
+      },
+      "serviceTotalSloc": 838,
+      "serviceFiles": [
+        "githubConnector.service.ts",
+        "githubConnector.test.ts",
+        "githubConnector/githubConnector.service.ts"
+      ],
+      "importedServiceFiles": [
+        "githubConnector/githubConnector.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/githubConnector.ts",
+        "sloc": 97,
+        "counts": {
+          "total": 7,
+          "GET": 3,
+          "POST": 3,
+          "PUT": 0,
+          "PATCH": 0,
+          "DELETE": 1
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/githubConnector.ts (94 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/githubConnector.ts (20 LOC)",
+      "pages": [
+        "apps/web/src/pages/githubConnector/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "AuditLog",
+        "Message",
+        "ApiKey"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "githubConnector/githubConnector.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "globalCurrency",
     "title": "Global Currency (S80)",
     "sessions": [
@@ -6355,7 +6610,7 @@
       "serviceDir": "apps/api/src/globalCurrency",
       "serviceFile": {
         "file": "globalCurrency.service.ts",
-        "path": "/home/user/WIN/apps/api/src/globalCurrency/globalCurrency.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/globalCurrency/globalCurrency.service.ts",
         "sloc": 566,
         "mathRandom": false,
         "externalFetch": false
@@ -6449,7 +6704,7 @@
       "serviceDir": "apps/api/src/googleAuth",
       "serviceFile": {
         "file": "googleIdentity.service.ts",
-        "path": "/home/user/WIN/apps/api/src/googleAuth/googleIdentity.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/googleAuth/googleIdentity.service.ts",
         "sloc": 866,
         "mathRandom": false,
         "externalFetch": false
@@ -6557,7 +6812,7 @@
       "serviceDir": "apps/api/src/governance",
       "serviceFile": {
         "file": "adr.service.ts",
-        "path": "/home/user/WIN/apps/api/src/governance/adr.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/governance/adr.service.ts",
         "sloc": 79,
         "mathRandom": false,
         "externalFetch": false
@@ -6638,7 +6893,7 @@
     "web": {
       "client": "apps/web/src/lib/governance.ts (84 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -6686,7 +6941,7 @@
       "serviceDir": "apps/api/src/healthEcosystem",
       "serviceFile": {
         "file": "healthEcosystem.service.ts",
-        "path": "/home/user/WIN/apps/api/src/healthEcosystem/healthEcosystem.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/healthEcosystem/healthEcosystem.service.ts",
         "sloc": 608,
         "mathRandom": false,
         "externalFetch": false
@@ -6801,7 +7056,7 @@
       "serviceDir": "apps/api/src/helpdesk",
       "serviceFile": {
         "file": "helpdesk.service.ts",
-        "path": "/home/user/WIN/apps/api/src/helpdesk/helpdesk.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/helpdesk/helpdesk.service.ts",
         "sloc": 386,
         "mathRandom": false,
         "externalFetch": false
@@ -6884,7 +7139,7 @@
       "serviceDir": "apps/api/src/hybridExec",
       "serviceFile": {
         "file": "hybridExec.service.ts",
-        "path": "/home/user/WIN/apps/api/src/hybridExec/hybridExec.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/hybridExec/hybridExec.service.ts",
         "sloc": 393,
         "mathRandom": false,
         "externalFetch": false
@@ -6964,7 +7219,7 @@
       "serviceDir": "apps/api/src/identityKnowledge",
       "serviceFile": {
         "file": "identityKnowledge.service.ts",
-        "path": "/home/user/WIN/apps/api/src/identityKnowledge/identityKnowledge.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/identityKnowledge/identityKnowledge.service.ts",
         "sloc": 655,
         "mathRandom": false,
         "externalFetch": false
@@ -7024,7 +7279,7 @@
     "web": {
       "client": "apps/web/src/lib/identityKnowledge.ts (89 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -7060,7 +7315,7 @@
       "serviceDir": "apps/api/src/industry",
       "serviceFile": {
         "file": "industry.service.ts",
-        "path": "/home/user/WIN/apps/api/src/industry/industry.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/industry/industry.service.ts",
         "sloc": 234,
         "mathRandom": false,
         "externalFetch": false
@@ -7137,7 +7392,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "cluster.service.ts",
-        "path": "/home/user/WIN/apps/api/src/platform/cluster.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/platform/cluster.service.ts",
         "sloc": 400,
         "mathRandom": false,
         "externalFetch": true
@@ -7210,7 +7465,9 @@
     "sharedTypes": "packages/shared/src/infrastructure.ts (271 LOC)",
     "web": {
       "client": "apps/web/src/lib/infrastructure.ts (65 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/infrastructure/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7240,12 +7497,12 @@
       "serviceDir": "apps/api/src/kernel",
       "serviceFile": {
         "file": "kernel.service.ts",
-        "path": "/home/user/WIN/apps/api/src/kernel/kernel.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/kernel/kernel.service.ts",
         "sloc": 129,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1142,
+      "serviceTotalSloc": 1186,
       "serviceFiles": [
         "bootstrap.ts",
         "kernel.service.ts",
@@ -7334,7 +7591,7 @@
       "serviceDir": "apps/api/src/knowledge",
       "serviceFile": {
         "file": "knowledge.service.ts",
-        "path": "/home/user/WIN/apps/api/src/knowledge/knowledge.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/knowledge/knowledge.service.ts",
         "sloc": 627,
         "mathRandom": false,
         "externalFetch": true
@@ -7434,6 +7691,127 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "languageLearning",
+    "title": "languageLearning",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/languageLearning",
+    "backend": {
+      "serviceDir": "apps/api/src/languageLearning",
+      "serviceFile": {
+        "file": "languageLearning.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/languageLearning/languageLearning.service.ts",
+        "sloc": 1046,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 5652,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "curriculum.ts",
+        "curriculumB2.ts",
+        "engines.test.ts",
+        "engines.ts",
+        "jobs.ts",
+        "languageLearning.service.ts",
+        "languageLearning.test.ts",
+        "registry.ts",
+        "store.ts",
+        "teacher.ts",
+        "languageLearning/languageLearning.service.ts"
+      ],
+      "importedServiceFiles": [
+        "languageLearning/languageLearning.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/languageLearning/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/languageLearning.ts",
+        "sloc": 260,
+        "counts": {
+          "total": 43,
+          "GET": 24,
+          "POST": 17,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /languages",
+          "GET /languages/:languageCode",
+          "GET /dashboard",
+          "GET /profiles",
+          "POST /profiles",
+          "GET /profiles/:languageCode",
+          "PATCH /profiles/:languageCode",
+          "DELETE /profiles/:languageCode",
+          "POST /assessments/:languageCode",
+          "GET /assessments/:id",
+          "POST /assessments/:id/answer",
+          "GET /paths/:languageCode",
+          "POST /paths/:languageCode",
+          "GET /lessons/:languageCode",
+          "GET /lessons/:languageCode/:lessonId",
+          "POST /lessons/:languageCode/:lessonId/start",
+          "POST /lesson-attempts/:id/answer",
+          "GET /lesson-attempts/:languageCode",
+          "POST /teacher",
+          "POST /conversations/:languageCode",
+          "POST /conversations/:id/turn",
+          "GET /conversations/:languageCode",
+          "GET /vocabulary/:languageCode/catalog",
+          "GET /vocabulary/:languageCode",
+          "GET /vocabulary/:languageCode/due",
+          "POST /vocabulary/:languageCode/:vocabId",
+          "POST /vocabulary-cards/:id/review",
+          "GET /vocabulary/:languageCode/quiz",
+          "POST /vocabulary-cards/:id/quiz",
+          "GET /grammar/:languageCode",
+          "POST /grammar/:languageCode/explain",
+          "POST /grammar/:languageCode/exercise",
+          "GET /grammar/:languageCode/progress",
+          "POST /writing/:languageCode",
+          "GET /writing/:languageCode",
+          "GET /listening/:languageCode",
+          "POST /listening/:languageCode",
+          "GET /speaking/:languageCode/prompts",
+          "POST /speaking/:languageCode",
+          "GET /plans/:languageCode",
+          "GET /progress/:languageCode",
+          "GET /recommendations/:languageCode",
+          "GET /next/:languageCode"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/languageLearning.ts (615 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/languageLearning.ts (99 LOC)",
+      "pages": [
+        "apps/web/src/pages/languages/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Activity",
+        "Conversation",
+        "Message",
+        "Meeting"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "languageLearning/engines.test.ts",
+      "languageLearning/languageLearning.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "leadDiscovery",
     "title": "Lead Discovery & Pipeline (S85/S115)",
     "sessions": [
@@ -7446,7 +7824,7 @@
       "serviceDir": "apps/api/src/leadDiscovery",
       "serviceFile": {
         "file": "leadDiscovery.service.ts",
-        "path": "/home/user/WIN/apps/api/src/leadDiscovery/leadDiscovery.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/leadDiscovery/leadDiscovery.service.ts",
         "sloc": 53,
         "mathRandom": false,
         "externalFetch": true
@@ -7522,7 +7900,9 @@
     "sharedTypes": "packages/shared/src/leadDiscovery.ts (452 LOC)",
     "web": {
       "client": "apps/web/src/lib/leadDiscovery.ts (192 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/leads/ (2 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -7555,7 +7935,7 @@
       "serviceDir": "apps/api/src/legal",
       "serviceFile": {
         "file": "legal.service.ts",
-        "path": "/home/user/WIN/apps/api/src/legal/legal.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/legal/legal.service.ts",
         "sloc": 309,
         "mathRandom": false,
         "externalFetch": false
@@ -7637,7 +8017,7 @@
       "serviceDir": "apps/api/src/licensing",
       "serviceFile": {
         "file": "licensing.service.ts",
-        "path": "/home/user/WIN/apps/api/src/licensing/licensing.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/licensing/licensing.service.ts",
         "sloc": 303,
         "mathRandom": false,
         "externalFetch": false
@@ -7717,7 +8097,7 @@
       "serviceDir": "apps/api/src/lifePrinciples",
       "serviceFile": {
         "file": "lifePrinciples.service.ts",
-        "path": "/home/user/WIN/apps/api/src/lifePrinciples/lifePrinciples.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/lifePrinciples/lifePrinciples.service.ts",
         "sloc": 253,
         "mathRandom": false,
         "externalFetch": false
@@ -7799,6 +8179,109 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "lotteryIntelligence",
+    "title": "lotteryIntelligence",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/lotteryIntelligence",
+    "backend": {
+      "serviceDir": "apps/api/src/lotteryIntelligence",
+      "serviceFile": {
+        "file": "lotteryIntelligence.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/lotteryIntelligence/lotteryIntelligence.service.ts",
+        "sloc": 748,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 3040,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "engines.test.ts",
+        "engines.ts",
+        "jobs.ts",
+        "lotteryIntelligence.service.ts",
+        "lotteryIntelligence.test.ts",
+        "providers.ts",
+        "store.ts",
+        "lotteryIntelligence/lotteryIntelligence.service.ts"
+      ],
+      "importedServiceFiles": [
+        "lotteryIntelligence/lotteryIntelligence.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/lotteryIntelligence/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/lotteryIntelligence.ts",
+        "sloc": 226,
+        "counts": {
+          "total": 27,
+          "GET": 17,
+          "POST": 8,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 1
+        },
+        "endpoints": [
+          "GET /lotteries",
+          "GET /dashboard",
+          "GET /rules",
+          "GET /config",
+          "PATCH /config",
+          "GET /draws",
+          "GET /draws/:id",
+          "GET /numbers",
+          "GET /stars",
+          "GET /distribution",
+          "GET /pairs",
+          "POST /analyze",
+          "POST /generate",
+          "POST /system",
+          "GET /tickets",
+          "POST /tickets",
+          "GET /tickets/:id",
+          "DELETE /tickets/:id",
+          "GET /performance",
+          "POST /backtests",
+          "GET /backtests",
+          "POST /strategies/compare",
+          "GET /providers",
+          "GET /jobs",
+          "POST /jobs/:kind",
+          "POST /pipeline",
+          "GET /audit"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/lotteryIntelligence.ts (562 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/lotteryIntelligence.ts (59 LOC)",
+      "pages": [
+        "apps/web/src/pages/lottery/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message",
+        "ApiKey",
+        "Alert"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "lotteryIntelligence/engines.test.ts",
+      "lotteryIntelligence/lotteryIntelligence.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "AWS"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "marketing",
     "title": "marketing",
     "sessions": [],
@@ -7808,7 +8291,7 @@
       "serviceDir": "apps/api/src/marketing",
       "serviceFile": {
         "file": "marketing.service.ts",
-        "path": "/home/user/WIN/apps/api/src/marketing/marketing.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/marketing/marketing.service.ts",
         "sloc": 412,
         "mathRandom": false,
         "externalFetch": false
@@ -7865,7 +8348,7 @@
     "web": {
       "client": "apps/web/src/lib/marketing.ts (146 LOC)",
       "pages": [
-        "apps/web/src/pages/marketing/ (12 files)"
+        "apps/web/src/pages/marketing/ (13 files)"
       ]
     },
     "db": {
@@ -7899,7 +8382,7 @@
       "serviceDir": "apps/api/src/marketplace",
       "serviceFile": {
         "file": "appStore.service.ts",
-        "path": "/home/user/WIN/apps/api/src/marketplace/appStore.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/marketplace/appStore.service.ts",
         "sloc": 165,
         "mathRandom": false,
         "externalFetch": false
@@ -8012,7 +8495,7 @@
       "serviceDir": "apps/api/src/mediaFactory",
       "serviceFile": {
         "file": "mediaFactory.service.ts",
-        "path": "/home/user/WIN/apps/api/src/mediaFactory/mediaFactory.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/mediaFactory/mediaFactory.service.ts",
         "sloc": 69,
         "mathRandom": false,
         "externalFetch": false
@@ -8132,6 +8615,7 @@
       "config/liveFabrication.test.ts",
       "config/moduleGates.test.ts",
       "config/seedGate.test.ts",
+      "services/account.test.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts",
       "services/mfa.test.ts",
@@ -8155,7 +8639,7 @@
       "serviceDir": "apps/api/src/mediaGen",
       "serviceFile": {
         "file": "mediaGen.service.ts",
-        "path": "/home/user/WIN/apps/api/src/mediaGen/mediaGen.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/mediaGen/mediaGen.service.ts",
         "sloc": 323,
         "mathRandom": false,
         "externalFetch": false
@@ -8231,7 +8715,7 @@
       "serviceDir": "apps/api/src/memoryEvolution",
       "serviceFile": {
         "file": "memoryEvolution.service.ts",
-        "path": "/home/user/WIN/apps/api/src/memoryEvolution/memoryEvolution.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/memoryEvolution/memoryEvolution.service.ts",
         "sloc": 228,
         "mathRandom": false,
         "externalFetch": false
@@ -8303,7 +8787,7 @@
       "serviceDir": "apps/api/src/mfa",
       "serviceFile": {
         "file": "mfaAssurance.service.ts",
-        "path": "/home/user/WIN/apps/api/src/mfa/mfaAssurance.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/mfa/mfaAssurance.service.ts",
         "sloc": 1246,
         "mathRandom": false,
         "externalFetch": false
@@ -8413,7 +8897,7 @@
       "serviceDir": "apps/api/src/mlOps",
       "serviceFile": {
         "file": "models.service.ts",
-        "path": "/home/user/WIN/apps/api/src/mlOps/models.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/mlOps/models.service.ts",
         "sloc": 382,
         "mathRandom": false,
         "externalFetch": true
@@ -8492,7 +8976,9 @@
     "sharedTypes": "packages/shared/src/mlOps.ts (338 LOC)",
     "web": {
       "client": "apps/web/src/lib/mlOps.ts (114 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/mlOps/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8533,7 +9019,7 @@
       "serviceDir": "apps/api/src/mobile",
       "serviceFile": {
         "file": "mobileSync.service.ts",
-        "path": "/home/user/WIN/apps/api/src/mobile/mobileSync.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/mobile/mobileSync.service.ts",
         "sloc": 1128,
         "mathRandom": false,
         "externalFetch": false
@@ -8622,7 +9108,7 @@
     "web": {
       "client": "apps/web/src/lib/mobile/biometrics.ts (100 LOC, serves /mobile)",
       "pages": [
-        "apps/web/src/pages/mobile/ (13 files)"
+        "apps/web/src/pages/mobile/ (16 files)"
       ]
     },
     "db": {
@@ -8663,7 +9149,7 @@
       "serviceDir": "apps/api/src/modelFactory",
       "serviceFile": {
         "file": "modelFactory.service.ts",
-        "path": "/home/user/WIN/apps/api/src/modelFactory/modelFactory.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/modelFactory/modelFactory.service.ts",
         "sloc": 183,
         "mathRandom": false,
         "externalFetch": false
@@ -8741,7 +9227,7 @@
       "serviceDir": "apps/api/src/moduleCenter",
       "serviceFile": {
         "file": "archive.service.ts",
-        "path": "/home/user/WIN/apps/api/src/moduleCenter/archive.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/moduleCenter/archive.service.ts",
         "sloc": 119,
         "mathRandom": false,
         "externalFetch": false
@@ -8794,7 +9280,10 @@
     "sharedTypes": "packages/shared/src/moduleCenter.ts (152 LOC)",
     "web": {
       "client": "apps/web/src/lib/moduleCenter.ts (46 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/moduleRuntime/ (1 file)",
+        "apps/web/src/pages/modules/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8829,7 +9318,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "permissions.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/permissions.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/services/permissions.service.ts",
         "sloc": 113,
         "mathRandom": false,
         "externalFetch": false
@@ -8902,7 +9391,7 @@
       "serviceDir": "apps/api/src/musicGen",
       "serviceFile": {
         "file": "musicGen.service.ts",
-        "path": "/home/user/WIN/apps/api/src/musicGen/musicGen.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/musicGen/musicGen.service.ts",
         "sloc": 220,
         "mathRandom": false,
         "externalFetch": false
@@ -8953,7 +9442,9 @@
     "sharedTypes": "packages/shared/src/musicGen.ts (97 LOC)",
     "web": {
       "client": "apps/web/src/lib/musicGen.ts (63 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/music/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -8984,7 +9475,7 @@
       "serviceDir": "apps/api/src/musicVideo",
       "serviceFile": {
         "file": "musicVideo.service.ts",
-        "path": "/home/user/WIN/apps/api/src/musicVideo/musicVideo.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/musicVideo/musicVideo.service.ts",
         "sloc": 522,
         "mathRandom": false,
         "externalFetch": true
@@ -9032,7 +9523,9 @@
     "sharedTypes": "packages/shared/src/musicVideo.ts (293 LOC)",
     "web": {
       "client": "apps/web/src/lib/musicVideo.ts (180 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/media/ (2 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9063,7 +9556,7 @@
       "serviceDir": "apps/api/src/nativeAi",
       "serviceFile": {
         "file": "console.service.ts",
-        "path": "/home/user/WIN/apps/api/src/nativeAi/console.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/nativeAi/console.service.ts",
         "sloc": 123,
         "mathRandom": false,
         "externalFetch": false
@@ -9163,12 +9656,12 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "audit.service.ts",
-        "path": "/home/user/WIN/apps/api/src/audit/audit.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/audit/audit.service.ts",
         "sloc": 551,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1754,
+      "serviceTotalSloc": 1798,
       "serviceFiles": [
         "audit/audit.service.ts",
         "services/ai/registry.ts",
@@ -9262,7 +9755,7 @@
       "serviceDir": "apps/api/src/nfc",
       "serviceFile": {
         "file": "nfc.service.ts",
-        "path": "/home/user/WIN/apps/api/src/nfc/nfc.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/nfc/nfc.service.ts",
         "sloc": 505,
         "mathRandom": false,
         "externalFetch": false
@@ -9357,7 +9850,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "nfc.service.ts",
-        "path": "/home/user/WIN/apps/api/src/nfc/nfc.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/nfc/nfc.service.ts",
         "sloc": 505,
         "mathRandom": false,
         "externalFetch": false
@@ -9434,7 +9927,7 @@
       "serviceDir": "apps/api/src/notifications",
       "serviceFile": {
         "file": "notifications.service.ts",
-        "path": "/home/user/WIN/apps/api/src/notifications/notifications.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/notifications/notifications.service.ts",
         "sloc": 452,
         "mathRandom": false,
         "externalFetch": false
@@ -9514,7 +10007,7 @@
       "serviceDir": "apps/api/src/opex",
       "serviceFile": {
         "file": "opex.service.ts",
-        "path": "/home/user/WIN/apps/api/src/opex/opex.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/opex/opex.service.ts",
         "sloc": 201,
         "mathRandom": false,
         "externalFetch": false
@@ -9592,7 +10085,7 @@
     "web": {
       "client": "apps/web/src/lib/opex.ts (160 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -9631,7 +10124,7 @@
       "serviceDir": "apps/api/src/payments",
       "serviceFile": {
         "file": "blockonomics.service.ts",
-        "path": "/home/user/WIN/apps/api/src/payments/blockonomics.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/payments/blockonomics.service.ts",
         "sloc": 334,
         "mathRandom": false,
         "externalFetch": true
@@ -9698,7 +10191,9 @@
     "sharedTypes": "packages/shared/src/payments.ts (243 LOC)",
     "web": {
       "client": "apps/web/src/lib/payments.ts (122 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/billing/ (6 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -9750,7 +10245,7 @@
       "serviceDir": "apps/api/src/permissions",
       "serviceFile": {
         "file": "permissions.module.ts",
-        "path": "/home/user/WIN/apps/api/src/permissions/permissions.module.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/permissions/permissions.module.ts",
         "sloc": 149,
         "mathRandom": false,
         "externalFetch": false
@@ -9827,7 +10322,7 @@
       "serviceDir": "apps/api/src/platform",
       "serviceFile": {
         "file": "cluster.service.ts",
-        "path": "/home/user/WIN/apps/api/src/platform/cluster.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/platform/cluster.service.ts",
         "sloc": 400,
         "mathRandom": false,
         "externalFetch": true
@@ -9937,7 +10432,7 @@
       "serviceDir": "apps/api/src/platformServices",
       "serviceFile": {
         "file": "billing.service.ts",
-        "path": "/home/user/WIN/apps/api/src/platformServices/billing.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/platformServices/billing.service.ts",
         "sloc": 117,
         "mathRandom": false,
         "externalFetch": false
@@ -10077,7 +10572,7 @@
       "serviceDir": "apps/api/src/pluginOs",
       "serviceFile": {
         "file": "bootstrap.ts",
-        "path": "/home/user/WIN/apps/api/src/pluginOs/bootstrap.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/pluginOs/bootstrap.ts",
         "sloc": 78,
         "mathRandom": false,
         "externalFetch": false
@@ -10121,7 +10616,9 @@
     "sharedTypes": "packages/shared/src/pluginOs.ts (187 LOC)",
     "web": {
       "client": "apps/web/src/lib/pluginOs.ts (36 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/pluginOs/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10157,7 +10654,7 @@
       "serviceDir": "apps/api/src/politics",
       "serviceFile": {
         "file": "politics.service.ts",
-        "path": "/home/user/WIN/apps/api/src/politics/politics.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/politics/politics.service.ts",
         "sloc": 802,
         "mathRandom": false,
         "externalFetch": false
@@ -10258,7 +10755,7 @@
       "serviceDir": "apps/api/src/program",
       "serviceFile": {
         "file": "archReview.service.ts",
-        "path": "/home/user/WIN/apps/api/src/program/archReview.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/program/archReview.service.ts",
         "sloc": 79,
         "mathRandom": false,
         "externalFetch": false
@@ -10333,7 +10830,9 @@
     "sharedTypes": "packages/shared/src/program.ts (232 LOC)",
     "web": {
       "client": "apps/web/src/lib/program.ts (47 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/program/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10362,7 +10861,7 @@
       "serviceDir": "apps/api/src/projectContinuity",
       "serviceFile": {
         "file": "clamav.service.ts",
-        "path": "/home/user/WIN/apps/api/src/projectContinuity/clamav.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/projectContinuity/clamav.service.ts",
         "sloc": 78,
         "mathRandom": false,
         "externalFetch": false
@@ -10405,7 +10904,9 @@
     "sharedTypes": "packages/shared/src/projectContinuity.ts (210 LOC)",
     "web": {
       "client": "apps/web/src/lib/projectContinuity.ts (75 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/projects/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10439,7 +10940,7 @@
       "serviceDir": "apps/api/src/promptTemplates",
       "serviceFile": {
         "file": "promptTemplates.service.ts",
-        "path": "/home/user/WIN/apps/api/src/promptTemplates/promptTemplates.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/promptTemplates/promptTemplates.service.ts",
         "sloc": 208,
         "mathRandom": false,
         "externalFetch": false
@@ -10488,7 +10989,7 @@
     "web": {
       "client": "apps/web/src/lib/promptTemplates.ts (55 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)",
+        "apps/web/src/pages/admin/ (17 files)",
         "apps/web/src/pages/promptTemplates/ (1 file)"
       ]
     },
@@ -10524,7 +11025,7 @@
       "serviceDir": "apps/api/src/publicApi",
       "serviceFile": {
         "file": "apiUsage.service.ts",
-        "path": "/home/user/WIN/apps/api/src/publicApi/apiUsage.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/publicApi/apiUsage.service.ts",
         "sloc": 274,
         "mathRandom": false,
         "externalFetch": false
@@ -10575,7 +11076,7 @@
     "web": {
       "client": "apps/web/src/lib/publicApi.ts (41 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -10621,7 +11122,7 @@
       "serviceDir": "apps/api/src/publishing",
       "serviceFile": {
         "file": "publishing.module.ts",
-        "path": "/home/user/WIN/apps/api/src/publishing/publishing.module.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/publishing/publishing.module.ts",
         "sloc": 94,
         "mathRandom": false,
         "externalFetch": false
@@ -10692,6 +11193,7 @@
       "config/liveFabrication.test.ts",
       "config/moduleGates.test.ts",
       "config/seedGate.test.ts",
+      "services/account.test.ts",
       "services/auth.test.ts",
       "services/googleAuth.test.ts",
       "services/mfa.test.ts",
@@ -10711,7 +11213,7 @@
       "serviceDir": "apps/api/src/qa",
       "serviceFile": {
         "file": "aiValidation.service.ts",
-        "path": "/home/user/WIN/apps/api/src/qa/aiValidation.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/qa/aiValidation.service.ts",
         "sloc": 137,
         "mathRandom": false,
         "externalFetch": false
@@ -10768,7 +11270,9 @@
     "sharedTypes": "packages/shared/src/qa.ts (208 LOC)",
     "web": {
       "client": "apps/web/src/lib/qa.ts (34 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/qa/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10800,7 +11304,7 @@
       "serviceDir": "apps/api/src/quantum",
       "serviceFile": {
         "file": "quantum.service.ts",
-        "path": "/home/user/WIN/apps/api/src/quantum/quantum.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/quantum/quantum.service.ts",
         "sloc": 253,
         "mathRandom": false,
         "externalFetch": false
@@ -10887,7 +11391,7 @@
       "serviceDir": "apps/api/src/release",
       "serviceFile": {
         "file": "aiValidation.service.ts",
-        "path": "/home/user/WIN/apps/api/src/release/aiValidation.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/release/aiValidation.service.ts",
         "sloc": 122,
         "mathRandom": false,
         "externalFetch": false
@@ -10942,7 +11446,9 @@
     "sharedTypes": "packages/shared/src/release.ts (172 LOC)",
     "web": {
       "client": "apps/web/src/lib/release.ts (60 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/release/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10970,7 +11476,7 @@
       "serviceDir": "apps/api/src/religions",
       "serviceFile": {
         "file": "religions.integrations.service.ts",
-        "path": "/home/user/WIN/apps/api/src/religions/religions.integrations.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/religions/religions.integrations.service.ts",
         "sloc": 404,
         "mathRandom": false,
         "externalFetch": false
@@ -11092,7 +11598,7 @@
       "serviceDir": "apps/api/src/revenueGuardian",
       "serviceFile": {
         "file": "revenueGuardian.service.ts",
-        "path": "/home/user/WIN/apps/api/src/revenueGuardian/revenueGuardian.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/revenueGuardian/revenueGuardian.service.ts",
         "sloc": 1039,
         "mathRandom": false,
         "externalFetch": false
@@ -11189,6 +11695,69 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "reviews",
+    "title": "reviews",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/reviews",
+    "backend": {
+      "serviceDir": "apps/api/src/reviews",
+      "serviceFile": {
+        "file": "reviews.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/reviews/reviews.service.ts",
+        "sloc": 164,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 433,
+      "serviceFiles": [
+        "reviews.service.ts",
+        "reviews.test.ts",
+        "reviews/reviews.service.ts"
+      ],
+      "importedServiceFiles": [
+        "reviews/reviews.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/reviews.ts",
+        "sloc": 124,
+        "counts": {
+          "total": 8,
+          "GET": 4,
+          "POST": 1,
+          "PUT": 0,
+          "PATCH": 2,
+          "DELETE": 1
+        },
+        "endpoints": []
+      }
+    ],
+    "sharedTypes": "packages/shared/src/reviews.ts (53 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/reviews.ts (38 LOC)",
+      "pages": [
+        "apps/web/src/pages/reviews/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "dataMarketplace.spec.ts",
+      "reviews/reviews.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "robotics",
     "title": "Robotics (S57)",
     "sessions": [
@@ -11200,7 +11769,7 @@
       "serviceDir": "apps/api/src/robotics",
       "serviceFile": {
         "file": "robotics.service.ts",
-        "path": "/home/user/WIN/apps/api/src/robotics/robotics.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/robotics/robotics.service.ts",
         "sloc": 382,
         "mathRandom": false,
         "externalFetch": false
@@ -11289,7 +11858,7 @@
       "serviceDir": "apps/api/src/scientific",
       "serviceFile": {
         "file": "scientific.service.ts",
-        "path": "/home/user/WIN/apps/api/src/scientific/scientific.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/scientific/scientific.service.ts",
         "sloc": 233,
         "mathRandom": false,
         "externalFetch": false
@@ -11375,7 +11944,7 @@
       "serviceDir": "apps/api/src/sdk",
       "serviceFile": {
         "file": "sdk.service.ts",
-        "path": "/home/user/WIN/apps/api/src/sdk/sdk.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/sdk/sdk.service.ts",
         "sloc": 191,
         "mathRandom": false,
         "externalFetch": true
@@ -11419,7 +11988,9 @@
     "sharedTypes": "packages/shared/src/sdk.ts (90 LOC)",
     "web": {
       "client": "apps/web/src/lib/sdk.ts (14 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/sdk/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11451,12 +12022,12 @@
       "serviceDir": "apps/api/src/security",
       "serviceFile": {
         "file": "governance.service.ts",
-        "path": "/home/user/WIN/apps/api/src/security/governance.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/security/governance.service.ts",
         "sloc": 210,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2517,
+      "serviceTotalSloc": 2521,
       "serviceFiles": [
         "csrf.ts",
         "encryption.test.ts",
@@ -11531,7 +12102,7 @@
     "web": {
       "client": "apps/web/src/lib/security.ts (42 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -11578,7 +12149,7 @@
       "serviceDir": "apps/api/src/selfHosted",
       "serviceFile": {
         "file": "selfHosted.service.ts",
-        "path": "/home/user/WIN/apps/api/src/selfHosted/selfHosted.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/selfHosted/selfHosted.service.ts",
         "sloc": 151,
         "mathRandom": false,
         "externalFetch": false
@@ -11627,7 +12198,9 @@
     "sharedTypes": "packages/shared/src/selfHosted.ts (52 LOC)",
     "web": {
       "client": "apps/web/src/lib/selfHosted.ts (22 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/selfHosted/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -11646,6 +12219,117 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "sitePlatform",
+    "title": "sitePlatform",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/sitePlatform",
+    "backend": {
+      "serviceDir": "apps/api/src/sitePlatform",
+      "serviceFile": {
+        "file": "sitePlatform.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/sitePlatform/sitePlatform.service.ts",
+        "sloc": 985,
+        "mathRandom": false,
+        "externalFetch": true
+      },
+      "serviceTotalSloc": 2235,
+      "serviceFiles": [
+        "platformApis.runtime.ts",
+        "sitePlatform.service.ts",
+        "sitePlatform.test.ts",
+        "store.ts",
+        "sitePlatform/sitePlatform.service.ts"
+      ],
+      "importedServiceFiles": [
+        "sitePlatform/sitePlatform.service.ts"
+      ],
+      "bootstrapFile": null
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/sitePlatform.ts",
+        "sloc": 203,
+        "counts": {
+          "total": 36,
+          "GET": 19,
+          "POST": 5,
+          "PUT": 5,
+          "PATCH": 5,
+          "DELETE": 2
+        },
+        "endpoints": [
+          "GET /announcement",
+          "GET /public",
+          "GET /media/:id",
+          "GET /seo",
+          "GET /chat/health",
+          "POST /chat",
+          "POST /chat/:id/message",
+          "GET /chat/:id",
+          "DELETE /chat/:id",
+          "GET /announcement",
+          "PATCH /announcement",
+          "GET /seo",
+          "PATCH /seo",
+          "GET /seo/pages",
+          "PUT /seo/pages",
+          "GET /smtp",
+          "PATCH /smtp",
+          "POST /smtp/test",
+          "GET /brand",
+          "PATCH /brand",
+          "GET /images",
+          "PUT /images/:slot",
+          "POST /media",
+          "GET /pages",
+          "PUT /pages",
+          "GET /reviews",
+          "PUT /reviews",
+          "GET /map",
+          "PATCH /map",
+          "GET /apis",
+          "PUT /apis",
+          "DELETE /apis/:id",
+          "GET /summary",
+          "POST /admins"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/sitePlatform.ts (503 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/sitePlatform.ts (115 LOC)",
+      "pages": [
+        "apps/web/src/pages/sitePlatform/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Workspace",
+        "Membership",
+        "AuditLog",
+        "Agent",
+        "Conversation",
+        "Message",
+        "ApiKey"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "sitePlatform/sitePlatform.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [
+      "OpenAI",
+      "Anthropic",
+      "Google"
+    ],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "socialPlatform",
     "title": "socialPlatform",
     "sessions": [],
@@ -11655,7 +12339,7 @@
       "serviceDir": "apps/api/src/socialPlatform",
       "serviceFile": {
         "file": "socialPlatform.service.ts",
-        "path": "/home/user/WIN/apps/api/src/socialPlatform/socialPlatform.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/socialPlatform/socialPlatform.service.ts",
         "sloc": 399,
         "mathRandom": false,
         "externalFetch": false
@@ -11735,7 +12419,7 @@
       "serviceDir": "apps/api/src/softwareFactory",
       "serviceFile": {
         "file": "softwareFactory.service.ts",
-        "path": "/home/user/WIN/apps/api/src/softwareFactory/softwareFactory.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/softwareFactory/softwareFactory.service.ts",
         "sloc": 334,
         "mathRandom": false,
         "externalFetch": false
@@ -11810,7 +12494,7 @@
       "serviceDir": "apps/api/src/spatial",
       "serviceFile": {
         "file": "spatial.service.ts",
-        "path": "/home/user/WIN/apps/api/src/spatial/spatial.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/spatial/spatial.service.ts",
         "sloc": 483,
         "mathRandom": false,
         "externalFetch": false
@@ -11884,6 +12568,104 @@
     "status": "COMPLETE"
   },
   {
+    "moduleKey": "sportsIntelligence",
+    "title": "sportsIntelligence",
+    "sessions": [],
+    "tier": "unknown",
+    "routePrefix": "/api/v1/sportsIntelligence",
+    "backend": {
+      "serviceDir": "apps/api/src/sportsIntelligence",
+      "serviceFile": {
+        "file": "sportsIntelligence.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/sportsIntelligence/sportsIntelligence.service.ts",
+        "sloc": 1123,
+        "mathRandom": false,
+        "externalFetch": false
+      },
+      "serviceTotalSloc": 4507,
+      "serviceFiles": [
+        "bootstrap.ts",
+        "engines.test.ts",
+        "engines.ts",
+        "jobs.ts",
+        "providers.ts",
+        "sportsIntelligence.service.ts",
+        "sportsIntelligence.test.ts",
+        "store.ts",
+        "sportsIntelligence/sportsIntelligence.service.ts"
+      ],
+      "importedServiceFiles": [
+        "sportsIntelligence/sportsIntelligence.service.ts"
+      ],
+      "bootstrapFile": "apps/api/src/sportsIntelligence/bootstrap.ts"
+    },
+    "routes": [
+      {
+        "file": "apps/api/src/http/routes/sportsIntelligence.ts",
+        "sloc": 238,
+        "counts": {
+          "total": 24,
+          "GET": 17,
+          "POST": 6,
+          "PUT": 0,
+          "PATCH": 1,
+          "DELETE": 0
+        },
+        "endpoints": [
+          "GET /dashboard",
+          "GET /config",
+          "PATCH /config",
+          "GET /matches",
+          "GET /matches/:id",
+          "GET /odds",
+          "GET /predictions",
+          "GET /predictions/:id",
+          "GET /tickets",
+          "GET /tickets/daily",
+          "GET /tickets/:id",
+          "POST /tickets/generate",
+          "POST /tickets/:id/approve",
+          "POST /tickets/:id/override",
+          "GET /results",
+          "GET /performance",
+          "POST /backtests",
+          "GET /backtests",
+          "GET /models",
+          "GET /providers",
+          "GET /jobs",
+          "POST /jobs/:kind",
+          "POST /pipeline",
+          "GET /audit"
+        ]
+      }
+    ],
+    "sharedTypes": "packages/shared/src/sportsIntelligence.ts (676 LOC)",
+    "web": {
+      "client": "apps/web/src/lib/sportsIntelligence.ts (81 LOC)",
+      "pages": [
+        "apps/web/src/pages/sports/ (1 file)"
+      ]
+    },
+    "db": {
+      "prismaModels": [
+        "User",
+        "Organization",
+        "Message",
+        "ApiKey",
+        "Alert"
+      ],
+      "migrations": [],
+      "storage": "Redis primary; Prisma/Postgres for auth/org/billing core"
+    },
+    "tests": [
+      "sportsIntelligence/engines.test.ts",
+      "sportsIntelligence/sportsIntelligence.test.ts"
+    ],
+    "syntheticData": [],
+    "externalIntegrations": [],
+    "status": "COMPLETE"
+  },
+  {
     "moduleKey": "sustainability",
     "title": "Sustainability / ESG (S64)",
     "sessions": [
@@ -11895,7 +12677,7 @@
       "serviceDir": "apps/api/src/sustainability",
       "serviceFile": {
         "file": "sustainability.service.ts",
-        "path": "/home/user/WIN/apps/api/src/sustainability/sustainability.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/sustainability/sustainability.service.ts",
         "sloc": 372,
         "mathRandom": false,
         "externalFetch": true
@@ -11937,7 +12719,7 @@
     "web": {
       "client": "apps/web/src/lib/sustainability.ts (36 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -11972,7 +12754,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "talk.service.ts",
-        "path": "/home/user/WIN/apps/api/src/services/talk.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/services/talk.service.ts",
         "sloc": 544,
         "mathRandom": false,
         "externalFetch": false
@@ -12065,12 +12847,12 @@
       "serviceDir": "apps/api/src/tenantIsolation",
       "serviceFile": {
         "file": "tenantIsolation.service.ts",
-        "path": "/home/user/WIN/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
-        "sloc": 868,
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/tenantIsolation/tenantIsolation.service.ts",
+        "sloc": 931,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1912,
+      "serviceTotalSloc": 2038,
       "serviceFiles": [
         "tenantIsolation.service.ts",
         "tenantIsolation.test.ts",
@@ -12107,7 +12889,7 @@
     "web": {
       "client": "apps/web/src/lib/tenantIsolation.ts (66 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -12118,6 +12900,7 @@
         "Agent",
         "Task",
         "Activity",
+        "Conversation",
         "Message",
         "Canvas",
         "Workflow",
@@ -12147,12 +12930,12 @@
       "serviceDir": "apps/api/src/tradingIntel",
       "serviceFile": {
         "file": "brokerIntegration.service.ts",
-        "path": "/home/user/WIN/apps/api/src/tradingIntel/brokerIntegration.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/tradingIntel/brokerIntegration.service.ts",
         "sloc": 1561,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 7879,
+      "serviceTotalSloc": 7928,
       "serviceFiles": [
         "agents.ts",
         "analysis.ts",
@@ -12234,7 +13017,9 @@
     "sharedTypes": "packages/shared/src/tradingIntel.ts (269 LOC)",
     "web": {
       "client": "apps/web/src/lib/tradingIntel.ts (69 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/trading/ (3 files)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12306,7 +13091,7 @@
       "serviceDir": "apps/api/src/training",
       "serviceFile": {
         "file": "training.service.ts",
-        "path": "/home/user/WIN/apps/api/src/training/training.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/training/training.service.ts",
         "sloc": 312,
         "mathRandom": false,
         "externalFetch": false
@@ -12353,7 +13138,9 @@
     "sharedTypes": "packages/shared/src/training.ts (90 LOC)",
     "web": {
       "client": "apps/web/src/lib/training.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/training/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12387,7 +13174,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "university.service.ts",
-        "path": "/home/user/WIN/apps/api/src/education/university.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/education/university.service.ts",
         "sloc": 207,
         "mathRandom": false,
         "externalFetch": false
@@ -12463,7 +13250,7 @@
       "serviceDir": null,
       "serviceFile": {
         "file": "universityEngine.service.ts",
-        "path": "/home/user/WIN/apps/api/src/education/universityEngine.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/education/universityEngine.service.ts",
         "sloc": 364,
         "mathRandom": false,
         "externalFetch": false
@@ -12543,7 +13330,7 @@
       "serviceDir": "apps/api/src/updates",
       "serviceFile": {
         "file": "updateSigning.service.ts",
-        "path": "/home/user/WIN/apps/api/src/updates/updateSigning.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/updates/updateSigning.service.ts",
         "sloc": 83,
         "mathRandom": false,
         "externalFetch": false
@@ -12589,7 +13376,9 @@
     "sharedTypes": "packages/shared/src/updates.ts (100 LOC)",
     "web": {
       "client": "apps/web/src/lib/updates.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/updates/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12622,7 +13411,7 @@
       "serviceDir": "apps/api/src/usage",
       "serviceFile": {
         "file": "usage.service.ts",
-        "path": "/home/user/WIN/apps/api/src/usage/usage.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/usage/usage.service.ts",
         "sloc": 273,
         "mathRandom": false,
         "externalFetch": false
@@ -12665,7 +13454,7 @@
     "web": {
       "client": "apps/web/src/lib/usage.ts (49 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/ (16 files)"
+        "apps/web/src/pages/admin/ (17 files)"
       ]
     },
     "db": {
@@ -12714,7 +13503,7 @@
       "serviceDir": "apps/api/src/uxIntelligence",
       "serviceFile": {
         "file": "uxIntelligence.service.ts",
-        "path": "/home/user/WIN/apps/api/src/uxIntelligence/uxIntelligence.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/uxIntelligence/uxIntelligence.service.ts",
         "sloc": 355,
         "mathRandom": false,
         "externalFetch": false
@@ -12798,7 +13587,7 @@
       "serviceDir": "apps/api/src/v76validation",
       "serviceFile": {
         "file": "v76validation.service.ts",
-        "path": "/home/user/WIN/apps/api/src/v76validation/v76validation.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/v76validation/v76validation.service.ts",
         "sloc": 339,
         "mathRandom": false,
         "externalFetch": false
@@ -12879,7 +13668,7 @@
       "serviceDir": "apps/api/src/videoEngine",
       "serviceFile": {
         "file": "video.service.ts",
-        "path": "/home/user/WIN/apps/api/src/videoEngine/video.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/videoEngine/video.service.ts",
         "sloc": 640,
         "mathRandom": false,
         "externalFetch": false
@@ -12959,7 +13748,9 @@
     "sharedTypes": "packages/shared/src/video.ts (400 LOC, supplies VideoMusicTrack/VideoProject/VideoVoiceTrack)",
     "web": {
       "client": "apps/web/src/lib/video.ts (85 LOC, serves /video)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/video/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -12991,7 +13782,7 @@
       "serviceDir": "apps/api/src/videoTransform",
       "serviceFile": {
         "file": "transform.service.ts",
-        "path": "/home/user/WIN/apps/api/src/videoTransform/transform.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/videoTransform/transform.service.ts",
         "sloc": 585,
         "mathRandom": false,
         "externalFetch": false
@@ -13068,6 +13859,7 @@
     "web": {
       "client": "apps/web/src/lib/videoTransform.ts (62 LOC)",
       "pages": [
+        "apps/web/src/pages/videoTransform/ (4 files)",
         "apps/web/src/pages/videoTransform/ (4 files)"
       ]
     },
@@ -13103,7 +13895,7 @@
       "serviceDir": "apps/api/src/videoTransformer",
       "serviceFile": {
         "file": "transform.service.ts",
-        "path": "/home/user/WIN/apps/api/src/videoTransformer/transform.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/videoTransformer/transform.service.ts",
         "sloc": 250,
         "mathRandom": false,
         "externalFetch": false
@@ -13159,6 +13951,7 @@
     "web": {
       "client": "apps/web/src/lib/videoTransformer.ts (33 LOC)",
       "pages": [
+        "apps/web/src/pages/videoTransformer/ (1 file)",
         "apps/web/src/pages/videoTransformer/ (1 file)"
       ]
     },
@@ -13193,7 +13986,7 @@
       "serviceDir": "apps/api/src/voice",
       "serviceFile": {
         "file": "voice.module.ts",
-        "path": "/home/user/WIN/apps/api/src/voice/voice.module.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/voice/voice.module.ts",
         "sloc": 448,
         "mathRandom": false,
         "externalFetch": false
@@ -13280,7 +14073,7 @@
       "serviceDir": "apps/api/src/voiceFoundry",
       "serviceFile": {
         "file": "voiceFoundry.service.ts",
-        "path": "/home/user/WIN/apps/api/src/voiceFoundry/voiceFoundry.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/voiceFoundry/voiceFoundry.service.ts",
         "sloc": 196,
         "mathRandom": false,
         "externalFetch": false
@@ -13328,7 +14121,9 @@
     "sharedTypes": "packages/shared/src/voiceFoundry.ts (118 LOC)",
     "web": {
       "client": "apps/web/src/lib/voiceFoundry.ts (20 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/voiceFoundry/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13360,7 +14155,7 @@
       "serviceDir": "apps/api/src/voiceOwnership",
       "serviceFile": {
         "file": "voiceOwnership.service.ts",
-        "path": "/home/user/WIN/apps/api/src/voiceOwnership/voiceOwnership.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/voiceOwnership/voiceOwnership.service.ts",
         "sloc": 196,
         "mathRandom": false,
         "externalFetch": false
@@ -13407,7 +14202,9 @@
     "sharedTypes": "packages/shared/src/voiceOwnership.ts (56 LOC)",
     "web": {
       "client": "apps/web/src/lib/voiceOwnership.ts (17 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/voiceOwnership/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13437,14 +14234,15 @@
       "serviceDir": "apps/api/src/voiceStudio",
       "serviceFile": {
         "file": "voice.service.ts",
-        "path": "/home/user/WIN/apps/api/src/voiceStudio/voice.service.ts",
-        "sloc": 229,
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/voiceStudio/voice.service.ts",
+        "sloc": 306,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1535,
+      "serviceTotalSloc": 1804,
       "serviceFiles": [
         "bootstrap.ts",
+        "voice.service.test.ts",
         "voice.service.ts",
         "voiceStudio.service.ts",
         "voiceStudio.test.ts",
@@ -13460,7 +14258,7 @@
     "routes": [
       {
         "file": "apps/api/src/http/routes/voiceStudio.ts",
-        "sloc": 198,
+        "sloc": 199,
         "counts": {
           "total": 15,
           "GET": 8,
@@ -13508,10 +14306,12 @@
     "tests": [
       "sessions37-40.spec.ts",
       "voiceStudio.spec.ts",
+      "voiceStudio/voice.service.test.ts",
       "voiceStudio/voiceStudio.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [
+      "OpenAI",
       "ElevenLabs",
       "PlayHT"
     ],
@@ -13527,7 +14327,7 @@
       "serviceDir": "apps/api/src/wakeIntel",
       "serviceFile": {
         "file": "wakeIntelligence.service.ts",
-        "path": "/home/user/WIN/apps/api/src/wakeIntel/wakeIntelligence.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/wakeIntel/wakeIntelligence.service.ts",
         "sloc": 571,
         "mathRandom": false,
         "externalFetch": false
@@ -13603,7 +14403,9 @@
     "sharedTypes": "packages/shared/src/wakeIntel.ts (395 LOC)",
     "web": {
       "client": "apps/web/src/lib/wakeIntel.ts (30 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/wakeIntel/ (1 file)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -13635,7 +14437,7 @@
       "serviceDir": "apps/api/src/webhook",
       "serviceFile": {
         "file": "webhookReceiver.service.ts",
-        "path": "/home/user/WIN/apps/api/src/webhook/webhookReceiver.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/webhook/webhookReceiver.service.ts",
         "sloc": 307,
         "mathRandom": false,
         "externalFetch": false
@@ -13705,7 +14507,7 @@
       "serviceDir": "apps/api/src/websiteBuilder",
       "serviceFile": {
         "file": "websiteBuilder.service.ts",
-        "path": "/home/user/WIN/apps/api/src/websiteBuilder/websiteBuilder.service.ts",
+        "path": "/home/user/WINDELS-AI-OS/apps/api/src/websiteBuilder/websiteBuilder.service.ts",
         "sloc": 490,
         "mathRandom": false,
         "externalFetch": false

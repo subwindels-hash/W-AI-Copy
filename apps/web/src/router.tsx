@@ -122,6 +122,37 @@ const EducationPage = lazy(() => import("./pages/education/EducationPage").then(
 const ScientificPage = lazy(() => import("./pages/scientific/ScientificPage").then((m) => ({ default: m.ScientificPage })));
 const UniversityEnginePage = lazy(() => import("./pages/universityEngine/UniversityEnginePage").then((m) => ({ default: m.UniversityEnginePage })));
 const DisasterRecoveryPage = lazy(() => import("./pages/disasterRecovery/DisasterRecoveryPage").then((m) => ({ default: m.DisasterRecoveryPage })));
+const FinancialPage = lazy(() => import("./pages/financial/FinancialPage").then((m) => ({ default: m.FinancialPage })));
+const DataMarketplacePage = lazy(() => import("./pages/dataMarketplace/DataMarketplacePage").then((m) => ({ default: m.DataMarketplacePage })));
+const ReviewsPage = lazy(() => import("./pages/reviews/ReviewsPage").then((m) => ({ default: m.ReviewsPage })));
+const BenchmarksPage = lazy(() => import("./pages/benchmarks/BenchmarksPage").then((m) => ({ default: m.BenchmarksPage })));
+const MlOpsPage = lazy(() => import("./pages/mlOps/MlOpsPage").then((m) => ({ default: m.MlOpsPage })));
+const GiftCardsPage = lazy(() => import("./pages/giftCards/GiftCardsPage").then((m) => ({ default: m.GiftCardsPage })));
+const ExpertsPlatformPage = lazy(() => import("./pages/expertsPlatform/ExpertsPlatformPage").then((m) => ({ default: m.ExpertsPlatformPage })));
+const TrainingPage = lazy(() => import("./pages/training/TrainingPage").then((m) => ({ default: m.TrainingPage })));
+const EtlPage = lazy(() => import("./pages/etl/EtlPage").then((m) => ({ default: m.EtlPage })));
+const FabricPage = lazy(() => import("./pages/fabric/FabricPage").then((m) => ({ default: m.FabricPage })));
+const UpdatesPage = lazy(() => import("./pages/updates/UpdatesPage").then((m) => ({ default: m.UpdatesPage })));
+const VoiceFoundryPage = lazy(() => import("./pages/voiceFoundry/VoiceFoundryPage").then((m) => ({ default: m.VoiceFoundryPage })));
+const VoiceOwnershipPage = lazy(() => import("./pages/voiceOwnership/VoiceOwnershipPage").then((m) => ({ default: m.VoiceOwnershipPage })));
+const SdkPage = lazy(() => import("./pages/sdk/SdkPage").then((m) => ({ default: m.SdkPage })));
+const SelfHostedPage = lazy(() => import("./pages/selfHosted/SelfHostedPage").then((m) => ({ default: m.SelfHostedPage })));
+const QaPage = lazy(() => import("./pages/qa/QaPage").then((m) => ({ default: m.QaPage })));
+const ReleasePage = lazy(() => import("./pages/release/ReleasePage").then((m) => ({ default: m.ReleasePage })));
+const ProgramPage = lazy(() => import("./pages/program/ProgramPage").then((m) => ({ default: m.ProgramPage })));
+const DevportalPage = lazy(() => import("./pages/devportal/DevportalPage").then((m) => ({ default: m.DevportalPage })));
+const AiCommercePage = lazy(() => import("./pages/aiCommerce/AiCommercePage").then((m) => ({ default: m.AiCommercePage })));
+const AiEcosystemPage = lazy(() => import("./pages/aiEcosystem/AiEcosystemPage").then((m) => ({ default: m.AiEcosystemPage })));
+const BrokerIntegrationPage = lazy(() => import("./pages/brokerIntegration/BrokerIntegrationPage").then((m) => ({ default: m.BrokerIntegrationPage })));
+const CryptoIntelligencePage = lazy(() => import("./pages/cryptoIntelligence/CryptoIntelligencePage").then((m) => ({ default: m.CryptoIntelligencePage })));
+const CoreIntegrationPage = lazy(() => import("./pages/coreIntegration/CoreIntegrationPage").then((m) => ({ default: m.CoreIntegrationPage })));
+const GithubConnectorPage = lazy(() => import("./pages/githubConnector/GithubConnectorPage").then((m) => ({ default: m.GithubConnectorPage })));
+const ChannelsPage = lazy(() => import("./pages/channels/ChannelsPage").then((m) => ({ default: m.ChannelsPage })));
+const PluginOsPage = lazy(() => import("./pages/pluginOs/PluginOsPage").then((m) => ({ default: m.PluginOsPage })));
+const WakeIntelPage = lazy(() => import("./pages/wakeIntel/WakeIntelPage").then((m) => ({ default: m.WakeIntelPage })));
+const EnterpriseFoundationPage = lazy(() => import("./pages/enterpriseFoundation/EnterpriseFoundationPage").then((m) => ({ default: m.EnterpriseFoundationPage })));
+const InfrastructurePage = lazy(() => import("./pages/infrastructure/InfrastructurePage").then((m) => ({ default: m.InfrastructurePage })));
+const SitePlatformPage = lazy(() => import("./pages/sitePlatform/SitePlatformPage").then((m) => ({ default: m.SitePlatformPage })));
 const UxIntelligencePage = lazy(() => import("./pages/uxIntelligence/UxIntelligencePage").then((m) => ({ default: m.UxIntelligencePage })));
 const ArchitecturePage = lazy(() => import("./pages/architecture/ArchitecturePage").then((m) => ({ default: m.ArchitecturePage })));
 const HybridExecPage = lazy(() => import("./pages/hybridExec/HybridExecPage").then((m) => ({ default: m.HybridExecPage })));
@@ -275,6 +306,8 @@ export const router = createBrowserRouter([
   { path: "/faq", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<FaqPage/>) }] },
   { path: "/help", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<HelpPage/>) }] },
   { path: "/contact", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
+  // Platform Reviews — public read; writing requires a signed-in account.
+  { path: "/reviews", element: withSuspense(<ReviewsPage />) },
   { path: "/support", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<ContactPage />) }] },
   { path: "/legal", element: withSuspense(<MarketingLayout/>), children: [{ index: true, element: withSuspense(<MarketingLegal/>) }] },
   { path: "/changelog", element: <Navigate to="/blog/launch-notes-july" replace /> },
@@ -447,6 +480,36 @@ export const router = createBrowserRouter([
       { path: "licensing", element: withSuspense(<LicensingConsolePage />) },
       { path: "deployment", element: withSuspense(<DeploymentConsolePage />) },
       { path: "disaster-recovery", element: withSuspense(<DisasterRecoveryPage />) },
+      { path: "financial", element: withSuspense(<FinancialPage />) },
+      { path: "data-marketplace", element: withSuspense(<DataMarketplacePage />) },
+      { path: "benchmarks", element: withSuspense(<BenchmarksPage />) },
+      { path: "ml-ops", element: withSuspense(<MlOpsPage />) },
+      { path: "gift-cards", element: withSuspense(<GiftCardsPage />) },
+      { path: "experts", element: withSuspense(<ExpertsPlatformPage />) },
+      { path: "training", element: withSuspense(<TrainingPage />) },
+      { path: "etl", element: withSuspense(<EtlPage />) },
+      { path: "fabric", element: withSuspense(<FabricPage />) },
+      { path: "updates", element: withSuspense(<UpdatesPage />) },
+      { path: "voice-foundry", element: withSuspense(<VoiceFoundryPage />) },
+      { path: "voice-ownership", element: withSuspense(<VoiceOwnershipPage />) },
+      { path: "sdk", element: withSuspense(<SdkPage />) },
+      { path: "self-hosted", element: withSuspense(<SelfHostedPage />) },
+      { path: "qa", element: withSuspense(<QaPage />) },
+      { path: "releases", element: withSuspense(<ReleasePage />) },
+      { path: "program", element: withSuspense(<ProgramPage />) },
+      { path: "dev-portal-tools", element: withSuspense(<DevportalPage />) },
+      { path: "ai-commerce", element: withSuspense(<AiCommercePage />) },
+      { path: "ai-ecosystem", element: withSuspense(<AiEcosystemPage />) },
+      { path: "broker-integration", element: withSuspense(<BrokerIntegrationPage />) },
+      { path: "crypto-intel", element: withSuspense(<CryptoIntelligencePage />) },
+      { path: "core-integration", element: withSuspense(<CoreIntegrationPage />) },
+      { path: "github-connector", element: withSuspense(<GithubConnectorPage />) },
+      { path: "channels", element: withSuspense(<ChannelsPage />) },
+      { path: "plugin-os", element: withSuspense(<PluginOsPage />) },
+      { path: "wake-intel", element: withSuspense(<WakeIntelPage />) },
+      { path: "enterprise-foundation", element: withSuspense(<EnterpriseFoundationPage />) },
+      { path: "infrastructure", element: withSuspense(<InfrastructurePage />) },
+      { path: "site-platform", element: withSuspense(<SitePlatformPage />) },
       { path: "ux-intelligence", element: withSuspense(<UxIntelligencePage />) },
       { path: "architecture", element: withSuspense(<ArchitecturePage />) },
       { path: "hybrid-execution", element: withSuspense(<HybridExecPage />) },

@@ -116,6 +116,8 @@ import { registerMemoryEvolutionRoutes } from "./routes/memoryEvolution.js";
 import { registerConstitutionRoutes } from "./routes/constitution.js";
 import { registerComposerRoutes } from "./routes/composer.js";
 import { registerBenchmarksRoutes } from "./routes/benchmarks.js";
+import { registerFinancialRoutes } from "./routes/financial.js";
+import { registerReviewsRoutes } from "./routes/reviews.js";
 import { registerDisasterRecoveryRoutes } from "./routes/disasterRecovery.js";
 import { registerLicensingRoutes } from "./routes/licensing.js";
 import { registerDeploymentRoutes } from "./routes/deployment.js";
@@ -1126,6 +1128,22 @@ export function createApp() {
   });
   registerBenchmarksRoutes(bmRouter);
 
+  // /financial — Financial Policy console (provenance + decision-safety gates)
+  const finRouter = express.Router();
+  v1.use("/financial", finRouter);
+  finRouter.use(authenticate);
+  finRouter.use(async (req, res, next) => {
+    try {
+      const { hasPermission } = await import("../services/permissions.service.js");
+      const { Permission } = await import("@prisma/client");
+      if (!(await hasPermission(req.user!.id, Permission.ORG_ADMIN))) {
+        return res.status(403).json({ ok: false, error: { code: "FORBIDDEN", message: "Admins only" } });
+      }
+      next();
+    } catch (e) { next(e); }
+  });
+  registerFinancialRoutes(finRouter);
+
   // /disaster-recovery — Session 51: Disaster Recovery & AI Continuity
   const drRouter = express.Router();
   v1.use("/disaster-recovery", drRouter);
@@ -1581,6 +1599,8 @@ export function createApp() {
   registerBlockonomicsAdminRoutes(v1);
   // Contact & Support Center (public form, AI assistant, my-requests, admin).
   registerContactRoutes(v1);
+  // Platform Reviews (public aggregate + authenticated write/rate, admin moderation).
+  registerReviewsRoutes(v1);
 
   app.use((req, res) => {
     res.status(404).json({
