@@ -15,9 +15,9 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Button } from "@/components/ui/Button";
 import { Badge } from "@/components/ui/Badge";
 import { LanguagePicker, DETECT_CODE, pushRecentLanguage } from "@/components/languages/LanguagePicker";
+import { MAX_TRANSLATE_CHARS as MAX_CHARS, isReadableTextDocument, detectedLabel as buildDetectedLabel } from "./translateHelpers";
 
 const FORMALITIES: LlTranslationFormality[] = ["AUTO", "FORMAL", "INFORMAL"];
-const MAX_CHARS = 20000;
 
 function speak(text: string, bcp47: string) {
   if (typeof window === "undefined" || !window.speechSynthesis || !text) return;
@@ -68,9 +68,7 @@ export function TranslateView({ languages }: { languages: LlLanguage[] }) {
     return () => { cancelled = true; window.clearTimeout(t); window.clearTimeout(t); };
   }, [text, source]);
 
-  const detectedLabel = detected?.code
-    ? `${detected.name}${detected.confidence ? ` (${Math.round(detected.confidence * 100)}%)` : ""}`
-    : detecting ? "detecting…" : null;
+  const detectedLabel = buildDetectedLabel(detected, detecting);
 
   const doTranslate = useCallback(async () => {
     if (!text.trim() || !target) return;
@@ -110,8 +108,7 @@ export function TranslateView({ languages }: { languages: LlLanguage[] }) {
   const onFile = useCallback(async (file: File) => {
     setErr(null);
     // Text-based documents are read client-side (txt, csv, md, json, srt, etc.).
-    const okType = /text\/|application\/(json|xml|csv)/.test(file.type) || /\.(txt|md|csv|json|xml|srt|vtt|log)$/i.test(file.name);
-    if (!okType) {
+    if (!isReadableTextDocument(file)) {
       setErr("Only text-based documents (.txt, .md, .csv, .json, .srt, …) can be read in the browser. Paste the text for other formats.");
       return;
     }
