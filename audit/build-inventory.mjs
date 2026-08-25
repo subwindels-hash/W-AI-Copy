@@ -513,109 +513,180 @@ function findWebClient(modKey) {
 }
 
 /**
- * Locate the web console page(s) for a module.
+ * Session 198 — the web router table.
  *
- * Pre-existing bug (UNFINISHED_MODULES.md): the emitted `pages` array was
- * hardcoded to `[]` for every module, even when a real page directory
- * existed. The convention in this repo is `apps/web/src/pages/<modKey>/`,
- * but a number of modules keep their page under a different directory
- * (e.g. `pages/bi/` for `businessIntelligence`, `pages/finops/` for
- * `enterpriseFinOps`, `pages/voice/` for `voice` etc.) — those directories
- * either are the canonical home and the module-key directory is an alias,
- * or vice versa. Match both shapes, following the same prefix-alias map
- * the route resolver uses.
+ * The router (`apps/web/src/router.tsx`) is the source of truth for "this
+ * module has a console": it is what makes a page reachable at a URL. The
+ * previous page detection checked directory names only, so it could not tell
+ * a routed console from a dead directory — the pages/businessIntelligence,
+ * pages/enterpriseSearch, pages/enterpriseFinOps, pages/mediaFactory,
+ * pages/promptTemplates, pages/apiKeys and pages/canvasCollab alias folders
+ * (one-file re-exports nothing imports) were all counted as module pages,
+ * and the `engineering` module was credited with the `events/` and
+ * `webhook/` consoles, which belong to other modules.
  *
- * Returns an array of page directory paths (one per match) or `[]` if no
- * page is registered for the module. Headless modules (kernel, mfa, etc.)
- * legitimately have no page.
+ * The table is built once from the router source:
+ *   routesOfPage  component page file -> the route paths rendering it
+ * Components that are lazy-imported but never rendered (dead bindings, e.g.
+ * dashboard/AdminDashboard) are excluded — an unrouted page is not a console.
  */
-function findWebPages(modKey) {
-  // Map of "module key" → the *actual* console directory under
-  // apps/web/src/pages/. The module-key directory may also exist (e.g. as
-  // an alias added by S181–S190), so the function reports *both* the home
-  // directory and the alias directory when present.
-  const PAGE_HOME = {
-    // Module key -> canonical pages directory (without the "pages/" prefix).
-    mfa: ["security"],
-    canvasCollab: ["canvas"],
-    googleAuth: ["googleAuth"],
-    // Pages that live under pages/admin/ with a different module key.
-    // S121 (sustainability), S124 (aiEngineering), S125 (identityKnowledge),
-    // S118 (opex), S120 (publicApi), S176-S190 console aliases.
-    promptTemplates: ["admin", "promptTemplates"],
-    publicApi: ["admin"],
-    usage: ["admin"],
-    sustainability: ["admin"],
-    opex: ["admin"],
-    aiEngineering: ["admin"],
-    identityKnowledge: ["admin"],
-    tenantIsolation: ["admin"],
-    security: ["admin"],
-    governance: ["admin"],
-    enterprise: ["admin"],
-    adminApiControl: ["admin"],
-    businessIntelligence: ["bi", "businessIntelligence"],
-    enterpriseSearch: ["search", "enterpriseSearch"],
-    enterpriseFinOps: ["finops", "enterpriseFinOps"],
-    // The "media" directory serves both mediaFactory (S77b) and the legacy
-    // mediaGen (S42) under the Universal Media Generation dashboard.
-    mediaFactory: ["media", "mediaFactory"],
-    mediaGen: ["media", "mediaGen"],
-    // voice was reused for voiceStudio in S162; both module keys share the
-    // canonical "voice" directory (S135) and voiceStudio has a dedicated
-    // voiceStudio alias (S162).
-    voice: ["voice"],
-    voiceStudio: ["voiceStudio", "voice"],
-    // cloudAndroid, nfc: aliases (S181).
-    cloudAndroidPublic: ["cloudAndroid", "cloudAndroidPublic"],
-    nfcPublic: ["nfc", "nfcPublic"],
-    moduleRuntime: ["modules", "moduleRuntime"],
-    nativeAi: ["nativeAi"],
-    nativeAiApi: ["nativeAiApi"],
-    modelFactory: ["modelFactory"],
-    memoryEvolution: ["memoryEvolution"],
-    marketplace: ["marketplace"],
-    // ── Consoles that live under a differently-named page directory ──────
-    // Session completion pass: these modules already ship a dedicated page,
-    // just under a directory the module-key convention does not match. Mapping
-    // them here so the inventory stops reporting a missing console.
-    tradingIntel: ["trading", "tradingIntel"],
-    musicGen: ["music", "musicGen"],
-    musicVideo: ["media", "musicVideo"],
-    videoEngine: ["video", "videoEngine"],
-    videoTransform: ["videoTransform", "videoTransform"],
-    videoTransformer: ["videoTransformer", "videoTransformer"],
-    lotteryIntelligence: ["lottery", "lotteryIntelligence"],
-    sportsIntelligence: ["sports", "sportsIntelligence"],
-    languageLearning: ["languages", "languageLearning"],
-    leadDiscovery: ["leads", "leadDiscovery"],
-    projectContinuity: ["projects", "projectContinuity"],
-    payments: ["billing", "payments"],
-    geoBilling: ["billing", "geoBilling"],
-    collaboration: ["canvas", "workflow", "collaboration"],
-    extensions: ["plugins", "extensions"],
-    moduleCenter: ["moduleRuntime", "modules", "moduleCenter"],
-    agentComm: ["agents", "agentComm"],
-    engineering: ["events", "webhook", "engineering"],
-    blockonomicsAdmin: ["admin", "blockonomicsAdmin"],
-    developerPlatform: ["developerPortal", "developerPlatform"],
-    cinematic: ["cinematic"],
-    // The rest use the module key as the directory name.
+const WEB_ROUTER = path.join(ROOT, "apps/web/src/router.tsx");
+
+function buildRouterTable() {
+  const src = read(WEB_ROUTER);
+  // Component -> lazily imported page file ("dir/File"). Both the plain
+  // `import("./pages/x/Y")` and the `.then((m) => ({ default: m.Y }))`
+  // binding forms reference the same file.
+  const fileOfComponent = new Map();
+  for (const m of src.matchAll(/(\w+)\s*=\s*lazy\(\s*\(\)\s*=>\s*import\("\.\/pages\/([\w/]+)"/g)) {
+    fileOfComponent.set(m[1], m[2]);
+  }
+  // Route entry -> components rendered inside it. Each `{ path: "..."` slice
+  // runs to the next `{ path:` so a parent's children attribute to the child
+  // entry, not the parent (layouts stay on the parent slice).
+  const starts = [...src.matchAll(/\{\s*path:\s*"([^"]+)"/g)].map((m) => m.index);
+  const pathsOfComponent = new Map();
+  for (let i = 0; i < starts.length; i++) {
+    const routePath = src.slice(starts[i]).match(/\{\s*path:\s*"([^"]+)"/)[1];
+    const seg = src.slice(starts[i], i + 1 < starts.length ? starts[i + 1] : src.length);
+    for (const c of seg.matchAll(/<([A-Z]\w+)/g)) {
+      if (!pathsOfComponent.has(c[1])) pathsOfComponent.set(c[1], new Set());
+      pathsOfComponent.get(c[1]).add(routePath);
+    }
+  }
+  const routesOfPage = new Map(); // "dir/File" -> Set<route path>
+  for (const [comp, file] of fileOfComponent) {
+    const paths = pathsOfComponent.get(comp);
+    if (!paths || !paths.size) continue;
+    routesOfPage.set(file, paths);
+  }
+  return { routesOfPage };
+}
+let _routerTable = null;
+function routerTable() {
+  return (_routerTable ??= buildRouterTable());
+}
+
+/** kebab-case a camelCase key: enterpriseFinOps -> enterprise-finops. */
+function kebabCase(s) {
+  return s.replace(/([a-z0-9])([A-Z])/g, "$1-$2").toLowerCase();
+}
+
+/**
+ * Route paths that name a module but are spelled differently from the module
+ * key, its kebab-case form and moduleRoutePrefix(). Every entry was verified
+ * against router.tsx; these are *URL paths* (what a user can visit), unlike
+ * the old PAGE_HOME map, which guessed directory names.
+ */
+const ROUTE_ALIASES = {
+  agents: ["workforce"],            // /app/workforce -> agents/AgentsPage
+  advertising: ["ads"],
+  adminApiControl: ["api-platform"],
+  apikey: ["api-keys"],
+  blockonomicsAdmin: ["blockonomics"],
+  canvasCollab: ["canvas"],
+  cinematic: ["cinematic-studio"],
+  collaboration: ["canvas", "workflow", "flow"],
+  cryptoIntelligence: ["crypto-intel"],
+  developerPlatform: ["developer-portal"],
+  devportal: ["dev-portal-tools"],
+  googleAuth: ["google-identity"],
+  languageLearning: ["languages"],
+  leadDiscovery: ["leads", "lead-pipeline"],
+  lotteryIntelligence: ["lottery"],
+  mfa: ["mfa-assurance"],
+  mobile: ["mobile-devices"],
+  moduleCenter: ["modules"],        // /admin/modules + modules/:moduleId
+  musicGen: ["music"],
+  projectContinuity: ["projects"],
+  release: ["releases"],
+  sitePlatform: ["site"],
+  socialPlatform: ["social"],
+  sportsIntelligence: ["sports"],
+  tradingIntel: ["trading"],
+  universityEngine: ["education-engine"],
+  v76validation: ["v76-validation"],
+  videoEngine: ["video-studio"],
+  videoTransformer: ["video-editor"],
+};
+
+/**
+ * Locate the web console page(s) for a module — grounded in the router.
+ *
+ * A page file belongs to the module when either
+ *   1. a route path that renders it matches one of the module's path tokens
+ *      (module key, kebab-case, moduleRoutePrefix, ROUTE_ALIASES entry),
+ *      compared per path segment so nested paths ("modules/:moduleId") and
+ *      public prefixes ("/contact") match too; or
+ *   2. the page imports the module's web API client (the file findWebClient
+ *      resolved) — the page really calls that module's endpoints.
+ *
+ * Files under pages/marketing/ are public website sections, not module
+ * consoles, so they never match by route path (the marketing module keeps
+ * its own MarketingDashboardPage console).
+ *
+ * Returns per-file entries naming the routes that render them, e.g.
+ *   apps/web/src/pages/bi/BusinessIntelligencePage.tsx (routes: bi, businessIntelligence)
+ * Headless modules (kernel, developerGateway, ...) legitimately return [].
+ */
+function findWebPages(modKey, webClientDesc) {
+  const { routesOfPage } = routerTable();
+  const tokens = new Set(
+    [modKey, kebabCase(modKey), moduleRoutePrefix(modKey), ...(ROUTE_ALIASES[modKey] || [])]
+      .map((t) => t.toLowerCase()),
+  );
+
+  // Normalize a route path into comparable segments: "/admin/modules" ->
+  // ["admin", "modules"], "canvas/:id" -> ["canvas"] (params dropped).
+  const segments = (p) =>
+    p.replace(/^\//, "").toLowerCase().split("/").filter((s) => s && !s.startsWith(":"));
+  const matches = (routePath) => {
+    const segs = segments(routePath).map(kebabCase);
+    return segs.some((s) => tokens.has(s));
   };
 
-  const homes = PAGE_HOME[modKey] ?? [modKey];
-  const found = [];
-  for (const home of homes) {
-    const p = path.join(WEB_PAGES, home);
-    if (fexists(p) && fs.statSync(p).isDirectory()) {
-      // Count the actual page files inside (not just any subdirectory).
-      const files = ls(p).filter(f => f.endsWith(".tsx") || f.endsWith(".ts"));
-      if (files.length > 0) {
-        found.push(`apps/web/src/pages/${home}/ (${files.length} file${files.length === 1 ? "" : "s"})`);
+  // 1. Route-path attribution.
+  const claims = new Map(); // "dir/File" -> [route paths]
+  for (const [file, paths] of routesOfPage) {
+    if (file.startsWith("marketing/") && modKey !== "marketing") continue;
+    const hit = [...paths].filter(matches);
+    if (hit.length) claims.set(file, hit);
+  }
+
+  // 2. Web-client attribution — the page imports this module's client.
+  //    webClientDesc is findWebClient's result, e.g.
+  //    "apps/web/src/lib/files.ts (465 LOC, serves /attachments)".
+  let clientRel = null;
+  if (webClientDesc) {
+    clientRel = webClientDesc.replace(/^apps\/web\/src\/lib\//, "").replace(/\s*\([^)]*\)\s*$/, "").replace(/\.ts$/, "");
+  }
+  // `lib/api.ts` is the shared fetch wrapper every client builds on, not the
+  // auth module's client — matching it attributed two dozen unrelated pages
+  // to `auth`. Same exclusion spirit as "api" in findSharedTypes().
+  if (clientRel && clientRel !== "api") {
+    // A top-level client matches the exact specifier end (`lib/files"`);
+    // a sub-directory client (lib/mobile/sync) matches its directory.
+    const esc = clientRel.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const re = new RegExp(`lib/${clientRel.includes("/") ? esc.split("/")[0] + "/" : esc + `"`}`);
+    for (const [file, paths] of routesOfPage) {
+      // admin/PlatformPage.tsx is the everything-tab shell (S176–S190 gave
+      // it a tab per module); client-matching it attributed the shell to
+      // ~40 modules. A module's console is its own routed page, not a tab
+      // inside a shared shell.
+      if (file === "admin/PlatformPage") continue;
+      const p = path.join(WEB_PAGES, `${file}.tsx`);
+      if (!fexists(p)) continue;
+      if (re.test(read(p))) {
+        const existing = claims.get(file) || [];
+        claims.set(file, [...new Set([...existing, ...paths])]);
       }
     }
   }
-  return found;
+
+  return [...claims.entries()]
+    .sort(([a], [b]) => (a < b ? -1 : 1))
+    .map(([file, routes]) =>
+      `apps/web/src/pages/${file}.tsx (routes: ${routes.sort().join(", ")})`);
 }
 
 function moduleRoutePrefix(key) {
@@ -904,10 +975,13 @@ for (const modKey of [...allModules].sort()) {
       endpoints: r.endpoints,
     })),
     sharedTypes: findSharedTypes(modKey),
-    web: {
-      client: findWebClient(modKey),
-      pages: findWebPages(modKey),
-    },
+    web: (() => {
+      // Session 198 — findWebPages attributes consoles through the router
+      // and the module's web client, so it needs the client findWebClient
+      // resolved (one call, shared by both fields).
+      const client = findWebClient(modKey);
+      return { client, pages: findWebPages(modKey, client) };
+    })(),
     db: {
       prismaModels: prismaModels.filter(m => {
         const searchFor = new RegExp(`\\b${m}\\b`, "i");
