@@ -17,6 +17,9 @@ import {
   type CogObservationOrigin,
   type CogWorldModelRollup,
   type WorldModelDomain,
+  type InnovationProposal,
+  type SelfEvolutionMetric,
+  type FederationPartner,
 } from "@/lib/cognitive";
 import { useAuthStore } from "@/store/auth";
 import { Badge } from "@/components/ui/Badge";
@@ -51,6 +54,11 @@ export function CognitivePage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  const [innovations, setInnovations] = useState<InnovationProposal[]>([]);
+  const [evolution, setEvolution] = useState<SelfEvolutionMetric[]>([]);
+  const [partners, setPartners] = useState<FederationPartner[]>([]);
+  const [innovationTitle, setInnovationTitle] = useState("");
+  const [partnerName, setPartnerName] = useState("");
 
   const [entityForm, setEntityForm] = useState({ name: "", kind: "customer" as CogEntityKind, domain: "customers" as WorldModelDomain, description: "" });
   const [observationForm, setObservationForm] = useState({ topic: "", claim: "", confidence: "0.5", source: "", evidence: "", domain: "enterprise" as WorldModelDomain, entityId: "", origin: "human" as CogObservationOrigin });
@@ -60,10 +68,10 @@ export function CognitivePage() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [worldModel, entityRows, observationRows, hypothesisRows] = await Promise.all([
-        cogApi.worldModel(), cogApi.entities({ limit: 200 }), cogApi.observations({ limit: 200 }), cogApi.hypotheses({ limit: 200 }),
+      const [worldModel, entityRows, observationRows, hypothesisRows, innovationRows, evolutionRows, partnerRows] = await Promise.all([
+        cogApi.worldModel(), cogApi.entities({ limit: 200 }), cogApi.observations({ limit: 200 }), cogApi.hypotheses({ limit: 200 }), cogApi.innovations(), cogApi.selfEvolution(), cogApi.federation(),
       ]);
-      setRollup(worldModel); setEntities(entityRows); setObservations(observationRows); setHypotheses(hypothesisRows); setError(null);
+      setRollup(worldModel); setEntities(entityRows); setObservations(observationRows); setHypotheses(hypothesisRows); setInnovations(innovationRows); setEvolution(evolutionRows); setPartners(partnerRows); setError(null);
     } catch (e) { setError(e instanceof Error ? e.message : String(e)); } finally { setLoading(false); }
   }, []);
   useEffect(() => { void load(); }, [load]);
@@ -141,6 +149,12 @@ export function CognitivePage() {
         </div>)}
         {!rollup ? <p className="text-sm text-text-muted">Loading coverage…</p> : null}
       </div></CardContent></Card>
+
+    <Card><CardHeader><CardTitle>Cognitive subsystems</CardTitle><CardDescription>Innovation, self-evolution, and federation registers for this organization.</CardDescription></CardHeader><CardContent className="grid gap-4 lg:grid-cols-3">
+      <section className="rounded-lg border border-white/10 bg-white/5 p-4"><div className="flex items-center justify-between"><h3 className="font-semibold text-text-bright">Innovation</h3><Badge variant="violet">{innovations.filter(i => i.status !== "rejected").length} open</Badge></div><div className="mt-3 space-y-2">{innovations.map(i => <div key={i.id} className="flex items-center gap-2 text-xs"><span className="flex-1 text-text-bright">{i.title}</span><Badge variant="secondary">{i.status}</Badge>{canWrite && <button className="text-crimson" onClick={() => void cogApi.deleteInnovation(i.id).then(load)}>×</button>}</div>)}{!innovations.length && <p className="text-xs text-text-muted">No proposals recorded.</p>}</div>{canWrite && <div className="mt-3 flex gap-2"><Input placeholder="New proposal" value={innovationTitle} onChange={e => setInnovationTitle(e.target.value)} /><Button size="sm" onClick={() => innovationTitle.trim() && void cogApi.createInnovation({ title: innovationTitle, category: "general", projectedValueUsd: 0, risk: "med", status: "proposed" }).then(() => { setInnovationTitle(""); return load(); })}><Plus className="h-4 w-4" /></Button></div>}</section>
+      <section className="rounded-lg border border-white/10 bg-white/5 p-4"><div className="flex items-center justify-between"><h3 className="font-semibold text-text-bright">Self-evolution</h3><Badge variant="emerald">{evolution.length} components</Badge></div><div className="mt-3 space-y-2">{evolution.map(m => <div key={m.component}><div className="flex justify-between text-xs"><span className="text-text-bright">{m.component}</span><span className="text-emerald">{Math.round(m.health * 100)}%</span></div><div className="mt-1 h-1.5 rounded bg-white/10"><div className="h-full rounded bg-emerald" style={{ width: `${m.health * 100}%` }} /></div></div>)}{!evolution.length && <p className="text-xs text-text-muted">No component records yet.</p>}</div></section>
+      <section className="rounded-lg border border-white/10 bg-white/5 p-4"><div className="flex items-center justify-between"><h3 className="font-semibold text-text-bright">Federation</h3><Badge variant="azure">{partners.filter(p => p.status === "active").length} active</Badge></div><div className="mt-3 space-y-2">{partners.map(p => <div key={p.id} className="flex items-center gap-2 text-xs"><span className="flex-1 text-text-bright">{p.name}</span><Badge variant="secondary">{p.trustTier}</Badge><span className="text-text-muted">{p.sharedDatasets + p.sharedModels} assets</span></div>)}{!partners.length && <p className="text-xs text-text-muted">No partners registered.</p>}</div>{canWrite && <div className="mt-3 flex gap-2"><Input placeholder="New partner" value={partnerName} onChange={e => setPartnerName(e.target.value)} /><Button size="sm" onClick={() => partnerName.trim() && void cogApi.createFederationPartner({ name: partnerName, type: "partner", trustTier: "bronze", sharedDatasets: 0, sharedModels: 0, status: "pending" }).then(() => { setPartnerName(""); return load(); })}><Plus className="h-4 w-4" /></Button></div>}</section>
+    </CardContent></Card>
 
     <div className="grid grid-cols-1 gap-4 xl:grid-cols-[1fr_360px]">
       <Card><CardHeader><CardTitle>Modelled entities</CardTitle><CardDescription>Entities with no observation are shown as blind spots.</CardDescription></CardHeader>
