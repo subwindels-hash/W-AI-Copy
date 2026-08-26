@@ -11,7 +11,7 @@
  * Uses AI providers to perform relationship extraction with structured output.
  */
 import { prisma } from "../db/client.js";
-import { aiRegistry } from "../ai/registry.js";
+import { aiRegistry } from "./ai/registry.js";
 import { logger } from "../config/logger.js";
 import { KnowledgeGraphService } from "../enterprise/knowledgeGraph/knowledgeGraph.service.js";
 import type { RelationKind, KGEntity } from "@windels/shared/dataPlatform";

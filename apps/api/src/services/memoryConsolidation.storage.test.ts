@@ -28,10 +28,10 @@ vi.mock("../db/client.js", () => ({
   },
 }));
 vi.mock("../db/redis.js", () => ({ redisCmd: { lpush: vi.fn(), ltrim: vi.fn() } }));
-vi.mock("../ai/registry.js", () => ({
+vi.mock("./ai/registry.js", () => ({
   aiRegistry: { complete: vi.fn(async () => ({ content: state.summary })) },
 }));
-vi.mock("../config/logger.js", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
+vi.mock("../config/logger.js", () => ({ logger: { debug: vi.fn(), info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
 vi.mock("./vectorStorage.service.js", () => ({
   generateEmbedding: vi.fn(async () => [0.1, 0.2]),
   semanticSearch: vi.fn(async () => []),

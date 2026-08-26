@@ -6774,13 +6774,13 @@ function BenchmarksTab() {
   const dash = useRefresh<bm.BmDashboard|null>(()=>bm.benchmarksApi.dashboard(), 10_000);
   const runs = useRefresh<bm.BmRun[]>(()=>bm.benchmarksApi.runs(), 10_000);
   const d = dash.data;
-  const [area,setArea] = useState<bm.BmArea>("latency");
-  const [notes,setNotes] = useState("");
   const [msg,setMsg] = useState<string|null>(null);
   const AREAS: bm.BmArea[] = ["ai_models","ai_employees","ai_workflows","voice_models","vision_models","translation_quality","coding_performance","response_accuracy","latency","resource_consumption","cost_efficiency","safety_metrics","reliability","user_satisfaction"];
-  const runOne = async () => {
-    try { const r = await bm.benchmarksApi.run({area,notes}); setMsg(`run ${r.id} score ${r.overallScore} ${r.passed?"✓":"✗"}`); runs.refresh(); dash.refresh(); } catch(e:any){ setMsg(e.message); }
-  };
+  // Session 200 honesty fix: the old inline "Run Benchmark" card called a
+  // fabricated `benchmarksApi.run({area, notes})` that invented a score from
+  // nothing. The benchmark centre is a result registry — recording a real
+  // evaluation (evaluator + evidence) lives in the dedicated /app/benchmarks
+  // console, so this tab stays read-only and links there.
   return (<div className="space-y-4">
     <Card><CardContent className="p-4"><div className="flex items-center gap-2">
       <BarChart3 className="h-5 w-5 text-amber"/><div className="flex-1"><div className="font-semibold">Enterprise AI Benchmark Center</div>
@@ -6802,13 +6802,10 @@ function BenchmarksTab() {
           <span className="w-8 text-right font-mono">{d.areaScores[a]}</span>
         </div>))}
       </CardContent></Card>
-      <Card><CardHeader><CardTitle className="text-sm">Run Benchmark</CardTitle></CardHeader>
+      <Card><CardHeader><CardTitle className="text-sm">Record a result</CardTitle></CardHeader>
       <CardContent className="space-y-2">
-        <select value={area} onChange={e=>setArea(e.target.value as any)} className="w-full bg-white/5 border border-white/10 rounded px-2 py-1 text-xs">
-          {AREAS.map(a=><option key={a} value={a}>{a.replace(/_/g," ")}</option>)}
-        </select>
-        <Input placeholder="Notes" value={notes} onChange={e=>setNotes(e.target.value)}/>
-        <Button size="sm" variant="primary" onClick={runOne}><Play className="h-3 w-3 mr-1"/>Run</Button>
+        <div className="text-xs text-text-muted">The benchmark centre is a result registry, not a simulator — scores are never invented here. Record a real evaluation (area, metrics, evaluator, evidence) from the dedicated console.</div>
+        <Button size="sm" variant="primary" onClick={()=>{ setMsg("Recording real benchmark results happens in the Benchmarks console (/app/benchmarks)."); }}><Play className="h-3 w-3 mr-1"/>Open Benchmarks console</Button>
         {msg && <div className="text-xs text-text-muted">{msg}</div>}
       </CardContent></Card>
     </div>

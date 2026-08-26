@@ -447,7 +447,7 @@ export function analyzeWriting(original: string, languageCode: string): {
   const structureScore = words.length >= 6 ? 0.8 : words.length >= 3 ? 0.6 : 0.35;
   const naturalness = Math.max(0.2, Math.min(1, (grammarScore + vocabScore + structureScore) / 3 - (mistakes.length > 3 ? 0.15 : 0)));
 
-  const nativeBits = pack.vocab.filter((v) => normalize(corrected).includes(normalize(v.word))).slice(0, 4).map((v) => v.example);
+  const nativeBits = pack.vocab.filter((v) => normalize(corrected).includes(normalize(v.word))).slice(0, 4).map((v) => v.exampleSentence);
   const nativeVersion = nativeBits[0] ?? corrected;
 
   return {

@@ -212,6 +212,42 @@ class MockRedis {
     return slice.slice(start, actualStop).map((item: any) => item.member);
   }
 
+  // Faithful subset of ZRANGEBYSCORE / ZREVRANGEBYSCORE: score range filter,
+  // optional LIMIT offset count. The in-memory zset is kept score-ascending.
+  static #score(v: number | string): number {
+    if (v === "-inf") return -Infinity;
+    if (v === "+inf") return Infinity;
+    const n = Number(v);
+    return Number.isNaN(n) ? (String(v).startsWith("-") ? -Infinity : Infinity) : n;
+  }
+
+  #applyLimit(items: any[], args: any[]): any[] {
+    const li = args.findIndex((a) => String(a).toUpperCase() === "LIMIT");
+    if (li === -1) return items;
+    const offset = Number(args[li + 1] ?? 0) || 0;
+    const count = Number(args[li + 2] ?? items.length);
+    if (!Number.isFinite(count) || count < 0) return [];
+    return items.slice(offset, offset + count);
+  }
+
+  async zrangebyscore(key: string, min: number | string, max: number | string, ...args: any[]) {
+    const zset = this.store.get(key);
+    if (!zset || !Array.isArray(zset)) return [];
+    const lo = MockRedis.#score(min);
+    const hi = MockRedis.#score(max);
+    const inRange = zset.filter((i: any) => i.score >= lo && i.score <= hi);
+    return this.#applyLimit(inRange, args).map((i: any) => i.member);
+  }
+
+  async zrevrangebyscore(key: string, max: number | string, min: number | string, ...args: any[]) {
+    const zset = this.store.get(key);
+    if (!zset || !Array.isArray(zset)) return [];
+    const lo = MockRedis.#score(min);
+    const hi = MockRedis.#score(max);
+    const inRange = zset.filter((i: any) => i.score >= lo && i.score <= hi).reverse();
+    return this.#applyLimit(inRange, args).map((i: any) => i.member);
+  }
+
   async zrem(key: string, member: string) {
     const zset = this.store.get(key);
     if (!zset || !Array.isArray(zset)) return 0;

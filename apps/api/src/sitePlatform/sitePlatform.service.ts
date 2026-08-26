@@ -18,6 +18,7 @@ import type {
   SpContactMap,
   SpContactMapPatch,
   SpControlSummary,
+  SpApiCatalogItem,
   SpCreateAdminInput,
   SpMediaPublic,
   SpMediaUploadInput,
@@ -154,7 +155,7 @@ function catalogEnvConfigured(slot: string): boolean {
 function publicApi(
   slot: string,
   rec: StoredApi | undefined,
-  cat: { slot: string; label: string; category: SpApiCredentialPublic["category"]; removable: boolean },
+  cat: Pick<SpApiCatalogItem, "slot" | "label" | "category" | "needsKey" | "needsUrl" | "defaultBaseUrl" | "removable">,
   envFallback: boolean,
 ): SpApiCredentialPublic {
   return {
@@ -776,7 +777,7 @@ export const SitePlatformService = {
     for (const rec of stored) {
       if (SP_API_CATALOG.some((c) => c.slot === rec.slot)) continue;
       out.push(publicApi(rec.slot, rec, {
-        slot: rec.slot, label: rec.label, category: rec.category, envHint: "",
+        slot: rec.slot, label: rec.label, category: rec.category,
         needsKey: true, needsUrl: true, defaultBaseUrl: null, removable: true,
       }, false));
     }

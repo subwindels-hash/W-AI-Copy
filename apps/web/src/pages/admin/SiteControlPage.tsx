@@ -127,7 +127,7 @@ export function SiteControlPage({ embedded }: { embedded?: boolean }) {
                   </div>
                   <Input className="mb-2 text-xs" value={images[slot] ?? ""} onChange={(e) => setImages({ ...images, [slot]: e.target.value })} />
                   <div className="flex gap-2">
-                    <Button size="sm" variant="outline" onClick={async () => { try { setImages(await siteAdminApi.saveImage(slot, images[slot])); flash(`${slot} URL saved.`); } catch (e) { fail(e); } }}>Save URL</Button>
+                    <Button size="sm" variant="outline" onClick={async () => { const url = images[slot]; if (!url) { fail(`Slot ${slot} has no URL to save yet.`); return; } try { setImages(await siteAdminApi.saveImage(slot, url)); flash(`${slot} URL saved.`); } catch (e) { fail(e); } }}>Save URL</Button>
                     <label className="inline-flex cursor-pointer items-center rounded-lg border border-white/15 px-2 text-[11px] text-text-muted">
                       Upload
                       <input type="file" accept="image/*" className="hidden" onChange={(e) => { const f = e.target.files?.[0]; if (f) void onUpload(slot, f); }} />

@@ -27,6 +27,7 @@ export type {
   SiDashboard,
   SiTicket,
   SiTicketConfig,
+  SiTicketConfigPatch,
   SiMatch,
   SiOdds,
   SiPrediction,

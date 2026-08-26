@@ -1,8 +1,8 @@
-# Unfinished Modules — Full Name List (regenerated 2026-08-16)
+# Unfinished Modules — Full Name List (regenerated 2026-08-26)
 
 > Source of truth for the historical queue: `docs/UNFINISHED_MODULES.md`.
-> Live checks below were re-run on 2026-08-16 against the working tree on
-> branch `arena/01a00df4-win`.
+> Live checks below were re-run on 2026-08-26 against the working tree on
+> branch `arena/01a03d7c-windels-ai-os`.
 
 ## Current inventory verdict (fresh run)
 
@@ -10,10 +10,10 @@
 
 | Status | Count |
 |---|---|
-| COMPLETE | **144** |
+| COMPLETE | **153** |
 | PARTIAL | **0** |
 | STUB | **0** |
-| TOTAL | **144** |
+| TOTAL | **153** |
 
 **There are currently no unfinished modules by the scanner's gates.**
 
@@ -71,22 +71,22 @@ user-facing services but no console:
 `disasterRecovery`, `sdk`, `devportal`, `leadDiscovery`, `payments`,
 `geoBilling`, `selfHosted`, `qa`, `release`, `program`, `projectContinuity`.
 
-### Current status of each (live route-table check, 2026-08-16)
+### Current status of each (live route-table check, 2026-08-26)
 
 | # | Module | Console today |
 |---|---|---|
 | 1 | `publicApi` | ✅ `/app/public-api` (`admin/PublicApiPage`) |
-| 2 | `dataMarketplace` | ❌ **still none** — PlatformPage tab only; `/app/marketplace` belongs to the separate `marketplace` module |
+| 2 | `dataMarketplace` | ✅ `/app/data-marketplace` (dedicated `DataMarketplacePage`) |
 | 3 | `digitalHumans` | ✅ `/app/digital-humans` (S168) |
-| 4 | `expertsPlatform` | ❌ **still none** — PlatformPage tab only |
-| 5 | `voiceFoundry` | ❌ **still none** — PlatformPage tab only |
-| 6 | `voiceOwnership` | ❌ **still none** — PlatformPage tab only |
+| 4 | `expertsPlatform` | ✅ `/app/experts` (dedicated `ExpertsPlatformPage`) |
+| 5 | `voiceFoundry` | ✅ `/app/voice-foundry` (dedicated `VoiceFoundryPage`) |
+| 6 | `voiceOwnership` | ✅ `/app/voice-ownership` (dedicated `VoiceOwnershipPage`) |
 | 7 | `voiceStudio` | ✅ `/app/voice-studio` (S162) + `/app/voice` |
 | 8 | `musicGen` | ✅ `/app/music` (`MusicStudioPage`) |
 | 9 | `musicVideo` | ✅ `/app/music-video` |
-| 10 | `training` | ❌ **still none** — PlatformPage tab only |
-| 11 | `mlOps` | ❌ **still none** — PlatformPage tab only |
-| 12 | `etl` | ❌ **still none** |
+| 10 | `training` | ✅ `/app/training` (dedicated `TrainingPage`) |
+| 11 | `mlOps` | ✅ `/app/ml-ops` (dedicated `MlOpsPage`) |
+| 12 | `etl` | ✅ `/app/etl` (dedicated `EtlPage`) |
 | 13 | `governance` | ✅ `/app/governance` |
 | 14 | `sustainability` | ✅ `/app/sustainability` |
 | 15 | `tradingIntel` | ✅ `/app/trading` (+ brokers, dashboard) |
@@ -99,44 +99,44 @@ user-facing services but no console:
 | 22 | `constitution` | ✅ `/app/constitution` (S163) |
 | 23 | `deployment` | ✅ `/app/deployment` (S165) |
 | 24 | `globalCurrency` | ✅ `/app/global-currency` (S167) |
-| 25 | `giftCards` | ❌ **still none** — PlatformPage tab only |
-| 26 | `fabric` | ❌ **still none** — no dedicated page |
+| 25 | `giftCards` | ✅ `/app/gift-cards` (dedicated `GiftCardsPage`) |
+| 26 | `fabric` | ✅ `/app/fabric` (dedicated `FabricPage`) |
 | 27 | `hybridExec` | ✅ `/app/hybrid-execution` (S194) |
 | 28 | `uxIntelligence` | ✅ `/app/ux-intelligence` (S192) |
 | 29 | `usage` | ✅ `/app/usage` |
-| 30 | `updates` | ❌ **still none** |
+| 30 | `updates` | ✅ `/app/updates` (dedicated `UpdatesPage`) |
 | 31 | `opex` | ✅ `/app/opex` (`OpexAssurancePage`) |
-| 32 | `benchmarks` | ❌ **still none** — PlatformPage tab + sections inside `architecture`/`hybridExec` pages; no `/app/benchmarks` |
+| 32 | `benchmarks` | ✅ `/app/benchmarks` (dedicated `BenchmarksPage`) |
 | 33 | `disasterRecovery` | ✅ `/app/disaster-recovery` (S179) |
-| 34 | `sdk` | ❌ **still none** — marketing docs pages only |
+| 34 | `sdk` | ✅ `/app/sdk` (dedicated `SdkPage`) |
 | 35 | `devportal` | ✅ `/app/developer-portal` |
 | 36 | `leadDiscovery` | ✅ `/app/leads` + `/app/lead-pipeline` |
 | 37 | `payments` | ✅ `/app/payments` |
 | 38 | `geoBilling` | ✅ `/app/geo-billing` |
-| 39 | `selfHosted` | ❌ **still none** — PlatformPage tab only |
-| 40 | `qa` | ❌ **still none** |
-| 41 | `release` | ❌ **still none** |
-| 42 | `program` | ❌ **still none** |
+| 39 | `selfHosted` | ✅ `/app/self-hosted` (dedicated `SelfHostedPage`) |
+| 40 | `qa` | ✅ `/app/qa` (dedicated `QaPage`) |
+| 41 | `release` | ✅ `/app/releases` (dedicated `ReleasePage`) |
+| 42 | `program` | ✅ `/app/program` (dedicated `ProgramPage`) |
 | 43 | `projectContinuity` | ✅ `/app/projects` (uses `lib/projectContinuity`) |
 
-**Result: 27 of 43 now have a dedicated console; 16 still do not.**
+**Result: 43 of 43 now have a dedicated console. The Tier 4 gap is closed.**
 
-### Still without a dedicated `/app/<module>` console (16)
-
-`dataMarketplace`, `expertsPlatform`, `voiceFoundry`, `voiceOwnership`,
-`training`, `mlOps`, `etl`, `giftCards`, `fabric`, `updates`, `benchmarks`,
-`sdk`, `selfHosted`, `qa`, `release`, `program`
-
-Caveat: several of these surface as tabs in the Platform rollup
-(`/app/platform`) but have no page of their own — which is exactly what the
-Tier 4 audit flagged as insufficient. Some may be legitimately headless;
-that call is per-module, not made here.
+The last 16 holdouts (`dataMarketplace`, `expertsPlatform`, `voiceFoundry`,
+`voiceOwnership`, `training`, `mlOps`, `etl`, `giftCards`, `fabric`,
+`updates`, `benchmarks`, `sdk`, `selfHosted`, `qa`, `release`, `program`)
+gained dedicated routed pages (`/app/<module>`, all in the sidebar) wired to
+each module's real API client and shared contract. As part of the same pass the
+S200 repair fixed the typecheck regression the console work had left in the
+tree (7 web + 30 API errors, including the PlatformPage tab still calling the
+removed fabricated `benchmarksApi.run` — the tab is now read-only and points at
+the real console) and the worldState `zrangebyscore "REV"` invalid-Redis-syntax
+bug (now `zrevrangebyscore`, with faithful Mock implementations).
 
 ---
 
 ## 3. Still-open work (unfinished in a different sense)
 
-- **Runtime validation — the largest open block.** All 77 session rows in
+- **Runtime validation — the largest open block.** All session rows in
   `PROGRESS.md` are 🟡 **VERIFIED (partial)**; zero are 🟢 PRODUCTION
   COMPLETE. Every Phase 6 runtime checklist
   (`docs/SESSION_*_RUNTIME_VALIDATION_CHECKLIST.md`) is open, because the

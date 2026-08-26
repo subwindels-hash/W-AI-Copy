@@ -33,7 +33,7 @@ export async function liRead<T extends { organizationId: string }>(entity: LiEnt
   return rec && rec.organizationId === org ? rec : null;
 }
 
-export async function liWrite(entity: LiEntity, org: string, rec: { id: string; createdAt?: string; userId?: string }): Promise<void> {
+export async function liWrite<T extends { id: string; createdAt?: string; userId?: string }>(entity: LiEntity, org: string, rec: T): Promise<void> {
   const score = rec.createdAt ? Date.parse(rec.createdAt) || Date.now() : Date.now();
   await redis.hset(LiKeys.item(entity, org, rec.id), "_doc", s2(rec));
   await redis.zadd(LiKeys.idx(entity, org), score, rec.id);

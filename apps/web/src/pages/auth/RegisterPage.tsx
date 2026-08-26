@@ -27,8 +27,7 @@ export function RegisterPage() {
     setLoading(true);
     setError(null);
     try {
-      const { pin: _unusedPin, ...rest } = form;
-      const created = await api<{ issuedPin?: string | null }>("/auth/register", { method: "POST", json: rest });
+      const created = await api<{ issuedPin?: string | null }>("/auth/register", { method: "POST", json: form });
       if (created.issuedPin) {
         setIssuedPin(created.issuedPin);
         return;

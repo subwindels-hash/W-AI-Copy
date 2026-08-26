@@ -6,7 +6,7 @@ function osmSrc(lat: number, lng: number, zoom: number) {
   return `https://www.openstreetmap.org/export/embed.html?bbox=${encodeURIComponent(bbox)}&layer=mapnik&marker=${lat}%2C${lng}`;
 }
 
-export function ContactMap({ map }: { map: SpContactMap }) {
+export function ContactMap({ map }: { map: Omit<SpContactMap, "updatedBy"> }) {
   const ready = Boolean(map.enabled && map.lat != null && map.lng != null);
   if (!ready) return null;
   const lat = map.lat!;

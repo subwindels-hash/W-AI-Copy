@@ -41,7 +41,8 @@ export interface SchemaValidationResult {
 export type EntityKind =
   | "user" | "agent" | "organization" | "workspace" | "project"
   | "document" | "conversation" | "message" | "task" | "workflow"
-  | "service" | "event" | "topic" | "concept" | "memory" | "file" | "custom";
+  | "service" | "event" | "topic" | "concept" | "memory" | "file" | "custom"
+  | "technology";
 
 export interface KGEntity {
   id: string;                 // stable id (e.g. "user:<uuid>", "doc:<uuid>")
@@ -57,7 +58,9 @@ export interface KGEntity {
 export type RelationKind =
   | "owns" | "member_of" | "authored" | "mentions" | "references"
   | "depends_on" | "part_of" | "related_to" | "produced_by" | "triggered_by"
-  | "assigned_to" | "knows_about" | "used_in" | "preceded_by" | "uses" | "custom";
+  | "assigned_to" | "knows_about" | "used_in" | "preceded_by" | "uses" | "custom"
+  | "located_in" | "used_by" | "contains" | "contains_location"
+  | "created_by" | "created";
 
 export interface KGRelation {
   id: string;

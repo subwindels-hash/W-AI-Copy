@@ -387,7 +387,7 @@ export const SportsIntelligenceService = {
       return p.result === "WON" || p.result === "LOST" || p.result === "VOID";
     });
     const matches = await this.listMatches(org);
-    const byId = new Map(matches.map((m) => [m.id, m]));
+    const byId = new Map<string, SiMatch>(matches.map((m) => [m.id, m] as [string, SiMatch]));
     const filtered = params.leagueId
       ? preds.filter((p) => byId.get(p.matchId)?.leagueId === params.leagueId || byId.get(p.matchId)?.leagueName === params.leagueId)
       : preds;
@@ -833,8 +833,8 @@ export const SportsIntelligenceService = {
   async recalculateQuality(org: string) {
     const cfg = await this.getConfig(org);
     const preds = await this.listPredictions(org);
-    const matches = new Map((await this.listMatches(org)).map((m) => [m.id, m]));
-    const odds = new Map((await this.listOdds(org)).map((o) => [o.id, o]));
+    const matches = new Map<string, SiMatch>((await this.listMatches(org)).map((m) => [m.id, m] as [string, SiMatch]));
+    const odds = new Map<string, SiOdds>((await this.listOdds(org)).map((o) => [o.id, o] as [string, SiOdds]));
     let updated = 0;
     for (const p of preds) {
       const match = matches.get(p.matchId);
@@ -860,7 +860,7 @@ export const SportsIntelligenceService = {
     }
     const preds = (await this.listPredictions(org)).filter((p) => p.result === "PENDING");
     const matches = await this.listMatches(org);
-    const matchMap = new Map(matches.map((m) => [m.id, m]));
+    const matchMap = new Map<string, SiMatch>(matches.map((m) => [m.id, m] as [string, SiMatch]));
     const optimized = optimizeTicket({ candidates: preds, matchesById: matchMap, config: cfg });
     if (!optimized.qualified) {
       const ticket = await this.persistNoTicket(org, cfg, optimized.reason ?? "NO QUALIFIED TICKET");
@@ -983,7 +983,7 @@ export const SportsIntelligenceService = {
   async settlePending(org: string) {
     const cfg = await this.getConfig(org);
     const results = (await this.listResults(org)).filter((r) => r.verified);
-    const byMatch = new Map(results.map((r) => [r.matchId, r]));
+    const byMatch = new Map<string, SiResult>(results.map((r) => [r.matchId, r] as [string, SiResult]));
     const preds = await this.listPredictions(org);
     let updated = 0;
     for (const p of preds) {
@@ -995,7 +995,7 @@ export const SportsIntelligenceService = {
       updated += 1;
     }
     const tickets = await this.listTickets(org);
-    const predMap = new Map((await this.listPredictions(org)).map((p) => [p.id, p]));
+    const predMap = new Map<string, SiPrediction>((await this.listPredictions(org)).map((p) => [p.id, p] as [string, SiPrediction]));
     for (const t of tickets) {
       if (t.status === "NO_QUALIFIED_TICKET" || t.settlementStatus === "SETTLED" || t.settlementStatus === "OVERRIDDEN") continue;
       if (t.approvalStatus === "REJECTED") continue;
