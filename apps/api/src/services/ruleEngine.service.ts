@@ -56,7 +56,8 @@ export interface RuleAction {
   // Add entity
   entityName?: string;
   entityKind?: string;
-  // Update attribute
+  // Update attribute (entityId may be a binding variable or a literal id)
+  entityId?: string;
   attributeName?: string;
   attributeValue?: any;
   // Log
@@ -382,12 +383,32 @@ async function executeAction(
     }
 
     case "update_attribute": {
+      if (!action.entityId) {
+        throw new Error("update_attribute requires entityId");
+      }
       if (!action.attributeName) {
         throw new Error("update_attribute requires attributeName");
       }
-      
-      // TODO: Implement attribute update
-      return { updated: true };
+
+      // Resolve the entity id from a binding variable when applicable, then set
+      // the single attribute via upsert (which merges attributes for an
+      // existing entity). Report honestly when the target does not exist rather
+      // than claiming a phantom update.
+      const entityId = bindings.get(action.entityId) ?? action.entityId;
+      const existing = KnowledgeGraphService.get(entityId);
+      if (!existing) {
+        return { updated: false, reason: "entity_not_found", entityId };
+      }
+
+      await KnowledgeGraphService.upsertEntity({
+        id: entityId,
+        kind: existing.kind,
+        name: existing.name,
+        attributes: { [action.attributeName]: action.attributeValue ?? null, updatedByRule: true },
+        provenance: { source: "rule-engine" },
+      });
+
+      return { updated: true, entityId, attributeName: action.attributeName };
     }
 
     case "log": {
