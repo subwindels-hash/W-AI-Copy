@@ -1112,7 +1112,7 @@ export const OpexAssuranceService = {
 
   /* ── Provenance for the Session 73 rollup ────────────────────────────── */
 
-  provenance(observed: { reliability: boolean; freshness: boolean; register: boolean }): OpexProvenance {
+  provenance(observed: { reliability: boolean; freshness: boolean; register: boolean; maturityMeasured?: boolean }): OpexProvenance {
     const entries = [
       {
         field: "trust.reliability",
@@ -1167,6 +1167,16 @@ export const OpexAssuranceService = {
         basis: "not_assessed" as const,
         detail: `Declared by the Session 73 contract; nothing in this deployment populates it. The zero is structural, not a measurement.`,
       })),
+      {
+        // The composite maturity score is a weighted average over the signals
+        // this deployment measures. It is `observed` once at least one component
+        // has real data, and `not_assessed` (a structural 0) when none do.
+        field: "continuous.maturityScore",
+        basis: (observed.maturityMeasured ? "observed" : "not_assessed") as OpexProvenance["entries"][number]["basis"],
+        detail: observed.maturityMeasured
+          ? "A weighted average over measured operational signals (reliability, safety pass rate, human approval, governance/regulatory/playbook coverage, explainability and safety benchmarks). Absent signals are dropped from the denominator, not scored as zero."
+          : "No component signal has been measured yet, so the composite is a structural 0 rather than an average over nothing.",
+      },
     ];
     return {
       entries,
@@ -1229,8 +1239,10 @@ export const OpexAssuranceService = {
       {
         key: "unimplemented_sections",
         label: "Unimplemented rollup sections",
-        state: "warn",
-        detail: `The Session 73 rollup declares ${OPEX_UNIMPLEMENTED_SECTIONS.length} sections that nothing populates: ${OPEX_UNIMPLEMENTED_SECTIONS.join(", ")}. They report structural zeros, and the provenance block says so field by field.`,
+        state: OPEX_UNIMPLEMENTED_SECTIONS.length === 0 ? "pass" : "warn",
+        detail: OPEX_UNIMPLEMENTED_SECTIONS.length === 0
+          ? "Every Session 73 rollup section is now backed by a real org-scoped store or a measured composite. None report a structural zero for lack of an implementation."
+          : `The Session 73 rollup declares ${OPEX_UNIMPLEMENTED_SECTIONS.length} sections that nothing populates: ${OPEX_UNIMPLEMENTED_SECTIONS.join(", ")}. They report structural zeros, and the provenance block says so field by field.`,
       },
       {
         key: "reliability_source",

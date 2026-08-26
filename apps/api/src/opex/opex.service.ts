@@ -47,6 +47,7 @@ import { RegulationsRegistryService } from "./regulationsRegistry.service.js";
 import { PlaybooksRegistryService } from "./playbooksRegistry.service.js";
 import { ExplanationsRegistryService } from "./explanationsRegistry.service.js";
 import { SafetyBenchmarksService } from "./safetyBenchmarks.service.js";
+import { computeMaturityScore } from "./maturityScore.js";
 
 const K = {
   meta: (oid: string) => `opex:${oid}:meta`,
@@ -167,6 +168,30 @@ export const OpexService = {
     const passRate = summary.closureRatePercent ?? 0;
     const humanApprovalRate = taskClosure.ratePercent ?? 0;
 
+    // Composite operational-maturity score over the signals this deployment
+    // actually measures. Each component only contributes when it has real data;
+    // when nothing has been measured the score stays a structural 0.
+    const benchmarkCategories = Object.values(safetyBenchmarks);
+    const benchmarkPassPct = benchmarkCategories.length
+      ? Math.round((benchmarkCategories.filter((b) => b.pass).length / benchmarkCategories.length) * 100)
+      : 0;
+    const maturity = computeMaturityScore({
+      reliabilityPct: reliability,
+      reliabilityPresent: reliabilityReport.total > 0,
+      safetyPassRatePct: passRate,
+      safetyPresent: summary.total > 0,
+      humanApprovalPct: humanApprovalRate,
+      humanApprovalPresent: taskClosure.considered > 0,
+      governanceGatesCount: governanceRollup.gates.length,
+      regulationsTracked: regulationsRollup.summary.tracked,
+      playbookAvgCompliancePct: playbooksRollup.avgCompliancePct,
+      playbooksTotal: playbooksRollup.total,
+      explanationAvgConfidencePct: explanationsRollup.summary.avgConfidence,
+      explanationsAvailable: explanationsRollup.summary.available24h,
+      safetyBenchmarkPassPct: benchmarkPassPct,
+      safetyBenchmarkCategories: benchmarkCategories.length,
+    });
+
     return {
       trust: {
         trust: reliability,
@@ -210,7 +235,7 @@ export const OpexService = {
               },
             ]
           : [],
-        maturityScore: 0,
+        maturityScore: maturity.score,
       },
       recentAlerts: page.alerts.map(toLegacyAlert),
       recentRegulations: regulationsRollup.recent,
@@ -221,6 +246,7 @@ export const OpexService = {
         reliability: reliabilityReport.total > 0,
         freshness: reliabilityReport.lastRequestAt !== null,
         register: summary.total > 0,
+        maturityMeasured: maturity.measured,
       }),
     };
   },

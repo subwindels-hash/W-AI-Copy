@@ -105,6 +105,24 @@ describe("opex completion — dashboard still honest via assurance", () => {
   });
 });
 
+describe("opex completion — continuous.maturityScore is now measured", () => {
+  it("is a structural 0 on an empty org and a real composite once signals exist", async () => {
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.continuous.maturityScore).toBe(0);
+    expect(empty.provenance!.entries.find((e) => e.field === "continuous.maturityScore")!.basis).toBe("not_assessed");
+
+    // Give the org measured signals: a tracked regulation + a passing benchmark.
+    const { RegulationsRegistryService } = await import("./regulationsRegistry.service.js");
+    const { SafetyBenchmarksService } = await import("./safetyBenchmarks.service.js");
+    await RegulationsRegistryService.create(ORG, { name: "GDPR", jurisdiction: "EU", category: "privacy", status: "enforcing", summary: "", impactAreas: [], gapCount: 0, gapResolved: 0 }, ADMIN);
+    await SafetyBenchmarksService.record(ORG, { category: "jailbreak", score: 95, passThreshold: 80 }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.continuous.maturityScore).toBeGreaterThan(0);
+    expect(d.provenance!.entries.find((e) => e.field === "continuous.maturityScore")!.basis).toBe("observed");
+  });
+});
+
 describe("opex completion — safety.benchmarks is now measured", () => {
   it("reports latest benchmark result per evaluated category in the dashboard", async () => {
     const { SafetyBenchmarksService } = await import("./safetyBenchmarks.service.js");

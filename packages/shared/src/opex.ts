@@ -480,9 +480,13 @@ export const OPEX_MIN_ASSESSMENT_METHOD_LENGTH = 10;
 export const OPEX_MIN_REOPEN_REASON_LENGTH = 10;
 
 /** Sections the Session 73 contract declares that nothing in this deployment implements. */
-export const OPEX_UNIMPLEMENTED_SECTIONS = [
-  "continuous.maturityScore",
-] as const;
+/**
+ * Rollup sections the Session 73 contract declares that nothing in this
+ * deployment implements. Now empty: every section is backed by a real
+ * org-scoped store or a measured composite. Retained (as a possibly-empty
+ * array) so consumers that iterate it keep compiling.
+ */
+export const OPEX_UNIMPLEMENTED_SECTIONS: readonly string[] = [];
 
 /* ── Notes that ship inside payloads ───────────────────────────────────── */
 
