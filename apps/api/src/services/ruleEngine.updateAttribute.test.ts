@@ -77,3 +77,32 @@ describe("update_attribute action", () => {
     expect(activations.some((a) => a.result?.updated === true)).toBe(false);
   });
 });
+
+describe("custom rule action (fail-closed registry)", () => {
+  it("invokes a registered custom handler", async () => {
+    ruleEngine.clearCustomRuleActions();
+    const handler = vi.fn(() => ({ did: "work" }));
+    ruleEngine.registerCustomRuleAction("notify", handler);
+    const e = await KnowledgeGraphService.upsertEntity({ kind: "concept" as any, name: "Sig", attributes: { fire: true } });
+    await ruleEngine.createRule({
+      name: "Custom fire", description: "runs a registered custom handler",
+      condition: { type: "attribute", entityId: e.id, attributeName: "fire", attributeValue: true },
+      action: { type: "custom", handler: "notify" } as any,
+    });
+    const { activations } = await ruleEngine.forwardChain(1);
+    expect(handler).toHaveBeenCalledTimes(1);
+    expect(activations.some((a) => a.result?.custom === true && a.result?.handler === "notify")).toBe(true);
+  });
+
+  it("does not fire (throws internally) for an unknown custom handler", async () => {
+    ruleEngine.clearCustomRuleActions();
+    const e = await KnowledgeGraphService.upsertEntity({ kind: "concept" as any, name: "Ghost", attributes: { fire: true } });
+    await ruleEngine.createRule({
+      name: "Custom ghost", description: "unknown handler",
+      condition: { type: "attribute", entityId: e.id, attributeName: "fire", attributeValue: true },
+      action: { type: "custom", handler: "does-not-exist" } as any,
+    });
+    const { activations } = await ruleEngine.forwardChain(1);
+    expect(activations.some((a) => a.result?.custom === true)).toBe(false);
+  });
+});

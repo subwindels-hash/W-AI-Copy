@@ -16,6 +16,30 @@ import { logger } from "../config/logger.js";
 import { KnowledgeGraphService } from "../enterprise/knowledgeGraph/knowledgeGraph.service.js";
 import type { KGEntity, KGRelation, RelationKind } from "@windels/shared/dataPlatform";
 
+// ─── Custom action handler registry ─────────────────────────────
+//
+// A `custom` rule action references a named handler. The old stub returned
+// `{ custom: true }` for any custom action without doing anything (a false
+// success). Named handlers are now registered and looked up; an unknown handler
+// FAILS CLOSED by throwing, so a rule can never report a phantom custom action.
+
+export type CustomRuleActionHandler = (
+  action: RuleAction,
+  bindings: Map<string, string>,
+) => Promise<unknown> | unknown;
+
+const customRuleActionHandlers = new Map<string, CustomRuleActionHandler>();
+
+/** Register a named custom rule-action handler. */
+export function registerCustomRuleAction(name: string, fn: CustomRuleActionHandler): void {
+  customRuleActionHandlers.set(name, fn);
+}
+
+/** Test-only / lifecycle helper to clear the registry. */
+export function clearCustomRuleActions(): void {
+  customRuleActionHandlers.clear();
+}
+
 // ─── Types ──────────────────────────────────────────────────────
 
 export interface Rule {
@@ -419,8 +443,16 @@ async function executeAction(
     }
 
     case "custom": {
-      // TODO: Implement custom handlers
-      return { custom: true };
+      // Fail closed: a custom action with no registered handler must not report
+      // a phantom success. `action.handler` names the registered function.
+      if (!action.handler) {
+        throw new Error("custom action requires a handler name");
+      }
+      const fn = customRuleActionHandlers.get(action.handler);
+      if (!fn) {
+        throw new Error(`Unknown custom rule-action handler: ${action.handler}`);
+      }
+      return { custom: true, handler: action.handler, result: await fn(action, bindings) };
     }
 
     default:
