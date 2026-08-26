@@ -12,6 +12,7 @@
  *
  * Tenant-scoped in Redis (`cog:evo:*:<org>:*`); reads never cross orgs.
  */
+import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { AppError } from "../utils/result.js";
 import {
@@ -63,7 +64,7 @@ export const SelfEvolutionService = {
     const now = Date.now();
     const next: ComponentRecord = { ...cur, autoFixes: cur.autoFixes + 1, lastOptimizedAt: new Date(now).toISOString() };
     await redis.set(K.item(oid, component), JSON.stringify(next));
-    await redis.zadd(K.fixes(oid), now, `${component}:${now}:${Math.random().toString(36).slice(2, 8)}`);
+    await redis.zadd(K.fixes(oid), now, `${component}:${now}:${randomUUID().slice(0, 8)}`);
     return next;
   },
 
