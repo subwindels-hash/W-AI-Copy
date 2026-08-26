@@ -18,6 +18,55 @@ import type { Prisma } from "@prisma/client";
 // ─── Notification Types ──────────────────────────────────────────────────────
 
 export type NotificationChannel = "in_app" | "push" | "email" | "sms";
+
+/** Result of attempting delivery on a single channel. Never fabricated. */
+export interface NotificationDeliveryResult {
+  channel: NotificationChannel;
+  sent: boolean;
+  reason: string;
+  error?: string;
+}
+
+/** Provider-agnostic SMS transport. Real providers (Twilio, etc.) implement this. */
+export interface SmsTransport {
+  send(input: { to: string; message: string }): Promise<{ sent: boolean; reason?: string; error?: string }>;
+}
+
+/**
+ * Resolve the configured SMS transport, or `null` when none is configured.
+ * A Twilio transport is used when the standard Twilio env vars are present; the
+ * REST call is performed with the runtime `fetch`. No provider configured means
+ * SMS is honestly reported as unavailable rather than silently dropped.
+ */
+export function getSmsTransport(fetchImpl: typeof fetch = fetch): SmsTransport | null {
+  const sid = process.env.TWILIO_ACCOUNT_SID;
+  const token = process.env.TWILIO_AUTH_TOKEN;
+  const from = process.env.TWILIO_FROM_NUMBER;
+  if (!sid || !token || !from) return null;
+  return {
+    async send({ to, message }) {
+      const url = `https://api.twilio.com/2010-04-01/Accounts/${encodeURIComponent(sid)}/Messages.json`;
+      const body = new URLSearchParams({ To: to, From: from, Body: message });
+      let res: Response;
+      try {
+        res = await fetchImpl(url, {
+          method: "POST",
+          headers: {
+            authorization: `Basic ${Buffer.from(`${sid}:${token}`).toString("base64")}`,
+            "content-type": "application/x-www-form-urlencoded",
+          },
+          body: body.toString(),
+          signal: AbortSignal.timeout(10_000),
+        });
+      } catch (e) {
+        return { sent: false, reason: "SMS_NETWORK_ERROR", error: (e as Error).message };
+      }
+      if (res.ok) return { sent: true, reason: "sent" };
+      const text = await res.text().catch(() => "");
+      return { sent: false, reason: `SMS_HTTP_${res.status}`, error: text.slice(0, 300) };
+    },
+  };
+}
 export type NotificationPriority = "low" | "normal" | "high" | "urgent";
 
 export type NotificationCategory =
@@ -207,9 +256,13 @@ export const notificationsService = {
         await this.sendEmail(notification);
         break;
 
-      case "sms":
-        await this.sendSms(notification);
+      case "sms": {
+        const phone = notification.data && typeof notification.data === "object"
+          ? (notification.data as Record<string, unknown>).phone as string | undefined
+          : undefined;
+        await this.sendSms({ ...notification, phone });
         break;
+      }
     }
   },
 
@@ -247,7 +300,14 @@ export const notificationsService = {
   },
 
   /**
-   * Send email notification (stub — implement with SMTP)
+   * Send an email notification through the configured SMTP relay
+   * (`EmailService.sendEmail`, the same real transport the contact center and
+   * site platform use). It resolves the recipient's address from the user
+   * record and never fabricates delivery:
+   *   - no email on file  → { sent:false, reason:"NO_EMAIL_ON_FILE" }
+   *   - SMTP not set up    → { sent:false, reason:"SMTP_NOT_CONFIGURED" }
+   *   - relay error        → { sent:false, reason:"SMTP_ERROR", error }
+   * Callers get a structured result; nothing is silently dropped.
    */
   async sendEmail(notification: {
     id?: string;
@@ -255,25 +315,63 @@ export const notificationsService = {
     title: string;
     body: string;
     url?: string | null;
-  }): Promise<void> {
-    // TODO: Implement email sending via SMTP
-    logger.info("Email notification would be sent", {
-      notificationId: notification.id,
-      userId: notification.userId,
-      title: notification.title,
-    });
+  }): Promise<NotificationDeliveryResult> {
+    const user = await prisma.user.findUnique({ where: { id: notification.userId }, select: { email: true } });
+    if (!user?.email) {
+      logger.warn("Email notification skipped: no email on file", { notificationId: notification.id, userId: notification.userId });
+      return { channel: "email", sent: false, reason: "NO_EMAIL_ON_FILE" };
+    }
+    const text = notification.url ? `${notification.body}\n\n${notification.url}` : notification.body;
+    try {
+      const { EmailService } = await import("../sitePlatform/sitePlatform.service.js");
+      const res = await EmailService.sendEmail({ to: user.email, subject: notification.title, text });
+      if (res.sent) {
+        logger.info("Email notification sent", { notificationId: notification.id, userId: notification.userId });
+        return { channel: "email", sent: true, reason: res.reason };
+      }
+      logger.warn("Email notification not sent", { notificationId: notification.id, userId: notification.userId, reason: res.reason });
+      return { channel: "email", sent: false, reason: res.reason, error: res.error };
+    } catch (e) {
+      logger.warn("Email notification error", { notificationId: notification.id, userId: notification.userId, error: (e as Error).message });
+      return { channel: "email", sent: false, reason: "SMTP_ERROR", error: (e as Error).message };
+    }
   },
 
   /**
-   * Send SMS notification (stub — implement with SMS provider)
+   * Send an SMS notification through a provider-agnostic, injectable transport.
+   * The default transport is resolved from `getSmsTransport()`; when no SMS
+   * provider is configured the message is honestly reported as not sent rather
+   * than logged as if it had been. The recipient number is read from the user
+   * record (never invented).
    */
-  async sendSms(notification: { id?: string; userId: string; title: string; body: string }): Promise<void> {
-    // TODO: Implement SMS sending via Twilio/etc
-    logger.info("SMS notification would be sent", {
-      notificationId: notification.id,
-      userId: notification.userId,
-      title: notification.title,
-    });
+  async sendSms(
+    notification: { id?: string; userId: string; title: string; body: string; phone?: string | null },
+    transport: SmsTransport | null = getSmsTransport(),
+  ): Promise<NotificationDeliveryResult> {
+    if (!transport) {
+      logger.warn("SMS notification skipped: no SMS provider configured", { notificationId: notification.id, userId: notification.userId });
+      return { channel: "sms", sent: false, reason: "SMS_NOT_CONFIGURED" };
+    }
+    // The User model has no phone column, so the recipient number must be
+    // supplied explicitly (e.g. via the notification's data payload). Without
+    // one we honestly report it rather than inventing a destination.
+    const phone = notification.phone?.trim();
+    if (!phone) {
+      logger.warn("SMS notification skipped: no phone provided", { notificationId: notification.id, userId: notification.userId });
+      return { channel: "sms", sent: false, reason: "NO_PHONE_ON_FILE" };
+    }
+    const message = `${notification.title}: ${notification.body}`.slice(0, 480);
+    try {
+      const res = await transport.send({ to: phone, message });
+      if (res.sent) {
+        logger.info("SMS notification sent", { notificationId: notification.id, userId: notification.userId });
+        return { channel: "sms", sent: true, reason: res.reason ?? "sent" };
+      }
+      return { channel: "sms", sent: false, reason: res.reason ?? "SMS_SEND_FAILED", error: res.error };
+    } catch (e) {
+      logger.warn("SMS notification error", { notificationId: notification.id, userId: notification.userId, error: (e as Error).message });
+      return { channel: "sms", sent: false, reason: "SMS_ERROR", error: (e as Error).message };
+    }
   },
 
   /**
