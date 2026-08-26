@@ -481,7 +481,6 @@ export const OPEX_MIN_REOPEN_REASON_LENGTH = 10;
 
 /** Sections the Session 73 contract declares that nothing in this deployment implements. */
 export const OPEX_UNIMPLEMENTED_SECTIONS = [
-  "regulations",
   "playbooks",
   "explanations",
   "safety.benchmarks",
@@ -818,3 +817,45 @@ export interface OpexGateRecord {
   createdAt: string;
   createdBy: string | null;
 }
+
+/* ── Regulatory tracking (org-scoped) ──────────────────────────────────────
+ *
+ * Session-completion: `regulations` was a structural zero. These schemas back a
+ * real org-scoped regulatory register. The opex rollup figures (tracked,
+ * changed30d, openGaps, upcoming) are computed from stored records only. */
+
+export const OPEX_REGULATION_CATEGORIES = [
+  "privacy", "security", "finance", "health", "ai_act", "environmental", "tax", "cyber", "procurement",
+] as const;
+export type OpexRegulationCategory = (typeof OPEX_REGULATION_CATEGORIES)[number];
+
+export const OPEX_REGULATION_STATUSES = ["proposed", "enacted", "enforcing", "updated"] as const;
+export type OpexRegulationStatus = (typeof OPEX_REGULATION_STATUSES)[number];
+
+export const OpexRegulationCreateSchema = z.object({
+  name: z.string().trim().min(2).max(200),
+  jurisdiction: z.string().trim().min(2).max(120),
+  category: z.enum(OPEX_REGULATION_CATEGORIES),
+  status: z.enum(OPEX_REGULATION_STATUSES).default("proposed"),
+  summary: z.string().trim().max(2000).default(""),
+  effectiveDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional(),
+  impactAreas: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
+  gapCount: z.number().int().min(0).max(100000).default(0),
+  gapResolved: z.number().int().min(0).max(100000).default(0),
+});
+export type OpexRegulationCreateInput = z.infer<typeof OpexRegulationCreateSchema>;
+
+export const OpexRegulationUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(200).optional(),
+    status: z.enum(OPEX_REGULATION_STATUSES).optional(),
+    summary: z.string().trim().max(2000).optional(),
+    effectiveDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).nullable().optional(),
+    impactAreas: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
+    gapCount: z.number().int().min(0).max(100000).optional(),
+    gapResolved: z.number().int().min(0).max(100000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "No regulation fields supplied." });
+export type OpexRegulationUpdateInput = z.infer<typeof OpexRegulationUpdateSchema>;
+
+export const OpexRegulationIdParamSchema = z.object({ regulationId: z.string().trim().min(1).max(128) });

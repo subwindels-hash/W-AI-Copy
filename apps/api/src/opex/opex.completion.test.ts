@@ -105,6 +105,26 @@ describe("opex completion — dashboard still honest via assurance", () => {
   });
 });
 
+describe("opex completion — regulations is now measured", () => {
+  it("reports real regulatory register figures in the dashboard", async () => {
+    const { RegulationsRegistryService } = await import("./regulationsRegistry.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.regulations).toEqual({ tracked: 0, changed30d: 0, openGaps: 0, upcoming: 0 });
+    expect(empty.recentRegulations).toHaveLength(0);
+
+    await RegulationsRegistryService.create(ORG, { name: "GDPR", jurisdiction: "EU", category: "privacy", status: "enforcing", summary: "", impactAreas: [], gapCount: 4, gapResolved: 1 }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.regulations.tracked).toBe(1);
+    expect(d.regulations.openGaps).toBe(3);
+    expect(d.recentRegulations).toHaveLength(1);
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.regulations.tracked).toBe(0);
+  });
+});
+
 describe("opex completion — governance.gates is now measured", () => {
   it("reports real gates and pending decisions in the dashboard governance block", async () => {
     const { GovernanceGatesService } = await import("./governanceGates.service.js");

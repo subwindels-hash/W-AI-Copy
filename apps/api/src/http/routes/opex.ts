@@ -4,12 +4,16 @@ import { requireAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { OpexService } from "../../opex/opex.service.js";
 import { GovernanceGatesService } from "../../opex/governanceGates.service.js";
+import { RegulationsRegistryService } from "../../opex/regulationsRegistry.service.js";
 import {
   OpexGateCreateSchema,
   OpexGateRequestSchema,
   OpexGateDecisionSchema,
   OpexGateIdParamSchema,
   OpexGateRequestIdParamSchema,
+  OpexRegulationCreateSchema,
+  OpexRegulationUpdateSchema,
+  OpexRegulationIdParamSchema,
 } from "@windels/shared/opex";
 import { AppError } from "../../utils/result.js";
 const Alert = z.object({ category: z.string().trim().min(1).max(64), severity: z.enum(["info", "warning", "critical"]), source: z.string().trim().min(1).max(128), message: z.string().trim().min(1).max(5000), model: z.string().max(128).optional() });
@@ -30,4 +34,10 @@ export function registerOpexRoutes(router: Router) {
   router.get("/governance/gates/:gateId/requests", validate({ params: OpexGateIdParamSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await GovernanceGatesService.listRequests(orgOf(req), req.params.gateId), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.post("/governance/gates/:gateId/requests", validate({ params: OpexGateIdParamSchema, body: OpexGateRequestSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await GovernanceGatesService.openRequest(orgOf(req), req.params.gateId, req.body, (req.user as any).id), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.post("/governance/gates/:gateId/requests/:requestId/decision", requireAdmin, validate({ params: OpexGateRequestIdParamSchema, body: OpexGateDecisionSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await GovernanceGatesService.decideRequest(orgOf(req), req.params.gateId, req.params.requestId, req.body.decision, (req.user as any).id, req.body.reason), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+
+  // ── Regulatory register (org-scoped) ──────────────────────────────────────
+  router.get("/regulations", async (req, res, next) => { try { res.json({ ok: true, data: await RegulationsRegistryService.list(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/regulations", requireAdmin, validate({ body: OpexRegulationCreateSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await RegulationsRegistryService.create(orgOf(req), req.body, (req.user as any).id), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.patch("/regulations/:regulationId", requireAdmin, validate({ params: OpexRegulationIdParamSchema, body: OpexRegulationUpdateSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await RegulationsRegistryService.update(orgOf(req), req.params.regulationId, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.delete("/regulations/:regulationId", requireAdmin, validate({ params: OpexRegulationIdParamSchema }), async (req, res, next) => { try { const ok = await RegulationsRegistryService.delete(orgOf(req), req.params.regulationId); if (!ok) throw AppError.notFound("Regulation not found in organization"); res.json({ ok: true, data: { deleted: true }, meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
 }

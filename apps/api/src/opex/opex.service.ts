@@ -22,16 +22,17 @@
  *         against every open task ever created. Both sides now use the same
  *         window.
  *
- * The rollup's remaining zeros are structural: `regulations`, `playbooks`,
- * `explanations`, `safety.benchmarks` and `maturityScore` are declared by the
- * Session 73 contract and nothing in this deployment populates them. Rather than
- * delete fields that existing consumers read, the `provenance` block states
- * which is which, and `GET /opex/trust` reports the honest, nullable version of
- * the trust block. `collaborationSessionsActive` (canvases with live
- * collaboration presence, see CanvasCollabService.activeSessionCount) and
- * `governance.gates` (org-scoped approval gates and their recorded decisions,
- * see GovernanceGatesService.rollup) are no longer structural — both are real
- * org-scoped measurements now.
+ * The rollup's remaining zeros are structural: `playbooks`, `explanations`,
+ * `safety.benchmarks` and `maturityScore` are declared by the Session 73
+ * contract and nothing in this deployment populates them. Rather than delete
+ * fields that existing consumers read, the `provenance` block states which is
+ * which, and `GET /opex/trust` reports the honest, nullable version of the trust
+ * block. `collaborationSessionsActive` (canvases with live collaboration
+ * presence, see CanvasCollabService.activeSessionCount), `governance.gates`
+ * (org-scoped approval gates + recorded decisions, see
+ * GovernanceGatesService.rollup) and `regulations` (org-scoped regulatory
+ * register, see RegulationsRegistryService.rollup) are no longer structural —
+ * all three are real org-scoped measurements now.
  */
 import { redisCmd as redis } from "../db/redis.js";
 import { prisma } from "../db/client.js";
@@ -43,6 +44,7 @@ import { OpexAssuranceService, toLegacyAlert } from "./opexAssurance.service.js"
 import type { LegacyOpexAlert } from "./opexAssurance.service.js";
 import { CanvasCollabService } from "../collaboration/canvasCollab.service.js";
 import { GovernanceGatesService } from "./governanceGates.service.js";
+import { RegulationsRegistryService } from "./regulationsRegistry.service.js";
 
 const K = {
   meta: (oid: string) => `opex:${oid}:meta`,
@@ -141,6 +143,9 @@ export const OpexService = {
     // No longer a structural zero.
     const governanceRollup = await GovernanceGatesService.rollup(oid).catch(() => ({ gates: [], pendingTotal: 0 }));
 
+    // Real, org-scoped regulatory register. No longer a structural zero.
+    const regulationsRollup = await RegulationsRegistryService.rollup(oid).catch(() => ({ summary: { tracked: 0, changed30d: 0, openGaps: 0, upcoming: 0 }, recent: [] }));
+
     // Floored, never rounded: a rate that rounds a failure away cannot be used
     // to notice one. 0 here means "no recorded traffic", which provenance says.
     const reliability = reliabilityReport.successRatePercent ?? 0;
@@ -174,7 +179,7 @@ export const OpexService = {
         auditsCompleted: summary.byStatus.resolved,
         benchmarks: {},
       },
-      regulations: { tracked: 0, changed30d: 0, openGaps: 0, upcoming: 0 },
+      regulations: regulationsRollup.summary,
       playbooks: { total: 0, active: 0, simulating: 0, avgCompliancePct: 0 },
       explanations: { available24h: 0, avgEvidence: 0, avgConfidence: 0, challenged: 0, challengedUpheld: 0 },
       governance: { gates: governanceRollup.gates, pendingTotal: pendingApprovals + governanceRollup.pendingTotal, emergencyShutdowns: 0, overrides24h: 0 },
@@ -196,7 +201,7 @@ export const OpexService = {
         maturityScore: 0,
       },
       recentAlerts: page.alerts.map(toLegacyAlert),
-      recentRegulations: [],
+      recentRegulations: regulationsRollup.recent,
       recentExplanations: [],
       collaborationSessionsActive,
       decisionsRequiringHuman: pendingApprovals,
