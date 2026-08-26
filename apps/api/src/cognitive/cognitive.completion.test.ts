@@ -59,8 +59,51 @@ describe("cognitive completion — C3 structural zeros are null", () => {
     expect(d.innovationProposalsOpen).toBeNull();
     expect(d.innovationPipelineValueUsd).toBeNull();
     expect(d.provenance).toBeTruthy();
+    // Empty stores => structural_null (a real "nothing recorded", not a fabricated 0).
     expect(d.provenance?.selfEvolutionHealth).toBe("structural_null");
-    expect(d.provenance?.note).toContain("do not exist yet");
+    expect(d.provenance?.marketplaceUnifiedAssets).toBe("structural_null");
+    expect(d.provenance?.federationPartners).toBe("structural_null");
+    expect(d.provenance?.innovationProposalsOpen).toBe("structural_null");
+    expect(d.provenance?.note).toMatch(/backed by a real org-scoped store/i);
+  });
+
+  it("innovation pipeline fields become measured once proposals exist", async () => {
+    const { InnovationPipelineService } = await import("./innovationPipeline.service.js");
+    await InnovationPipelineService.create(ORG, { title: "Edge caching", category: "infra", projectedValueUsd: 25000, risk: "low", status: "approved" }, "user-1");
+    await InnovationPipelineService.create(ORG, { title: "Rejected idea", category: "infra", projectedValueUsd: 999, risk: "high", status: "rejected" }, "user-1");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.innovationProposalsOpen).toBe(1); // rejected excluded from open
+    expect(d.innovationPipelineValueUsd).toBe(25000);
+    expect(d.provenance?.innovationProposalsOpen).toBe("measured");
+    // Isolation: another org still sees null.
+    const other = await CognitiveService.dashboard(OTHER);
+    expect(other.innovationProposalsOpen).toBeNull();
+  });
+
+  it("self-evolution fields become measured once components + auto-fixes exist", async () => {
+    const { SelfEvolutionService } = await import("./selfEvolution.service.js");
+    await SelfEvolutionService.upsertComponent(ORG, { component: "observability", health: 0.9 });
+    await SelfEvolutionService.upsertComponent(ORG, { component: "memory", health: 0.7 });
+    await SelfEvolutionService.recordAutoFix(ORG, "memory");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.selfEvolutionHealth).toBe(80); // (0.9 + 0.7) / 2 * 100
+    expect(d.autoFixes30d).toBe(1);
+    // 2 of 6 expected DNA components configured -> 33%.
+    expect(d.dnaCompleteness).toBe(33);
+    expect(d.provenance?.selfEvolutionHealth).toBe("measured");
+  });
+
+  it("federation fields become measured once active partners exist", async () => {
+    const { FederationService } = await import("./federation.service.js");
+    await FederationService.create(ORG, { name: "Acme", type: "enterprise", trustTier: "gold", sharedDatasets: 3, sharedModels: 2, status: "active" }, "user-1");
+    await FederationService.create(ORG, { name: "Pending Co", type: "supplier", trustTier: "bronze", sharedDatasets: 5, sharedModels: 5, status: "pending" }, "user-1");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.federationPartners).toBe(1); // only active
+    expect(d.marketplaceUnifiedAssets).toBe(5); // 3 + 2 from the active partner
+    expect(d.provenance?.federationPartners).toBe("measured");
   });
 
   it("civilizationEntities and worldScenariosTracked are now measured from the world-model register", async () => {

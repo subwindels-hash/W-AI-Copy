@@ -24,9 +24,20 @@ import {
   CogObservationCreateSchema,
   CogObservationIdSchema,
   CogObservationQuerySchema,
+  CogInnovationCreateSchema,
+  CogInnovationStatusSchema,
+  CogInnovationIdParamSchema,
+  CogSelfEvolutionComponentSchema,
+  CogSelfEvolutionAutoFixSchema,
+  CogFederationPartnerCreateSchema,
+  CogFederationPartnerUpdateSchema,
+  CogFederationPartnerIdParamSchema,
 } from "@windels/shared/cognitive";
 import { CognitiveService } from "../../cognitive/cognitive.service.js";
 import { CognitiveWorldModelService } from "../../cognitive/worldModel.service.js";
+import { InnovationPipelineService } from "../../cognitive/innovationPipeline.service.js";
+import { SelfEvolutionService } from "../../cognitive/selfEvolution.service.js";
+import { FederationService } from "../../cognitive/federation.service.js";
 
 import { AppError } from "../../utils/result.js";
 const orgOf = (req: any): string => {
@@ -169,4 +180,21 @@ export function registerCognitiveRoutes(router: Router) {
       res.json({ ok: true, data: { deleted: true, id: req.params.id }, meta: { requestId: req.requestId } });
     } catch (e) { next(e); }
   });
+
+  // ── Innovation pipeline (org-scoped) ───────────────────────────────────────
+  router.get("/innovations", async (req, res, next) => { try { res.json({ ok: true, data: await InnovationPipelineService.list(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/innovations", requireAdmin, validate({ body: CogInnovationCreateSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await InnovationPipelineService.create(orgOf(req), req.body, userOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/innovations/:innovationId/status", requireAdmin, validate({ params: CogInnovationIdParamSchema, body: CogInnovationStatusSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await InnovationPipelineService.setStatus(orgOf(req), req.params.innovationId, req.body.status), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.delete("/innovations/:innovationId", requireAdmin, validate({ params: CogInnovationIdParamSchema }), async (req, res, next) => { try { const ok = await InnovationPipelineService.delete(orgOf(req), req.params.innovationId); if (!ok) return notFound(res, "Innovation proposal not found", req.requestId); res.json({ ok: true, data: { deleted: true }, meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+
+  // ── Self-evolution register (org-scoped) ───────────────────────────────────
+  router.get("/self-evolution", async (req, res, next) => { try { res.json({ ok: true, data: await SelfEvolutionService.listComponents(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.put("/self-evolution/components", requireAdmin, validate({ body: CogSelfEvolutionComponentSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await SelfEvolutionService.upsertComponent(orgOf(req), req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/self-evolution/auto-fix", requireAdmin, validate({ body: CogSelfEvolutionAutoFixSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await SelfEvolutionService.recordAutoFix(orgOf(req), req.body.component), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+
+  // ── Federation register (org-scoped) ───────────────────────────────────────
+  router.get("/federation", async (req, res, next) => { try { res.json({ ok: true, data: await FederationService.list(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/federation", requireAdmin, validate({ body: CogFederationPartnerCreateSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await FederationService.create(orgOf(req), req.body, userOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.patch("/federation/:partnerId", requireAdmin, validate({ params: CogFederationPartnerIdParamSchema, body: CogFederationPartnerUpdateSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await FederationService.update(orgOf(req), req.params.partnerId, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.delete("/federation/:partnerId", requireAdmin, validate({ params: CogFederationPartnerIdParamSchema }), async (req, res, next) => { try { const ok = await FederationService.delete(orgOf(req), req.params.partnerId); if (!ok) return notFound(res, "Federation partner not found", req.requestId); res.json({ ok: true, data: { deleted: true }, meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
 }

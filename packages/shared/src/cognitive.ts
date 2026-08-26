@@ -100,17 +100,19 @@ export interface CognitiveDashboard {
 }
 
 export interface CognitiveProvenance {
-  /** Marks which rolls are structural-null vs measured. */
-  selfEvolutionHealth: "structural_null";
-  autoFixes30d: "structural_null";
-  dnaCompleteness: "structural_null";
-  marketplaceUnifiedAssets: "structural_null";
-  federationPartners: "structural_null";
-  innovationProposalsOpen: "structural_null";
-  innovationPipelineValueUsd: "structural_null";
-  // These two are now backed by the real world-model evidence register
-  // (worldModel.service.ts), so they report "measured" once that register
-  // holds data and "structural_null" only when it is empty.
+  /**
+   * Marks which rolls are structural-null vs measured. Every field now has a
+   * real org-scoped backing store, so each reports "measured" once its store
+   * holds data and "structural_null" only while empty (0 is a real measurement
+   * there — nothing recorded yet — never a fabricated estimate).
+   */
+  selfEvolutionHealth: "structural_null" | "measured";
+  autoFixes30d: "structural_null" | "measured";
+  dnaCompleteness: "structural_null" | "measured";
+  marketplaceUnifiedAssets: "structural_null" | "measured";
+  federationPartners: "structural_null" | "measured";
+  innovationProposalsOpen: "structural_null" | "measured";
+  innovationPipelineValueUsd: "structural_null" | "measured";
   civilizationEntities: "structural_null" | "measured";
   worldScenariosTracked: "structural_null" | "measured";
   note: string;
@@ -314,3 +316,91 @@ export const CogHypothesisResolveSchema = z.object({
   contradictingObservationIds: z.array(idSchema).max(50).optional(),
 });
 export type CogHypothesisResolveInput = z.infer<typeof CogHypothesisResolveSchema>;
+
+/* ── Innovation pipeline (org-scoped) ──────────────────────────────────────
+ *
+ * Session-completion: `innovationProposalsOpen` / `innovationPipelineValueUsd`
+ * were structural nulls. These schemas back a real org-scoped innovation
+ * register. The dashboard figures are computed from stored proposals only:
+ *   - innovationProposalsOpen    = proposals in an open state (proposed|reviewing|approved|executing)
+ *   - innovationPipelineValueUsd = sum of projectedValueUsd over those open proposals */
+
+export const COG_INNOVATION_RISKS = ["low", "med", "high"] as const;
+export const COG_INNOVATION_STATUSES = ["proposed", "reviewing", "approved", "rejected", "executing"] as const;
+export type CogInnovationStatus = (typeof COG_INNOVATION_STATUSES)[number];
+
+export const CogInnovationCreateSchema = z.object({
+  title: z.string().trim().min(2).max(200),
+  category: z.string().trim().min(1).max(80),
+  projectedValueUsd: z.number().min(0).max(1e15).default(0),
+  risk: z.enum(COG_INNOVATION_RISKS).default("med"),
+  status: z.enum(COG_INNOVATION_STATUSES).default("proposed"),
+});
+export type CogInnovationCreateInput = z.infer<typeof CogInnovationCreateSchema>;
+
+export const CogInnovationStatusSchema = z.object({ status: z.enum(COG_INNOVATION_STATUSES) });
+export const CogInnovationIdParamSchema = z.object({ innovationId: z.string().trim().min(1).max(128) });
+
+/* ── Self-evolution register (org-scoped) ──────────────────────────────────
+ *
+ * Session-completion: `selfEvolutionHealth` / `autoFixes30d` / `dnaCompleteness`
+ * were structural nulls. This backs a real org-scoped register of the platform's
+ * self-optimizing components. Dashboard figures come from stored records only:
+ *   - selfEvolutionHealth = mean component health as a 0-100 percentage
+ *   - autoFixes30d        = auto-fixes recorded in the last 30 days
+ *   - dnaCompleteness     = configured components / expected component count (%) */
+
+export const CogSelfEvolutionComponentSchema = z.object({
+  component: z.string().trim().min(1).max(120),
+  health: z.number().min(0).max(1),
+  bottleneck: z.string().trim().max(300).optional(),
+  recommendation: z.string().trim().max(500).optional(),
+});
+export type CogSelfEvolutionComponentInput = z.infer<typeof CogSelfEvolutionComponentSchema>;
+
+export const CogSelfEvolutionAutoFixSchema = z.object({
+  component: z.string().trim().min(1).max(120),
+  summary: z.string().trim().min(2).max(500),
+});
+export type CogSelfEvolutionAutoFixInput = z.infer<typeof CogSelfEvolutionAutoFixSchema>;
+
+/** The component set the platform expects for a "complete" self-evolution DNA. */
+export const COG_DNA_EXPECTED_COMPONENTS = [
+  "observability", "memory", "reasoning", "planning", "self_repair", "governance",
+] as const;
+
+/* ── Federation & unified marketplace (org-scoped) ─────────────────────────
+ *
+ * Session-completion: `federationPartners` / `marketplaceUnifiedAssets` were
+ * structural nulls. This backs a real org-scoped federation register (partners
+ * with shared datasets/models) and a unified-assets tally. Dashboard figures:
+ *   - federationPartners      = active federation partners
+ *   - marketplaceUnifiedAssets = sum of sharedDatasets + sharedModels across active partners */
+
+export const COG_FEDERATION_TYPES = ["enterprise", "government", "academic", "supplier", "partner"] as const;
+export const COG_FEDERATION_TRUST_TIERS = ["bronze", "silver", "gold", "platinum"] as const;
+export const COG_FEDERATION_STATUSES = ["active", "pending", "suspended"] as const;
+export type CogFederationStatus = (typeof COG_FEDERATION_STATUSES)[number];
+
+export const CogFederationPartnerCreateSchema = z.object({
+  name: z.string().trim().min(2).max(200),
+  type: z.enum(COG_FEDERATION_TYPES),
+  trustTier: z.enum(COG_FEDERATION_TRUST_TIERS).default("bronze"),
+  sharedDatasets: z.number().int().min(0).max(1000000).default(0),
+  sharedModels: z.number().int().min(0).max(1000000).default(0),
+  status: z.enum(COG_FEDERATION_STATUSES).default("pending"),
+});
+export type CogFederationPartnerCreateInput = z.infer<typeof CogFederationPartnerCreateSchema>;
+
+export const CogFederationPartnerUpdateSchema = z
+  .object({
+    trustTier: z.enum(COG_FEDERATION_TRUST_TIERS).optional(),
+    sharedDatasets: z.number().int().min(0).max(1000000).optional(),
+    sharedModels: z.number().int().min(0).max(1000000).optional(),
+    status: z.enum(COG_FEDERATION_STATUSES).optional(),
+    federatedJobs30d: z.number().int().min(0).max(1000000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "No federation fields supplied." });
+export type CogFederationPartnerUpdateInput = z.infer<typeof CogFederationPartnerUpdateSchema>;
+
+export const CogFederationPartnerIdParamSchema = z.object({ partnerId: z.string().trim().min(1).max(128) });
