@@ -3,7 +3,7 @@ import { Router } from "express";
 import { authenticate, requireSuperAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { rateLimit } from "../middleware/rateLimit.js";
-import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsAdminAssetToggleSchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
+import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsAdminAssetToggleSchema, BlockonomicsAdminTransactionQuerySchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
 import { BlockonomicsConfigService } from "../../payments/blockonomics.service.js";
 import { BlockonomicsAdminService } from "../../payments/blockonomicsAdmin.service.js";
 import { BlockonomicsReconciliationService } from "../../payments/blockonomicsReconciliation.service.js";
@@ -52,6 +52,16 @@ export function registerBlockonomicsAdminRoutes(router: Router) {
   admin.get("/dashboard", async (req, res, next) => {
     try {
       res.json({ ok: true, data: await BlockonomicsAdminService.dashboard(), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  // Super Admin → Payments → Crypto Transactions. Read-only search/filter over
+  // the durable crypto payment ledger (by user id, transaction reference, asset,
+  // status). No balance-mutating operations are exposed here.
+  admin.get("/transactions", validate({ query: BlockonomicsAdminTransactionQuerySchema }), async (req, res, next) => {
+    try {
+      const page = await BlockonomicsAdminService.searchTransactions(req.query as any);
+      res.json({ ok: true, data: page, meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 

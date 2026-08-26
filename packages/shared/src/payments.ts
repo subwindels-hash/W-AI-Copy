@@ -274,6 +274,47 @@ export interface BlockonomicsAdminHealthResult {
   error?: string;
 }
 
+/**
+ * Super Admin → Payments → Crypto Transactions search/filter. Read-only: there
+ * is deliberately no "mark as paid" input here — settlement only ever happens
+ * through verified provider evidence.
+ */
+export const BlockonomicsAdminTransactionQuerySchema = z.object({
+  userId: z.string().trim().min(1).max(200).optional(),
+  reference: z.string().trim().min(1).max(200).optional(),
+  asset: z.enum(BLOCKONOMICS_ASSETS).optional(),
+  status: z.enum(PAYMENT_TRANSACTION_STATUSES).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  cursor: z.string().trim().min(1).max(200).optional(),
+});
+export type BlockonomicsAdminTransactionQuery = z.infer<typeof BlockonomicsAdminTransactionQuerySchema>;
+
+export interface BlockonomicsAdminTransactionRow {
+  id: string;
+  organizationId: string;
+  requestedById: string | null;
+  reference: string;
+  providerTransactionId: string | null;
+  asset: BlockonomicsAsset | null;
+  network: string | null;
+  status: string;
+  amountCents: number;
+  currency: string;
+  confirmations: number;
+  requiredConfirmations: number;
+  reconciliationStatus: string;
+  paymentAddress: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface BlockonomicsAdminTransactionPage {
+  transactions: BlockonomicsAdminTransactionRow[];
+  nextCursor: string | null;
+  query: BlockonomicsAdminTransactionQuery;
+}
+
 export const BLOCKONOMICS_RECONCILIATION_TIMEFRAMES = ["1W", "2W", "1M", "3M", "6M", "1Y"] as const;
 export const BlockonomicsReconciliationRequestSchema = z.object({
   timeframe: z.enum(BLOCKONOMICS_RECONCILIATION_TIMEFRAMES).default("1M"),

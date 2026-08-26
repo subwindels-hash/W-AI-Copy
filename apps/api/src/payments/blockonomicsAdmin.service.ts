@@ -1,6 +1,12 @@
 import { prisma } from "../db/client.js";
 import { AppError } from "../utils/result.js";
-import type { BlockonomicsAdminDashboard, BlockonomicsAdminHealthResult } from "@windels/shared/payments";
+import type {
+  BlockonomicsAdminDashboard,
+  BlockonomicsAdminHealthResult,
+  BlockonomicsAdminTransactionPage,
+  BlockonomicsAdminTransactionQuery,
+  BlockonomicsAsset,
+} from "@windels/shared/payments";
 import { BlockonomicsClient, BlockonomicsConfigService } from "./blockonomics.service.js";
 
 function countGroups(rows: any[], key: string): Array<{ status: string; count: number }> {
@@ -100,6 +106,68 @@ export const BlockonomicsAdminService = {
           createdAt: run.createdAt.toISOString(),
         };
       }),
+    };
+  },
+
+  /**
+   * Super Admin → Payments → Crypto Transactions. Searchable, filterable,
+   * read-only view over the durable Blockonomics payment ledger. Supports search
+   * by requesting User ID and by transaction reference / provider transaction id,
+   * plus BTC/USDT and status filters. Keyset-paginated on (createdAt desc, id) so
+   * it stays cheap regardless of ledger size. No amounts are ever mutated here.
+   */
+  async searchTransactions(query: BlockonomicsAdminTransactionQuery): Promise<BlockonomicsAdminTransactionPage> {
+    const limit = query.limit ?? 50;
+    const where: Record<string, unknown> = { provider: "blockonomics" };
+    if (query.userId) where.requestedById = query.userId;
+    if (query.asset) where.cryptoCurrency = query.asset;
+    if (query.status) where.status = query.status;
+    if (query.reference) {
+      const term = query.reference;
+      where.OR = [
+        { internalReference: { contains: term, mode: "insensitive" } },
+        { providerTransactionId: { contains: term, mode: "insensitive" } },
+      ];
+    }
+
+    // Keyset cursor is the last row's id; we page by (createdAt desc, id desc).
+    const rows = await prisma.paymentRecord.findMany({
+      where,
+      orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+      take: limit + 1,
+      ...(query.cursor ? { cursor: { id: query.cursor }, skip: 1 } : {}),
+      select: {
+        id: true, organizationId: true, requestedById: true, internalReference: true,
+        providerTransactionId: true, cryptoCurrency: true, cryptoNetwork: true, status: true,
+        amountCents: true, currency: true, confirmations: true, requiredConfirmations: true,
+        reconciliationStatus: true, paymentAddress: true, createdAt: true, confirmedAt: true, completedAt: true,
+      },
+    });
+
+    const hasMore = rows.length > limit;
+    const page = hasMore ? rows.slice(0, limit) : rows;
+    return {
+      transactions: page.map((row) => ({
+        id: row.id,
+        organizationId: row.organizationId,
+        requestedById: row.requestedById ?? null,
+        reference: row.internalReference,
+        providerTransactionId: row.providerTransactionId ?? null,
+        asset: (row.cryptoCurrency as BlockonomicsAsset | null) ?? null,
+        network: row.cryptoNetwork ?? null,
+        status: row.status,
+        amountCents: row.amountCents,
+        currency: row.currency,
+        confirmations: row.confirmations ?? 0,
+        requiredConfirmations: row.requiredConfirmations ?? 2,
+        reconciliationStatus: row.reconciliationStatus,
+        paymentAddress: row.paymentAddress ?? null,
+        createdAt: row.createdAt?.toISOString?.() ?? String(row.createdAt),
+        confirmedAt: row.confirmedAt?.toISOString?.() ?? (row.confirmedAt ?? null),
+        completedAt: row.completedAt?.toISOString?.() ?? (row.completedAt ?? null),
+      })),
+      nextCursor: hasMore ? (page[page.length - 1]?.id ?? null) : null,
+      query,
     };
   },
 

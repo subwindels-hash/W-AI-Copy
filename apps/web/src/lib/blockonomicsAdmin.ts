@@ -4,6 +4,8 @@ import type {
   BlockonomicsAdminDashboard,
   BlockonomicsAdminHealthResult,
   BlockonomicsAdminPublicConfig,
+  BlockonomicsAdminTransactionPage,
+  BlockonomicsAdminTransactionQuery,
   BlockonomicsAsset,
   BlockonomicsReconciliationResult,
   BlockonomicsReconciliationTimeframe,
@@ -21,6 +23,10 @@ export const blockonomicsAdmin = {
   setAssetEnabled: (asset: BlockonomicsAsset, enabled: boolean) =>
     api<BlockonomicsAdminPublicConfig>(`${base}/assets`, { method: "PATCH", json: { asset, enabled } }),
   checkHealth: () => api<BlockonomicsAdminHealthResult>(`${base}/health`, { method: "POST" }),
+  transactions: (query: BlockonomicsAdminTransactionQuery = {}) =>
+    api<BlockonomicsAdminTransactionPage>(`${base}/transactions`, {
+      params: query as Record<string, unknown>,
+    }),
   reconcile: (timeframe: BlockonomicsReconciliationTimeframe) =>
     api<BlockonomicsReconciliationResult>(`${base}/reconcile`, { method: "POST", json: { timeframe } }),
 };

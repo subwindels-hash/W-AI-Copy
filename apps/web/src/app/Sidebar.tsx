@@ -255,6 +255,7 @@ const navItems = [
   { to: "/admin/modules", icon: Blocks, label: "Module & Plugin Center" },
   { to: "/admin/api-platform", icon: Code2, label: "API Control Center" },
   { to: "/platform/blockonomics", icon: Bitcoin, label: "Blockonomics Control" },
+  { to: "/platform/crypto-transactions", icon: Coins, label: "Crypto Transactions" },
   { to: "/app/files", icon: Folder, label: "Files" },
   { to: "/app/extensions", icon: Puzzle, label: "Extensions" },
   { to: "/app/account", icon: UserCircle, label: "My Account" },
