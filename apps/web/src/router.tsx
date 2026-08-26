@@ -40,6 +40,7 @@ const LeadPipelinePage = lazy(() => import("./pages/leads/LeadPipelinePage").the
 const MfaAssurancePage = lazy(() => import("./pages/security/MfaAssurancePage").then((m) => ({ default: m.MfaAssurancePage })));
 const MobileDevicesPage = lazy(() => import("./pages/mobile/MobileDevicesPage").then((m) => ({ default: m.MobileDevicesPage })));
 const OpexAssurancePage = lazy(() => import("./pages/admin/OpexAssurancePage").then((m) => ({ default: m.OpexAssurancePage })));
+const OpexGovernancePage = lazy(() => import("./pages/admin/OpexGovernancePage").then((m) => ({ default: m.OpexGovernancePage })));
 const PromptTemplatesPage = lazy(() => import("./pages/admin/PromptTemplatesPage").then((m) => ({ default: m.PromptTemplatesPage })));
 const PublicApiPage = lazy(() => import("./pages/admin/PublicApiPage").then((m) => ({ default: m.PublicApiPage })));
 const SustainabilityPage = lazy(() => import("./pages/admin/SustainabilityPage").then((m) => ({ default: m.SustainabilityPage })));
@@ -66,6 +67,7 @@ const PlatformPage = lazy(() => import("./pages/admin/PlatformPage"));
 const SecurityPage = lazy(() => import("./pages/admin/SecurityPage"));
 const AdminApiControlPage = lazy(() => import("./pages/admin/AdminApiControlPage"));
 const BlockonomicsAdminPage = lazy(() => import("./pages/admin/BlockonomicsAdminPage"));
+const CryptoTransactionsPage = lazy(() => import("./pages/admin/CryptoTransactionsPage"));
 const ModuleCenterPage = lazy(() => import("./pages/admin/ModuleCenterPage").then((m) => ({ default: m.ModuleCenterPage })));
 const ModuleRuntimePage = lazy(() => import("./pages/modules/ModuleRuntimePage").then((m) => ({ default: m.ModuleRuntimePage })));
 const TenantIsolationPage = lazy(() => import("./pages/admin/TenantIsolationPage").then((m) => ({ default: m.TenantIsolationPage })));
@@ -420,6 +422,7 @@ export const router = createBrowserRouter([
       { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
       { path: "cloud-android", element: withSuspense(<CloudAndroidPage />) },
       { path: "opex", element: withSuspense(<OpexAssurancePage />) },
+      { path: "opex-governance", element: withSuspense(<OpexGovernancePage />) },
       { path: "prompt-templates", element: withSuspense(<PromptTemplatesPage />) },
       { path: "promptTemplates", element: withSuspense(<PromptTemplatesPage />) },
       { path: "public-api", element: withSuspense(<PublicApiPage />) },
@@ -592,6 +595,7 @@ export const router = createBrowserRouter([
     children: [
       { index: true, element: withSuspense(<SuperAdminDashboard />) },
       { path: "blockonomics", element: withSuspense(<BlockonomicsAdminPage />) },
+      { path: "crypto-transactions", element: withSuspense(<CryptoTransactionsPage />) },
       { path: "site", element: withSuspense(<SiteControlPage />) },
     ],
   },

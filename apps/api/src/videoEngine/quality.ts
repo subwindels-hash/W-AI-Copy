@@ -51,7 +51,7 @@ export async function runQualityChecks(project: VideoProject): Promise<VideoQaRe
     "unsupported_media",
     unsupported.length === 0,
     unsupported.length ? `${unsupported.length} unsupported mime type(s)` : "all media types supported",
-    unsupported.length > 0 ? "warn" : "pass",
+    "warn", // soft: unsupported media warns, never hard-fails delivery
   ));
 
   // 4. A/V sync — every voiceover scene should have a caption covering its duration
@@ -60,7 +60,7 @@ export async function runQualityChecks(project: VideoProject): Promise<VideoQaRe
     "av_sync",
     avIssues.length === 0,
     avIssues.length ? `${avIssues.length} voiceover scene(s) without captions` : "voice/caption coverage ok",
-    avIssues.length > 0 ? "warn" : "pass",
+    "warn", // soft: missing captions warn, never hard-fail
   ));
 
   // 5. Caption errors
@@ -89,7 +89,7 @@ export async function runQualityChecks(project: VideoProject): Promise<VideoQaRe
   // 8. Copyright-sensitive terms
   const allText = [project.prompt, project.script?.summary, ...project.scenes.map((s) => s.visualPrompt)].join(" ").toLowerCase();
   const copyHit = COPYRIGHT_TERMS.some((t) => allText.includes(t));
-  checks.push(result("copyright", !copyHit, copyHit ? "copyright-sensitive text detected" : "no copyright markers", copyHit ? "warn" : "pass"));
+  checks.push(result("copyright", !copyHit, copyHit ? "copyright-sensitive text detected" : "no copyright markers", "warn")); // soft: copyright markers warn, never hard-fail
 
   // 9. Unsafe content
   const unsafe = UNSAFE_PATTERNS.find((p) => p.re.test(allText));
@@ -123,9 +123,9 @@ function result(
   id: VideoQaCheckId,
   ok: boolean,
   message: string,
-  okStatus: "pass" | "warn" = "pass",
+  failStatus: "fail" | "warn" = "fail",
 ): VideoQaCheck {
-  return { id, status: ok ? okStatus : "fail", message };
+  return { id, status: ok ? "pass" : failStatus, message };
 }
 
 /**

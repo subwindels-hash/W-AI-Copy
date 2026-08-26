@@ -1,12 +1,14 @@
 import { useCallback, useEffect, useState } from "react";
-import { Activity, AlertTriangle, Bitcoin, KeyRound, RefreshCw, Save, ShieldCheck, TestTube2, Webhook } from "lucide-react";
+import { Activity, AlertTriangle, Bitcoin, Coins, KeyRound, RefreshCw, Save, ShieldCheck, TestTube2, Webhook } from "lucide-react";
 import type { BlockonomicsAdminDashboard, BlockonomicsAdminPublicConfig, BlockonomicsAsset, BlockonomicsReconciliationResult, BlockonomicsReconciliationTimeframe } from "@windels/shared/payments";
+import { blockonomicsAssetDisplayName, blockonomicsAssetNetworkWarning, blockonomicsNetworkLabel } from "@windels/shared/payments";
 import { blockonomicsAdmin } from "@/lib/blockonomicsAdmin";
 import { toast } from "@/lib/toast";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Input } from "@/components/ui/Input";
+import { Switch } from "@/components/ui/Switch";
 
 interface ConfigForm {
   apiKey: string;
@@ -44,6 +46,7 @@ export function BlockonomicsAdminPage() {
   const [saving, setSaving] = useState(false);
   const [probing, setProbing] = useState(false);
   const [toggling, setToggling] = useState(false);
+  const [assetSaving, setAssetSaving] = useState<BlockonomicsAsset | null>(null);
   const [reconciling, setReconciling] = useState(false);
   const [reconciliationTimeframe, setReconciliationTimeframe] = useState<BlockonomicsReconciliationTimeframe>("1M");
   const [reconciliationResult, setReconciliationResult] = useState<BlockonomicsReconciliationResult | null>(null);
@@ -67,7 +70,6 @@ export function BlockonomicsAdminPage() {
 
   const save = async () => {
     if (!dashboard || !form) return;
-    if (!form.supportedAssets.length) return toast.error("Enable at least one settlement asset.");
     setSaving(true);
     try {
       const updated = await blockonomicsAdmin.updateConfig({
@@ -136,9 +138,22 @@ export function BlockonomicsAdminPage() {
     }
   };
 
-  const setAsset = (asset: BlockonomicsAsset, checked: boolean) => {
-    if (!form) return;
-    setForm({ ...form, supportedAssets: checked ? [...new Set([...form.supportedAssets, asset])] : form.supportedAssets.filter((item) => item !== asset) });
+  // Per-method ON/OFF switch. BTC and USDT are controlled independently and the
+  // change is persisted immediately (audit-logged server-side), so the user
+  // payment page reflects it without a separate "Save". Turning both off is a
+  // valid state — cryptocurrency payments simply become unavailable.
+  const toggleAsset = async (asset: BlockonomicsAsset, enabled: boolean) => {
+    setAssetSaving(asset);
+    try {
+      const next = await blockonomicsAdmin.setAssetEnabled(asset, enabled);
+      setForm((current) => (current ? { ...current, supportedAssets: next.supportedAssets } : current));
+      toast.success(`${asset} payments ${enabled ? "enabled" : "disabled"}.`);
+      await load();
+    } catch (cause: any) {
+      toast.error(cause?.message ?? `Could not update ${asset} availability`);
+    } finally {
+      setAssetSaving(null);
+    }
   };
 
   const config = dashboard?.configuration;
@@ -208,11 +223,40 @@ export function BlockonomicsAdminPage() {
                       <div><label className="mb-1 block text-xs uppercase text-text-muted">Quote timer (minutes)</label><Input type="number" min={5} max={60} value={form.quoteExpiryMinutes} onChange={(event) => setForm({ ...form, quoteExpiryMinutes: Number(event.target.value) })} /></div>
                       <label className="flex items-center gap-2 self-end rounded-md border border-border p-3 text-sm text-text-main"><input type="checkbox" checked={form.testMode} onChange={(event) => setForm({ ...form, testMode: event.target.checked })} /><TestTube2 className="h-4 w-4" />Blockonomics Test Mode</label>
                     </div>
-                    <div>
-                      <div className="mb-2 text-xs uppercase text-text-muted">Settlement assets</div>
-                      <div className="flex flex-wrap gap-4">
-                        {(["BTC", "USDT"] as const).map((asset) => <label key={asset} className="flex items-center gap-2 text-sm text-text-main"><input type="checkbox" checked={form.supportedAssets.includes(asset)} onChange={(event) => setAsset(asset, event.target.checked)} />{asset}{asset === "USDT" ? " (Ethereum ERC-20)" : ""}</label>)}
-                      </div>
+                    <div className="space-y-2">
+                      <div className="text-xs uppercase text-text-muted">Cryptocurrency payment methods</div>
+                      <p className="text-xs text-text-muted">Enable each method independently. Both can be off — cryptocurrency payments are then unavailable to users. Changes save immediately.</p>
+                      {(["BTC", "USDT"] as const).map((asset) => {
+                        const on = form.supportedAssets.includes(asset);
+                        const warning = blockonomicsAssetNetworkWarning(asset);
+                        return (
+                          <div key={asset} className="rounded-md border border-border bg-background/40 p-3">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2">
+                                {asset === "BTC" ? <Bitcoin className="h-4 w-4 text-amber-400" /> : <Coins className="h-4 w-4 text-emerald-400" />}
+                                <div>
+                                  <div className="text-sm font-medium text-text-bright">{blockonomicsAssetDisplayName(asset)}</div>
+                                  <div className="text-[11px] text-text-muted">Network: {blockonomicsNetworkLabel(asset)}</div>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Badge variant={on ? "success" : "secondary"}>{on ? "ON" : "OFF"}</Badge>
+                                <Switch
+                                  checked={on}
+                                  disabled={assetSaving !== null}
+                                  onChange={(next) => void toggleAsset(asset, next)}
+                                  aria-label={`Enable ${asset} payments`}
+                                />
+                              </div>
+                            </div>
+                            {asset === "USDT" && warning ? (
+                              <div className="mt-2 flex gap-1.5 rounded border border-amber-500/30 bg-amber-500/10 p-2 text-[11px] text-amber-200">
+                                <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" /><span>{warning}</span>
+                              </div>
+                            ) : null}
+                          </div>
+                        );
+                      })}
                     </div>
                     <div className="flex flex-wrap items-center justify-between gap-2 border-t border-border pt-4">
                       <div className="text-xs text-text-muted">Required final provider status: 2 confirmations · fixed by backend policy</div>

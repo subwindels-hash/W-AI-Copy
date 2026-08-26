@@ -7,7 +7,7 @@ import { Code2, Webhook, Key, BookOpen, Terminal, Cpu } from "lucide-react";
 const FEATURES = [
   { icon: Key, title: "API keys", desc: "Scoped keys with READ/WRITE/ADMIN permissions. Hashed at rest, returned once on creation." },
   { icon: Webhook, title: "Webhooks", desc: "HMAC-signed deliveries, exponential backoff, 5 retries, 7 event types." },
-  { icon: Terminal, title: "REST API", desc: "Public REST API is planned. Current developer access includes organization API keys and webhook management." },
+  { icon: Terminal, title: "REST API", desc: "Live public REST API at /api/rest/v1 — list workflows, trigger runs, list agents, and send channel messages with a scoped key." },
   { icon: Cpu, title: "Model-agnostic", desc: "Route between OpenAI, Anthropic, Azure, Bedrock, or local — one API to call." },
 ];
 
@@ -37,8 +37,8 @@ export default function DevelopersPage() {
                 <span className="ml-2 font-mono">bash</span>
               </div>
               <pre className="p-5 font-mono text-sm leading-relaxed overflow-x-auto text-slate-200">
-{`# Install (coming soon)
-npm install @windels/sdk
+{`# The REST API is live today — no SDK install required.
+# Create a scoped API key in Dashboard -> API Keys, then call it directly:
 
 # Trigger a workflow run with curl
 curl -X POST https://api.windels.ai/api/rest/v1/workflows/wf_abc123/run \\

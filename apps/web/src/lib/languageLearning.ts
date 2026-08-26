@@ -6,6 +6,7 @@ import type {
   LlCorrectionMode,
   LlDailyPlan,
   LlDashboard,
+  LlDetectedLanguage,
   LlEnrollInput,
   LlGrammarRule,
   LlLanguage,
@@ -17,6 +18,9 @@ import type {
   LlProgress,
   LlRecommendation,
   LlSpeakingAttempt,
+  LlTranslateInput,
+  LlTranslation,
+  LlTranslationFormality,
   LlUserGrammarProgress,
   LlUserLanguageProfile,
   LlUserVocab,
@@ -30,6 +34,7 @@ export type {
   LlProgress, LlRecommendation, LlSpeakingAttempt, LlUserGrammarProgress,
   LlUserLanguageProfile, LlUserVocab, LlVocabItem, LlWritingAttempt,
   LlConversationMode, LlCorrectionMode,
+  LlDetectedLanguage, LlTranslation, LlTranslateInput, LlTranslationFormality,
 };
 
 export const languageApi = {
@@ -91,6 +96,16 @@ export const languageApi = {
   speakingPrompts: (code: string) => api<Array<{ id: string; prompt: string; expected: string; pronunciation: string }>>(`/language-learning/speaking/${code}/prompts`),
   speak: (code: string, transcript: string, expected?: string, promptId?: string) =>
     api<LlSpeakingAttempt>(`/language-learning/speaking/${code}`, { method: "POST", json: { transcript, expected, promptId, transcriptSource: "TYPED" } }),
+  // Session 199 — translation + automatic language detection.
+  detect: (text: string) => api<LlDetectedLanguage>(`/language-learning/detect`, { method: "POST", json: { text } }),
+  translate: (input: {
+    text: string;
+    targetLanguage: string;
+    sourceLanguage?: string;
+    formality?: LlTranslationFormality;
+    preserveFormatting?: boolean;
+    includeAlternatives?: boolean;
+  }) => api<LlTranslation>(`/language-learning/translate`, { method: "POST", json: input }),
   plan: (code: string) => api<LlDailyPlan>(`/language-learning/plans/${code}`),
   progress: (code: string) => api<LlProgress>(`/language-learning/progress/${code}`),
   recommendations: (code: string) => api<LlRecommendation[]>(`/language-learning/recommendations/${code}`),

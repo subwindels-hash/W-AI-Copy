@@ -104,3 +104,146 @@ describe("opex completion — dashboard still honest via assurance", () => {
     expect(d.provenance).toBeTruthy();
   });
 });
+
+describe("opex completion — continuous.maturityScore is now measured", () => {
+  it("is a structural 0 on an empty org and a real composite once signals exist", async () => {
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.continuous.maturityScore).toBe(0);
+    expect(empty.provenance!.entries.find((e) => e.field === "continuous.maturityScore")!.basis).toBe("not_assessed");
+
+    // Give the org measured signals: a tracked regulation + a passing benchmark.
+    const { RegulationsRegistryService } = await import("./regulationsRegistry.service.js");
+    const { SafetyBenchmarksService } = await import("./safetyBenchmarks.service.js");
+    await RegulationsRegistryService.create(ORG, { name: "GDPR", jurisdiction: "EU", category: "privacy", status: "enforcing", summary: "", impactAreas: [], gapCount: 0, gapResolved: 0 }, ADMIN);
+    await SafetyBenchmarksService.record(ORG, { category: "jailbreak", score: 95, passThreshold: 80 }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.continuous.maturityScore).toBeGreaterThan(0);
+    expect(d.provenance!.entries.find((e) => e.field === "continuous.maturityScore")!.basis).toBe("observed");
+  });
+});
+
+describe("opex completion — safety.benchmarks is now measured", () => {
+  it("reports latest benchmark result per evaluated category in the dashboard", async () => {
+    const { SafetyBenchmarksService } = await import("./safetyBenchmarks.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.safety.benchmarks).toEqual({});
+
+    await SafetyBenchmarksService.record(ORG, { category: "jailbreak", score: 91, passThreshold: 80 }, ADMIN);
+    await SafetyBenchmarksService.record(ORG, { category: "bias", score: 40, passThreshold: 80 }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.safety.benchmarks.jailbreak).toEqual({ pass: true, score: 91 });
+    expect(d.safety.benchmarks.bias).toEqual({ pass: false, score: 40 });
+    // Unevaluated categories remain absent.
+    expect(d.safety.benchmarks.toxicity).toBeUndefined();
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.safety.benchmarks).toEqual({});
+  });
+});
+
+describe("opex completion — explanations is now measured", () => {
+  it("reports real explainability figures in the dashboard", async () => {
+    const { ExplanationsRegistryService } = await import("./explanationsRegistry.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.explanations).toEqual({ available24h: 0, avgEvidence: 0, avgConfidence: 0, challenged: 0, challengedUpheld: 0 });
+    expect(empty.recentExplanations).toHaveLength(0);
+
+    await ExplanationsRegistryService.record(ORG, { decisionId: "d1", decisionSummary: "Approved", confidence: 0.9, evidenceCount: 5, knowledgeSources: [], memoryTouches: 0, toolCalls: 0, policyChecks: [], risks: [] } as any);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.explanations.available24h).toBe(1);
+    expect(d.explanations.avgConfidence).toBe(90);
+    expect(d.explanations.avgEvidence).toBe(5);
+    expect(d.recentExplanations).toHaveLength(1);
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.explanations.available24h).toBe(0);
+  });
+});
+
+describe("opex completion — playbooks is now measured", () => {
+  it("reports real playbook figures in the dashboard", async () => {
+    const { PlaybooksRegistryService } = await import("./playbooksRegistry.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.playbooks).toEqual({ total: 0, active: 0, simulating: 0, avgCompliancePct: 0 });
+
+    await PlaybooksRegistryService.create(ORG, { name: "IR", category: "cyber", version: "1", steps: 5, status: "active", compliance: "verified" }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.playbooks.total).toBe(1);
+    expect(d.playbooks.active).toBe(1);
+    expect(d.playbooks.avgCompliancePct).toBe(100);
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.playbooks.total).toBe(0);
+  });
+});
+
+describe("opex completion — regulations is now measured", () => {
+  it("reports real regulatory register figures in the dashboard", async () => {
+    const { RegulationsRegistryService } = await import("./regulationsRegistry.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.regulations).toEqual({ tracked: 0, changed30d: 0, openGaps: 0, upcoming: 0 });
+    expect(empty.recentRegulations).toHaveLength(0);
+
+    await RegulationsRegistryService.create(ORG, { name: "GDPR", jurisdiction: "EU", category: "privacy", status: "enforcing", summary: "", impactAreas: [], gapCount: 4, gapResolved: 1 }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.regulations.tracked).toBe(1);
+    expect(d.regulations.openGaps).toBe(3);
+    expect(d.recentRegulations).toHaveLength(1);
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.regulations.tracked).toBe(0);
+  });
+});
+
+describe("opex completion — governance.gates is now measured", () => {
+  it("reports real gates and pending decisions in the dashboard governance block", async () => {
+    const { GovernanceGatesService } = await import("./governanceGates.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.governance.gates).toHaveLength(0);
+
+    const gate = await GovernanceGatesService.createGate(ORG, { name: "Prod deploy", level: "l3_director" }, ADMIN);
+    await GovernanceGatesService.openRequest(ORG, gate.id, { subject: "Ship release 1.2" }, "user-1");
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.governance.gates).toHaveLength(1);
+    expect(d.governance.gates[0]).toMatchObject({ name: "Prod deploy", level: "l3_director", pending: 1 });
+    // pendingTotal includes the gate's pending request.
+    expect(d.governance.pendingTotal).toBeGreaterThanOrEqual(1);
+
+    // Isolated by organization.
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.governance.gates).toHaveLength(0);
+  });
+});
+
+describe("opex completion — collaborationSessionsActive is now measured", () => {
+  it("reports 0 with no live collaboration and a real count once a canvas has presence", async () => {
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.collaborationSessionsActive).toBe(0);
+
+    // Seed a live, org-scoped canvas presence heartbeat + active index directly
+    // in the shared FakeKv (the mediaFactory fake has no pub/sub, so we avoid
+    // heartbeat()'s publish and write the same state it would).
+    const now = new Date().toISOString();
+    const presence = JSON.stringify({ userId: "u1", displayName: "Ada", avatarColor: "#38bdf8", joinedAt: now, lastSeenAt: now });
+    await kv.hset("canvas:presence:i:" + ORG + ":canvas-1", "u1", presence);
+    await kv.sadd("canvas:active:i:" + ORG, "canvas-1");
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.collaborationSessionsActive).toBe(1);
+
+    // Isolated by organization.
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.collaborationSessionsActive).toBe(0);
+  });
+});

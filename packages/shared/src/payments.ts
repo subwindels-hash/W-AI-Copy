@@ -128,11 +128,74 @@ export const BlockonomicsProviderSettingsSchema = z.object({
   enabled: z.boolean(),
   testMode: z.boolean().default(false),
   matchCallback: z.string().trim().min(3).max(300),
-  supportedAssets: z.array(z.enum(BLOCKONOMICS_ASSETS)).min(1).default(["BTC"]),
+  // Per-asset enable/disable is the Super Admin's cryptocurrency payment-method
+  // control. An empty array is a valid, explicit state: BTC OFF + USDT OFF means
+  // cryptocurrency payments are unavailable even while the provider row stays
+  // configured. `.min(1)` is deliberately NOT used — do not force either asset on.
+  supportedAssets: z.array(z.enum(BLOCKONOMICS_ASSETS)).max(BLOCKONOMICS_ASSETS.length).default(["BTC"]),
   quoteExpiryMinutes: z.number().int().min(5).max(60).default(15),
   requiredConfirmations: z.literal(2).default(2),
 });
 export type BlockonomicsProviderSettings = z.infer<typeof BlockonomicsProviderSettingsSchema>;
+
+/**
+ * Toggle a single Blockonomics settlement asset (BTC or USDT) on or off inside
+ * a supported-assets list, returning a new list in canonical BLOCKONOMICS_ASSETS
+ * order with no duplicates. This is the pure core of the Super Admin per-method
+ * ON/OFF switches: turning both off yields `[]`, which the schema now accepts as
+ * "cryptocurrency payments unavailable".
+ */
+export function toggleBlockonomicsAsset(
+  current: readonly BlockonomicsAsset[],
+  asset: BlockonomicsAsset,
+  enabled: boolean,
+): BlockonomicsAsset[] {
+  const set = new Set(current);
+  if (enabled) set.add(asset);
+  else set.delete(asset);
+  return BLOCKONOMICS_ASSETS.filter((item) => set.has(item));
+}
+
+/**
+ * Whether a specific asset may be offered to users. An asset is available only
+ * when the provider is configured with credentials, globally enabled, AND that
+ * asset is individually toggled on. This is the single rule the user payment
+ * page and the create-payment backend guard must agree on.
+ */
+export function isBlockonomicsAssetAvailable(
+  config: Pick<BlockonomicsAdminPublicConfig, "configured" | "enabled" | "supportedAssets">,
+  asset: BlockonomicsAsset,
+): boolean {
+  return Boolean(config.configured) && Boolean(config.enabled) && config.supportedAssets.includes(asset);
+}
+
+/** The list of assets currently offerable to users, in canonical order. */
+export function availableBlockonomicsAssets(
+  config: Pick<BlockonomicsAdminPublicConfig, "configured" | "enabled" | "supportedAssets">,
+): BlockonomicsAsset[] {
+  return BLOCKONOMICS_ASSETS.filter((asset) => isBlockonomicsAssetAvailable(config, asset));
+}
+
+/**
+ * Human-facing network label for an asset. USDT MUST always be shown with its
+ * network so a user never sends funds over the wrong chain; Blockonomics settles
+ * USDT on Ethereum ERC-20 only. BTC has no competing-network ambiguity.
+ */
+export function blockonomicsNetworkLabel(asset: BlockonomicsAsset): string {
+  return asset === "USDT" ? "Ethereum (ERC-20)" : "Bitcoin";
+}
+
+/** Display name shown in the user's payment-method picker, network included. */
+export function blockonomicsAssetDisplayName(asset: BlockonomicsAsset): string {
+  return asset === "USDT" ? "Tether — USDT (Ethereum ERC-20)" : "Bitcoin (BTC)";
+}
+
+/** Wrong-network loss warning; non-empty only for assets with network ambiguity. */
+export function blockonomicsAssetNetworkWarning(asset: BlockonomicsAsset): string {
+  return asset === "USDT"
+    ? "Only send USDT on the Ethereum ERC-20 network. Sending USDT over another network (e.g. TRON/TRC-20 or BSC/BEP-20) may result in permanent loss of funds."
+    : "";
+}
 
 export const BlockonomicsAdminConfigUpdateSchema = z.object({
   apiKey: z.string().trim().min(10).max(500).optional(),
@@ -142,6 +205,13 @@ export const BlockonomicsAdminConfigUpdateSchema = z.object({
 export type BlockonomicsAdminConfigUpdateInput = z.infer<typeof BlockonomicsAdminConfigUpdateSchema>;
 
 export const BlockonomicsAdminToggleSchema = z.object({ enabled: z.boolean() });
+
+/** Enable/disable a single settlement asset (the BTC / USDT ON-OFF switches). */
+export const BlockonomicsAdminAssetToggleSchema = z.object({
+  asset: z.enum(BLOCKONOMICS_ASSETS),
+  enabled: z.boolean(),
+});
+export type BlockonomicsAdminAssetToggleInput = z.infer<typeof BlockonomicsAdminAssetToggleSchema>;
 
 export interface BlockonomicsAdminPublicConfig extends BlockonomicsProviderSettings {
   provider: "blockonomics";
@@ -202,6 +272,47 @@ export interface BlockonomicsAdminHealthResult {
   checkedAt: string;
   healthStatus: string;
   error?: string;
+}
+
+/**
+ * Super Admin → Payments → Crypto Transactions search/filter. Read-only: there
+ * is deliberately no "mark as paid" input here — settlement only ever happens
+ * through verified provider evidence.
+ */
+export const BlockonomicsAdminTransactionQuerySchema = z.object({
+  userId: z.string().trim().min(1).max(200).optional(),
+  reference: z.string().trim().min(1).max(200).optional(),
+  asset: z.enum(BLOCKONOMICS_ASSETS).optional(),
+  status: z.enum(PAYMENT_TRANSACTION_STATUSES).optional(),
+  limit: z.coerce.number().int().min(1).max(200).optional(),
+  cursor: z.string().trim().min(1).max(200).optional(),
+});
+export type BlockonomicsAdminTransactionQuery = z.infer<typeof BlockonomicsAdminTransactionQuerySchema>;
+
+export interface BlockonomicsAdminTransactionRow {
+  id: string;
+  organizationId: string;
+  requestedById: string | null;
+  reference: string;
+  providerTransactionId: string | null;
+  asset: BlockonomicsAsset | null;
+  network: string | null;
+  status: string;
+  amountCents: number;
+  currency: string;
+  confirmations: number;
+  requiredConfirmations: number;
+  reconciliationStatus: string;
+  paymentAddress: string | null;
+  createdAt: string;
+  confirmedAt: string | null;
+  completedAt: string | null;
+}
+
+export interface BlockonomicsAdminTransactionPage {
+  transactions: BlockonomicsAdminTransactionRow[];
+  nextCursor: string | null;
+  query: BlockonomicsAdminTransactionQuery;
 }
 
 export const BLOCKONOMICS_RECONCILIATION_TIMEFRAMES = ["1W", "2W", "1M", "3M", "6M", "1Y"] as const;

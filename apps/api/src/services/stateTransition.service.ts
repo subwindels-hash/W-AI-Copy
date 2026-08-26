@@ -178,6 +178,47 @@ export async function listActions(): Promise<Action[]> {
 
 // ─── Condition Evaluation ───────────────────────────────────────
 
+// ─── Custom evaluator / handler registry ────────────────────────
+//
+// `custom` preconditions and effects reference a named function. Rather than a
+// silent no-op (the old TODO returned `true` for every custom precondition —
+// a fail-OPEN bug that let unknown gates pass — and did nothing for custom
+// effects), named functions are registered here and looked up by name. An
+// unregistered name FAILS CLOSED: a custom precondition evaluates to `false`
+// and a custom effect throws, so a planning definition can never silently
+// bypass a gate it thinks it declared.
+
+export type CustomEvaluator = (
+  condition: Condition,
+  state: WorldState,
+  params: Record<string, any>,
+) => boolean;
+
+export type CustomEffectHandler = (
+  effect: Effect,
+  state: WorldState,
+  params: Record<string, any>,
+) => WorldState;
+
+const customEvaluators = new Map<string, CustomEvaluator>();
+const customEffectHandlers = new Map<string, CustomEffectHandler>();
+
+/** Register a named custom precondition evaluator. */
+export function registerCustomEvaluator(name: string, fn: CustomEvaluator): void {
+  customEvaluators.set(name, fn);
+}
+
+/** Register a named custom effect handler. */
+export function registerCustomEffectHandler(name: string, fn: CustomEffectHandler): void {
+  customEffectHandlers.set(name, fn);
+}
+
+/** Test-only / lifecycle helper to clear the registries. */
+export function clearCustomRegistries(): void {
+  customEvaluators.clear();
+  customEffectHandlers.clear();
+}
+
 /**
  * Resolve parameter references in a string (e.g., "?agent" → actual entity ID).
  */
@@ -250,8 +291,18 @@ function evaluateCondition(
     }
 
     case "custom": {
-      // TODO: Implement custom evaluators
-      return true;
+      // Fail closed: a custom precondition with no registered evaluator must not
+      // silently pass (that would let an unknown gate approve every transition).
+      if (!condition.evaluator) {
+        logger.warn("Custom precondition has no evaluator name; failing closed", {});
+        return false;
+      }
+      const fn = customEvaluators.get(condition.evaluator);
+      if (!fn) {
+        logger.warn("Unknown custom evaluator; failing closed", { evaluator: condition.evaluator });
+        return false;
+      }
+      return fn(condition, state, params);
     }
 
     default:
@@ -376,8 +427,16 @@ function applyEffect(
     }
 
     case "custom": {
-      // TODO: Implement custom handlers
-      break;
+      // Fail closed: an unknown custom effect must not be silently skipped, or a
+      // transition would report success while having applied nothing.
+      if (!effect.handler) {
+        throw new Error("Custom effect has no handler name");
+      }
+      const fn = customEffectHandlers.get(effect.handler);
+      if (!fn) {
+        throw new Error(`Unknown custom effect handler: ${effect.handler}`);
+      }
+      return fn(effect, newState, params);
     }
   }
 

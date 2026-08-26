@@ -7,9 +7,16 @@
  * `worldModel()` delegate below exists so callers that already hold
  * `CognitiveService` reach it without a second import.
  *
- * Session 177: the nine self-evolution/DNA/federation/world-model fields now
- * report `null` (was 0) — those subsystems do not exist yet, and 0 is a
- * measurement claim. `dashboard()` no longer seeds; it is a pure read.
+ * Session 177: the self-evolution/DNA/federation/world-model fields report
+ * `null` (was 0) until measured — 0 would be a measurement claim. `dashboard()`
+ * never seeds; it is a pure read.
+ *
+ * Completion: every one of those fields now has a real org-scoped backing store
+ * — the world-model register (worldModel.service.ts), the innovation pipeline
+ * (innovationPipeline.service.ts), the self-evolution register
+ * (selfEvolution.service.ts) and the federation register (federation.service.ts).
+ * Each field reports a measured value once its store holds data and a
+ * null/structural_null pair while empty. Nothing is estimated.
  */
 import { prisma } from "../db/client.js";
 import { redisCmd as redis } from "../db/redis.js";
@@ -25,14 +32,16 @@ export const CognitiveService = {
   /**
    * Platform observability rollup.
    *
-   * Counts are read from real tables. Fields with no backing store (self-
-   * evolution, DNA completeness, federation partners, civilization/world
-   * modelling) now report `null` — those subsystems do not exist yet, and a
-   * plausible number would imply they do. Measured aggregates (observatory,
-   * memory, predictions) remain numbers; 0 there is measured (0 healthy nodes).
+   * Counts are read from real tables. Fields that once had no backing store
+   * (self-evolution, DNA completeness, federation partners, marketplace assets,
+   * innovation pipeline, civilization/world modelling) are now backed by real
+   * org-scoped stores; each reports a measured value once its store holds data
+   * and `null` while empty (a plausible number over an empty store would imply
+   * activity that has not happened). Measured aggregates (observatory, memory,
+   * predictions) remain numbers; 0 there is measured (0 healthy nodes).
    *
    * This is a pure read — it never writes. A fresh org returns `null` for the
-   * nine structural fields and provenance marks them as `structural_null`.
+   * not-yet-populated fields and provenance marks them `structural_null`.
    */
   async dashboard(oid: string): Promise<CognitiveDashboard> {
     if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
@@ -64,19 +73,48 @@ export const CognitiveService = {
       { category: "events", healthy: openAlerts === 0, count: openAlerts, alerts: openAlerts },
     ];
     const healthyPct = Math.round((observatory.filter((o) => o.healthy).length / observatory.length) * 100);
+
+    // Two of the previously structural-null fields now have a real backing
+    // store: the Session 110 world-model evidence register. `civilizationEntities`
+    // is the register's entity count and `worldScenariosTracked` is its
+    // hypothesis count (forward-looking scenarios). They are read from stored
+    // records only — never estimated. An empty register still reports the honest
+    // 0/structural_null pair (0 is a measurement here: nothing recorded yet).
+    const { CognitiveWorldModelService } = await import("./worldModel.service.js");
+    const worldModel = await CognitiveWorldModelService.worldModel(oid);
+    const civilizationEntities = worldModel.entityCount;
+    const worldScenariosTracked = worldModel.hypothesisCount;
+    const worldModelHasData = civilizationEntities > 0 || worldScenariosTracked > 0;
+
+    // The remaining formerly-structural fields now have real org-scoped backing
+    // stores. Each reports a real value once its store holds data and a null +
+    // structural_null pair while empty (never a fabricated estimate).
+    const { InnovationPipelineService } = await import("./innovationPipeline.service.js");
+    const { SelfEvolutionService } = await import("./selfEvolution.service.js");
+    const { FederationService } = await import("./federation.service.js");
+    const [innovation, evolution, federation] = await Promise.all([
+      InnovationPipelineService.rollup(oid),
+      SelfEvolutionService.rollup(oid),
+      FederationService.rollup(oid),
+    ]);
+    const marketplaceUnifiedAssets = federation.hasData ? federation.unifiedAssets : null;
+    const federationPartners = federation.hasData ? federation.activePartners : null;
+    const innovationProposalsOpen = innovation.hasData ? innovation.openCount : null;
+    const innovationPipelineValueUsd = innovation.hasData ? innovation.pipelineValueUsd : null;
     return {
-      selfEvolutionHealth: null, autoFixes30d: null,
+      selfEvolutionHealth: evolution.health, autoFixes30d: evolution.autoFixes30d,
       // A bottleneck is a workflow that is stuck running or has failed.
       activeBottlenecks: runningWorkflows + failedRuns,
-      dnaCompleteness: null, marketplaceUnifiedAssets: null, federationPartners: null,
+      dnaCompleteness: evolution.dnaCompleteness,
+      marketplaceUnifiedAssets, federationPartners,
       observatoryHealthyPct: healthyPct,
       observabilityNodes: observatory.reduce((n, x) => n + x.count, 0),
       reasoningAccuracyAvg: successPct,
       globalMemoryEntries: memories + knowledge,
-      innovationProposalsOpen: null, innovationPipelineValueUsd: null,
-      civilizationEntities: null, worldScenariosTracked: null,
+      innovationProposalsOpen, innovationPipelineValueUsd,
+      civilizationEntities, worldScenariosTracked,
       predictionsMade30d: aiTotal, predictionAccuracyPct: successPct,
-      components: [], partners: [], observatory,
+      components: evolution.components, partners: federation.partners, observatory,
       // ReasoningCapability is keyed by a fixed domain enum, and we do not
       // classify requests by reasoning domain — so this stays empty rather
       // than mislabelling aggregate traffic as e.g. "medical" reasoning.
@@ -85,18 +123,18 @@ export const CognitiveService = {
         { layer: "agent_memory", entries: memories, accesses24h: 0, sizeGb: 0 },
         { layer: "agent_knowledge", entries: knowledge, accesses24h: 0, sizeGb: 0 },
       ],
-      innovations: [], scenarios: [],
+      innovations: innovation.proposals, scenarios: [],
       provenance: {
-        selfEvolutionHealth: "structural_null",
-        autoFixes30d: "structural_null",
-        dnaCompleteness: "structural_null",
-        marketplaceUnifiedAssets: "structural_null",
-        federationPartners: "structural_null",
-        innovationProposalsOpen: "structural_null",
-        innovationPipelineValueUsd: "structural_null",
-        civilizationEntities: "structural_null",
-        worldScenariosTracked: "structural_null",
-        note: "Nine subsystems report null — they do not exist yet (no estimation). Measured rolls (observatory, memory, predictions, bottlenecks) remain numbers.",
+        selfEvolutionHealth: evolution.hasData ? "measured" : "structural_null",
+        autoFixes30d: evolution.hasData ? "measured" : "structural_null",
+        dnaCompleteness: evolution.hasData ? "measured" : "structural_null",
+        marketplaceUnifiedAssets: federation.hasData ? "measured" : "structural_null",
+        federationPartners: federation.hasData ? "measured" : "structural_null",
+        innovationProposalsOpen: innovation.hasData ? "measured" : "structural_null",
+        innovationPipelineValueUsd: innovation.hasData ? "measured" : "structural_null",
+        civilizationEntities: worldModelHasData ? "measured" : "structural_null",
+        worldScenariosTracked: worldModelHasData ? "measured" : "structural_null",
+        note: "Every field is now backed by a real org-scoped store (self-evolution, innovation pipeline, federation, world-model). Each reports a measured value once its store holds data and a null/structural_null pair while empty (0 is a real measurement — nothing recorded yet). Observatory, memory and prediction rolls remain live counts.",
       },
     } satisfies CognitiveDashboard;
   },

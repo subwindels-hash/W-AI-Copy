@@ -802,12 +802,14 @@ describe("organization isolation", () => {
 /* ═══ Configuration, gaps and the ledger ══════════════════════════════════ */
 
 describe("configuration and gaps", () => {
-  it("names every unimplemented rollup section rather than letting its zero pass as data", async () => {
+  it("reports the unimplemented rollup sections list (now empty — all sections implemented)", async () => {
     const cfg = Opex.configuration();
-    expect(cfg.unimplementedSections.length).toBeGreaterThan(0);
-    for (const section of shared.OPEX_UNIMPLEMENTED_SECTIONS) {
-      expect(cfg.unimplementedSections).toContain(section);
-    }
+    // Every Session 73 section is now backed by a real store or measured
+    // composite, so the unimplemented list is empty and the config check passes.
+    expect(cfg.unimplementedSections).toEqual([...shared.OPEX_UNIMPLEMENTED_SECTIONS]);
+    expect(cfg.unimplementedSections.length).toBe(0);
+    const check = cfg.checks.find((c) => c.key === "unimplemented_sections")!;
+    expect(check.state).toBe("pass");
     expect(cfg.note).toMatch(/implemented and reachable, not audited or certified/i);
   });
 
@@ -920,8 +922,11 @@ describe("Session 73 compatibility", () => {
     const dash = await OpexService.dashboard(ORG);
     const provenance = dash.provenance!;
     expect(provenance.structuralZeroFields).toBeGreaterThan(0);
-    const gates = provenance.entries.find((e) => e.field === "governance.gates")!;
-    expect(gates.basis).toBe("not_assessed");
+    // On an empty org the composite maturity score has no measured signal, so it
+    // reports not_assessed here (it becomes `observed` once any signal has data —
+    // covered in the completion suite).
+    const structural = provenance.entries.find((e) => e.field === "continuous.maturityScore")!;
+    expect(structural.basis).toBe("not_assessed");
     const safety = provenance.entries.find((e) => e.field === "trust.safety")!;
     expect(safety.detail).toMatch(/not a safety assessment/i);
     expect(provenance.note).toMatch(/shape is unchanged for existing consumers/i);

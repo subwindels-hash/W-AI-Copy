@@ -16,6 +16,30 @@ import { logger } from "../config/logger.js";
 import { KnowledgeGraphService } from "../enterprise/knowledgeGraph/knowledgeGraph.service.js";
 import type { KGEntity, KGRelation, RelationKind } from "@windels/shared/dataPlatform";
 
+// ─── Custom action handler registry ─────────────────────────────
+//
+// A `custom` rule action references a named handler. The old stub returned
+// `{ custom: true }` for any custom action without doing anything (a false
+// success). Named handlers are now registered and looked up; an unknown handler
+// FAILS CLOSED by throwing, so a rule can never report a phantom custom action.
+
+export type CustomRuleActionHandler = (
+  action: RuleAction,
+  bindings: Map<string, string>,
+) => Promise<unknown> | unknown;
+
+const customRuleActionHandlers = new Map<string, CustomRuleActionHandler>();
+
+/** Register a named custom rule-action handler. */
+export function registerCustomRuleAction(name: string, fn: CustomRuleActionHandler): void {
+  customRuleActionHandlers.set(name, fn);
+}
+
+/** Test-only / lifecycle helper to clear the registry. */
+export function clearCustomRuleActions(): void {
+  customRuleActionHandlers.clear();
+}
+
 // ─── Types ──────────────────────────────────────────────────────
 
 export interface Rule {
@@ -56,7 +80,8 @@ export interface RuleAction {
   // Add entity
   entityName?: string;
   entityKind?: string;
-  // Update attribute
+  // Update attribute (entityId may be a binding variable or a literal id)
+  entityId?: string;
   attributeName?: string;
   attributeValue?: any;
   // Log
@@ -382,12 +407,32 @@ async function executeAction(
     }
 
     case "update_attribute": {
+      if (!action.entityId) {
+        throw new Error("update_attribute requires entityId");
+      }
       if (!action.attributeName) {
         throw new Error("update_attribute requires attributeName");
       }
-      
-      // TODO: Implement attribute update
-      return { updated: true };
+
+      // Resolve the entity id from a binding variable when applicable, then set
+      // the single attribute via upsert (which merges attributes for an
+      // existing entity). Report honestly when the target does not exist rather
+      // than claiming a phantom update.
+      const entityId = bindings.get(action.entityId) ?? action.entityId;
+      const existing = KnowledgeGraphService.get(entityId);
+      if (!existing) {
+        return { updated: false, reason: "entity_not_found", entityId };
+      }
+
+      await KnowledgeGraphService.upsertEntity({
+        id: entityId,
+        kind: existing.kind,
+        name: existing.name,
+        attributes: { [action.attributeName]: action.attributeValue ?? null, updatedByRule: true },
+        provenance: { source: "rule-engine" },
+      });
+
+      return { updated: true, entityId, attributeName: action.attributeName };
     }
 
     case "log": {
@@ -398,8 +443,16 @@ async function executeAction(
     }
 
     case "custom": {
-      // TODO: Implement custom handlers
-      return { custom: true };
+      // Fail closed: a custom action with no registered handler must not report
+      // a phantom success. `action.handler` names the registered function.
+      if (!action.handler) {
+        throw new Error("custom action requires a handler name");
+      }
+      const fn = customRuleActionHandlers.get(action.handler);
+      if (!fn) {
+        throw new Error(`Unknown custom rule-action handler: ${action.handler}`);
+      }
+      return { custom: true, handler: action.handler, result: await fn(action, bindings) };
     }
 
     default:

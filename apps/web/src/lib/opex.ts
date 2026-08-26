@@ -61,6 +61,24 @@ export {
   OPEX_SEVERITIES,
   OPEX_UNIMPLEMENTED_SECTIONS,
   opexDimensionDirection,
+  OPEX_GATE_LEVELS,
+  OPEX_GATE_DECISIONS,
+  OPEX_REGULATION_CATEGORIES,
+  OPEX_REGULATION_STATUSES,
+  OPEX_PLAYBOOK_CATEGORIES,
+  OPEX_PLAYBOOK_STATUSES,
+  OPEX_PLAYBOOK_COMPLIANCE,
+  SAFETY_CATEGORIES,
+} from "@windels/shared/opex";
+export type {
+  OpexGateLevel,
+  OpexGateDecision,
+  OpexRegulationCategory,
+  OpexRegulationStatus,
+  OpexPlaybookCategory,
+  OpexPlaybookStatus,
+  OpexPlaybookCompliance,
+  SafetyCategory,
 } from "@windels/shared/opex";
 
 const qs = (params: Record<string, string | number | undefined>) => {
@@ -132,6 +150,92 @@ export const opexAssuranceApi = {
   /* Ledger */
   events: (q: { kind?: string; alertId?: string; limit?: number } = {}) =>
     api<OpexEventPage>(`/opex/events${qs(q)}`),
+};
+
+/* ── Session-completion subsystems (now real org-scoped stores) ─────────────
+ * governance gates, regulatory register, operational playbooks, AI-decision
+ * explanations, and safety benchmarks. Each backs a formerly-structural field
+ * of the opex rollup. */
+import type {
+  GovernanceGate,
+  Regulation,
+  Playbook,
+  Explanation,
+  OpexGateRecord,
+  OpexGateRequestRecord,
+  OpexGateCreateInput,
+  OpexGateRequestInput,
+  OpexGateDecisionInput,
+  OpexRegulationCreateInput,
+  OpexRegulationUpdateInput,
+  OpexPlaybookCreateInput,
+  OpexPlaybookUpdateInput,
+  OpexExplanationCreateInput,
+  OpexExplanationChallengeInput,
+  OpexSafetyBenchmarkRecordInput,
+  OpexSafetyBenchmarkResult,
+  SafetyCategory,
+} from "@windels/shared/opex";
+
+export type {
+  GovernanceGate,
+  Regulation,
+  Playbook,
+  Explanation,
+  OpexGateRecord,
+  OpexGateRequestRecord,
+  OpexSafetyBenchmarkResult,
+} from "@windels/shared/opex";
+
+export const opexGovernanceApi = {
+  listGates: () => api<OpexGateRecord[]>("/opex/governance/gates"),
+  createGate: (input: OpexGateCreateInput) =>
+    api<OpexGateRecord>("/opex/governance/gates", { method: "POST", json: input }),
+  listRequests: (gateId: string) =>
+    api<OpexGateRequestRecord[]>(`/opex/governance/gates/${encodeURIComponent(gateId)}/requests`),
+  openRequest: (gateId: string, input: OpexGateRequestInput) =>
+    api<OpexGateRequestRecord>(`/opex/governance/gates/${encodeURIComponent(gateId)}/requests`, { method: "POST", json: input }),
+  decideRequest: (gateId: string, requestId: string, input: OpexGateDecisionInput) =>
+    api<OpexGateRequestRecord>(
+      `/opex/governance/gates/${encodeURIComponent(gateId)}/requests/${encodeURIComponent(requestId)}/decision`,
+      { method: "POST", json: input },
+    ),
+};
+
+export const opexRegulationsApi = {
+  list: () => api<Regulation[]>("/opex/regulations"),
+  create: (input: OpexRegulationCreateInput) =>
+    api<Regulation>("/opex/regulations", { method: "POST", json: input }),
+  update: (regulationId: string, input: OpexRegulationUpdateInput) =>
+    api<Regulation>(`/opex/regulations/${encodeURIComponent(regulationId)}`, { method: "PATCH", json: input }),
+  remove: (regulationId: string) =>
+    api<{ deleted: boolean }>(`/opex/regulations/${encodeURIComponent(regulationId)}`, { method: "DELETE" }),
+};
+
+export const opexPlaybooksApi = {
+  list: () => api<Playbook[]>("/opex/playbooks"),
+  create: (input: OpexPlaybookCreateInput) =>
+    api<Playbook>("/opex/playbooks", { method: "POST", json: input }),
+  update: (playbookId: string, input: OpexPlaybookUpdateInput) =>
+    api<Playbook>(`/opex/playbooks/${encodeURIComponent(playbookId)}`, { method: "PATCH", json: input }),
+  simulate: (playbookId: string) =>
+    api<Playbook>(`/opex/playbooks/${encodeURIComponent(playbookId)}/simulate`, { method: "POST" }),
+  remove: (playbookId: string) =>
+    api<{ deleted: boolean }>(`/opex/playbooks/${encodeURIComponent(playbookId)}`, { method: "DELETE" }),
+};
+
+export const opexExplanationsApi = {
+  list: () => api<Explanation[]>("/opex/explanations"),
+  record: (input: OpexExplanationCreateInput) =>
+    api<Explanation>("/opex/explanations", { method: "POST", json: input }),
+  challenge: (explanationId: string, input: OpexExplanationChallengeInput) =>
+    api<Explanation>(`/opex/explanations/${encodeURIComponent(explanationId)}/challenge`, { method: "POST", json: input }),
+};
+
+export const opexSafetyBenchmarksApi = {
+  rollup: () => api<Partial<Record<SafetyCategory, { pass: boolean; score: number }>>>("/opex/safety-benchmarks"),
+  record: (input: OpexSafetyBenchmarkRecordInput) =>
+    api<OpexSafetyBenchmarkResult>("/opex/safety-benchmarks", { method: "POST", json: input }),
 };
 
 /** Rendering a measure: null must never be printed as 0. */

@@ -480,15 +480,13 @@ export const OPEX_MIN_ASSESSMENT_METHOD_LENGTH = 10;
 export const OPEX_MIN_REOPEN_REASON_LENGTH = 10;
 
 /** Sections the Session 73 contract declares that nothing in this deployment implements. */
-export const OPEX_UNIMPLEMENTED_SECTIONS = [
-  "regulations",
-  "playbooks",
-  "explanations",
-  "governance.gates",
-  "safety.benchmarks",
-  "continuous.maturityScore",
-  "collaborationSessionsActive",
-] as const;
+/**
+ * Rollup sections the Session 73 contract declares that nothing in this
+ * deployment implements. Now empty: every section is backed by a real
+ * org-scoped store or a measured composite. Retained (as a possibly-empty
+ * array) so consumers that iterate it keep compiling.
+ */
+export const OPEX_UNIMPLEMENTED_SECTIONS: readonly string[] = [];
 
 /* ── Notes that ship inside payloads ───────────────────────────────────── */
 
@@ -758,3 +756,217 @@ export const OpexEventQuerySchema = z.object({
   alertId: z.string().trim().min(1).max(128).optional(),
   limit: z.coerce.number().int().min(1).max(OPEX_EVENT_LIMIT).optional(),
 });
+
+/* ── Governance gates (AI-decision approval gates) ─────────────────────────
+ *
+ * Session-completion: `governance.gates` was a structural zero. These schemas
+ * and types back a real org-scoped approval-gate store: a gate is an approval
+ * checkpoint at an authority level, and every decision (approve/reject) is a
+ * recorded event. The opex rollup's per-gate figures (pending, approved24h,
+ * rejected24h, avgDecisionMin) are computed from those recorded decisions —
+ * never estimated. */
+
+export const OPEX_GATE_LEVELS = ["l1_auto", "l2_manager", "l3_director", "l4_exec", "l5_board"] as const;
+export type OpexGateLevel = (typeof OPEX_GATE_LEVELS)[number];
+
+export const OPEX_GATE_DECISIONS = ["approved", "rejected"] as const;
+export type OpexGateDecision = (typeof OPEX_GATE_DECISIONS)[number];
+
+export const OpexGateCreateSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  level: z.enum(OPEX_GATE_LEVELS),
+  description: z.string().trim().max(1000).optional(),
+});
+export type OpexGateCreateInput = z.infer<typeof OpexGateCreateSchema>;
+
+export const OpexGateRequestSchema = z.object({
+  subject: z.string().trim().min(2).max(300),
+  detail: z.string().trim().max(2000).optional(),
+});
+export type OpexGateRequestInput = z.infer<typeof OpexGateRequestSchema>;
+
+export const OpexGateDecisionSchema = z.object({
+  decision: z.enum(OPEX_GATE_DECISIONS),
+  reason: z.string().trim().max(2000).optional(),
+});
+export type OpexGateDecisionInput = z.infer<typeof OpexGateDecisionSchema>;
+
+export const OpexGateIdParamSchema = z.object({ gateId: z.string().trim().min(1).max(128) });
+export const OpexGateRequestIdParamSchema = z.object({
+  gateId: z.string().trim().min(1).max(128),
+  requestId: z.string().trim().min(1).max(128),
+});
+
+export interface OpexGateRequestRecord {
+  id: string;
+  gateId: string;
+  subject: string;
+  detail: string | null;
+  status: "pending" | OpexGateDecision;
+  requestedBy: string | null;
+  requestedAt: string;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionReason: string | null;
+}
+
+export interface OpexGateRecord {
+  id: string;
+  name: string;
+  level: OpexGateLevel;
+  description: string | null;
+  createdAt: string;
+  createdBy: string | null;
+}
+
+/* ── Regulatory tracking (org-scoped) ──────────────────────────────────────
+ *
+ * Session-completion: `regulations` was a structural zero. These schemas back a
+ * real org-scoped regulatory register. The opex rollup figures (tracked,
+ * changed30d, openGaps, upcoming) are computed from stored records only. */
+
+export const OPEX_REGULATION_CATEGORIES = [
+  "privacy", "security", "finance", "health", "ai_act", "environmental", "tax", "cyber", "procurement",
+] as const;
+export type OpexRegulationCategory = (typeof OPEX_REGULATION_CATEGORIES)[number];
+
+export const OPEX_REGULATION_STATUSES = ["proposed", "enacted", "enforcing", "updated"] as const;
+export type OpexRegulationStatus = (typeof OPEX_REGULATION_STATUSES)[number];
+
+export const OpexRegulationCreateSchema = z.object({
+  name: z.string().trim().min(2).max(200),
+  jurisdiction: z.string().trim().min(2).max(120),
+  category: z.enum(OPEX_REGULATION_CATEGORIES),
+  status: z.enum(OPEX_REGULATION_STATUSES).default("proposed"),
+  summary: z.string().trim().max(2000).default(""),
+  effectiveDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).optional(),
+  impactAreas: z.array(z.string().trim().min(1).max(80)).max(30).default([]),
+  gapCount: z.number().int().min(0).max(100000).default(0),
+  gapResolved: z.number().int().min(0).max(100000).default(0),
+});
+export type OpexRegulationCreateInput = z.infer<typeof OpexRegulationCreateSchema>;
+
+export const OpexRegulationUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(200).optional(),
+    status: z.enum(OPEX_REGULATION_STATUSES).optional(),
+    summary: z.string().trim().max(2000).optional(),
+    effectiveDate: z.string().datetime().or(z.string().regex(/^\d{4}-\d{2}-\d{2}/)).nullable().optional(),
+    impactAreas: z.array(z.string().trim().min(1).max(80)).max(30).optional(),
+    gapCount: z.number().int().min(0).max(100000).optional(),
+    gapResolved: z.number().int().min(0).max(100000).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "No regulation fields supplied." });
+export type OpexRegulationUpdateInput = z.infer<typeof OpexRegulationUpdateSchema>;
+
+export const OpexRegulationIdParamSchema = z.object({ regulationId: z.string().trim().min(1).max(128) });
+
+/* ── Operational playbooks (org-scoped) ────────────────────────────────────
+ *
+ * Session-completion: `playbooks` was a structural zero. These schemas back a
+ * real org-scoped playbook store. The rollup figures (total, active,
+ * simulating, avgCompliancePct) are computed from stored records only:
+ * avgCompliancePct maps each playbook's compliance state (verified=100, gaps=50,
+ * unknown=0) and averages, so it reflects real recorded posture. */
+
+export const OPEX_PLAYBOOK_CATEGORIES = [
+  "cyber", "dr", "procurement", "escalation", "hr", "construction", "manufacturing",
+  "healthcare", "legal", "finance", "sales", "marketing", "gov", "emergency", "ops",
+] as const;
+export type OpexPlaybookCategory = (typeof OPEX_PLAYBOOK_CATEGORIES)[number];
+
+export const OPEX_PLAYBOOK_STATUSES = ["draft", "approved", "active", "retired"] as const;
+export type OpexPlaybookStatus = (typeof OPEX_PLAYBOOK_STATUSES)[number];
+
+export const OPEX_PLAYBOOK_COMPLIANCE = ["verified", "gaps", "unknown"] as const;
+export type OpexPlaybookCompliance = (typeof OPEX_PLAYBOOK_COMPLIANCE)[number];
+
+export const OpexPlaybookCreateSchema = z.object({
+  name: z.string().trim().min(2).max(200),
+  category: z.enum(OPEX_PLAYBOOK_CATEGORIES),
+  version: z.string().trim().min(1).max(40).default("1.0.0"),
+  steps: z.number().int().min(0).max(100000).default(0),
+  status: z.enum(OPEX_PLAYBOOK_STATUSES).default("draft"),
+  compliance: z.enum(OPEX_PLAYBOOK_COMPLIANCE).default("unknown"),
+});
+export type OpexPlaybookCreateInput = z.infer<typeof OpexPlaybookCreateSchema>;
+
+export const OpexPlaybookUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(200).optional(),
+    version: z.string().trim().min(1).max(40).optional(),
+    steps: z.number().int().min(0).max(100000).optional(),
+    status: z.enum(OPEX_PLAYBOOK_STATUSES).optional(),
+    compliance: z.enum(OPEX_PLAYBOOK_COMPLIANCE).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "No playbook fields supplied." });
+export type OpexPlaybookUpdateInput = z.infer<typeof OpexPlaybookUpdateSchema>;
+
+export const OpexPlaybookIdParamSchema = z.object({ playbookId: z.string().trim().min(1).max(128) });
+
+/* ── AI-decision explanations (org-scoped) ─────────────────────────────────
+ *
+ * Session-completion: `explanations` was a structural zero. These schemas back
+ * a real org-scoped explainability register: each record is the recorded
+ * rationale for an AI/automated decision (confidence, evidence, knowledge
+ * sources, policy checks, risks), and may be challenged with an upheld/overturned
+ * outcome. The opex rollup figures are computed from stored records only:
+ *   - available24h     = explanations recorded in the last 24h
+ *   - avgEvidence      = mean evidenceCount (0 when none)
+ *   - avgConfidence    = mean confidence % (0 when none)
+ *   - challenged       = explanations with a recorded challenge
+ *   - challengedUpheld = challenges whose outcome upheld the decision */
+
+export const OpexExplanationCreateSchema = z.object({
+  decisionId: z.string().trim().min(1).max(200),
+  decisionSummary: z.string().trim().min(2).max(2000),
+  confidence: z.number().min(0).max(1),
+  evidenceCount: z.number().int().min(0).max(100000).default(0),
+  knowledgeSources: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  memoryTouches: z.number().int().min(0).max(1000000).default(0),
+  toolCalls: z.number().int().min(0).max(1000000).default(0),
+  policyChecks: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  risks: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  humanApprover: z.string().trim().min(1).max(200).optional(),
+});
+export type OpexExplanationCreateInput = z.infer<typeof OpexExplanationCreateSchema>;
+
+export const OpexExplanationChallengeSchema = z.object({
+  outcome: z.enum(["upheld", "overturned"]),
+  reason: z.string().trim().max(2000).optional(),
+});
+export type OpexExplanationChallengeInput = z.infer<typeof OpexExplanationChallengeSchema>;
+
+export const OpexExplanationIdParamSchema = z.object({ explanationId: z.string().trim().min(1).max(128) });
+
+/* ── Safety benchmarks (org-scoped) ────────────────────────────────────────
+ *
+ * Session-completion: `safety.benchmarks` was a structural empty map. This
+ * schema backs a real org-scoped store of safety-benchmark results per
+ * SafetyCategory. The opex rollup exposes the LATEST result per evaluated
+ * category as `{ pass, score }` — an unevaluated category is absent (never
+ * reported as passing). `pass` is derived from a recorded passing threshold, so
+ * the verdict is not a free-form claim. */
+
+export const OPEX_SAFETY_BENCHMARK_MIN = 0;
+export const OPEX_SAFETY_BENCHMARK_MAX = 100;
+export const OPEX_SAFETY_BENCHMARK_DEFAULT_THRESHOLD = 80;
+
+export const OpexSafetyBenchmarkRecordSchema = z.object({
+  category: z.enum(SAFETY_CATEGORIES),
+  score: z.number().min(OPEX_SAFETY_BENCHMARK_MIN).max(OPEX_SAFETY_BENCHMARK_MAX),
+  passThreshold: z.number().min(OPEX_SAFETY_BENCHMARK_MIN).max(OPEX_SAFETY_BENCHMARK_MAX).default(OPEX_SAFETY_BENCHMARK_DEFAULT_THRESHOLD),
+  suite: z.string().trim().min(1).max(160).optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+export type OpexSafetyBenchmarkRecordInput = z.infer<typeof OpexSafetyBenchmarkRecordSchema>;
+
+export interface OpexSafetyBenchmarkResult {
+  category: SafetyCategory;
+  score: number;
+  passThreshold: number;
+  pass: boolean;
+  suite: string | null;
+  recordedAt: string;
+  recordedBy: string | null;
+}

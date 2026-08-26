@@ -3,7 +3,7 @@ import { Router } from "express";
 import { authenticate, requireSuperAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { rateLimit } from "../middleware/rateLimit.js";
-import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
+import { BlockonomicsAdminConfigUpdateSchema, BlockonomicsAdminToggleSchema, BlockonomicsAdminAssetToggleSchema, BlockonomicsAdminTransactionQuerySchema, BlockonomicsReconciliationRequestSchema } from "@windels/shared/payments";
 import { BlockonomicsConfigService } from "../../payments/blockonomics.service.js";
 import { BlockonomicsAdminService } from "../../payments/blockonomicsAdmin.service.js";
 import { BlockonomicsReconciliationService } from "../../payments/blockonomicsReconciliation.service.js";
@@ -32,6 +32,16 @@ export function registerBlockonomicsAdminRoutes(router: Router) {
     } catch (error) { next(error); }
   });
 
+  // Per-method ON/OFF switch. Enables/disables BTC or USDT independently; the
+  // two are never coupled, and turning both off is a valid "crypto unavailable"
+  // state. Super-admin only + audit-logged via the config service.
+  admin.patch("/assets", validate({ body: BlockonomicsAdminAssetToggleSchema }), async (req, res, next) => {
+    try {
+      const config = await BlockonomicsConfigService.setAssetEnabled(req.body.asset, req.body.enabled, req.user!.id);
+      res.json({ ok: true, data: config, meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
   admin.post("/health", async (req, res, next) => {
     try {
       const result = await BlockonomicsAdminService.checkHealth(req.user!.id);
@@ -42,6 +52,16 @@ export function registerBlockonomicsAdminRoutes(router: Router) {
   admin.get("/dashboard", async (req, res, next) => {
     try {
       res.json({ ok: true, data: await BlockonomicsAdminService.dashboard(), meta: { requestId: req.requestId } });
+    } catch (error) { next(error); }
+  });
+
+  // Super Admin → Payments → Crypto Transactions. Read-only search/filter over
+  // the durable crypto payment ledger (by user id, transaction reference, asset,
+  // status). No balance-mutating operations are exposed here.
+  admin.get("/transactions", validate({ query: BlockonomicsAdminTransactionQuerySchema }), async (req, res, next) => {
+    try {
+      const page = await BlockonomicsAdminService.searchTransactions(req.query as any);
+      res.json({ ok: true, data: page, meta: { requestId: req.requestId } });
     } catch (error) { next(error); }
   });
 

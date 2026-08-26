@@ -40,6 +40,13 @@ export interface ConsolidationResult {
   summary: string;
   clusterType: string;
   similarityScore: number;
+  /** Net bytes of memory `content` reclaimed by this cluster (freed − added). */
+  bytesFreed: number;
+}
+
+/** UTF-8 byte length of a string (real stored size, not JS char count). */
+function byteLen(text: string): number {
+  return Buffer.byteLength(text ?? "", "utf8");
 }
 
 export interface ConsolidationStats {
@@ -239,6 +246,13 @@ export async function consolidateCluster(
 
   // Delete original memories (except centroid for provenance)
   const memoriesToDelete = cluster.memoryIds.filter(id => id !== cluster.centroidMemoryId);
+  // Real storage reclaimed: the content bytes of every deleted memory, minus
+  // the bytes of the new consolidated summary we just wrote. The retained
+  // centroid is unchanged, so it nets to zero and is excluded.
+  const bytesRemoved = memories
+    .filter(m => memoriesToDelete.includes(m.id))
+    .reduce((sum, m) => sum + byteLen(m.content), 0);
+  const bytesFreed = bytesRemoved - byteLen(summary);
   for (const memoryId of memoriesToDelete) {
     await deleteEmbedding(memoryId);
     await prisma.agentMemory.delete({ where: { id: memoryId } });
@@ -270,6 +284,7 @@ export async function consolidateCluster(
     summary,
     clusterType: cluster.clusterType,
     similarityScore: cluster.avgSimilarity,
+    bytesFreed,
   };
 }
 
@@ -357,6 +372,7 @@ export async function consolidateAgentMemories(
   // Consolidate each cluster
   const results: ConsolidationResult[] = [];
   let memoriesDeleted = 0;
+  let storageReduction = 0;
 
   for (const cluster of clusters) {
     try {
@@ -364,6 +380,7 @@ export async function consolidateAgentMemories(
       if (result) {
         results.push(result);
         memoriesDeleted += cluster.memoryIds.length - 1; // All except centroid
+        storageReduction += Math.max(0, result.bytesFreed); // Real reclaimed content bytes
       }
     } catch (e) {
       logger.warn("Cluster consolidation failed", {
@@ -380,7 +397,8 @@ export async function consolidateAgentMemories(
     duplicatesMerged: results.filter(r => r.clusterType === "duplicate").length,
     relatedMerged: results.filter(r => r.clusterType === "related").length,
     memoriesDeleted,
-    storageReduction: 0, // TODO: Calculate actual storage savings
+    // Net UTF-8 content bytes reclaimed across all consolidated clusters.
+    storageReduction,
   };
 
   // Record consolidation history

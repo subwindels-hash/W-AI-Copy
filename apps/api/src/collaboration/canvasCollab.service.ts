@@ -36,12 +36,19 @@ export interface CanvasCollabKv {
   hdel(key: string, field: string): Promise<unknown>;
   del(key: string): Promise<unknown>;
   publish(channel: string, message: string): Promise<unknown>;
+  // Optional set ops for the org-scoped active-canvas index. They are optional
+  // so existing injected fakes keep working; when absent the index is skipped.
+  sadd?(key: string, member: string): Promise<unknown>;
+  srem?(key: string, member: string): Promise<unknown>;
+  smembers?(key: string): Promise<string[]>;
 }
 
 export const PRESENCE_TTL_SEC = Number(process.env.CANVAS_PRESENCE_TTL_SEC ?? 30);
 const presenceKey = (canvasId: string, organizationId?: string) => organizationId ? `canvas:presence:i:${organizationId}:${canvasId}` : `canvas:presence:${canvasId}`;
 const cursorKey = (canvasId: string, organizationId?: string) => organizationId ? `canvas:cursor:i:${organizationId}:${canvasId}` : `canvas:cursor:${canvasId}`;
 export const collabChannel = (canvasId: string, organizationId?: string) => organizationId ? `canvas:collab:${organizationId}:${canvasId}` : `canvas:collab:${canvasId}`;
+/** Org-scoped index of canvas ids that have (or recently had) live presence. */
+const activeCanvasIndexKey = (organizationId: string) => `canvas:active:i:${organizationId}`;
 
 /** Shared Redis subscriber — one subscription per canvas id (idempotent). */
 const subscribers = new Set<string>();
@@ -73,8 +80,34 @@ export const CanvasCollabService = {
       lastSeenAt: now,
     };
     await k.hset(presenceKey(canvasId, organizationId), user.userId, JSON.stringify(doc));
+    // Track this canvas in the org-scoped active index so opex (and any other
+    // org-level rollup) can count active collaboration sessions truthfully.
+    // Membership is authoritative only together with a live presence check:
+    // activeSessionCount() prunes canvases whose heartbeats have all expired.
+    if (organizationId && k.sadd) await k.sadd(activeCanvasIndexKey(organizationId), canvasId);
     await k.publish(collabChannel(canvasId, organizationId), JSON.stringify({ type: "presence", userId: user.userId, displayName: user.displayName, at: now }));
     return doc;
+  },
+
+  /**
+   * Count active collaboration sessions for an organization — a session being a
+   * canvas that currently has at least one non-expired presence heartbeat. Reads
+   * the org-scoped active-canvas index and re-checks live presence per canvas
+   * (pruning canvases whose heartbeats have all expired), so the count reflects
+   * real current activity rather than stale index membership. Never estimated.
+   */
+  async activeSessionCount(organizationId: string, kv?: CanvasCollabKv): Promise<number> {
+    if (!organizationId) throw new Error("organizationId is required");
+    const k = withDefaults(kv);
+    if (!k.smembers || !k.srem) return 0;
+    const canvasIds = await k.smembers(activeCanvasIndexKey(organizationId));
+    let active = 0;
+    for (const canvasId of canvasIds) {
+      const present = await this.presence(canvasId, kv, organizationId);
+      if (present.length > 0) active += 1;
+      else await k.srem(activeCanvasIndexKey(organizationId), canvasId); // prune dead session
+    }
+    return active;
   },
 
   /** Active collaborators (expired heartbeats are pruned lazily). */
@@ -133,6 +166,12 @@ export const CanvasCollabService = {
     const k = withDefaults(kv);
     await k.hdel(presenceKey(canvasId, organizationId), userId);
     await k.hdel(cursorKey(canvasId, organizationId), userId);
+    // If that was the last collaborator, drop the canvas from the org active
+    // index so the session is no longer counted as active.
+    if (organizationId && k.srem) {
+      const remaining = await k.hgetall(presenceKey(canvasId, organizationId));
+      if (Object.keys(remaining).length === 0) await k.srem(activeCanvasIndexKey(organizationId), canvasId);
+    }
     await k.publish(collabChannel(canvasId, organizationId), JSON.stringify({ type: "leave", userId, at: new Date().toISOString() }));
   },
 

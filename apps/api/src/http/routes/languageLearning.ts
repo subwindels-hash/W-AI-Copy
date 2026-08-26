@@ -7,6 +7,7 @@ import {
   LlAssessmentAnswerSchema,
   LlConversationStartSchema,
   LlConversationTurnSchema,
+  LlDetectLanguageSchema,
   LlEnrollSchema,
   LlGrammarAskSchema,
   LlGrammarExerciseSchema,
@@ -15,6 +16,7 @@ import {
   LlProfilePatchSchema,
   LlSpeakingSchema,
   LlTeacherAskSchema,
+  LlTranslateSchema,
   LlVocabQuizAnswerSchema,
   LlVocabReviewSchema,
   LlWritingSchema,
@@ -43,6 +45,18 @@ export function registerLanguageLearningRoutes(router: Router) {
 
   router.get("/languages/:languageCode", validate({ params: LangParam }), async (req, res, next) => {
     try { res.json({ ok: true, data: await Ll.catalog(req.params.languageCode), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+
+  // Session 199 — automatic language detection (typed/pasted/uploaded/message text).
+  router.post("/detect", validate({ body: LlDetectLanguageSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await Ll.detectLanguage(orgOf(req), userOf(req), req.body.text), meta: { requestId: req.requestId } }); }
+    catch (e) { next(e); }
+  });
+
+  // Session 199 — context-aware translation via the AI fabric.
+  router.post("/translate", validate({ body: LlTranslateSchema }), async (req, res, next) => {
+    try { res.json({ ok: true, data: await Ll.translate(orgOf(req), userOf(req), req.body), meta: { requestId: req.requestId } }); }
     catch (e) { next(e); }
   });
 

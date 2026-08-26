@@ -49,7 +49,7 @@ describe("cognitive completion — C1 read path does not seed", () => {
 });
 
 describe("cognitive completion — C3 structural zeros are null", () => {
-  it("empty org dashboard returns null for nine structural fields (fails on C3)", async () => {
+  it("empty org dashboard returns null for the seven structural fields (fails on C3)", async () => {
     const d = await CognitiveService.dashboard(ORG);
     expect(d.selfEvolutionHealth).toBeNull();
     expect(d.autoFixes30d).toBeNull();
@@ -58,11 +58,73 @@ describe("cognitive completion — C3 structural zeros are null", () => {
     expect(d.federationPartners).toBeNull();
     expect(d.innovationProposalsOpen).toBeNull();
     expect(d.innovationPipelineValueUsd).toBeNull();
-    expect(d.civilizationEntities).toBeNull();
-    expect(d.worldScenariosTracked).toBeNull();
     expect(d.provenance).toBeTruthy();
+    // Empty stores => structural_null (a real "nothing recorded", not a fabricated 0).
     expect(d.provenance?.selfEvolutionHealth).toBe("structural_null");
-    expect(d.provenance?.note).toContain("do not exist yet");
+    expect(d.provenance?.marketplaceUnifiedAssets).toBe("structural_null");
+    expect(d.provenance?.federationPartners).toBe("structural_null");
+    expect(d.provenance?.innovationProposalsOpen).toBe("structural_null");
+    expect(d.provenance?.note).toMatch(/backed by a real org-scoped store/i);
+  });
+
+  it("innovation pipeline fields become measured once proposals exist", async () => {
+    const { InnovationPipelineService } = await import("./innovationPipeline.service.js");
+    await InnovationPipelineService.create(ORG, { title: "Edge caching", category: "infra", projectedValueUsd: 25000, risk: "low", status: "approved" }, "user-1");
+    await InnovationPipelineService.create(ORG, { title: "Rejected idea", category: "infra", projectedValueUsd: 999, risk: "high", status: "rejected" }, "user-1");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.innovationProposalsOpen).toBe(1); // rejected excluded from open
+    expect(d.innovationPipelineValueUsd).toBe(25000);
+    expect(d.provenance?.innovationProposalsOpen).toBe("measured");
+    // Isolation: another org still sees null.
+    const other = await CognitiveService.dashboard(OTHER);
+    expect(other.innovationProposalsOpen).toBeNull();
+  });
+
+  it("self-evolution fields become measured once components + auto-fixes exist", async () => {
+    const { SelfEvolutionService } = await import("./selfEvolution.service.js");
+    await SelfEvolutionService.upsertComponent(ORG, { component: "observability", health: 0.9 });
+    await SelfEvolutionService.upsertComponent(ORG, { component: "memory", health: 0.7 });
+    await SelfEvolutionService.recordAutoFix(ORG, "memory");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.selfEvolutionHealth).toBe(80); // (0.9 + 0.7) / 2 * 100
+    expect(d.autoFixes30d).toBe(1);
+    // 2 of 6 expected DNA components configured -> 33%.
+    expect(d.dnaCompleteness).toBe(33);
+    expect(d.provenance?.selfEvolutionHealth).toBe("measured");
+  });
+
+  it("federation fields become measured once active partners exist", async () => {
+    const { FederationService } = await import("./federation.service.js");
+    await FederationService.create(ORG, { name: "Acme", type: "enterprise", trustTier: "gold", sharedDatasets: 3, sharedModels: 2, status: "active" }, "user-1");
+    await FederationService.create(ORG, { name: "Pending Co", type: "supplier", trustTier: "bronze", sharedDatasets: 5, sharedModels: 5, status: "pending" }, "user-1");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.federationPartners).toBe(1); // only active
+    expect(d.marketplaceUnifiedAssets).toBe(5); // 3 + 2 from the active partner
+    expect(d.provenance?.federationPartners).toBe("measured");
+  });
+
+  it("civilizationEntities and worldScenariosTracked are now measured from the world-model register", async () => {
+    // Empty register: measured 0, provenance still structural_null (nothing recorded).
+    const empty = await CognitiveService.dashboard(ORG);
+    expect(empty.civilizationEntities).toBe(0);
+    expect(empty.worldScenariosTracked).toBe(0);
+    expect(empty.provenance?.civilizationEntities).toBe("structural_null");
+    expect(empty.provenance?.worldScenariosTracked).toBe("structural_null");
+
+    // Record one entity and one hypothesis, then the fields report real counts
+    // with "measured" provenance.
+    const { CognitiveWorldModelService } = await import("./worldModel.service.js");
+    await CognitiveWorldModelService.createEntity(ORG, { name: "Power Grid", kind: "internal_system", domain: "infrastructure" }, "user-1");
+    await CognitiveWorldModelService.createHypothesis(ORG, { statement: "Load will peak in Q4", domain: "infrastructure", horizonMonths: 6 }, "user-1");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.civilizationEntities).toBe(1);
+    expect(d.worldScenariosTracked).toBe(1);
+    expect(d.provenance?.civilizationEntities).toBe("measured");
+    expect(d.provenance?.worldScenariosTracked).toBe("measured");
   });
 
   it("measured aggregates remain numbers (0 is honest there)", async () => {

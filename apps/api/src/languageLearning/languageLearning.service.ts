@@ -30,8 +30,10 @@ import type {
   LlVocabItem,
   LlWritingAttempt,
 } from "@windels/shared/languageLearning";
+import type { LlDetectedLanguage, LlTranslateInput, LlTranslation } from "@windels/shared/languageLearning";
 import { LL_CURRENT_MODEL, LL_DISCLAIMER } from "@windels/shared/languageLearning";
 import { listLanguages, requireLanguage } from "./registry.js";
+import { detectLanguage, translate } from "./translate.js";
 import {
   curriculumCeiling,
   getPack,
@@ -1027,6 +1029,21 @@ export const LanguageLearningService = {
 
   async catalog(languageCode: string) {
     const lang = requireLanguage(languageCode);
+    // Session 199 — translation-only catalog languages have no authored
+    // curriculum pack. Report that honestly instead of throwing.
+    if (!lang.learningSupported) {
+      return {
+        language: lang,
+        vocabCount: 0,
+        grammarCount: 0,
+        lessonCount: 0,
+        assessmentItems: 0,
+        conversationModes: [],
+        curriculumCeiling: null,
+        nextUnauthoredLevel: null,
+        note: `${lang.name} is available for translation, AI language practice and language detection. A structured beginner-to-advanced curriculum (authored vocabulary, grammar and lessons) is not yet published for this language.`,
+      };
+    }
     const pack = getPack(languageCode);
     return {
       language: lang,
@@ -1039,6 +1056,22 @@ export const LanguageLearningService = {
       nextUnauthoredLevel: curriculumCeiling(languageCode) === "B2" ? "C1" : null,
       note: "Curriculum is authored through B2 workplace language. C1/C2 lessons are not invented. Pronunciation scores stay NOT_AVAILABLE without a provider.",
     };
+  },
+
+  /**
+   * Session 199 — automatic language detection for typed/pasted text, uploaded
+   * document text, conversation messages and translation requests.
+   */
+  async detectLanguage(org: string, userId: string, text: string): Promise<LlDetectedLanguage> {
+    return detectLanguage(text, { org, userId });
+  },
+
+  /**
+   * Session 199 — context-aware translation via the AI fabric. Preserves the
+   * selected regional/script variant and never returns a silent wrong result.
+   */
+  async translate(org: string, userId: string, input: LlTranslateInput): Promise<LlTranslation> {
+    return translate(input, { org, userId });
   },
 };
 

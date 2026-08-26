@@ -84,12 +84,112 @@ class LocalCompositeProvider implements VtxProviderAdapter {
   }
 }
 
+/**
+ * HTTP transport contract for a cloud video-AI provider. Kept tiny and
+ * injectable so the provider can be exercised without a live endpoint: a job is
+ * submitted, then polled until it reaches a terminal state. The default
+ * implementation talks to `WINDELS_CLOUD_VIDEO_URL` over `fetch`; tests pass a
+ * fake transport.
+ */
+export interface CloudVideoJobSubmission {
+  jobId: string;
+  status?: string;
+}
+export interface CloudVideoJobStatus {
+  jobId: string;
+  status: "queued" | "processing" | "succeeded" | "failed";
+  outputUrl?: string;
+  stages?: string[];
+  error?: string;
+}
+export interface CloudVideoTransport {
+  submit(req: TransformRequest & { modelId: string }): Promise<CloudVideoJobSubmission>;
+  poll(jobId: string): Promise<CloudVideoJobStatus>;
+}
+
+/**
+ * Default transport: a real HTTP client for the WINDELS Cloud Video AI endpoint.
+ * It never fabricates a result — a missing base URL, a non-OK response, a failed
+ * job, or a poll budget exhaustion each surface as an explicit typed error.
+ */
+class HttpCloudVideoTransport implements CloudVideoTransport {
+  constructor(
+    private readonly baseUrl: string,
+    private readonly apiKey: string,
+    private readonly fetchImpl: typeof fetch = fetch,
+    private readonly timeoutMs = 15_000,
+  ) {}
+
+  private async request<T>(path: string, init: RequestInit): Promise<T> {
+    const url = new URL(path, this.baseUrl.endsWith("/") ? this.baseUrl : `${this.baseUrl}/`);
+    let response: Response;
+    try {
+      response = await this.fetchImpl(url, {
+        ...init,
+        headers: {
+          accept: "application/json",
+          authorization: `Bearer ${this.apiKey}`,
+          ...(init.body ? { "content-type": "application/json" } : {}),
+          ...(init.headers ?? {}),
+        },
+        signal: AbortSignal.timeout(this.timeoutMs),
+      });
+    } catch (error) {
+      throw Object.assign(new Error(`Cloud video request failed: ${(error as Error).message}`), { code: "CLOUD_VIDEO_NETWORK_ERROR", retryable: true });
+    }
+    const text = await response.text();
+    let body: any = {};
+    try { body = text ? JSON.parse(text) : {}; } catch { body = {}; }
+    if (!response.ok) {
+      throw Object.assign(new Error(body?.error?.message ?? body?.message ?? `Cloud video HTTP ${response.status}`), { code: "CLOUD_VIDEO_UPSTREAM", status: response.status });
+    }
+    return (body?.data ?? body) as T;
+  }
+
+  async submit(req: TransformRequest & { modelId: string }): Promise<CloudVideoJobSubmission> {
+    const out = await this.request<CloudVideoJobSubmission>("jobs", {
+      method: "POST",
+      body: JSON.stringify({
+        model: req.modelId,
+        source: req.sourcePath,
+        background: req.backgroundPath ?? null,
+        resolution: req.resolution,
+        previewSeconds: req.previewSeconds ?? null,
+        plan: req.plan,
+        meta: req.meta,
+      }),
+    });
+    if (!out?.jobId) throw Object.assign(new Error("Cloud video provider did not return a job id"), { code: "CLOUD_VIDEO_UPSTREAM" });
+    return out;
+  }
+
+  async poll(jobId: string): Promise<CloudVideoJobStatus> {
+    return this.request<CloudVideoJobStatus>(`jobs/${encodeURIComponent(jobId)}`, { method: "GET" });
+  }
+}
+
 class CloudSimulatorProvider implements VtxProviderAdapter {
   providerId = "windels-cloud";
   label = "WINDELS Cloud Video AI";
   kind = "cloud_video_ai" as const;
 
-  isConfigured() { return Boolean(process.env.WINDELS_CLOUD_VIDEO_KEY); }
+  /**
+   * A transport can be injected (tests, or an alternative cloud provider). When
+   * none is injected the default HTTP transport is built from environment
+   * configuration at call time.
+   */
+  constructor(
+    private readonly transportFactory: (() => CloudVideoTransport) | null = null,
+    private readonly pollOptions: { attempts: number; intervalMs: number } = { attempts: 40, intervalMs: 1_500 },
+    private readonly sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+  ) {}
+
+  isConfigured() { return Boolean(process.env.WINDELS_CLOUD_VIDEO_KEY && process.env.WINDELS_CLOUD_VIDEO_URL); }
+
+  private transport(): CloudVideoTransport {
+    if (this.transportFactory) return this.transportFactory();
+    return new HttpCloudVideoTransport(process.env.WINDELS_CLOUD_VIDEO_URL!, process.env.WINDELS_CLOUD_VIDEO_KEY!);
+  }
 
   models(): VtxModelDescriptor[] {
     const configured = this.isConfigured();
@@ -106,12 +206,40 @@ class CloudSimulatorProvider implements VtxProviderAdapter {
   }
 
   async transform(req: TransformRequest): Promise<TransformResult> {
-    if (!this.isConfigured()) throw Object.assign(new Error("WINDELS Cloud Video AI is not configured. Set WINDELS_CLOUD_VIDEO_KEY."), { code: "PROVIDER_NOT_CONFIGURED" });
-    // Real HTTP call to the cloud video-AI endpoint would go here; we return a
-    // deterministic job handle in the configured deployment.
-    throw new Error("Cloud transform transport not implemented in this build");
+    if (!this.isConfigured()) throw Object.assign(new Error("WINDELS Cloud Video AI is not configured. Set WINDELS_CLOUD_VIDEO_URL and WINDELS_CLOUD_VIDEO_KEY."), { code: "PROVIDER_NOT_CONFIGURED" });
+    const modelId = (req as TransformRequest & { modelId?: string }).modelId ?? "cloud-hq";
+    const transport = this.transport();
+
+    // 1) Submit the job.
+    const submission = await transport.submit({ ...req, modelId });
+
+    // 2) Poll to a terminal state within the configured budget. The result is
+    // only ever returned from a real `succeeded` job with a real output URL —
+    // never fabricated.
+    let last: CloudVideoJobStatus | null = null;
+    for (let attempt = 0; attempt < this.pollOptions.attempts; attempt++) {
+      last = await transport.poll(submission.jobId);
+      if (last.status === "succeeded") {
+        if (!last.outputUrl) throw Object.assign(new Error("Cloud video job succeeded without an output URL"), { code: "CLOUD_VIDEO_UPSTREAM" });
+        return {
+          outputPath: last.outputUrl,
+          providerId: this.providerId,
+          modelId,
+          multiStage: (last.stages?.length ?? 0) > 1,
+          stages: last.stages ?? ["cloud_transform"],
+          durationSec: req.previewSeconds ?? req.meta.durationSec,
+        };
+      }
+      if (last.status === "failed") {
+        throw Object.assign(new Error(`Cloud video job failed: ${last.error ?? "unknown provider error"}`), { code: "CLOUD_VIDEO_JOB_FAILED", retryable: false });
+      }
+      if (attempt < this.pollOptions.attempts - 1) await this.sleep(this.pollOptions.intervalMs);
+    }
+    throw Object.assign(new Error(`Cloud video job did not complete within ${this.pollOptions.attempts} polls (last status: ${last?.status ?? "unknown"})`), { code: "CLOUD_VIDEO_TIMEOUT", retryable: true });
   }
 }
+
+export { HttpCloudVideoTransport, CloudSimulatorProvider };
 
 class VtxGateway {
   private adapters = new Map<string, VtxProviderAdapter>();

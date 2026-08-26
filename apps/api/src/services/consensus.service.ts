@@ -463,10 +463,21 @@ export async function cancelProposal(
     throw AppError.badRequest(`Proposal is ${proposal.status}, cannot cancel`);
   }
 
-  // Only proposer or org admin can cancel
+  // Only the proposer or an admin of the proposal's organization can cancel.
   if (proposal.proposerId !== cancellerId) {
-    // TODO: Check if canceller is org admin
-    throw AppError.forbidden("Only the proposer can cancel a proposal");
+    const canceller = await prisma.user.findUnique({
+      where: { id: cancellerId },
+      select: { role: true, organizationId: true },
+    });
+    const isOrgAdmin =
+      !!canceller &&
+      (canceller.role === "ADMIN" || canceller.role === "SUPER_ADMIN") &&
+      // SUPER_ADMIN may cancel across organizations; ADMIN only within the
+      // proposal's own organization.
+      (canceller.role === "SUPER_ADMIN" || canceller.organizationId === proposal.organizationId);
+    if (!isOrgAdmin) {
+      throw AppError.forbidden("Only the proposer or an organization admin can cancel a proposal");
+    }
   }
 
   await redis.hset(PROPOSAL_KEY(proposalId), {
