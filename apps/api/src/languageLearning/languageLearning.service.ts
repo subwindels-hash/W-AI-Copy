@@ -275,7 +275,9 @@ export const LanguageLearningService = {
   },
 
   async answerAssessment(org: string, userId: string, id: string, response: string): Promise<LlAssessment> {
-    const rec = await this.getAssessment(org, userId, id);
+    // Explicit annotation: inside this object literal the circular `this`
+    // reference degrades to `any`, which silently untyped `rec` downstream.
+    const rec: LlAssessment | null = await this.getAssessment(org, userId, id);
     if (!rec) deny("ASSESSMENT_NOT_FOUND", "Assessment not found", 404);
     if (rec.status !== "IN_PROGRESS" || !rec.currentItem) deny("ASSESSMENT_CLOSED", "This assessment is not accepting answers");
     const item = rec.currentItem;

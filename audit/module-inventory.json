@@ -2912,7 +2912,7 @@
     ],
     "sharedTypes": "packages/shared/src/cognitive.ts (407 LOC)",
     "web": {
-      "client": "apps/web/src/lib/cognitive.ts (64 LOC)",
+      "client": "apps/web/src/lib/cognitive.ts (100 LOC)",
       "pages": [
         "apps/web/src/pages/cognitive/CognitivePage.tsx (routes: cognitive)"
       ]
@@ -7776,11 +7776,11 @@
       "serviceFile": {
         "file": "languageLearning.service.ts",
         "path": "/home/user/WINDELS-AI-OS/apps/api/src/languageLearning/languageLearning.service.ts",
-        "sloc": 1079,
+        "sloc": 1081,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 6778,
+      "serviceTotalSloc": 6782,
       "serviceFiles": [
         "bootstrap.ts",
         "catalog.data.ts",
@@ -8275,11 +8275,11 @@
       "serviceFile": {
         "file": "lotteryIntelligence.service.ts",
         "path": "/home/user/WINDELS-AI-OS/apps/api/src/lotteryIntelligence/lotteryIntelligence.service.ts",
-        "sloc": 748,
+        "sloc": 749,
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 3040,
+      "serviceTotalSloc": 3042,
       "serviceFiles": [
         "bootstrap.ts",
         "engines.test.ts",
@@ -10219,9 +10219,10 @@
     ],
     "sharedTypes": "packages/shared/src/opex.ts (973 LOC)",
     "web": {
-      "client": "apps/web/src/lib/opex.ts (160 LOC)",
+      "client": "apps/web/src/lib/opex.ts (264 LOC)",
       "pages": [
-        "apps/web/src/pages/admin/OpexAssurancePage.tsx (routes: opex)"
+        "apps/web/src/pages/admin/OpexAssurancePage.tsx (routes: opex)",
+        "apps/web/src/pages/admin/OpexGovernancePage.tsx (routes: opex-governance)"
       ]
     },
     "db": {
@@ -12391,11 +12392,11 @@
       "serviceFile": {
         "file": "sitePlatform.service.ts",
         "path": "/home/user/WINDELS-AI-OS/apps/api/src/sitePlatform/sitePlatform.service.ts",
-        "sloc": 985,
+        "sloc": 986,
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 2472,
+      "serviceTotalSloc": 2474,
       "serviceFiles": [
         "platformApis.runtime.ts",
         "sitePlatform.content.test.ts",
@@ -12748,7 +12749,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 4507,
+      "serviceTotalSloc": 4510,
       "serviceFiles": [
         "bootstrap.ts",
         "engines.test.ts",
@@ -12807,7 +12808,7 @@
     ],
     "sharedTypes": "packages/shared/src/sportsIntelligence.ts (676 LOC)",
     "web": {
-      "client": "apps/web/src/lib/sportsIntelligence.ts (81 LOC)",
+      "client": "apps/web/src/lib/sportsIntelligence.ts (82 LOC)",
       "pages": [
         "apps/web/src/pages/mobile/MobileSportsPage.tsx (routes: sports)",
         "apps/web/src/pages/sports/SportsIntelligencePage.tsx (routes: sports, sports/:view)"
@@ -14417,7 +14418,7 @@
         "mathRandom": false,
         "externalFetch": true
       },
-      "serviceTotalSloc": 1804,
+      "serviceTotalSloc": 1806,
       "serviceFiles": [
         "bootstrap.ts",
         "voice.service.test.ts",

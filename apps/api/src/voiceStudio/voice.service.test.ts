@@ -71,7 +71,9 @@ describe("VoiceService — fail closed", () => {
 
   it("uses OpenAI /audio/speech when a key is present and clientSide is false", async () => {
     process.env.OPENAI_API_KEY = "sk-test-not-real";
-    const fetchMock = vi.fn(async () => ({
+    // Signature mirrors global fetch so the mocked `calls` tuple carries the
+    // URL argument the assertions below read back.
+    const fetchMock = vi.fn(async (_url: string | URL | Request, _init?: RequestInit) => ({
       ok: true,
       status: 200,
       arrayBuffer: async () => new Uint8Array([0x49, 0x44, 0x33, 0x04]).buffer,

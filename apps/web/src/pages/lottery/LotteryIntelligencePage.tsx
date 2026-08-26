@@ -84,7 +84,7 @@ export function LotteryIntelligencePage() {
       const [d, dr, n, s, di, t, p, pr, c] = await Promise.all([
         lotteryApi.dashboard(lotteryId), lotteryApi.draws(lotteryId), lotteryApi.numbers({ lastN: windowN, lotteryId }),
         lotteryApi.stars({ lastN: windowN, lotteryId }), lotteryApi.distribution({ lastN: windowN, lotteryId }),
-        lotteryApi.tickets(), lotteryApi.performance(lotteryId), lotteryApi.providers(), lotteryApi.config(),
+        lotteryApi.tickets(), lotteryApi.performance(), lotteryApi.providers(), lotteryApi.config(),
       ]);
       setDash(d); setDraws(dr); setNums(n); setStars(s); setDist(di);
       setTickets(t); setPerf(p); setProviders(pr); setCfg(c); setErr(null);

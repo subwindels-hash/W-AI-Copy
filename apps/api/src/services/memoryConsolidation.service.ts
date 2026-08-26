@@ -14,7 +14,7 @@
  */
 import { prisma } from "../db/client.js";
 import { redisCmd as redis } from "../db/redis.js";
-import { aiRegistry } from "../ai/registry.js";
+import { aiRegistry } from "./ai/registry.js";
 import { logger } from "../config/logger.js";
 import { AppError } from "../utils/result.js";
 import {
@@ -308,6 +308,7 @@ async function generateConsolidatedSummary(
 
   const result = await aiRegistry.complete(
     {
+      model: "",
       messages: [
         {
           role: "system",

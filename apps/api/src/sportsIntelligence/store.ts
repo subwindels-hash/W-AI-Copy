@@ -44,7 +44,7 @@ export async function siRead<T extends { organizationId: string }>(
   return rec && rec.organizationId === org ? rec : null;
 }
 
-export async function siWrite(entity: SiEntity, org: string, rec: { id: string; createdAt?: string }): Promise<void> {
+export async function siWrite<T extends { id: string; createdAt?: string; userId?: string }>(entity: SiEntity, org: string, rec: T): Promise<void> {
   const score = rec.createdAt ? Date.parse(rec.createdAt) || Date.now() : Date.now();
   await redis.hset(SiKeys.item(entity, org, rec.id), "_doc", s2(rec));
   await redis.zadd(SiKeys.idx(entity, org), score, rec.id);

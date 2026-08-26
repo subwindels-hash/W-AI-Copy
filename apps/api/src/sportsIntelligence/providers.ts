@@ -210,7 +210,7 @@ export const SandboxProvider: SportsProvider = {
     const form = (played: number, w: number, d: number, l: number, gf: number, ga: number): SiTeamForm => ({
       played, won: w, drawn: d, lost: l, goalsFor: gf, goalsAgainst: ga, source: "sandbox", observedAt,
     });
-    const records: NormalizedFixture[] = [
+    const sandboxFixtures: NormalizedFixture[] = [
       {
         providerId: this.id, providerMatchId: "sbx-m-1001", providerLeagueId: "sbx-lg-1",
         leagueName: "Sandbox Premier", country: "XX",
@@ -255,7 +255,10 @@ export const SandboxProvider: SportsProvider = {
         restDaysHome: 6, restDaysAway: 6, injuries: [], lineups: [],
         homeScore: 2, awayScore: 0, dataClass: "SANDBOX", observedAt,
       },
-    ].filter((f) => {
+    ];
+    // Contextual typing first, filter second — annotating only the filtered
+    // result widened the literal `status` fields to `string`.
+    const records = sandboxFixtures.filter((f) => {
       const k = Date.parse(f.kickoffAt);
       return k >= window.from.getTime() - 48 * 3600_000 && k <= window.to.getTime();
     });

@@ -20,6 +20,7 @@ import type {
   SiResult,
   SiTicket,
   SiTicketConfig,
+  SiTicketConfigPatch,
 } from "@/lib/sportsIntelligence";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
@@ -570,7 +571,7 @@ function PerformancePanel({ perf, range, onRange }: { perf: SiPerformanceSnapsho
     <div className="space-y-4">
       <div className="flex gap-2">
         {["today", "7d", "30d", "90d"].map((r) => (
-          <Button key={r} size="sm" variant={range === r ? "default" : "outline"} onClick={() => onRange(r)}>{r}</Button>
+          <Button key={r} size="sm" variant={range === r ? "primary" : "outline"} onClick={() => onRange(r)}>{r}</Button>
         ))}
       </div>
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
@@ -740,7 +741,7 @@ function AuditPanel({ rows, onLoad }: { rows: SiAuditEntry[]; onLoad: () => void
   );
 }
 
-function SettingsPanel({ cfg, onSave }: { cfg: SiTicketConfig; onSave: (p: Partial<SiTicketConfig>) => void }) {
+function SettingsPanel({ cfg, onSave }: { cfg: SiTicketConfig; onSave: (p: SiTicketConfigPatch) => void }) {
   const [form, setForm] = useState(cfg);
   useEffect(() => setForm(cfg), [cfg]);
   const set = (k: keyof SiTicketConfig, v: any) => setForm((f) => ({ ...f, [k]: v }));

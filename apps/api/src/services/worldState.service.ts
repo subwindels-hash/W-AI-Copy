@@ -173,8 +173,9 @@ export async function getLatestState(): Promise<WorldState | null> {
  * Get state at or before a specific timestamp.
  */
 export async function getStateAt(timestamp: number): Promise<WorldState | null> {
-  // Find the most recent state at or before the timestamp
-  const stateIds = await redis.zrangebyscore(STATES_KEY, 0, timestamp, "REV", 0, 1);
+  // Find the most recent state at or before the timestamp:
+  // ZREVRANGEBYSCORE key max min LIMIT 0 1 (scores are state timestamps).
+  const stateIds = await redis.zrevrangebyscore(STATES_KEY, timestamp, "-inf", "LIMIT", 0, 1);
   
   if (stateIds.length === 0) return null;
   

@@ -34,6 +34,7 @@ import type {
   LiTicketLine,
 } from "@windels/shared/lotteryIntelligence";
 import {
+  EUROMILLIONS_RULES,
   LI_CURRENT_MODEL,
   LI_DEFAULT_CONFIG,
   LI_DISCLAIMER,
