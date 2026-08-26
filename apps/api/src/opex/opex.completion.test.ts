@@ -105,6 +105,27 @@ describe("opex completion — dashboard still honest via assurance", () => {
   });
 });
 
+describe("opex completion — explanations is now measured", () => {
+  it("reports real explainability figures in the dashboard", async () => {
+    const { ExplanationsRegistryService } = await import("./explanationsRegistry.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.explanations).toEqual({ available24h: 0, avgEvidence: 0, avgConfidence: 0, challenged: 0, challengedUpheld: 0 });
+    expect(empty.recentExplanations).toHaveLength(0);
+
+    await ExplanationsRegistryService.record(ORG, { decisionId: "d1", decisionSummary: "Approved", confidence: 0.9, evidenceCount: 5, knowledgeSources: [], memoryTouches: 0, toolCalls: 0, policyChecks: [], risks: [] } as any);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.explanations.available24h).toBe(1);
+    expect(d.explanations.avgConfidence).toBe(90);
+    expect(d.explanations.avgEvidence).toBe(5);
+    expect(d.recentExplanations).toHaveLength(1);
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.explanations.available24h).toBe(0);
+  });
+});
+
 describe("opex completion — playbooks is now measured", () => {
   it("reports real playbook figures in the dashboard", async () => {
     const { PlaybooksRegistryService } = await import("./playbooksRegistry.service.js");

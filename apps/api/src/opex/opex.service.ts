@@ -22,16 +22,17 @@
  *         against every open task ever created. Both sides now use the same
  *         window.
  *
- * The rollup's remaining zeros are structural: `explanations`,
- * `safety.benchmarks` and `maturityScore` are declared by the Session 73
- * contract and nothing in this deployment populates them. Rather than delete
- * fields that existing consumers read, the `provenance` block states which is
- * which, and `GET /opex/trust` reports the honest, nullable version of the trust
- * block. `collaborationSessionsActive` (canvases with live collaboration
- * presence), `governance.gates` (org-scoped approval gates + recorded
- * decisions), `regulations` (org-scoped regulatory register) and `playbooks`
- * (org-scoped operational-playbook register, see PlaybooksRegistryService.rollup)
- * are no longer structural — all are real org-scoped measurements now.
+ * The rollup's remaining zeros are structural: `safety.benchmarks` and
+ * `maturityScore` are declared by the Session 73 contract and nothing in this
+ * deployment populates them. Rather than delete fields that existing consumers
+ * read, the `provenance` block states which is which, and `GET /opex/trust`
+ * reports the honest, nullable version of the trust block.
+ * `collaborationSessionsActive` (canvases with live collaboration presence),
+ * `governance.gates` (org-scoped approval gates + recorded decisions),
+ * `regulations` (org-scoped regulatory register), `playbooks` (org-scoped
+ * operational-playbook register) and `explanations` (org-scoped AI-decision
+ * explainability register, see ExplanationsRegistryService.rollup) are no longer
+ * structural — all are real org-scoped measurements now.
  */
 import { redisCmd as redis } from "../db/redis.js";
 import { prisma } from "../db/client.js";
@@ -45,6 +46,7 @@ import { CanvasCollabService } from "../collaboration/canvasCollab.service.js";
 import { GovernanceGatesService } from "./governanceGates.service.js";
 import { RegulationsRegistryService } from "./regulationsRegistry.service.js";
 import { PlaybooksRegistryService } from "./playbooksRegistry.service.js";
+import { ExplanationsRegistryService } from "./explanationsRegistry.service.js";
 
 const K = {
   meta: (oid: string) => `opex:${oid}:meta`,
@@ -149,6 +151,9 @@ export const OpexService = {
     // Real, org-scoped operational-playbook register. No longer a structural zero.
     const playbooksRollup = await PlaybooksRegistryService.rollup(oid).catch(() => ({ total: 0, active: 0, simulating: 0, avgCompliancePct: 0 }));
 
+    // Real, org-scoped AI-decision explainability register. No longer a structural zero.
+    const explanationsRollup = await ExplanationsRegistryService.rollup(oid).catch(() => ({ summary: { available24h: 0, avgEvidence: 0, avgConfidence: 0, challenged: 0, challengedUpheld: 0 }, recent: [] }));
+
     // Floored, never rounded: a rate that rounds a failure away cannot be used
     // to notice one. 0 here means "no recorded traffic", which provenance says.
     const reliability = reliabilityReport.successRatePercent ?? 0;
@@ -184,7 +189,7 @@ export const OpexService = {
       },
       regulations: regulationsRollup.summary,
       playbooks: playbooksRollup,
-      explanations: { available24h: 0, avgEvidence: 0, avgConfidence: 0, challenged: 0, challengedUpheld: 0 },
+      explanations: explanationsRollup.summary,
       governance: { gates: governanceRollup.gates, pendingTotal: pendingApprovals + governanceRollup.pendingTotal, emergencyShutdowns: 0, overrides24h: 0 },
       continuous: {
         kpis: [
@@ -205,7 +210,7 @@ export const OpexService = {
       },
       recentAlerts: page.alerts.map(toLegacyAlert),
       recentRegulations: regulationsRollup.recent,
-      recentExplanations: [],
+      recentExplanations: explanationsRollup.recent,
       collaborationSessionsActive,
       decisionsRequiringHuman: pendingApprovals,
       provenance: OpexAssuranceService.provenance({

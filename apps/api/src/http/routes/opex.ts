@@ -6,6 +6,7 @@ import { OpexService } from "../../opex/opex.service.js";
 import { GovernanceGatesService } from "../../opex/governanceGates.service.js";
 import { RegulationsRegistryService } from "../../opex/regulationsRegistry.service.js";
 import { PlaybooksRegistryService } from "../../opex/playbooksRegistry.service.js";
+import { ExplanationsRegistryService } from "../../opex/explanationsRegistry.service.js";
 import {
   OpexGateCreateSchema,
   OpexGateRequestSchema,
@@ -18,6 +19,9 @@ import {
   OpexPlaybookCreateSchema,
   OpexPlaybookUpdateSchema,
   OpexPlaybookIdParamSchema,
+  OpexExplanationCreateSchema,
+  OpexExplanationChallengeSchema,
+  OpexExplanationIdParamSchema,
 } from "@windels/shared/opex";
 import { AppError } from "../../utils/result.js";
 const Alert = z.object({ category: z.string().trim().min(1).max(64), severity: z.enum(["info", "warning", "critical"]), source: z.string().trim().min(1).max(128), message: z.string().trim().min(1).max(5000), model: z.string().max(128).optional() });
@@ -51,4 +55,9 @@ export function registerOpexRoutes(router: Router) {
   router.patch("/playbooks/:playbookId", requireAdmin, validate({ params: OpexPlaybookIdParamSchema, body: OpexPlaybookUpdateSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await PlaybooksRegistryService.update(orgOf(req), req.params.playbookId, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.post("/playbooks/:playbookId/simulate", requireAdmin, validate({ params: OpexPlaybookIdParamSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await PlaybooksRegistryService.runSimulation(orgOf(req), req.params.playbookId), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.delete("/playbooks/:playbookId", requireAdmin, validate({ params: OpexPlaybookIdParamSchema }), async (req, res, next) => { try { const ok = await PlaybooksRegistryService.delete(orgOf(req), req.params.playbookId); if (!ok) throw AppError.notFound("Playbook not found in organization"); res.json({ ok: true, data: { deleted: true }, meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+
+  // ── AI-decision explanations (org-scoped) ─────────────────────────────────
+  router.get("/explanations", async (req, res, next) => { try { res.json({ ok: true, data: await ExplanationsRegistryService.list(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/explanations", requireAdmin, validate({ body: OpexExplanationCreateSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await ExplanationsRegistryService.record(orgOf(req), req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/explanations/:explanationId/challenge", requireAdmin, validate({ params: OpexExplanationIdParamSchema, body: OpexExplanationChallengeSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await ExplanationsRegistryService.challenge(orgOf(req), req.params.explanationId, req.body.outcome, (req.user as any).id, req.body.reason), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
 }

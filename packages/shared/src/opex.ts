@@ -481,7 +481,6 @@ export const OPEX_MIN_REOPEN_REASON_LENGTH = 10;
 
 /** Sections the Session 73 contract declares that nothing in this deployment implements. */
 export const OPEX_UNIMPLEMENTED_SECTIONS = [
-  "explanations",
   "safety.benchmarks",
   "continuous.maturityScore",
 ] as const;
@@ -901,3 +900,38 @@ export const OpexPlaybookUpdateSchema = z
 export type OpexPlaybookUpdateInput = z.infer<typeof OpexPlaybookUpdateSchema>;
 
 export const OpexPlaybookIdParamSchema = z.object({ playbookId: z.string().trim().min(1).max(128) });
+
+/* ── AI-decision explanations (org-scoped) ─────────────────────────────────
+ *
+ * Session-completion: `explanations` was a structural zero. These schemas back
+ * a real org-scoped explainability register: each record is the recorded
+ * rationale for an AI/automated decision (confidence, evidence, knowledge
+ * sources, policy checks, risks), and may be challenged with an upheld/overturned
+ * outcome. The opex rollup figures are computed from stored records only:
+ *   - available24h     = explanations recorded in the last 24h
+ *   - avgEvidence      = mean evidenceCount (0 when none)
+ *   - avgConfidence    = mean confidence % (0 when none)
+ *   - challenged       = explanations with a recorded challenge
+ *   - challengedUpheld = challenges whose outcome upheld the decision */
+
+export const OpexExplanationCreateSchema = z.object({
+  decisionId: z.string().trim().min(1).max(200),
+  decisionSummary: z.string().trim().min(2).max(2000),
+  confidence: z.number().min(0).max(1),
+  evidenceCount: z.number().int().min(0).max(100000).default(0),
+  knowledgeSources: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  memoryTouches: z.number().int().min(0).max(1000000).default(0),
+  toolCalls: z.number().int().min(0).max(1000000).default(0),
+  policyChecks: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  risks: z.array(z.string().trim().min(1).max(200)).max(50).default([]),
+  humanApprover: z.string().trim().min(1).max(200).optional(),
+});
+export type OpexExplanationCreateInput = z.infer<typeof OpexExplanationCreateSchema>;
+
+export const OpexExplanationChallengeSchema = z.object({
+  outcome: z.enum(["upheld", "overturned"]),
+  reason: z.string().trim().max(2000).optional(),
+});
+export type OpexExplanationChallengeInput = z.infer<typeof OpexExplanationChallengeSchema>;
+
+export const OpexExplanationIdParamSchema = z.object({ explanationId: z.string().trim().min(1).max(128) });
