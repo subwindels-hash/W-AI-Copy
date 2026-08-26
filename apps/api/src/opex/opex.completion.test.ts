@@ -105,6 +105,25 @@ describe("opex completion — dashboard still honest via assurance", () => {
   });
 });
 
+describe("opex completion — playbooks is now measured", () => {
+  it("reports real playbook figures in the dashboard", async () => {
+    const { PlaybooksRegistryService } = await import("./playbooksRegistry.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.playbooks).toEqual({ total: 0, active: 0, simulating: 0, avgCompliancePct: 0 });
+
+    await PlaybooksRegistryService.create(ORG, { name: "IR", category: "cyber", version: "1", steps: 5, status: "active", compliance: "verified" }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.playbooks.total).toBe(1);
+    expect(d.playbooks.active).toBe(1);
+    expect(d.playbooks.avgCompliancePct).toBe(100);
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.playbooks.total).toBe(0);
+  });
+});
+
 describe("opex completion — regulations is now measured", () => {
   it("reports real regulatory register figures in the dashboard", async () => {
     const { RegulationsRegistryService } = await import("./regulationsRegistry.service.js");

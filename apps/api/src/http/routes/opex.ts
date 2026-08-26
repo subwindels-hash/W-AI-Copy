@@ -5,6 +5,7 @@ import { validate } from "../middleware/validate.js";
 import { OpexService } from "../../opex/opex.service.js";
 import { GovernanceGatesService } from "../../opex/governanceGates.service.js";
 import { RegulationsRegistryService } from "../../opex/regulationsRegistry.service.js";
+import { PlaybooksRegistryService } from "../../opex/playbooksRegistry.service.js";
 import {
   OpexGateCreateSchema,
   OpexGateRequestSchema,
@@ -14,6 +15,9 @@ import {
   OpexRegulationCreateSchema,
   OpexRegulationUpdateSchema,
   OpexRegulationIdParamSchema,
+  OpexPlaybookCreateSchema,
+  OpexPlaybookUpdateSchema,
+  OpexPlaybookIdParamSchema,
 } from "@windels/shared/opex";
 import { AppError } from "../../utils/result.js";
 const Alert = z.object({ category: z.string().trim().min(1).max(64), severity: z.enum(["info", "warning", "critical"]), source: z.string().trim().min(1).max(128), message: z.string().trim().min(1).max(5000), model: z.string().max(128).optional() });
@@ -40,4 +44,11 @@ export function registerOpexRoutes(router: Router) {
   router.post("/regulations", requireAdmin, validate({ body: OpexRegulationCreateSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await RegulationsRegistryService.create(orgOf(req), req.body, (req.user as any).id), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.patch("/regulations/:regulationId", requireAdmin, validate({ params: OpexRegulationIdParamSchema, body: OpexRegulationUpdateSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await RegulationsRegistryService.update(orgOf(req), req.params.regulationId, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.delete("/regulations/:regulationId", requireAdmin, validate({ params: OpexRegulationIdParamSchema }), async (req, res, next) => { try { const ok = await RegulationsRegistryService.delete(orgOf(req), req.params.regulationId); if (!ok) throw AppError.notFound("Regulation not found in organization"); res.json({ ok: true, data: { deleted: true }, meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+
+  // ── Operational playbooks (org-scoped) ────────────────────────────────────
+  router.get("/playbooks", async (req, res, next) => { try { res.json({ ok: true, data: await PlaybooksRegistryService.list(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/playbooks", requireAdmin, validate({ body: OpexPlaybookCreateSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await PlaybooksRegistryService.create(orgOf(req), req.body, (req.user as any).id), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.patch("/playbooks/:playbookId", requireAdmin, validate({ params: OpexPlaybookIdParamSchema, body: OpexPlaybookUpdateSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await PlaybooksRegistryService.update(orgOf(req), req.params.playbookId, req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/playbooks/:playbookId/simulate", requireAdmin, validate({ params: OpexPlaybookIdParamSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await PlaybooksRegistryService.runSimulation(orgOf(req), req.params.playbookId), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.delete("/playbooks/:playbookId", requireAdmin, validate({ params: OpexPlaybookIdParamSchema }), async (req, res, next) => { try { const ok = await PlaybooksRegistryService.delete(orgOf(req), req.params.playbookId); if (!ok) throw AppError.notFound("Playbook not found in organization"); res.json({ ok: true, data: { deleted: true }, meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
 }

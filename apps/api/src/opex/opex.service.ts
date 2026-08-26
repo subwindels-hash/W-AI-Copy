@@ -22,17 +22,16 @@
  *         against every open task ever created. Both sides now use the same
  *         window.
  *
- * The rollup's remaining zeros are structural: `playbooks`, `explanations`,
+ * The rollup's remaining zeros are structural: `explanations`,
  * `safety.benchmarks` and `maturityScore` are declared by the Session 73
  * contract and nothing in this deployment populates them. Rather than delete
  * fields that existing consumers read, the `provenance` block states which is
  * which, and `GET /opex/trust` reports the honest, nullable version of the trust
  * block. `collaborationSessionsActive` (canvases with live collaboration
- * presence, see CanvasCollabService.activeSessionCount), `governance.gates`
- * (org-scoped approval gates + recorded decisions, see
- * GovernanceGatesService.rollup) and `regulations` (org-scoped regulatory
- * register, see RegulationsRegistryService.rollup) are no longer structural —
- * all three are real org-scoped measurements now.
+ * presence), `governance.gates` (org-scoped approval gates + recorded
+ * decisions), `regulations` (org-scoped regulatory register) and `playbooks`
+ * (org-scoped operational-playbook register, see PlaybooksRegistryService.rollup)
+ * are no longer structural — all are real org-scoped measurements now.
  */
 import { redisCmd as redis } from "../db/redis.js";
 import { prisma } from "../db/client.js";
@@ -45,6 +44,7 @@ import type { LegacyOpexAlert } from "./opexAssurance.service.js";
 import { CanvasCollabService } from "../collaboration/canvasCollab.service.js";
 import { GovernanceGatesService } from "./governanceGates.service.js";
 import { RegulationsRegistryService } from "./regulationsRegistry.service.js";
+import { PlaybooksRegistryService } from "./playbooksRegistry.service.js";
 
 const K = {
   meta: (oid: string) => `opex:${oid}:meta`,
@@ -146,6 +146,9 @@ export const OpexService = {
     // Real, org-scoped regulatory register. No longer a structural zero.
     const regulationsRollup = await RegulationsRegistryService.rollup(oid).catch(() => ({ summary: { tracked: 0, changed30d: 0, openGaps: 0, upcoming: 0 }, recent: [] }));
 
+    // Real, org-scoped operational-playbook register. No longer a structural zero.
+    const playbooksRollup = await PlaybooksRegistryService.rollup(oid).catch(() => ({ total: 0, active: 0, simulating: 0, avgCompliancePct: 0 }));
+
     // Floored, never rounded: a rate that rounds a failure away cannot be used
     // to notice one. 0 here means "no recorded traffic", which provenance says.
     const reliability = reliabilityReport.successRatePercent ?? 0;
@@ -180,7 +183,7 @@ export const OpexService = {
         benchmarks: {},
       },
       regulations: regulationsRollup.summary,
-      playbooks: { total: 0, active: 0, simulating: 0, avgCompliancePct: 0 },
+      playbooks: playbooksRollup,
       explanations: { available24h: 0, avgEvidence: 0, avgConfidence: 0, challenged: 0, challengedUpheld: 0 },
       governance: { gates: governanceRollup.gates, pendingTotal: pendingApprovals + governanceRollup.pendingTotal, emergencyShutdowns: 0, overrides24h: 0 },
       continuous: {

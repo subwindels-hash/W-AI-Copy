@@ -481,7 +481,6 @@ export const OPEX_MIN_REOPEN_REASON_LENGTH = 10;
 
 /** Sections the Session 73 contract declares that nothing in this deployment implements. */
 export const OPEX_UNIMPLEMENTED_SECTIONS = [
-  "playbooks",
   "explanations",
   "safety.benchmarks",
   "continuous.maturityScore",
@@ -859,3 +858,46 @@ export const OpexRegulationUpdateSchema = z
 export type OpexRegulationUpdateInput = z.infer<typeof OpexRegulationUpdateSchema>;
 
 export const OpexRegulationIdParamSchema = z.object({ regulationId: z.string().trim().min(1).max(128) });
+
+/* ── Operational playbooks (org-scoped) ────────────────────────────────────
+ *
+ * Session-completion: `playbooks` was a structural zero. These schemas back a
+ * real org-scoped playbook store. The rollup figures (total, active,
+ * simulating, avgCompliancePct) are computed from stored records only:
+ * avgCompliancePct maps each playbook's compliance state (verified=100, gaps=50,
+ * unknown=0) and averages, so it reflects real recorded posture. */
+
+export const OPEX_PLAYBOOK_CATEGORIES = [
+  "cyber", "dr", "procurement", "escalation", "hr", "construction", "manufacturing",
+  "healthcare", "legal", "finance", "sales", "marketing", "gov", "emergency", "ops",
+] as const;
+export type OpexPlaybookCategory = (typeof OPEX_PLAYBOOK_CATEGORIES)[number];
+
+export const OPEX_PLAYBOOK_STATUSES = ["draft", "approved", "active", "retired"] as const;
+export type OpexPlaybookStatus = (typeof OPEX_PLAYBOOK_STATUSES)[number];
+
+export const OPEX_PLAYBOOK_COMPLIANCE = ["verified", "gaps", "unknown"] as const;
+export type OpexPlaybookCompliance = (typeof OPEX_PLAYBOOK_COMPLIANCE)[number];
+
+export const OpexPlaybookCreateSchema = z.object({
+  name: z.string().trim().min(2).max(200),
+  category: z.enum(OPEX_PLAYBOOK_CATEGORIES),
+  version: z.string().trim().min(1).max(40).default("1.0.0"),
+  steps: z.number().int().min(0).max(100000).default(0),
+  status: z.enum(OPEX_PLAYBOOK_STATUSES).default("draft"),
+  compliance: z.enum(OPEX_PLAYBOOK_COMPLIANCE).default("unknown"),
+});
+export type OpexPlaybookCreateInput = z.infer<typeof OpexPlaybookCreateSchema>;
+
+export const OpexPlaybookUpdateSchema = z
+  .object({
+    name: z.string().trim().min(2).max(200).optional(),
+    version: z.string().trim().min(1).max(40).optional(),
+    steps: z.number().int().min(0).max(100000).optional(),
+    status: z.enum(OPEX_PLAYBOOK_STATUSES).optional(),
+    compliance: z.enum(OPEX_PLAYBOOK_COMPLIANCE).optional(),
+  })
+  .refine((v) => Object.keys(v).length > 0, { message: "No playbook fields supplied." });
+export type OpexPlaybookUpdateInput = z.infer<typeof OpexPlaybookUpdateSchema>;
+
+export const OpexPlaybookIdParamSchema = z.object({ playbookId: z.string().trim().min(1).max(128) });
