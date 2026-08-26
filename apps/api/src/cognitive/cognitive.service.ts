@@ -32,14 +32,16 @@ export const CognitiveService = {
   /**
    * Platform observability rollup.
    *
-   * Counts are read from real tables. Fields with no backing store (self-
-   * evolution, DNA completeness, federation partners, civilization/world
-   * modelling) now report `null` — those subsystems do not exist yet, and a
-   * plausible number would imply they do. Measured aggregates (observatory,
-   * memory, predictions) remain numbers; 0 there is measured (0 healthy nodes).
+   * Counts are read from real tables. Fields that once had no backing store
+   * (self-evolution, DNA completeness, federation partners, marketplace assets,
+   * innovation pipeline, civilization/world modelling) are now backed by real
+   * org-scoped stores; each reports a measured value once its store holds data
+   * and `null` while empty (a plausible number over an empty store would imply
+   * activity that has not happened). Measured aggregates (observatory, memory,
+   * predictions) remain numbers; 0 there is measured (0 healthy nodes).
    *
    * This is a pure read — it never writes. A fresh org returns `null` for the
-   * nine structural fields and provenance marks them as `structural_null`.
+   * not-yet-populated fields and provenance marks them `structural_null`.
    */
   async dashboard(oid: string): Promise<CognitiveDashboard> {
     if (!oid || typeof oid !== "string" || oid.trim().length === 0) throw new Error("organizationId is required");
