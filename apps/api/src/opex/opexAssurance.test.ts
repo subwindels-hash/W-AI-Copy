@@ -920,8 +920,10 @@ describe("Session 73 compatibility", () => {
     const dash = await OpexService.dashboard(ORG);
     const provenance = dash.provenance!;
     expect(provenance.structuralZeroFields).toBeGreaterThan(0);
-    const gates = provenance.entries.find((e) => e.field === "governance.gates")!;
-    expect(gates.basis).toBe("not_assessed");
+    // `regulations` remains a structural zero (governance.gates and
+    // collaborationSessionsActive are now measured from real stores).
+    const structural = provenance.entries.find((e) => e.field === "regulations")!;
+    expect(structural.basis).toBe("not_assessed");
     const safety = provenance.entries.find((e) => e.field === "trust.safety")!;
     expect(safety.detail).toMatch(/not a safety assessment/i);
     expect(provenance.note).toMatch(/shape is unchanged for existing consumers/i);

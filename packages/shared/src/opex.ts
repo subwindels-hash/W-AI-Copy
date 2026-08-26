@@ -484,7 +484,6 @@ export const OPEX_UNIMPLEMENTED_SECTIONS = [
   "regulations",
   "playbooks",
   "explanations",
-  "governance.gates",
   "safety.benchmarks",
   "continuous.maturityScore",
 ] as const;
@@ -757,3 +756,65 @@ export const OpexEventQuerySchema = z.object({
   alertId: z.string().trim().min(1).max(128).optional(),
   limit: z.coerce.number().int().min(1).max(OPEX_EVENT_LIMIT).optional(),
 });
+
+/* ── Governance gates (AI-decision approval gates) ─────────────────────────
+ *
+ * Session-completion: `governance.gates` was a structural zero. These schemas
+ * and types back a real org-scoped approval-gate store: a gate is an approval
+ * checkpoint at an authority level, and every decision (approve/reject) is a
+ * recorded event. The opex rollup's per-gate figures (pending, approved24h,
+ * rejected24h, avgDecisionMin) are computed from those recorded decisions —
+ * never estimated. */
+
+export const OPEX_GATE_LEVELS = ["l1_auto", "l2_manager", "l3_director", "l4_exec", "l5_board"] as const;
+export type OpexGateLevel = (typeof OPEX_GATE_LEVELS)[number];
+
+export const OPEX_GATE_DECISIONS = ["approved", "rejected"] as const;
+export type OpexGateDecision = (typeof OPEX_GATE_DECISIONS)[number];
+
+export const OpexGateCreateSchema = z.object({
+  name: z.string().trim().min(2).max(160),
+  level: z.enum(OPEX_GATE_LEVELS),
+  description: z.string().trim().max(1000).optional(),
+});
+export type OpexGateCreateInput = z.infer<typeof OpexGateCreateSchema>;
+
+export const OpexGateRequestSchema = z.object({
+  subject: z.string().trim().min(2).max(300),
+  detail: z.string().trim().max(2000).optional(),
+});
+export type OpexGateRequestInput = z.infer<typeof OpexGateRequestSchema>;
+
+export const OpexGateDecisionSchema = z.object({
+  decision: z.enum(OPEX_GATE_DECISIONS),
+  reason: z.string().trim().max(2000).optional(),
+});
+export type OpexGateDecisionInput = z.infer<typeof OpexGateDecisionSchema>;
+
+export const OpexGateIdParamSchema = z.object({ gateId: z.string().trim().min(1).max(128) });
+export const OpexGateRequestIdParamSchema = z.object({
+  gateId: z.string().trim().min(1).max(128),
+  requestId: z.string().trim().min(1).max(128),
+});
+
+export interface OpexGateRequestRecord {
+  id: string;
+  gateId: string;
+  subject: string;
+  detail: string | null;
+  status: "pending" | OpexGateDecision;
+  requestedBy: string | null;
+  requestedAt: string;
+  decidedBy: string | null;
+  decidedAt: string | null;
+  decisionReason: string | null;
+}
+
+export interface OpexGateRecord {
+  id: string;
+  name: string;
+  level: OpexGateLevel;
+  description: string | null;
+  createdAt: string;
+  createdBy: string | null;
+}

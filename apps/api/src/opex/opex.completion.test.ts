@@ -105,6 +105,28 @@ describe("opex completion — dashboard still honest via assurance", () => {
   });
 });
 
+describe("opex completion — governance.gates is now measured", () => {
+  it("reports real gates and pending decisions in the dashboard governance block", async () => {
+    const { GovernanceGatesService } = await import("./governanceGates.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.governance.gates).toHaveLength(0);
+
+    const gate = await GovernanceGatesService.createGate(ORG, { name: "Prod deploy", level: "l3_director" }, ADMIN);
+    await GovernanceGatesService.openRequest(ORG, gate.id, { subject: "Ship release 1.2" }, "user-1");
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.governance.gates).toHaveLength(1);
+    expect(d.governance.gates[0]).toMatchObject({ name: "Prod deploy", level: "l3_director", pending: 1 });
+    // pendingTotal includes the gate's pending request.
+    expect(d.governance.pendingTotal).toBeGreaterThanOrEqual(1);
+
+    // Isolated by organization.
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.governance.gates).toHaveLength(0);
+  });
+});
+
 describe("opex completion — collaborationSessionsActive is now measured", () => {
   it("reports 0 with no live collaboration and a real count once a canvas has presence", async () => {
     const empty = await OpexService.dashboard(ORG);
