@@ -7,6 +7,7 @@ import { GovernanceGatesService } from "../../opex/governanceGates.service.js";
 import { RegulationsRegistryService } from "../../opex/regulationsRegistry.service.js";
 import { PlaybooksRegistryService } from "../../opex/playbooksRegistry.service.js";
 import { ExplanationsRegistryService } from "../../opex/explanationsRegistry.service.js";
+import { SafetyBenchmarksService } from "../../opex/safetyBenchmarks.service.js";
 import {
   OpexGateCreateSchema,
   OpexGateRequestSchema,
@@ -22,6 +23,7 @@ import {
   OpexExplanationCreateSchema,
   OpexExplanationChallengeSchema,
   OpexExplanationIdParamSchema,
+  OpexSafetyBenchmarkRecordSchema,
 } from "@windels/shared/opex";
 import { AppError } from "../../utils/result.js";
 const Alert = z.object({ category: z.string().trim().min(1).max(64), severity: z.enum(["info", "warning", "critical"]), source: z.string().trim().min(1).max(128), message: z.string().trim().min(1).max(5000), model: z.string().max(128).optional() });
@@ -60,4 +62,8 @@ export function registerOpexRoutes(router: Router) {
   router.get("/explanations", async (req, res, next) => { try { res.json({ ok: true, data: await ExplanationsRegistryService.list(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.post("/explanations", requireAdmin, validate({ body: OpexExplanationCreateSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await ExplanationsRegistryService.record(orgOf(req), req.body), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
   router.post("/explanations/:explanationId/challenge", requireAdmin, validate({ params: OpexExplanationIdParamSchema, body: OpexExplanationChallengeSchema }), async (req, res, next) => { try { res.json({ ok: true, data: await ExplanationsRegistryService.challenge(orgOf(req), req.params.explanationId, req.body.outcome, (req.user as any).id, req.body.reason), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+
+  // ── Safety benchmarks (org-scoped) ────────────────────────────────────────
+  router.get("/safety-benchmarks", async (req, res, next) => { try { res.json({ ok: true, data: await SafetyBenchmarksService.rollup(orgOf(req)), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
+  router.post("/safety-benchmarks", requireAdmin, validate({ body: OpexSafetyBenchmarkRecordSchema }), async (req, res, next) => { try { res.status(201).json({ ok: true, data: await SafetyBenchmarksService.record(orgOf(req), req.body, (req.user as any).id), meta: { requestId: req.requestId } }); } catch (e) { next(e); } });
 }

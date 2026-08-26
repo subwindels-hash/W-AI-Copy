@@ -481,7 +481,6 @@ export const OPEX_MIN_REOPEN_REASON_LENGTH = 10;
 
 /** Sections the Session 73 contract declares that nothing in this deployment implements. */
 export const OPEX_UNIMPLEMENTED_SECTIONS = [
-  "safety.benchmarks",
   "continuous.maturityScore",
 ] as const;
 
@@ -935,3 +934,35 @@ export const OpexExplanationChallengeSchema = z.object({
 export type OpexExplanationChallengeInput = z.infer<typeof OpexExplanationChallengeSchema>;
 
 export const OpexExplanationIdParamSchema = z.object({ explanationId: z.string().trim().min(1).max(128) });
+
+/* ── Safety benchmarks (org-scoped) ────────────────────────────────────────
+ *
+ * Session-completion: `safety.benchmarks` was a structural empty map. This
+ * schema backs a real org-scoped store of safety-benchmark results per
+ * SafetyCategory. The opex rollup exposes the LATEST result per evaluated
+ * category as `{ pass, score }` — an unevaluated category is absent (never
+ * reported as passing). `pass` is derived from a recorded passing threshold, so
+ * the verdict is not a free-form claim. */
+
+export const OPEX_SAFETY_BENCHMARK_MIN = 0;
+export const OPEX_SAFETY_BENCHMARK_MAX = 100;
+export const OPEX_SAFETY_BENCHMARK_DEFAULT_THRESHOLD = 80;
+
+export const OpexSafetyBenchmarkRecordSchema = z.object({
+  category: z.enum(SAFETY_CATEGORIES),
+  score: z.number().min(OPEX_SAFETY_BENCHMARK_MIN).max(OPEX_SAFETY_BENCHMARK_MAX),
+  passThreshold: z.number().min(OPEX_SAFETY_BENCHMARK_MIN).max(OPEX_SAFETY_BENCHMARK_MAX).default(OPEX_SAFETY_BENCHMARK_DEFAULT_THRESHOLD),
+  suite: z.string().trim().min(1).max(160).optional(),
+  notes: z.string().trim().max(2000).optional(),
+});
+export type OpexSafetyBenchmarkRecordInput = z.infer<typeof OpexSafetyBenchmarkRecordSchema>;
+
+export interface OpexSafetyBenchmarkResult {
+  category: SafetyCategory;
+  score: number;
+  passThreshold: number;
+  pass: boolean;
+  suite: string | null;
+  recordedAt: string;
+  recordedBy: string | null;
+}

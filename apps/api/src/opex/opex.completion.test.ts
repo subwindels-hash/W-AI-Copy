@@ -105,6 +105,27 @@ describe("opex completion — dashboard still honest via assurance", () => {
   });
 });
 
+describe("opex completion — safety.benchmarks is now measured", () => {
+  it("reports latest benchmark result per evaluated category in the dashboard", async () => {
+    const { SafetyBenchmarksService } = await import("./safetyBenchmarks.service.js");
+
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.safety.benchmarks).toEqual({});
+
+    await SafetyBenchmarksService.record(ORG, { category: "jailbreak", score: 91, passThreshold: 80 }, ADMIN);
+    await SafetyBenchmarksService.record(ORG, { category: "bias", score: 40, passThreshold: 80 }, ADMIN);
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.safety.benchmarks.jailbreak).toEqual({ pass: true, score: 91 });
+    expect(d.safety.benchmarks.bias).toEqual({ pass: false, score: 40 });
+    // Unevaluated categories remain absent.
+    expect(d.safety.benchmarks.toxicity).toBeUndefined();
+
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.safety.benchmarks).toEqual({});
+  });
+});
+
 describe("opex completion — explanations is now measured", () => {
   it("reports real explainability figures in the dashboard", async () => {
     const { ExplanationsRegistryService } = await import("./explanationsRegistry.service.js");

@@ -22,17 +22,16 @@
  *         against every open task ever created. Both sides now use the same
  *         window.
  *
- * The rollup's remaining zeros are structural: `safety.benchmarks` and
- * `maturityScore` are declared by the Session 73 contract and nothing in this
- * deployment populates them. Rather than delete fields that existing consumers
- * read, the `provenance` block states which is which, and `GET /opex/trust`
- * reports the honest, nullable version of the trust block.
+ * The only remaining structural zero is `continuous.maturityScore`, declared by
+ * the Session 73 contract with nothing populating it; the `provenance` block
+ * states so and `GET /opex/trust` reports the honest, nullable trust block.
  * `collaborationSessionsActive` (canvases with live collaboration presence),
  * `governance.gates` (org-scoped approval gates + recorded decisions),
  * `regulations` (org-scoped regulatory register), `playbooks` (org-scoped
- * operational-playbook register) and `explanations` (org-scoped AI-decision
- * explainability register, see ExplanationsRegistryService.rollup) are no longer
- * structural — all are real org-scoped measurements now.
+ * operational-playbook register), `explanations` (org-scoped AI-decision
+ * explainability register) and `safety.benchmarks` (latest result per evaluated
+ * SafetyCategory, see SafetyBenchmarksService.rollup) are no longer structural —
+ * all are real org-scoped measurements now.
  */
 import { redisCmd as redis } from "../db/redis.js";
 import { prisma } from "../db/client.js";
@@ -47,6 +46,7 @@ import { GovernanceGatesService } from "./governanceGates.service.js";
 import { RegulationsRegistryService } from "./regulationsRegistry.service.js";
 import { PlaybooksRegistryService } from "./playbooksRegistry.service.js";
 import { ExplanationsRegistryService } from "./explanationsRegistry.service.js";
+import { SafetyBenchmarksService } from "./safetyBenchmarks.service.js";
 
 const K = {
   meta: (oid: string) => `opex:${oid}:meta`,
@@ -154,6 +154,10 @@ export const OpexService = {
     // Real, org-scoped AI-decision explainability register. No longer a structural zero.
     const explanationsRollup = await ExplanationsRegistryService.rollup(oid).catch(() => ({ summary: { available24h: 0, avgEvidence: 0, avgConfidence: 0, challenged: 0, challengedUpheld: 0 }, recent: [] }));
 
+    // Real, org-scoped safety-benchmark results (latest per evaluated category).
+    // No longer a structural empty map.
+    const safetyBenchmarks = await SafetyBenchmarksService.rollup(oid).catch(() => ({}));
+
     // Floored, never rounded: a rate that rounds a failure away cannot be used
     // to notice one. 0 here means "no recorded traffic", which provenance says.
     const reliability = reliabilityReport.successRatePercent ?? 0;
@@ -185,7 +189,7 @@ export const OpexService = {
         // From the recorded resolution time, not the filing time.
         mitigations24h: summary.resolvedLast24h,
         auditsCompleted: summary.byStatus.resolved,
-        benchmarks: {},
+        benchmarks: safetyBenchmarks,
       },
       regulations: regulationsRollup.summary,
       playbooks: playbooksRollup,
