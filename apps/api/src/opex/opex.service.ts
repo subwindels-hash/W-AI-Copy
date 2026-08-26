@@ -23,11 +23,13 @@
  *         window.
  *
  * The rollup's remaining zeros are structural: `regulations`, `playbooks`,
- * `explanations`, `governance.gates`, `safety.benchmarks`, `maturityScore` and
- * `collaborationSessionsActive` are declared by the Session 73 contract and
- * nothing in this deployment populates them. Rather than delete fields that
- * existing consumers read, the `provenance` block states which is which, and
- * `GET /opex/trust` reports the honest, nullable version of the trust block.
+ * `explanations`, `governance.gates`, `safety.benchmarks` and `maturityScore`
+ * are declared by the Session 73 contract and nothing in this deployment
+ * populates them. Rather than delete fields that existing consumers read, the
+ * `provenance` block states which is which, and `GET /opex/trust` reports the
+ * honest, nullable version of the trust block. `collaborationSessionsActive`
+ * is no longer structural — it is now a real org-scoped count of canvases with
+ * live collaboration presence (see CanvasCollabService.activeSessionCount).
  */
 import { redisCmd as redis } from "../db/redis.js";
 import { prisma } from "../db/client.js";
@@ -37,6 +39,7 @@ import { opexRatePercent } from "@windels/shared/opex";
 import { AppError } from "../utils/result.js";
 import { OpexAssuranceService, toLegacyAlert } from "./opexAssurance.service.js";
 import type { LegacyOpexAlert } from "./opexAssurance.service.js";
+import { CanvasCollabService } from "../collaboration/canvasCollab.service.js";
 
 const K = {
   meta: (oid: string) => `opex:${oid}:meta`,
@@ -127,6 +130,10 @@ export const OpexService = {
       .count({ where: { organizationId: oid, status: { in: ["TODO", "IN_PROGRESS"] } } })
       .catch(() => 0);
 
+    // Real, org-scoped active collaboration-session count: canvases with a live
+    // presence heartbeat for this organization. No longer a structural zero.
+    const collaborationSessionsActive = await CanvasCollabService.activeSessionCount(oid).catch(() => 0);
+
     // Floored, never rounded: a rate that rounds a failure away cannot be used
     // to notice one. 0 here means "no recorded traffic", which provenance says.
     const reliability = reliabilityReport.successRatePercent ?? 0;
@@ -184,7 +191,7 @@ export const OpexService = {
       recentAlerts: page.alerts.map(toLegacyAlert),
       recentRegulations: [],
       recentExplanations: [],
-      collaborationSessionsActive: 0,
+      collaborationSessionsActive,
       decisionsRequiringHuman: pendingApprovals,
       provenance: OpexAssuranceService.provenance({
         reliability: reliabilityReport.total > 0,

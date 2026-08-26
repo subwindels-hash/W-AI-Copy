@@ -104,3 +104,25 @@ describe("opex completion — dashboard still honest via assurance", () => {
     expect(d.provenance).toBeTruthy();
   });
 });
+
+describe("opex completion — collaborationSessionsActive is now measured", () => {
+  it("reports 0 with no live collaboration and a real count once a canvas has presence", async () => {
+    const empty = await OpexService.dashboard(ORG);
+    expect(empty.collaborationSessionsActive).toBe(0);
+
+    // Seed a live, org-scoped canvas presence heartbeat + active index directly
+    // in the shared FakeKv (the mediaFactory fake has no pub/sub, so we avoid
+    // heartbeat()'s publish and write the same state it would).
+    const now = new Date().toISOString();
+    const presence = JSON.stringify({ userId: "u1", displayName: "Ada", avatarColor: "#38bdf8", joinedAt: now, lastSeenAt: now });
+    await kv.hset("canvas:presence:i:" + ORG + ":canvas-1", "u1", presence);
+    await kv.sadd("canvas:active:i:" + ORG, "canvas-1");
+
+    const d = await OpexService.dashboard(ORG);
+    expect(d.collaborationSessionsActive).toBe(1);
+
+    // Isolated by organization.
+    const other = await OpexService.dashboard(OTHER);
+    expect(other.collaborationSessionsActive).toBe(0);
+  });
+});

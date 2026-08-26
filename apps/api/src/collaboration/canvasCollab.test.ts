@@ -8,6 +8,7 @@ import type { CanvasCollabKv } from "./canvasCollab.service.js";
 
 class FakeKv implements CanvasCollabKv {
   hashes = new Map<string, Record<string, string>>();
+  sets = new Map<string, Set<string>>();
   published: Array<{ channel: string; message: string }> = [];
   clock: number = Date.now();
 
@@ -16,6 +17,9 @@ class FakeKv implements CanvasCollabKv {
   async hdel(key: string, field: string) { const h = this.hashes.get(key); if (h) delete h[field]; return 1; }
   async del(key: string) { this.hashes.delete(key); return 1; }
   async publish(channel: string, message: string) { this.published.push({ channel, message }); return 1; }
+  async sadd(key: string, member: string) { const s = this.sets.get(key) ?? new Set(); s.add(member); this.sets.set(key, s); return 1; }
+  async srem(key: string, member: string) { this.sets.get(key)?.delete(member); return 1; }
+  async smembers(key: string) { return [...(this.sets.get(key) ?? [])]; }
 }
 
 describe("CanvasCollabService", () => {
@@ -186,5 +190,47 @@ describe("CanvasCollabService", () => {
     expect(kv.hashes.has("canvas:cursor:i:org-a:c1")).toBe(true);
     expect(await CanvasCollabService.presence("c1", kv as any, "org-b")).toHaveLength(0);
     expect(await CanvasCollabService.cursors("c1", kv as any, "org-b")).toHaveLength(0);
+  });
+
+  /* ── Org-scoped active session count (opex source) ────────── */
+
+  it("counts distinct canvases with live presence per organization", async () => {
+    await CanvasCollabService.heartbeat("c1", { userId: "u1", displayName: "A" }, kv as any, "org-a");
+    await CanvasCollabService.heartbeat("c1", { userId: "u2", displayName: "B" }, kv as any, "org-a"); // same canvas, still 1
+    await CanvasCollabService.heartbeat("c2", { userId: "u3", displayName: "C" }, kv as any, "org-a");
+    expect(await CanvasCollabService.activeSessionCount("org-a", kv as any)).toBe(2);
+  });
+
+  it("isolates the count by organization", async () => {
+    await CanvasCollabService.heartbeat("c1", { userId: "u1", displayName: "A" }, kv as any, "org-a");
+    await CanvasCollabService.heartbeat("c9", { userId: "u9", displayName: "Z" }, kv as any, "org-b");
+    expect(await CanvasCollabService.activeSessionCount("org-a", kv as any)).toBe(1);
+    expect(await CanvasCollabService.activeSessionCount("org-b", kv as any)).toBe(1);
+    expect(await CanvasCollabService.activeSessionCount("org-c", kv as any)).toBe(0);
+  });
+
+  it("prunes a canvas from the active count once all heartbeats expire", async () => {
+    const now = Date.now();
+    await CanvasCollabService.heartbeat("c1", { userId: "fresh", displayName: "F" }, kv as any, "org-a");
+    // Overwrite with an expired heartbeat so presence() prunes it.
+    const stale = JSON.stringify({ userId: "fresh", displayName: "F", avatarColor: "#000", joinedAt: new Date(now - 60000).toISOString(), lastSeenAt: new Date(now - PRESENCE_TTL_SEC * 1000 - 1000).toISOString() });
+    await kv.hset("canvas:presence:i:org-a:c1", "fresh", stale);
+    expect(await CanvasCollabService.activeSessionCount("org-a", kv as any)).toBe(0);
+    // The dead canvas is removed from the index too.
+    expect(await kv.smembers("canvas:active:i:org-a")).toEqual([]);
+  });
+
+  it("drops a canvas from the count when the last collaborator leaves", async () => {
+    await CanvasCollabService.heartbeat("c1", { userId: "u1", displayName: "A" }, kv as any, "org-a");
+    expect(await CanvasCollabService.activeSessionCount("org-a", kv as any)).toBe(1);
+    await CanvasCollabService.leave("c1", "u1", kv as any, "org-a");
+    expect(await CanvasCollabService.activeSessionCount("org-a", kv as any)).toBe(0);
+  });
+
+  it("returns 0 when the kv lacks set operations (graceful)", async () => {
+    const bare = {
+      hset: async () => 1, hgetall: async () => ({}), hdel: async () => 1, del: async () => 1, publish: async () => 1,
+    };
+    expect(await CanvasCollabService.activeSessionCount("org-a", bare as any)).toBe(0);
   });
 });

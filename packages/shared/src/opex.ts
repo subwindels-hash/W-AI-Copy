@@ -487,7 +487,6 @@ export const OPEX_UNIMPLEMENTED_SECTIONS = [
   "governance.gates",
   "safety.benchmarks",
   "continuous.maturityScore",
-  "collaborationSessionsActive",
 ] as const;
 
 /* ── Notes that ship inside payloads ───────────────────────────────────── */
