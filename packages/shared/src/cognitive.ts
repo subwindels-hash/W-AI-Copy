@@ -108,8 +108,11 @@ export interface CognitiveProvenance {
   federationPartners: "structural_null";
   innovationProposalsOpen: "structural_null";
   innovationPipelineValueUsd: "structural_null";
-  civilizationEntities: "structural_null";
-  worldScenariosTracked: "structural_null";
+  // These two are now backed by the real world-model evidence register
+  // (worldModel.service.ts), so they report "measured" once that register
+  // holds data and "structural_null" only when it is empty.
+  civilizationEntities: "structural_null" | "measured";
+  worldScenariosTracked: "structural_null" | "measured";
   note: string;
 }
 

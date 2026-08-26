@@ -49,7 +49,7 @@ describe("cognitive completion — C1 read path does not seed", () => {
 });
 
 describe("cognitive completion — C3 structural zeros are null", () => {
-  it("empty org dashboard returns null for nine structural fields (fails on C3)", async () => {
+  it("empty org dashboard returns null for the seven structural fields (fails on C3)", async () => {
     const d = await CognitiveService.dashboard(ORG);
     expect(d.selfEvolutionHealth).toBeNull();
     expect(d.autoFixes30d).toBeNull();
@@ -58,11 +58,30 @@ describe("cognitive completion — C3 structural zeros are null", () => {
     expect(d.federationPartners).toBeNull();
     expect(d.innovationProposalsOpen).toBeNull();
     expect(d.innovationPipelineValueUsd).toBeNull();
-    expect(d.civilizationEntities).toBeNull();
-    expect(d.worldScenariosTracked).toBeNull();
     expect(d.provenance).toBeTruthy();
     expect(d.provenance?.selfEvolutionHealth).toBe("structural_null");
     expect(d.provenance?.note).toContain("do not exist yet");
+  });
+
+  it("civilizationEntities and worldScenariosTracked are now measured from the world-model register", async () => {
+    // Empty register: measured 0, provenance still structural_null (nothing recorded).
+    const empty = await CognitiveService.dashboard(ORG);
+    expect(empty.civilizationEntities).toBe(0);
+    expect(empty.worldScenariosTracked).toBe(0);
+    expect(empty.provenance?.civilizationEntities).toBe("structural_null");
+    expect(empty.provenance?.worldScenariosTracked).toBe("structural_null");
+
+    // Record one entity and one hypothesis, then the fields report real counts
+    // with "measured" provenance.
+    const { CognitiveWorldModelService } = await import("./worldModel.service.js");
+    await CognitiveWorldModelService.createEntity(ORG, { name: "Power Grid", kind: "internal_system", domain: "infrastructure" }, "user-1");
+    await CognitiveWorldModelService.createHypothesis(ORG, { statement: "Load will peak in Q4", domain: "infrastructure", horizonMonths: 6 }, "user-1");
+
+    const d = await CognitiveService.dashboard(ORG);
+    expect(d.civilizationEntities).toBe(1);
+    expect(d.worldScenariosTracked).toBe(1);
+    expect(d.provenance?.civilizationEntities).toBe("measured");
+    expect(d.provenance?.worldScenariosTracked).toBe("measured");
   });
 
   it("measured aggregates remain numbers (0 is honest there)", async () => {

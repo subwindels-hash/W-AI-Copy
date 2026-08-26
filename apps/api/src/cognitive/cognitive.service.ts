@@ -64,6 +64,18 @@ export const CognitiveService = {
       { category: "events", healthy: openAlerts === 0, count: openAlerts, alerts: openAlerts },
     ];
     const healthyPct = Math.round((observatory.filter((o) => o.healthy).length / observatory.length) * 100);
+
+    // Two of the previously structural-null fields now have a real backing
+    // store: the Session 110 world-model evidence register. `civilizationEntities`
+    // is the register's entity count and `worldScenariosTracked` is its
+    // hypothesis count (forward-looking scenarios). They are read from stored
+    // records only — never estimated. An empty register still reports the honest
+    // 0/structural_null pair (0 is a measurement here: nothing recorded yet).
+    const { CognitiveWorldModelService } = await import("./worldModel.service.js");
+    const worldModel = await CognitiveWorldModelService.worldModel(oid);
+    const civilizationEntities = worldModel.entityCount;
+    const worldScenariosTracked = worldModel.hypothesisCount;
+    const worldModelHasData = civilizationEntities > 0 || worldScenariosTracked > 0;
     return {
       selfEvolutionHealth: null, autoFixes30d: null,
       // A bottleneck is a workflow that is stuck running or has failed.
@@ -74,7 +86,7 @@ export const CognitiveService = {
       reasoningAccuracyAvg: successPct,
       globalMemoryEntries: memories + knowledge,
       innovationProposalsOpen: null, innovationPipelineValueUsd: null,
-      civilizationEntities: null, worldScenariosTracked: null,
+      civilizationEntities, worldScenariosTracked,
       predictionsMade30d: aiTotal, predictionAccuracyPct: successPct,
       components: [], partners: [], observatory,
       // ReasoningCapability is keyed by a fixed domain enum, and we do not
@@ -94,9 +106,9 @@ export const CognitiveService = {
         federationPartners: "structural_null",
         innovationProposalsOpen: "structural_null",
         innovationPipelineValueUsd: "structural_null",
-        civilizationEntities: "structural_null",
-        worldScenariosTracked: "structural_null",
-        note: "Nine subsystems report null — they do not exist yet (no estimation). Measured rolls (observatory, memory, predictions, bottlenecks) remain numbers.",
+        civilizationEntities: worldModelHasData ? "measured" : "structural_null",
+        worldScenariosTracked: worldModelHasData ? "measured" : "structural_null",
+        note: "Seven subsystems report null — they do not exist yet (no estimation). civilizationEntities and worldScenariosTracked are now measured from the world-model evidence register (entities and hypotheses). Measured rolls (observatory, memory, predictions, bottlenecks) remain numbers.",
       },
     } satisfies CognitiveDashboard;
   },
