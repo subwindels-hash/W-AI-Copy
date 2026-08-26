@@ -61,6 +61,24 @@ export {
   OPEX_SEVERITIES,
   OPEX_UNIMPLEMENTED_SECTIONS,
   opexDimensionDirection,
+  OPEX_GATE_LEVELS,
+  OPEX_GATE_DECISIONS,
+  OPEX_REGULATION_CATEGORIES,
+  OPEX_REGULATION_STATUSES,
+  OPEX_PLAYBOOK_CATEGORIES,
+  OPEX_PLAYBOOK_STATUSES,
+  OPEX_PLAYBOOK_COMPLIANCE,
+  SAFETY_CATEGORIES,
+} from "@windels/shared/opex";
+export type {
+  OpexGateLevel,
+  OpexGateDecision,
+  OpexRegulationCategory,
+  OpexRegulationStatus,
+  OpexPlaybookCategory,
+  OpexPlaybookStatus,
+  OpexPlaybookCompliance,
+  SafetyCategory,
 } from "@windels/shared/opex";
 
 const qs = (params: Record<string, string | number | undefined>) => {

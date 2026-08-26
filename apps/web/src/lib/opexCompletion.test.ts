@@ -7,8 +7,8 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const apiMock = vi.fn(async () => ({}));
-vi.mock("./api", () => ({ api: (...args: unknown[]) => apiMock(...args) }));
+const apiMock = vi.fn((..._args: any[]) => Promise.resolve({}));
+vi.mock("./api", () => ({ api: (...args: any[]) => apiMock(...args) }));
 
 import {
   opexGovernanceApi,
@@ -18,7 +18,7 @@ import {
   opexSafetyBenchmarksApi,
 } from "./opex";
 
-function lastCall() {
+function lastCall(): any[] {
   return apiMock.mock.calls[apiMock.mock.calls.length - 1]!;
 }
 

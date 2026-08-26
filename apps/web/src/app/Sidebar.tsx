@@ -123,6 +123,7 @@ const navItems = [
   { to: "/app/nfc", icon: Nfc, label: "NFC Card Manager" },
   { to: "/app/cloud-android", icon: Smartphone, label: "AI Cloud Android" },
   { to: "/app/opex", icon: Gauge, label: "Operational Excellence" },
+  { to: "/app/opex-governance", icon: ShieldCheck, label: "Governance & Assurance" },
   { to: "/app/prompt-templates", icon: SquarePen, label: "Prompt Templates" },
   { to: "/app/public-api", icon: Globe2, label: "Public API" },
   { to: "/app/sustainability", icon: Leaf, label: "Sustainability" },
