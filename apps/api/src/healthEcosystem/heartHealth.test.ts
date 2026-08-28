@@ -191,8 +191,7 @@ describe("heart center — pulse statistics", () => {
   });
 });
 
-describe("heart center — scans compile recorded data only", () => {
-  it("a heart scan reflects recorded pulse/BP/HRV with per-section basis counts", async () => {
+describe("heart center — scans compile recorded data only", () => {  it("a heart scan reflects recorded pulse/BP/HRV with per-section basis counts", async () => {
     await Heart.quickMeasure(OID, UID, { heartRateBpm: 68, source: "wearable" });
     await Heart.addBloodPressure(OID, UID, { systolic: 120, diastolic: 78, source: "bp_monitor" });
     const r = await Heart.generateReport(OID, UID, "heart_scan");
@@ -249,5 +248,59 @@ describe("heart center — tenant/user isolation", () => {
     await Heart.generateReport(OID, UID, "heart_scan");
     const other = await Heart.listReports(OID, OTHER_UID);
     expect(other).toHaveLength(0);
+  });
+});
+
+describe("heart center — complete Health Scan (Session 204)", () => {
+  it("covers the whole recorded-health surface", async () => {
+    const r = await Heart.generateReport(OID, UID, "health_scan");
+    const titles = r.sections.map((s) => s.title);
+    const expected = [
+      "Pulse", "Resting Heart Rate", "Heart Rate Variability", "Blood Pressure", "ECG / Rhythm Context",
+      "Kidney Function Labs", "Blood Pressure (kidney-relevant)",
+      "Sleep", "Oxygen Saturation", "Activity", "Body Composition",
+      "Blood Glucose & HbA1c", "Body Temperature", "Respiratory Rate", "Stress", "Hydration", "Cardio Fitness (VO2 max)",
+    ];
+    for (const t of expected) expect(titles).toContain(t);
+    // summary always last
+    expect(r.sections[r.sections.length - 1]!.title).toBe("Scan Summary");
+  });
+
+  it("reports recorded glucose and temperature values verbatim", async () => {
+    await Svc.addMetric(OID, UID, { kind: "glucose", value: 95, unit: "mg/dL", source: "manual" });
+    await Svc.addMetric(OID, UID, { kind: "temperature", value: 36.8, unit: "°C", source: "manual" });
+    const r = await Heart.generateReport(OID, UID, "health_scan");
+    const glu = r.sections.find((s) => s.title === "Blood Glucose & HbA1c")!;
+    expect(glu.status).toBe("ok");
+    expect(glu.text).toContain("95");
+    const temp = r.sections.find((s) => s.title === "Body Temperature")!;
+    expect(temp.status).toBe("ok");
+    expect(temp.text).toContain("36.8");
+  });
+
+  it("domains without recordings stay honest 'empty' sections", async () => {
+    await Svc.addMetric(OID, UID, { kind: "glucose", value: 95, unit: "mg/dL", source: "manual" });
+    const r = await Heart.generateReport(OID, UID, "health_scan");
+    expect(r.sections.find((s) => s.title === "Hydration")!.status).toBe("empty");
+    expect(r.sections.find((s) => s.title === "Hydration")!.text).toMatch(/no hydration recordings/i);
+  });
+
+  it("Scan Summary counts are consistent with the section list", async () => {
+    await Heart.quickMeasure(OID, UID, { heartRateBpm: 70 });
+    await Svc.addMetric(OID, UID, { kind: "sleep", value: 420, unit: "min", source: "manual" });
+    const r = await Heart.generateReport(OID, UID, "health_scan");
+    const domains = r.sections.slice(0, -1);
+    const summary = r.sections[r.sections.length - 1]!;
+    const withData = domains.filter((s) => s.status !== "empty").length;
+    const readings = domains.reduce((a, s) => a + s.basisReadings, 0);
+    expect(summary.basisReadings).toBe(readings);
+    expect(summary.text).toContain(`${withData} of ${domains.length}`);
+  });
+
+  it("an empty Health Scan summary says so honestly", async () => {
+    const r = await Heart.generateReport(OID, UID, "health_scan");
+    const summary = r.sections[r.sections.length - 1]!;
+    expect(summary.status).toBe("empty");
+    expect(summary.text).toMatch(/no health domains have recorded data/i);
   });
 });

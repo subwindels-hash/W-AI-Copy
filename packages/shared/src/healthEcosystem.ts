@@ -403,7 +403,7 @@ export interface PulseStats {
 export const HEART_SCAN_KINDS = [
   { id: "heart_scan", name: "Heart Scan", icon: "heart-pulse", description: "AI-powered heart report: pulse statistics, HRV analysis, blood-pressure trends, recorded ECG/AFib context." },
   { id: "kidney_scan", name: "Kidney Scan", icon: "droplet", description: "Report over recorded kidney-related lab values (eGFR, creatinine) and blood pressure." },
-  { id: "health_scan", name: "Health Scan", icon: "scan-line", description: "Whole-health report across all recorded metric domains." },
+  { id: "health_scan", name: "Health Scan", icon: "scan-line", description: "Whole-health report: pulse, HRV, BP, ECG, kidney labs, sleep, SpO2, glucose/HbA1c, temperature, respiratory rate, stress, hydration, fitness." },
 ] as const;
 export type HeartScanKind = typeof HEART_SCAN_KINDS[number]["id"];
 

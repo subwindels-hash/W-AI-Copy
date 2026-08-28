@@ -20,6 +20,7 @@ import {
   HeartPulse, Plus, ScanLine, Sparkles, Stethoscope,
 } from "lucide-react";
 import {
+  hecApi,
   heartApi,
   type HeartDataSnapshot, type HrvAnalysis, type HeartMonitorFeed,
   type QuickHeartMeasureResult, type BloodPressureSummary,
@@ -39,6 +40,23 @@ function labelVariant(l: string): any {
 const fmtDate = (iso?: string | null) => (iso ? new Date(iso).toLocaleString() : "—");
 const nOr = (v: number | null | undefined, unit = "") =>
   v === null || v === undefined ? "—" : `${Math.round(v * 10) / 10}${unit ? ` ${unit}` : ""}`;
+
+/** Session 204 — recordable whole-health inputs that feed the Health Scan. */
+const HEALTH_INPUTS: Array<{ kind: string; label: string; unit: string }> = [
+  { kind: "glucose", label: "Blood glucose", unit: "mg/dL" },
+  { kind: "hba1c", label: "HbA1c", unit: "%" },
+  { kind: "spo2", label: "Oxygen saturation (SpO2)", unit: "%" },
+  { kind: "temperature", label: "Body temperature", unit: "°C" },
+  { kind: "respiratory_rate", label: "Respiratory rate", unit: "breaths/min" },
+  { kind: "sleep", label: "Sleep duration", unit: "min" },
+  { kind: "stress", label: "Stress index", unit: "0-100" },
+  { kind: "hydration", label: "Hydration", unit: "%" },
+  { kind: "weight", label: "Weight", unit: "kg" },
+  { kind: "vo2max", label: "VO2 max", unit: "mL/kg/min" },
+  { kind: "egfr", label: "eGFR (kidney)", unit: "mL/min/1.73m²" },
+  { kind: "creatinine", label: "Creatinine (kidney)", unit: "mg/dL" },
+];
+const unitFor = (k: string) => HEALTH_INPUTS.find((x) => x.kind === k)?.unit ?? "";
 
 function Stat({ label, value, sub }: { label: string; value: string; sub?: string }) {
   return (
@@ -107,6 +125,11 @@ export function HeartHealthPage() {
   // monitor record form
   const [monBpm, setMonBpm] = useState("");
 
+  // whole-health input form (Session 204)
+  const [hKind, setHKind] = useState("glucose");
+  const [hValue, setHValue] = useState("");
+  const [hSource, setHSource] = useState("manual");
+
   // bp form
   const [bpSys, setBpSys] = useState("");
   const [bpDia, setBpDia] = useState("");
@@ -174,6 +197,16 @@ export function HeartHealthPage() {
     } catch (err) { setMsg({ text: err instanceof Error ? err.message : "Failed to record reading", type: "error" }); }
   };
 
+  const recordHealthInput = async (e: React.FormEvent) => {
+    e.preventDefault();
+    try {
+      await hecApi.addMetric({ kind: hKind as any, value: Number(hValue), unit: unitFor(hKind), source: hSource as any });
+      setHValue("");
+      setMsg({ text: `Recorded ${hKind} ${hValue} ${unitFor(hKind)}`, type: "success" });
+      await load();
+    } catch (err) { setMsg({ text: err instanceof Error ? err.message : "Failed to record measurement", type: "error" }); }
+  };
+
   const runScan = async (kind: HeartScanKind) => {
     try {
       const r = await heartApi.generateReport(kind);
@@ -203,6 +236,9 @@ export function HeartHealthPage() {
   };
 
   const t = (v: string) => `data-[state=active]:border-b-2 data-[state=active]:border-sky-500 ${v}`;
+  const healthReport = reports.find((r) => r.kind === "health_scan") ?? null;
+  const healthDomains = healthReport ? healthReport.sections.filter((s) => s.title !== "Scan Summary") : [];
+  const healthWithData = healthDomains.filter((s) => s.status !== "empty").length;
 
   return (
     <div className="space-y-6">
@@ -244,6 +280,7 @@ export function HeartHealthPage() {
           <TabsTrigger value="quick" className={t("")}>Quick Measure</TabsTrigger>
           <TabsTrigger value="bp" className={t("")}>Blood Pressure</TabsTrigger>
           <TabsTrigger value="pulse" className={t("")}>Pulse Stats</TabsTrigger>
+          <TabsTrigger value="healthscan" className={t("")}>Health Scan</TabsTrigger>
           <TabsTrigger value="reports" className={t("")}>Reports &amp; Scans</TabsTrigger>
         </TabsList>
 
@@ -509,6 +546,74 @@ export function HeartHealthPage() {
                 </Card>
               )}
             </>
+          )}
+        </TabsContent>
+
+        {/* ── Health Scan (whole-body, Session 204) ───────────────────── */}
+        <TabsContent value="healthscan" className="space-y-4 pt-4">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <Stat
+              label="Domains with data"
+              value={healthReport ? `${healthWithData} / ${healthDomains.length}` : "—"}
+              sub={healthReport ? `from your latest Health Scan` : "run a Health Scan to see coverage"}
+            />
+            <Stat
+              label="Readings analyzed"
+              value={healthReport ? String(healthDomains.reduce((a, s) => a + s.basisReadings, 0)) : "—"}
+              sub={healthReport ? `latest ${fmtDate(healthReport.generatedAt)}` : undefined}
+            />
+            <Stat label="Saved Health Scans" value={String(reports.filter((r) => r.kind === "health_scan").length)} sub="newest first in Reports &amp; Scans" />
+          </div>
+
+          <Card className="border-slate-800 bg-slate-900/30">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-slate-100"><ScanLine className="h-4 w-4 text-sky-400" />Record whole-health measurements</CardTitle>
+              <CardDescription className="text-xs text-slate-400">
+                These feed the Health Scan. Manual entries are stored as wellness estimates — pick <code>ehr</code> only for values transcribed from clinical lab reports.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={recordHealthInput} className="flex flex-wrap items-center gap-3">
+                <Select value={hKind} onChange={(e) => setHKind(e.target.value)} className="w-56">
+                  {HEALTH_INPUTS.map((x) => (
+                    <option key={x.kind} value={x.kind}>{x.label}</option>
+                  ))}
+                </Select>
+                <Input value={hValue} onChange={(e) => setHValue(e.target.value)} placeholder={`value (${unitFor(hKind)})`} className="w-40" inputMode="decimal" />
+                <Select value={hSource} onChange={(e) => setHSource(e.target.value)} className="w-40">
+                  <option value="manual">manual</option>
+                  <option value="ehr">EHR / lab report</option>
+                  <option value="wearable">wearable</option>
+                </Select>
+                <Button type="submit" disabled={!hValue}><Plus className="mr-1 h-4 w-4" />Record</Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <Button onClick={() => void runScan("health_scan")}><ScanLine className="mr-1 h-4 w-4" />Generate Health Scan</Button>
+            {healthReport && <span className="text-xs text-slate-500">latest: {fmtDate(healthReport.generatedAt)}</span>}
+          </div>
+
+          {healthDomains.length > 0 && (
+            <div className="flex flex-wrap gap-1.5">
+              {healthDomains.map((s) => (
+                <Badge key={s.title} variant={s.status === "empty" ? "slate" : "emerald"} className="text-[10px]">
+                  {s.title}{s.status === "empty" ? "" : ` · ${s.basisReadings}`}
+                </Badge>
+              ))}
+            </div>
+          )}
+
+          {healthReport ? (
+            <ReportCard r={healthReport} />
+          ) : (
+            <Card className="border-slate-800 bg-slate-900/30">
+              <CardContent className="p-6 text-center text-sm text-slate-500">
+                <ScanLine className="mx-auto mb-2 h-6 w-6 text-slate-600" />
+                No Health Scan yet — record measurements above (or run the camera thumb scan) and generate one.
+              </CardContent>
+            </Card>
           )}
         </TabsContent>
 

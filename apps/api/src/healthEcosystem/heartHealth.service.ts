@@ -418,6 +418,47 @@ function compileReport(kind: HeartScanKind, metrics: HealthMetric[]): HeartRepor
     sec("Oxygen Saturation", ["spo2"], spo2.length ? `Latest recorded SpO₂ ${nOf("spo2")[0].value}% across ${spo2.length} readings.` : "No SpO₂ readings recorded yet.");
     sec("Activity", ["steps"], steps.length ? `Average recorded steps ${Math.round(avg(steps)!).toLocaleString()}/day across ${steps.length} entries.` : "No activity recordings yet.");
     sec("Body Composition", ["weight", "bmi", "body_fat_pct"], weight.length ? `Latest recorded weight ${nOf("weight")[0].value} kg (${weight.length} entries).` : "No weight recordings yet.");
+
+    // Session 204 — complete the whole-health surface: metabolic, thermal,
+    // respiratory and lifestyle domains, every one reported as recorded.
+    const glucose = nOf("glucose").map((m) => m.value);
+    const hba1c = nOf("hba1c").map((m) => m.value);
+    sec("Blood Glucose & HbA1c", ["glucose", "hba1c"],
+      glucose.length || hba1c.length
+        ? `Latest recorded glucose ${glucose.length ? nOf("glucose")[0].value : "—"} mg/dL (${glucose.length} readings); HbA1c ${hba1c.length ? nOf("hba1c")[0].value : "—"} % (${hba1c.length} readings). Values are reported as recorded — no interpretation.`
+        : "No glucose or HbA1c recordings yet.");
+    const temps = [...nOf("temperature"), ...nOf("skin_temp")];
+    sec("Body Temperature", ["temperature", "skin_temp"],
+      temps.length
+        ? `Latest recorded temperature ${nOf("temperature").length ? nOf("temperature")[0].value : nOf("skin_temp")[0].value} °C across ${temps.length} readings.`
+        : "No temperature recordings yet.");
+    const resp = nOf("respiratory_rate").map((m) => m.value);
+    sec("Respiratory Rate", ["respiratory_rate"],
+      resp.length ? `Latest recorded respiratory rate ${nOf("respiratory_rate")[0].value} breaths/min across ${resp.length} readings.` : "No respiratory-rate recordings yet.");
+    const stressVals = nOf("stress").map((m) => m.value);
+    sec("Stress", ["stress"],
+      stressVals.length ? `Average recorded stress index ${round1(avg(stressVals)!)} across ${stressVals.length} entries.` : "No stress recordings yet.");
+    const hydrationVals = nOf("hydration").map((m) => m.value);
+    sec("Hydration", ["hydration"],
+      hydrationVals.length ? `Average recorded hydration ${round1(avg(hydrationVals)!)}% across ${hydrationVals.length} entries.` : "No hydration recordings yet.");
+    const vo2 = nOf("vo2max").map((m) => m.value);
+    sec("Cardio Fitness (VO2 max)", ["vo2max"],
+      vo2.length ? `Latest recorded VO2 max ${nOf("vo2max")[0].value} mL/kg/min across ${vo2.length} readings.` : "No VO2 max recordings yet.");
+
+    // Deterministic summary of domain coverage — computed from the sections
+    // above, so the same recorded data always yields the same summary.
+    const domainSections = sections.slice();
+    const withData = domainSections.filter((s) => s.status !== "empty").length;
+    const readingsTotal = domainSections.reduce((a, s) => a + s.basisReadings, 0);
+    sections.push({
+      title: "Scan Summary",
+      status: withData ? "ok" : "empty",
+      text: withData
+        ? `${withData} of ${domainSections.length} health domains have recorded data (${readingsTotal} readings analyzed). Domains without recordings are listed as "no data recorded" rather than estimated.`
+        : `No health domains have recorded data yet (${domainSections.length} domains checked). Record measurements to build your Health Scan.`,
+      basisKinds: [...new Set(domainSections.flatMap((s) => s.basisKinds))],
+      basisReadings: readingsTotal,
+    });
   }
 
   const inputCount = new Set(sections.flatMap((s) => s.basisKinds)).size;
