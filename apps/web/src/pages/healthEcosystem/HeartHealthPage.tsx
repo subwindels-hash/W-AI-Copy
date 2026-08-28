@@ -1,15 +1,18 @@
 /**
- * Session 200 — Heart Center (AI-Powered Heart Reports & Scans) — /app/heart
+ * Session 200 / 203 — Heart Center (AI-Powered Heart Reports & Scans) — /app/heart
  *
  * The heart-health suite of the Health Ecosystem:
- *   Your Heart Data · HRV Analysis · Heart Rate Monitor · Quick Heart Measure ·
- *   Track Blood Pressure · Pulse Statistics · Heart / Kidney / Health Scans
+ *   Heart Scan (camera thumb PPG) · Your Heart Data · HRV Analysis ·
+ *   Heart Rate Monitor · Quick Heart Measure · Track Blood Pressure ·
+ *   Pulse Statistics · Heart / Kidney / Health Scan reports
  *
  * Same record-only honesty as the ecosystem console: every number on this page
  * is arithmetic over measurements the user or a connected device recorded.
- * No readings, rhythms or scan findings are ever fabricated — empty accounts
- * see explicit empty states, and all derived output is labeled
- * wellness_estimate per the Fifth Standing Rule.
+ * The camera scan reads a thumb over the lens (light on) and shows only
+ * progress while scanning — results and the heart report appear exclusively
+ * after the scan completes. No readings, rhythms or scan findings are ever
+ * fabricated, and all derived output is labeled wellness_estimate per the
+ * Fifth Standing Rule.
  */
 import { useCallback, useEffect, useState } from "react";
 import {
@@ -22,6 +25,7 @@ import {
   type QuickHeartMeasureResult, type BloodPressureSummary,
   type PulseStats, type HeartReport, type HeartScanKind,
 } from "@/lib/healthEcosystem";
+import { ThumbScanCard, type ThumbScanOutcome } from "./ThumbScanCard";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/Card";
@@ -48,6 +52,36 @@ function Stat({ label, value, sub }: { label: string; value: string; sub?: strin
   );
 }
 
+/** Rendered heart/scan report — shared by the camera-scan tab and the reports list. */
+function ReportCard({ r }: { r: HeartReport }) {
+  return (
+    <Card className="border-slate-800 bg-slate-900/30">
+      <CardHeader>
+        <div className="flex flex-wrap items-center gap-2">
+          <Stethoscope className="h-4 w-4 text-slate-500" />
+          <CardTitle className="text-slate-100">{r.title}</CardTitle>
+          <Badge variant={r.hasData ? "emerald" : "slate"} className="text-[10px]">{r.hasData ? "data-backed" : "no data"}</Badge>
+          <Badge variant={labelVariant(r.label)} className="text-[10px]">{r.label.replace(/_/g, " ")}</Badge>
+          <span className="ml-auto text-xs text-slate-500">{fmtDate(r.generatedAt)}</span>
+        </div>
+        <CardDescription className="text-xs text-slate-500">{r.disclaimer}</CardDescription>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {r.sections.map((s, i) => (
+          <div key={i} className={`rounded border px-3 py-2 ${s.status === "empty" ? "border-slate-800 bg-slate-900/40" : s.status === "observation" ? "border-amber-900/40 bg-amber-950/20" : "border-slate-700 bg-slate-900/60"}`}>
+            <div className="flex items-center gap-2">
+              <span className="flex-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{s.title}</span>
+              <Badge variant={s.status === "empty" ? "slate" : s.status === "observation" ? "amber" : "emerald"} className="text-[10px]">{s.status === "empty" ? "no data recorded" : s.status}</Badge>
+              <span className="text-[10px] text-slate-500">{s.basisReadings} readings</span>
+            </div>
+            <p className="mt-1 text-sm text-slate-300">{s.text}</p>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
+  );
+}
+
 export function HeartHealthPage() {
   const [msg, setMsg] = useState<{ text: string; type: "success" | "error" } | null>(null);
 
@@ -59,6 +93,8 @@ export function HeartHealthPage() {
   const [bp, setBp] = useState<BloodPressureSummary | null>(null);
   const [pulse, setPulse] = useState<PulseStats | null>(null);
   const [reports, setReports] = useState<HeartReport[]>([]);
+  /** Report auto-generated right after a camera thumb scan completes. */
+  const [scanReport, setScanReport] = useState<HeartReport | null>(null);
 
   // quick measure form
   const [qmHr, setQmHr] = useState("");
@@ -146,6 +182,26 @@ export function HeartHealthPage() {
     } catch (err) { setMsg({ text: err instanceof Error ? err.message : "Scan failed", type: "error" }); }
   };
 
+  /**
+   * Camera thumb scan finished and was recorded — results/report are shown only
+   * at this point (never mid-scan). Refresh every tab and compile the heart
+   * report from the fresh recording.
+   */
+  const handleScanComplete = async (o: ThumbScanOutcome) => {
+    try {
+      const r = await heartApi.generateReport("heart_scan");
+      setScanReport(r);
+      setReports(await heartApi.reports());
+      await load();
+      setMsg({
+        text: `Thumb scan complete — ${o.analysis.bpm} bpm recorded${o.recorded ? "" : " (recording failed — see Heart Scan tab)"}. Heart report generated below.`,
+        type: o.recorded ? "success" : "error",
+      });
+    } catch (err) {
+      setMsg({ text: err instanceof Error ? err.message : "Failed to compile the post-scan report", type: "error" });
+    }
+  };
+
   const t = (v: string) => `data-[state=active]:border-b-2 data-[state=active]:border-sky-500 ${v}`;
 
   return (
@@ -158,9 +214,10 @@ export function HeartHealthPage() {
             <Badge variant="outline" className="text-xs">Record-only</Badge>
           </div>
           <p className="mt-1 max-w-3xl text-sm text-slate-400">
-            Your heart data, HRV analysis, heart-rate monitoring, blood-pressure tracking and pulse statistics —
-            plus AI-powered Heart, Kidney and Health scan reports compiled from your recorded measurements.
-            Nothing here is invented: reports and scans analyze only what you or a connected device recorded.
+            Camera thumb scan (light on, thumb over the lens) for heart rate &amp; HRV, plus your heart data, blood-pressure
+            tracking and pulse statistics — and AI-powered Heart, Kidney and Health scan reports compiled from your recorded
+            measurements. Scan results and reports appear only after a scan <span className="text-slate-300">completes</span>;
+            nothing here is invented.
           </p>
         </div>
         {data && (
@@ -178,8 +235,9 @@ export function HeartHealthPage() {
         </div>
       )}
 
-      <Tabs defaultValue="data" className="w-full">
+      <Tabs defaultValue="scan" className="w-full">
         <TabsList className="border-b border-slate-800 bg-transparent">
+          <TabsTrigger value="scan" className={t("")}>Heart Scan (Camera)</TabsTrigger>
           <TabsTrigger value="data" className={t("")}>Heart Data</TabsTrigger>
           <TabsTrigger value="hrv" className={t("")}>HRV Analysis</TabsTrigger>
           <TabsTrigger value="monitor" className={t("")}>Heart Rate Monitor</TabsTrigger>
@@ -189,14 +247,35 @@ export function HeartHealthPage() {
           <TabsTrigger value="reports" className={t("")}>Reports &amp; Scans</TabsTrigger>
         </TabsList>
 
+        {/* ── Camera Heart Scan (thumb PPG) ───────────────────────────── */}
+        <TabsContent value="scan" className="space-y-4 pt-4">
+          <ThumbScanCard onComplete={handleScanComplete} />
+          {scanReport ? (
+            <>
+              <div className="flex items-center gap-2 text-sm font-medium text-slate-300">
+                <Sparkles className="h-4 w-4 text-sky-400" />
+                Heart Report — generated after your scan completed
+              </div>
+              <ReportCard r={scanReport} />
+            </>
+          ) : (
+            <Card className="border-slate-800 bg-slate-900/30">
+              <CardContent className="p-6 text-center text-sm text-slate-500">
+                <ScanLine className="mx-auto mb-2 h-6 w-6 text-slate-600" />
+                The Heart Report appears here once a thumb scan completes — results are never shown mid-scan.
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+
         {/* ── Your Heart Data ─────────────────────────────────────────── */}
         <TabsContent value="data" className="space-y-4 pt-4">
           {!data ? <p className="text-sm text-slate-500">Loading…</p> : !data.hasData ? (
             <Card className="border-slate-800 bg-slate-900/30">
               <CardContent className="p-6 text-center text-sm text-slate-500">
                 <HeartPulse className="mx-auto mb-2 h-6 w-6 text-slate-600" />
-                No heart data recorded yet. Use <span className="text-slate-300">Quick Measure</span> or connect a device —
-                this page only ever shows measurements that were actually recorded.
+                No heart data recorded yet. Run a <span className="text-slate-300">Heart Scan (Camera)</span> with your thumb over
+                the lens, use Quick Measure, or connect a device — this page only ever shows measurements that were actually recorded.
               </CardContent>
             </Card>
           ) : (
@@ -438,7 +517,7 @@ export function HeartHealthPage() {
           <Card className="border-slate-800 bg-slate-900/30">
             <CardHeader>
               <CardTitle className="flex items-center gap-2 text-slate-100"><Sparkles className="h-4 w-4 text-sky-400" />AI-Powered Reports &amp; Scans</CardTitle>
-              <CardDescription className="text-xs text-slate-400">Each scan compiles a report from your recorded measurements — deterministically, with every section citing what it was computed from. Domains with no recorded data yield honest "no data recorded" sections; findings are never invented.</CardDescription>
+              <CardDescription className="text-xs text-slate-400">Each report compiles from your recorded measurements — deterministically, with every section citing what it was computed from. Use the <span className="text-slate-300">Heart Scan (Camera)</span> tab for the live thumb scan; the buttons below re-compile reports from all recorded data. Domains with no recorded data yield honest "no data recorded" sections; findings are never invented.</CardDescription>
             </CardHeader>
             <CardContent className="grid gap-3 sm:grid-cols-3">
               <Button variant="outline" onClick={() => void runScan("heart_scan")} className="h-auto flex-col gap-1 py-3">
@@ -466,30 +545,7 @@ export function HeartHealthPage() {
               </CardContent>
             </Card>
           ) : reports.map((r) => (
-            <Card key={r.id} className="border-slate-800 bg-slate-900/30">
-              <CardHeader>
-                <div className="flex flex-wrap items-center gap-2">
-                  <Stethoscope className="h-4 w-4 text-slate-500" />
-                  <CardTitle className="text-slate-100">{r.title}</CardTitle>
-                  <Badge variant={r.hasData ? "emerald" : "slate"} className="text-[10px]">{r.hasData ? "data-backed" : "no data"}</Badge>
-                  <Badge variant={labelVariant(r.label)} className="text-[10px]">{r.label.replace(/_/g, " ")}</Badge>
-                  <span className="ml-auto text-xs text-slate-500">{fmtDate(r.generatedAt)}</span>
-                </div>
-                <CardDescription className="text-xs text-slate-500">{r.disclaimer}</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                {r.sections.map((s, i) => (
-                  <div key={i} className={`rounded border px-3 py-2 ${s.status === "empty" ? "border-slate-800 bg-slate-900/40" : s.status === "observation" ? "border-amber-900/40 bg-amber-950/20" : "border-slate-700 bg-slate-900/60"}`}>
-                    <div className="flex items-center gap-2">
-                      <span className="flex-1 text-xs font-semibold uppercase tracking-wide text-slate-400">{s.title}</span>
-                      <Badge variant={s.status === "empty" ? "slate" : s.status === "observation" ? "amber" : "emerald"} className="text-[10px]">{s.status === "empty" ? "no data recorded" : s.status}</Badge>
-                      <span className="text-[10px] text-slate-500">{s.basisReadings} readings</span>
-                    </div>
-                    <p className="mt-1 text-sm text-slate-300">{s.text}</p>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+            <ReportCard key={r.id} r={r} />
           ))}
         </TabsContent>
       </Tabs>
