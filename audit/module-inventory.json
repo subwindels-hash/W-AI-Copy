@@ -7020,16 +7020,20 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 1525,
+      "serviceTotalSloc": 2667,
       "serviceFiles": [
         "bootstrap.ts",
         "healthEcosystem.completion.test.ts",
         "healthEcosystem.service.ts",
         "healthEcosystem.test.ts",
-        "healthEcosystem/healthEcosystem.service.ts"
+        "heartHealth.service.ts",
+        "heartHealth.test.ts",
+        "healthEcosystem/healthEcosystem.service.ts",
+        "healthEcosystem/heartHealth.service.ts"
       ],
       "importedServiceFiles": [
-        "healthEcosystem/healthEcosystem.service.ts"
+        "healthEcosystem/healthEcosystem.service.ts",
+        "healthEcosystem/heartHealth.service.ts"
       ],
       "bootstrapFile": "apps/api/src/healthEcosystem/bootstrap.ts"
     },
@@ -7053,11 +7057,11 @@
       },
       {
         "file": "apps/api/src/http/routes/healthEcosystem.ts",
-        "sloc": 366,
+        "sloc": 495,
         "counts": {
-          "total": 26,
-          "GET": 14,
-          "POST": 11,
+          "total": 36,
+          "GET": 21,
+          "POST": 14,
           "PUT": 0,
           "PATCH": 0,
           "DELETE": 1
@@ -7087,16 +7091,27 @@
           "POST /vaccinations",
           "GET /screenings",
           "POST /screenings",
+          "GET /heart/data",
+          "GET /heart/hrv",
+          "GET /heart/monitor",
+          "POST /heart/measure",
+          "GET /heart/blood-pressure",
+          "POST /heart/blood-pressure",
+          "GET /heart/pulse-stats",
+          "GET /heart/reports",
+          "POST /heart/reports",
+          "GET /heart/reports/:id",
           "GET /modules",
           "GET /disclaimer"
         ]
       }
     ],
-    "sharedTypes": "packages/shared/src/healthEcosystem.ts (307 LOC)",
+    "sharedTypes": "packages/shared/src/healthEcosystem.ts (462 LOC)",
     "web": {
-      "client": "apps/web/src/lib/healthEcosystem.ts (74 LOC)",
+      "client": "apps/web/src/lib/healthEcosystem.ts (124 LOC)",
       "pages": [
-        "apps/web/src/pages/healthEcosystem/HealthEcosystemPage.tsx (routes: health-ecosystem)"
+        "apps/web/src/pages/healthEcosystem/HealthEcosystemPage.tsx (routes: health-ecosystem)",
+        "apps/web/src/pages/healthEcosystem/HeartHealthPage.tsx (routes: heart)"
       ]
     },
     "db": {
@@ -7114,7 +7129,8 @@
       "healthEcosystem.spec.ts",
       "sessions73-75.spec.ts",
       "healthEcosystem/healthEcosystem.completion.test.ts",
-      "healthEcosystem/healthEcosystem.test.ts"
+      "healthEcosystem/healthEcosystem.test.ts",
+      "healthEcosystem/heartHealth.test.ts"
     ],
     "syntheticData": [],
     "externalIntegrations": [],

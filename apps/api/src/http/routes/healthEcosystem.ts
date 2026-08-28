@@ -9,6 +9,7 @@
 import { Router } from "express";
 import { z } from "zod";
 import { HealthEcosystemService } from "../../healthEcosystem/healthEcosystem.service.js";
+import { HeartHealthService } from "../../healthEcosystem/heartHealth.service.js";
 import { validate } from "../middleware/validate.js";
 import { authenticate } from "../middleware/auth.js";
 import { HEALTH_DISCLAIMER } from "@windels/shared";
@@ -109,6 +110,31 @@ const screeningBody = z.object({
   lastCompleted: z.string().optional(),
   nextDue: z.string().optional(),
   status: z.enum(["up_to_date","due","overdue"]).optional(),
+});
+
+// ── Session 200 — Heart Center (AI-Powered Heart Reports & Scans) ────────────
+const quickMeasureBody = z.object({
+  heartRateBpm: z.number().int().min(20).max(300).optional(),
+  systolic: z.number().int().min(50).max(300).optional(),
+  diastolic: z.number().int().min(30).max(200).optional(),
+  rrIntervalsMs: z.array(z.number().min(200).max(2000)).max(600).optional(),
+  source: z.string().optional(),
+  at: z.string().optional(),
+  note: z.string().max(500).optional(),
+}).refine(
+  (b) => b.heartRateBpm !== undefined || b.rrIntervalsMs?.length || (b.systolic !== undefined && b.diastolic !== undefined),
+  { message: "at least one measurement (heartRateBpm, systolic+diastolic, or rrIntervalsMs) is required" },
+);
+const bloodPressureBody = z.object({
+  systolic: z.number().int().min(50).max(300),
+  diastolic: z.number().int().min(30).max(200),
+  pulseBpm: z.number().int().min(20).max(300).optional(),
+  source: z.string().optional(),
+  at: z.string().optional(),
+  note: z.string().max(500).optional(),
+}).refine((b) => b.diastolic < b.systolic, { message: "diastolic must be lower than systolic" });
+const heartReportBody = z.object({
+  kind: z.enum(["heart_scan", "kidney_scan", "health_scan"]),
 });
 
 function orgOf(req: any, res: any): string | null {
@@ -342,6 +368,109 @@ export function registerHealthEcosystemRoutes(router: Router) {
       res.json({ ok: true, data: await HealthEcosystemService.addScreening(oid, uid, req.body) });
     }
     catch (e) { next(e); }
+  });
+
+  // ── Session 200 — Heart Center (AI-Powered Heart Reports & Scans) ──────────
+  // All subroutes are analysis/convenience layers over the shared metric store:
+  // writes go through HealthEcosystemService.addMetric (label provenance gate),
+  // reads are deterministic arithmetic, and scans never fabricate findings.
+
+  // Your Heart Data
+  router.get("/heart/data", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HeartHealthService.heartData(oid, uid) });
+    } catch (e) { next(e); }
+  });
+
+  // Heart Rate Variability Analysis
+  router.get("/heart/hrv", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      const days = req.query.days ? Number(req.query.days) : 7;
+      res.json({ ok: true, data: await HeartHealthService.hrvAnalysis(oid, uid, days) });
+    } catch (e) { next(e); }
+  });
+
+  // Heart Rate Monitor feed
+  router.get("/heart/monitor", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      const limit = req.query.limit ? Number(req.query.limit) : 60;
+      res.json({ ok: true, data: await HeartHealthService.monitorFeed(oid, uid, limit) });
+    } catch (e) { next(e); }
+  });
+
+  // Quick Heart Measure
+  router.post("/heart/measure", validate({ body: quickMeasureBody }), async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HeartHealthService.quickMeasure(oid, uid, req.body) });
+    } catch (e) { next(e); }
+  });
+
+  // Track Blood Pressure — summary + history
+  router.get("/heart/blood-pressure", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HeartHealthService.bloodPressure(oid, uid) });
+    } catch (e) { next(e); }
+  });
+
+  // Track Blood Pressure — record a reading
+  router.post("/heart/blood-pressure", validate({ body: bloodPressureBody }), async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HeartHealthService.addBloodPressure(oid, uid, req.body) });
+    } catch (e) { next(e); }
+  });
+
+  // Pulse Statistics
+  router.get("/heart/pulse-stats", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HeartHealthService.pulseStats(oid, uid) });
+    } catch (e) { next(e); }
+  });
+
+  // AI-Powered Heart Reports & Scans — list saved reports
+  router.get("/heart/reports", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      res.json({ ok: true, data: await HeartHealthService.listReports(oid, uid) });
+    } catch (e) { next(e); }
+  });
+
+  // AI-Powered Heart Reports & Scans — generate (Heart Scan / Kidney Scan / Health Scan)
+  router.post("/heart/reports", validate({ body: heartReportBody }), async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      const report = await HeartHealthService.generateReport(oid, uid, req.body.kind);
+      res.json({ ok: true, data: report, disclaimer: HEALTH_DISCLAIMER });
+    } catch (e) { next(e); }
+  });
+
+  // AI-Powered Heart Reports & Scans — fetch one saved report
+  router.get("/heart/reports/:id", async (req, res, next) => {
+    try {
+      const oid = orgOf(req, res); if (!oid) return;
+      const uid = userOf(req, res); if (!uid) return;
+      const report = await HeartHealthService.getReport(oid, uid, String(req.params.id));
+      if (!report) {
+        res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "report not found" } });
+        return;
+      }
+      res.json({ ok: true, data: report });
+    } catch (e) { next(e); }
   });
 
   // Module registry (which sub-modules are enabled, routes to them)
