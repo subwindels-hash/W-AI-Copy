@@ -37,13 +37,16 @@ export interface HealthProfile {
 
 export type MetricKind =
   | "steps" | "distance_km" | "floors" | "calories_burned" | "active_minutes"
-  | "heart_rate" | "resting_hr" | "hrv" | "hrv_sdnn" | "hrv_rmssd"
+  | "heart_rate" | "resting_hr" | "hrv" | "hrv_sdnn" | "hrv_rmssd" | "rr_interval"
   | "spo2" | "respiratory_rate" | "bp_systolic" | "bp_diastolic"
   | "glucose" | "hba1c" | "weight" | "bmi" | "body_fat_pct"
   | "sleep" | "deep_sleep" | "rem_sleep" | "sleep_efficiency"
   | "temperature" | "skin_temp" | "vo2max" | "stress" | "hydration"
   | "ecg" | "afib_probability" | "menstrual_cycle_day" | "basal_temp"
-  | "peak_flow" | "fev1" | "pain_level";
+  | "peak_flow" | "fev1" | "pain_level"
+  // Session 200 — Heart Center: kidney lab values so the Kidney Scan report has
+  // real recordable inputs (entered from lab results, never invented).
+  | "egfr" | "creatinine";
 
 export type MetricSource =
   | "phone" | "phone_ppg" | "phone_mic" | "phone_camera" | "phone_motion"
@@ -276,11 +279,163 @@ export interface HealthDashboard {
   familyMembers?: Array<{ id: string; name: string; relation: string; age?: number; shared: boolean }>;
 }
 
+// ── Session 200 — Heart Center (AI-Powered Heart Reports & Scans) ────────────
+//
+// Same record-only rules as the rest of the module: every figure below is
+// computed arithmetically from metrics the user (or a connected device) actually
+// recorded. Nothing here invents a reading, a rhythm, or a finding — an empty
+// account yields null statistics and honest "no data recorded" sections.
+
+/** Heart-domain metric kinds surfaced by "Your Heart Data". */
+export const HEART_METRIC_KINDS = [
+  "heart_rate", "resting_hr", "hrv", "hrv_sdnn", "hrv_rmssd", "rr_interval",
+  "bp_systolic", "bp_diastolic", "ecg", "afib_probability", "spo2",
+] as const;
+export type HeartMetricKind = typeof HEART_METRIC_KINDS[number];
+
+/** "Your Heart Data" — everything heart-related recorded for this user. */
+export interface HeartDataSnapshot {
+  counts: Record<HeartMetricKind, number>;
+  latest: Partial<Record<HeartMetricKind, { value: number; unit: string; at: string; label: HealthLabel }>>;
+  recent: HealthMetric[];
+  totalRecorded: number;
+  hasData: boolean;
+}
+
+/** Time-domain HRV analysis over recorded beat-to-beat (RR/NN) intervals. */
+export interface HrvAnalysis {
+  windowDays: number;
+  sampleCount: number;
+  meanRrMs: number | null;
+  sdnnMs: number | null;
+  rmssdMs: number | null;
+  pnn50Pct: number | null;
+  /** Mean heart rate implied by the mean RR interval (60000 / meanRR). */
+  meanHeartRateBpm: number | null;
+  /** Averages of device-computed hrv_sdnn / hrv_rmssd metrics, if recorded. */
+  deviceAvgSdnnMs: number | null;
+  deviceAvgRmssdMs: number | null;
+  /** Always wellness_estimate: app-computed figures, even from clinical inputs. */
+  label: HealthLabel;
+  hasData: boolean;
+}
+
+/** Heart Rate Monitor feed — the recorded heart-rate stream, newest first. */
+export interface HeartMonitorFeed {
+  latestBpm: number | null;
+  latestAt: string | null;
+  min24hBpm: number | null;
+  max24hBpm: number | null;
+  avg24hBpm: number | null;
+  restingAvgBpm: number | null;
+  readings: HealthMetric[];
+  hasData: boolean;
+}
+
+/** Quick Heart Measure — one-shot recording of whatever was measured now. */
+export interface QuickHeartMeasureInput {
+  heartRateBpm?: number;
+  systolic?: number;
+  diastolic?: number;
+  /** Beat-to-beat intervals in ms from an ECG/PPG strip (HRV sample). */
+  rrIntervalsMs?: number[];
+  source?: MetricSource;
+  at?: string;
+  note?: string;
+}
+
+export interface QuickHeartMeasureResult {
+  recorded: HealthMetric[];
+  /** Instant HRV of the submitted RR sample (when one was provided). */
+  hrv: { meanRrMs: number; sdnnMs: number; rmssdMs: number; pnn50Pct: number; sampleCount: number } | null;
+  label: HealthLabel;
+}
+
+/** One blood-pressure reading, paired from recorded systolic+diastolic metrics. */
+export interface BloodPressureReading {
+  at: string;
+  systolic: number;
+  diastolic: number;
+  pulseBpm?: number;
+  /** Mean arterial pressure ≈ diastolic + (systolic − diastolic) / 3. */
+  map: number;
+  pulsePressure: number;
+  source: string;
+  label: HealthLabel;
+}
+
+/** Track Blood Pressure — derived summary over recorded BP metrics. */
+export interface BloodPressureSummary {
+  totalReadings: number;
+  latest: BloodPressureReading | null;
+  readings: BloodPressureReading[];
+  avgSystolic: number | null;
+  avgDiastolic: number | null;
+  avgSystolic7d: number | null;
+  avgDiastolic7d: number | null;
+  avgMap: number | null;
+  avgPulsePressure: number | null;
+  /** Band the latest recorded pair falls into (AHA reference bands) — an
+   *  observation about where a reading sits, never a diagnosis. */
+  latestBand: string | null;
+  observations: string[];
+  hasData: boolean;
+}
+
+/** Pulse Statistics — aggregate arithmetic over recorded pulse metrics. */
+export interface PulseStats {
+  count: number;
+  latestBpm: number | null;
+  latestAt: string | null;
+  minBpm: number | null;
+  maxBpm: number | null;
+  avgBpm: number | null;
+  avgBpm7d: number | null;
+  avgBpm30d: number | null;
+  restingAvgBpm: number | null;
+  /** 7-day average minus 30-day average (bpm); null without both windows. */
+  trendBpm: number | null;
+  series: Array<{ at: string; bpm: number }>;
+  hasData: boolean;
+}
+
+/** The three AI-powered report kinds (Heart Scan / Kidney Scan / Health Scan). */
+export const HEART_SCAN_KINDS = [
+  { id: "heart_scan", name: "Heart Scan", icon: "heart-pulse", description: "AI-powered heart report: pulse statistics, HRV analysis, blood-pressure trends, recorded ECG/AFib context." },
+  { id: "kidney_scan", name: "Kidney Scan", icon: "droplet", description: "Report over recorded kidney-related lab values (eGFR, creatinine) and blood pressure." },
+  { id: "health_scan", name: "Health Scan", icon: "scan-line", description: "Whole-health report: pulse, HRV, BP, ECG, kidney labs, sleep, SpO2, glucose/HbA1c, temperature, respiratory rate, stress, hydration, fitness." },
+] as const;
+export type HeartScanKind = typeof HEART_SCAN_KINDS[number]["id"];
+
+export interface HeartReportSection {
+  title: string;
+  /** ok = data present · observation = data present outside a reference band · empty = nothing recorded */
+  status: "ok" | "observation" | "empty";
+  text: string;
+  /** Metric kinds and reading counts this section was computed from. */
+  basisKinds: MetricKind[];
+  basisReadings: number;
+}
+
+/** AI-Powered Heart Report — deterministic compilation of recorded data. */
+export interface HeartReport {
+  id: string;
+  kind: HeartScanKind;
+  title: string;
+  generatedAt: string;
+  sections: HeartReportSection[];
+  inputMetricCount: number;
+  /** Always wellness_estimate — the compiler never emits clinical determinations. */
+  label: HealthLabel;
+  disclaimer: string;
+  hasData: boolean;
+}
+
 // Sub-module registration — mirrors the 20+ modules defined in Source 12 (V10.0)
 export const HEALTH_MODULES = [
   { id: "symptom_checker", name: "Symptom Checker", route: "/symptoms", icon: "stethoscope", description: "AI triage with three-bucket labeling." },
   { id: "medication",      name: "Medication Manager", route: "/medications", icon: "pill", description: "Adherence, interactions, refills." },
-  { id: "heart_center",    name: "Heart Center", route: "/heart", icon: "heart-pulse", description: "HR, HRV, BP, ECG, AFib detection." },
+  { id: "heart_center",    name: "Heart Center", route: "/heart", icon: "heart-pulse", description: "HR, HRV, BP, ECG, AFib detection + AI-powered heart reports & scans (Session 200)." },
   { id: "bp_center",       name: "Blood Pressure Center", route: "/bp", icon: "activity", description: "Trends, MAP, pulse pressure, hypertension screening." },
   { id: "diabetes",        name: "Diabetes Center", route: "/diabetes", icon: "droplet", description: "CGM, HbA1c, bolus calculator, time-in-range." },
   { id: "sleep",           name: "Sleep Lab", route: "/sleep", icon: "moon", description: "Stages, apnea screening, recovery correlation." },

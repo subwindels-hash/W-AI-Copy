@@ -106,3 +106,32 @@ export const developerGatewayApi = {
   }) =>
     api<MediaGenerationResult>(`${REST}/media/generate`, { method: "POST", json: input }),
 };
+
+// ── Session 205 — Gateway reference catalog ────────────────────────────────
+/**
+ * The developer gateway is API-key authenticated (`X-Api-Key`), so a browser
+ * JWT session cannot (and should not) drive it. This catalog mirrors the nine
+ * registered routes one-to-one (apps/api/src/http/routes/developerGateway.ts)
+ * for the reference console; it is documentation, pinned by unit test.
+ */
+export interface GatewayEndpointDoc {
+  method: "GET" | "POST";
+  path: string;
+  /** Scopes accepted — any one of these authorizes the call. */
+  scopes: string[];
+  summary: string;
+}
+
+export const GATEWAY_BASE = "/api/rest/v1";
+
+export const GATEWAY_ENDPOINTS: GatewayEndpointDoc[] = [
+  { method: "POST", path: "/ai/complete", scopes: ["ai:execute", "ai:read"], summary: "AI completion via the provider registry." },
+  { method: "GET", path: "/agents", scopes: ["agents:read"], summary: "List agents available to the key's organization." },
+  { method: "POST", path: "/agents/:id/execute", scopes: ["agents:execute", "ai:execute"], summary: "Execute an agent with input/context." },
+  { method: "POST", path: "/workflows/:id/execute", scopes: ["workflows:execute", "workflows:read"], summary: "Run a workflow; billed to the usage ledger." },
+  { method: "GET", path: "/workflows/:id/runs", scopes: ["workflows:read"], summary: "List recent runs of a workflow." },
+  { method: "POST", path: "/workflows/:id/runs/:runId/cancel", scopes: ["workflows:execute"], summary: "Cancel an in-flight workflow run." },
+  { method: "GET", path: "/knowledge/search", scopes: ["knowledge:read", "search:read"], summary: "Semantic knowledge-base search." },
+  { method: "GET", path: "/trading/analysis", scopes: ["trading:read", "agents:read"], summary: "Trading-intelligence instrument analysis." },
+  { method: "POST", path: "/media/generate", scopes: ["media:generate", "documents:generate"], summary: "Generate image/audio/video media." },
+];

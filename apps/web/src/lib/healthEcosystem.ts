@@ -13,6 +13,16 @@ import type {
   MedicalDevice,
   Vaccination,
   Screening,
+  HeartDataSnapshot,
+  HrvAnalysis,
+  HeartMonitorFeed,
+  QuickHeartMeasureInput,
+  QuickHeartMeasureResult,
+  BloodPressureReading,
+  BloodPressureSummary,
+  PulseStats,
+  HeartReport,
+  HeartScanKind,
 } from "@windels/shared";
 export type {
   HealthDashboard,
@@ -27,6 +37,16 @@ export type {
   MedicalDevice,
   Vaccination,
   Screening,
+  HeartDataSnapshot,
+  HrvAnalysis,
+  HeartMonitorFeed,
+  QuickHeartMeasureInput,
+  QuickHeartMeasureResult,
+  BloodPressureReading,
+  BloodPressureSummary,
+  PulseStats,
+  HeartReport,
+  HeartScanKind,
 } from "@windels/shared";
 
 export const hecApi = {
@@ -70,4 +90,34 @@ export const hecApi = {
 
   modules: () => api.get<any[]>("/health-ecosystem/modules"),
   disclaimer: () => api.get<{ disclaimer: string; rule: string }>("/health-ecosystem/disclaimer"),
+};
+
+/** Session 200 — Heart Center (AI-Powered Heart Reports & Scans) */
+export const heartApi = {
+  // Your Heart Data
+  data: () => api.get<HeartDataSnapshot>("/health-ecosystem/heart/data"),
+
+  // Heart Rate Variability Analysis
+  hrv: (days = 7) => api.get<HrvAnalysis>("/health-ecosystem/heart/hrv", { days }),
+
+  // Heart Rate Monitor
+  monitor: (limit = 60) => api.get<HeartMonitorFeed>("/health-ecosystem/heart/monitor", { limit }),
+
+  // Quick Heart Measure
+  quickMeasure: (input: QuickHeartMeasureInput) =>
+    api.post<QuickHeartMeasureResult>("/health-ecosystem/heart/measure", input),
+
+  // Track Blood Pressure
+  bloodPressure: () => api.get<BloodPressureSummary>("/health-ecosystem/heart/blood-pressure"),
+  addBloodPressure: (input: { systolic: number; diastolic: number; pulseBpm?: number; source?: string; note?: string }) =>
+    api.post<BloodPressureReading>("/health-ecosystem/heart/blood-pressure", input),
+
+  // Pulse Statistics
+  pulseStats: () => api.get<PulseStats>("/health-ecosystem/heart/pulse-stats"),
+
+  // AI-Powered Heart Reports & Scans (Heart Scan / Kidney Scan / Health Scan)
+  reports: () => api.get<HeartReport[]>("/health-ecosystem/heart/reports"),
+  generateReport: (kind: HeartScanKind) =>
+    api.post<HeartReport>("/health-ecosystem/heart/reports", { kind }),
+  report: (id: string) => api.get<HeartReport>(`/health-ecosystem/heart/reports/${id}`),
 };

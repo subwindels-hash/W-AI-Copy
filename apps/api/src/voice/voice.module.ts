@@ -22,12 +22,17 @@
 import { randomUUID } from "node:crypto";
 import { redisCmd as redis } from "../db/redis.js";
 import { demoDataEnabled, skipDemoSeed } from "../config/demoData.js";
+import { VoiceService } from "../voiceStudio/voice.service.js";
 import { makeRng } from "../utils/detRng.js";
 import type {
-  BuiltInVoice, CustomVoice, VoiceSettings, VoicePreset, TtsJob,
+  BuiltInVoice, CustomVoice, VoiceSettings, VoicePreset,
   VoiceStudioDashboard, VfDashboard, VfGeneratedVoice,
   VfVoiceDesign, VfVoicePack, VfDeployment, VsVoiceGender, VsVoiceAge,
 } from "@windels/shared";
+// The S27 voice contract's richer job shape (text/clientSide/provider/error)
+// lives in the voice subpath; the root export resolves TtsJob to the S40
+// voiceStudio contract, which lacks those fields.
+import type { TtsJob } from "@windels/shared/voice";
 
 const _rng = makeRng('voice:voiceModule');
 const K = {
@@ -294,24 +299,36 @@ export const voiceModule = {
   },
 
   async synthesize(text: string, voiceId: string, settings?: VoiceSettings): Promise<TtsJob> {
-    // In a real implementation, this would call ElevenLabs/Play.ht/browser
-    const job: TtsJob = {
-      id: uid("tts-"),
+    // Session 206 — synthesis is delegated to the REAL engine (VoiceService,
+    // S40 voiceStudio): browser voices return clientSide jobs, provider
+    // voices synthesize actual audio files (served from /api/v1/voice-studio/
+    // audio), and an unconfigured provider fails honestly with
+    // VOICE_MODEL_NOT_CONFIGURED. The previous behavior — a 1-second timer
+    // that marked every job "ready" with an audio URL no route served — was
+    // fake output and is gone for good.
+    const vsJob = await VoiceService.synthesize({
+      text,
       voiceId,
-      status: "queued" as any,
+      speed: settings?.speed,
+      clientSide: (settings as { clientSide?: boolean } | undefined)?.clientSide,
+    });
+
+    const job: TtsJob = {
+      id: vsJob.id,
+      voiceId,
+      text,
+      status: vsJob.status as TtsJob["status"],
+      durationMs: vsJob.durationMs,
+      audioUrl: vsJob.audioUrl,
+      provider: vsJob.provider,
+      clientSide: vsJob.clientSide,
       requestedAt: new Date().toISOString(),
+      createdAt: vsJob.createdAt,
     };
-    (job as any).text = text;
+    if (vsJob.error) job.error = vsJob.error;
 
     await redis.hset(K.jobs + ":" + job.id, "_doc", JSON.stringify(job));
     await redis.zadd(K.jobs, Date.now(), job.id);
-
-    // Simulate completion
-    setTimeout(async () => {
-      job.status = "ready" as any;
-      job.audioUrl = `/api/v1/voice/audio/${job.id}.wav`;
-      await redis.hset(K.jobs + ":" + job.id, "_doc", JSON.stringify(job));
-    }, 1000);
 
     return job;
   },
