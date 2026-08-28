@@ -97,6 +97,8 @@ export interface TtsJob {
   audioUrl?: string;
   provider?: string;
   clientSide?: boolean;
+  /** Honest failure reason (e.g. VOICE_MODEL_NOT_CONFIGURED) — present only on failed jobs. */
+  error?: string;
   requestedAt: string;
   createdAt: string;
 }
