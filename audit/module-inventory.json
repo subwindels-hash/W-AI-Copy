@@ -4550,8 +4550,10 @@
     ],
     "sharedTypes": "packages/shared/src/developerPlatform.ts (265 LOC, imported)",
     "web": {
-      "client": "apps/web/src/lib/developerGateway.ts (109 LOC)",
-      "pages": []
+      "client": "apps/web/src/lib/developerGateway.ts (138 LOC)",
+      "pages": [
+        "apps/web/src/pages/developerGateway/DeveloperGatewayPage.tsx (routes: developer-gateway)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -5354,7 +5356,9 @@
     "sharedTypes": "packages/shared/src/engMetrics.ts (160 LOC, supplies SLOTier/ServiceMetric)",
     "web": {
       "client": "apps/web/src/lib/engineering.ts (46 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/engineering/EngineeringPage.tsx (routes: engineering)"
+      ]
     },
     "db": {
       "prismaModels": [],
@@ -7020,7 +7024,7 @@
         "mathRandom": false,
         "externalFetch": false
       },
-      "serviceTotalSloc": 2667,
+      "serviceTotalSloc": 2802,
       "serviceFiles": [
         "bootstrap.ts",
         "healthEcosystem.completion.test.ts",
@@ -7649,7 +7653,9 @@
     "sharedTypes": "packages/shared/src/kernel.ts (32 LOC)",
     "web": {
       "client": "apps/web/src/lib/kernel.ts (22 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/kernel/KernelPage.tsx (routes: kernel)"
+      ]
     },
     "db": {
       "prismaModels": [
@@ -10703,7 +10709,9 @@
     "sharedTypes": "packages/shared/src/platformServices.ts (294 LOC)",
     "web": {
       "client": "apps/web/src/lib/platformServices.ts (132 LOC)",
-      "pages": []
+      "pages": [
+        "apps/web/src/pages/platformServices/PlatformServicesPage.tsx (routes: platform-services)"
+      ]
     },
     "db": {
       "prismaModels": [

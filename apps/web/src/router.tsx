@@ -110,6 +110,10 @@ const IndustryPage = lazy(() => import("./pages/industry/IndustryPage").then((m)
 const BiomedicalPage = lazy(() => import("./pages/biomedical/BiomedicalPage").then((m) => ({ default: m.BiomedicalPage })));
 const HealthEcosystemPage = lazy(() => import("./pages/healthEcosystem/HealthEcosystemPage").then((m) => ({ default: m.HealthEcosystemPage })));
 const HeartHealthPage = lazy(() => import("./pages/healthEcosystem/HeartHealthPage").then((m) => ({ default: m.HeartHealthPage })));
+const KernelPage = lazy(() => import("./pages/kernel/KernelPage").then((m) => ({ default: m.KernelPage })));
+const EngineeringPage = lazy(() => import("./pages/engineering/EngineeringPage").then((m) => ({ default: m.EngineeringPage })));
+const PlatformServicesPage = lazy(() => import("./pages/platformServices/PlatformServicesPage").then((m) => ({ default: m.PlatformServicesPage })));
+const DeveloperGatewayPage = lazy(() => import("./pages/developerGateway/DeveloperGatewayPage").then((m) => ({ default: m.DeveloperGatewayPage })));
 const CloudAndroidPublicPage = lazy(() => import("./pages/cloudAndroidPublic/CloudAndroidPublicPage").then((m) => ({ default: m.CloudAndroidPublicPage })));
 const ModuleRuntimeAliasPage = lazy(() => import("./pages/moduleRuntime/ModuleRuntimePage").then((m) => ({ default: m.ModuleRuntimePage })));
 const NativeAiApiPage = lazy(() => import("./pages/nativeAiApi/NativeAiApiPage").then((m) => ({ default: m.NativeAiApiPage })));
@@ -532,6 +536,10 @@ export const router = createBrowserRouter([
       { path: "biomedical", element: withSuspense(<BiomedicalPage />) },
       { path: "health-ecosystem", element: withSuspense(<HealthEcosystemPage />) },
       { path: "heart", element: withSuspense(<HeartHealthPage />) },
+      { path: "kernel", element: withSuspense(<KernelPage />) },
+      { path: "engineering", element: withSuspense(<EngineeringPage />) },
+      { path: "platform-services", element: withSuspense(<PlatformServicesPage />) },
+      { path: "developer-gateway", element: withSuspense(<DeveloperGatewayPage />) },
       { path: "cloud-android-public", element: withSuspense(<CloudAndroidPublicPage />) },
       { path: "module-runtime", element: withSuspense(<ModuleRuntimeAliasPage />) },
       { path: "native-ai-api", element: withSuspense(<NativeAiApiPage />) },
