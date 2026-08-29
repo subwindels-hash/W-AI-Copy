@@ -14,6 +14,7 @@ import { DataBanner } from "@/components/ui/DataBanner";
 import {
   Search, Loader2, Users, FolderPlus, Download, Globe2, Phone, FileText, CheckCircle2, Link2,
 } from "lucide-react";
+import { AdvancedLeadDiscoveryPanel } from "./AdvancedLeadDiscoveryPanel";
 
 export function LeadsPage() {
   const [query, setQuery] = useState("");
@@ -113,11 +114,13 @@ export function LeadsPage() {
     <div className="space-y-5 p-1">
       <div>
         <h1 className="text-2xl font-bold text-text-bright flex items-center gap-2"><Users className="h-6 w-6 text-azure"/> AI Lead Discovery</h1>
-        <p className="text-sm text-text-muted mt-1">Natural-language business search ("gyms in London", "construction companies in Nigeria") → structured results → collections → export. Discovery only — no automated outreach, ever.</p>
+        <p className="text-sm text-text-muted mt-1">Advanced Apollo, Business, and Person modes with source traceability, quality scoring, verification status, lists, and explicit-only outreach handoff. Discovery never sends messages automatically.</p>
       </div>
 
+      <AdvancedLeadDiscoveryPanel onRecordsChanged={refresh} />
+
       <Card>
-        <CardHeader><CardTitle className="flex items-center gap-2"><Search className="h-5 w-5 text-azure"/> Lead search</CardTitle><CardDescription>Powered by Google Places (textsearch) when GOOGLE_PLACES_API_KEY is configured on the server.</CardDescription></CardHeader>
+        <CardHeader><CardTitle className="flex items-center gap-2"><Search className="h-5 w-5 text-azure"/> Classic Google Places search</CardTitle><CardDescription>The original quick search remains available and is powered by Google Places text search when GOOGLE_PLACES_API_KEY is configured on the server.</CardDescription></CardHeader>
         <CardContent className="flex flex-wrap gap-3">
           <Input value={query} onChange={(e) => setQuery(e.target.value)} placeholder="e.g. gyms in London, construction companies in Abuja…" className="flex-1 min-w-64" onKeyDown={(e) => e.key === "Enter" && void search()}/>
           <Button onClick={search} disabled={searching || !query.trim()} className="gap-2">

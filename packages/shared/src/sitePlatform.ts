@@ -383,7 +383,7 @@ export const SpContactMapPatchSchema = z.object({
 });
 export type SpContactMapPatch = z.infer<typeof SpContactMapPatchSchema>;
 
-export const SP_API_CATEGORIES = ["ai", "sports", "lottery", "maps", "email", "integrations", "custom"] as const;
+export const SP_API_CATEGORIES = ["ai", "sports", "lottery", "maps", "email", "lead_discovery", "integrations", "custom"] as const;
 export type SpApiCategory = (typeof SP_API_CATEGORIES)[number];
 
 export interface SpApiCatalogItem {
@@ -410,6 +410,9 @@ export const SP_API_CATALOG: SpApiCatalogItem[] = [
   { slot: "github-client-id", label: "GitHub OAuth client id", category: "integrations", envHint: "GITHUB_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
   { slot: "github-oauth", label: "GitHub OAuth client secret", category: "integrations", envHint: "GITHUB_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
   { slot: "google-maps", label: "Google Maps Embed (browser key)", category: "maps", envHint: "public embed key", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "google-places-lead-discovery", label: "Google Places Lead Discovery", category: "lead_discovery", envHint: "GOOGLE_PLACES_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://maps.googleapis.com", removable: false },
+  { slot: "apollo", label: "Apollo Lead Intelligence", category: "lead_discovery", envHint: "LEAD_APOLLO_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.apollo.io", removable: false },
+  { slot: "neverbounce", label: "NeverBounce Email Verification", category: "lead_discovery", envHint: "LEAD_NEVERBOUNCE_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.neverbounce.com", removable: false },
 ];
 
 export interface SpApiCredentialPublic {

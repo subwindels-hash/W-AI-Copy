@@ -25,17 +25,8 @@ import { requireAdmin } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { AppError } from "../../utils/result.js";
 import { UsageService } from "../../usage/usage.service.js";
-import { tenantStore } from "../../utils/tenantStore.js";
+import { UsageEventsService } from "../../usage/usageEvents.service.js";
 import { UsageEventSchema, UsageEventsQuerySchema } from "@windels/shared/usage";
-
-// Tenant-scoped usage event ledger. Real writes; dashboard reads roll them up.
-const events = tenantStore<{
-  feature: string;
-  actor: string;
-  quantity: number;
-  unit: string;
-  meta?: Record<string, unknown>;
-}>({ prefix: "usg:evt", idPrefix: "u-" });
 
 export function registerUsageRoutes(router: Router) {
   const orgOf = (req: any): string => {
@@ -53,7 +44,7 @@ export function registerUsageRoutes(router: Router) {
       const oid = orgOf(req);
       const [rollup, evts] = await Promise.all([
         UsageService.dashboard(oid),
-        events.list(oid, 100),
+        UsageEventsService.list(oid, 100),
       ]);
       // Aggregate by feature for a real usage summary.
       const byFeature: Record<string, { quantity: number; count: number }> = {};
@@ -83,7 +74,7 @@ export function registerUsageRoutes(router: Router) {
   router.post("/events", requireAdmin, validate({ body: UsageEventSchema }), async (req, res, next) => {
     try {
       const oid = orgOf(req);
-      const rec = await events.create(oid, req.body, (req.user as any).id);
+      const rec = await UsageEventsService.record(oid, req.body, (req.user as any).id);
       res.status(201).json({ ok: true, data: { id: rec.id, createdAt: rec.createdAt, ...rec.data } });
     } catch (e) { next(e); }
   });
@@ -93,7 +84,7 @@ export function registerUsageRoutes(router: Router) {
       const oid = orgOf(req);
       // Session 123 — clamp the limit instead of passing arbitrary input.
       const limit = Math.min(Number(req.query.limit ?? 100) || 100, 1000);
-      const list = await events.list(oid, limit);
+      const list = await UsageEventsService.list(oid, limit);
       res.json({ ok: true, data: list.map((e) => ({ id: e.id, createdAt: e.createdAt, ...e.data })) });
     } catch (e) { next(e); }
   });
@@ -103,7 +94,7 @@ export function registerUsageRoutes(router: Router) {
   router.get("/events/:id", async (req, res, next) => {
     try {
       const oid = orgOf(req);
-      const rec = await events.get(oid, req.params.id);
+      const rec = await UsageEventsService.get(oid, req.params.id);
       if (!rec) {
         return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Event not found" } });
       }
@@ -116,7 +107,7 @@ export function registerUsageRoutes(router: Router) {
   router.delete("/events/:id", requireAdmin, async (req, res, next) => {
     try {
       const oid = orgOf(req);
-      const removed = await events.delete(oid, req.params.id);
+      const removed = await UsageEventsService.remove(oid, req.params.id);
       if (!removed) {
         return res.status(404).json({ ok: false, error: { code: "NOT_FOUND", message: "Event not found" } });
       }

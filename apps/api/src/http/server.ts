@@ -35,6 +35,7 @@ import { registerAttachmentRoutes } from "./routes/attachments.js";
 import { registerProjectContinuityRoutes } from "./routes/projectContinuity.js";
 import { registerLeadDiscoveryRoutes } from "./routes/leadDiscovery.js";
 import { registerLeadPipelineRoutes } from "./routes/leadPipeline.js";
+import { registerAdvancedLeadDiscoveryRoutes } from "./routes/advancedLeadDiscovery.js";
 import { registerPromptTemplateRoutes } from "./routes/promptTemplates.js";
 import { registerAIRoutes } from "./routes/ai.js";
 import { registerAgentRoutes } from "./routes/agents.js";
@@ -297,6 +298,7 @@ export function createApp() {
   const leadPipelineRouter = express.Router();
   v1.use("/lead-discovery", leadPipelineRouter);
   registerLeadPipelineRoutes(leadPipelineRouter);
+  registerAdvancedLeadDiscoveryRoutes(leadPipelineRouter);
   const leadDiscoveryRouter = express.Router();
   v1.use("/lead-discovery", leadDiscoveryRouter);
   registerLeadDiscoveryRoutes(leadDiscoveryRouter);

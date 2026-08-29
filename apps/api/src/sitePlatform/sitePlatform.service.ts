@@ -148,6 +148,9 @@ function catalogEnvConfigured(slot: string): boolean {
     case "lottery-powerball": return Boolean(process.env.WINDELS_LOTTERY_POWERBALL_FEED_URL);
     case "github-client-id": return Boolean(process.env.GITHUB_CLIENT_ID);
     case "github-oauth": return Boolean(process.env.GITHUB_CLIENT_SECRET);
+    case "google-places-lead-discovery": return Boolean(process.env.GOOGLE_PLACES_API_KEY);
+    case "apollo": return Boolean(process.env.LEAD_APOLLO_API_KEY);
+    case "neverbounce": return Boolean(process.env.LEAD_NEVERBOUNCE_API_KEY);
     default: return false;
   }
 }

@@ -229,19 +229,21 @@ function tally(records: Array<{ status: LeadStatus }>): Record<LeadStatus, numbe
 /* ── Duplicate grouping ───────────────────────────────────────────────── */
 
 /**
- * Group leads by the provider's place identifier.
+ * Group leads by the pair of provider and provider identifier.
  *
- * This is the only grouping rule. Two records with similar names, or the same
- * address typed differently, are *not* merged: the provider did not say they
- * are the same listing, and inferring it would be a guess dressed as a fact.
+ * This is the only pipeline grouping rule. Two records with similar names, or
+ * a coincidentally identical identifier issued by different providers, are not
+ * merged here. Advanced discovery adds its own confident cross-source checks
+ * at ingest while preserving every source trace.
  */
 function groupBySourceId(leads: Lead[]): Map<string, Lead[]> {
   const groups = new Map<string, Lead[]>();
   for (const lead of leads) {
     if (!lead.sourceId) continue;
-    const bucket = groups.get(lead.sourceId);
+    const key = `${lead.source}:${lead.sourceId}`;
+    const bucket = groups.get(key);
     if (bucket) bucket.push(lead);
-    else groups.set(lead.sourceId, [lead]);
+    else groups.set(key, [lead]);
   }
   return groups;
 }
@@ -414,7 +416,7 @@ export const LeadPipelineService = {
     let affectedLeads = 0;
     let unresolvedGroups = 0;
 
-    for (const [sourceId, members] of grouped) {
+    for (const [, members] of grouped) {
       if (members.length < 2) continue;
       affectedLeads += members.length;
       const ordered = sortByDiscovery(members, order);
@@ -428,7 +430,7 @@ export const LeadPipelineService = {
 
       if (groups.length < LEAD_MAX_DUPLICATE_GROUPS) {
         groups.push({
-          sourceId,
+          sourceId: keeper.sourceId,
           name: keeper.name,
           keeperId: keeper.id,
           duplicateIds: rest.map((l) => l.id),
@@ -516,6 +518,9 @@ export const LeadPipelineService = {
 
     const count = (predicate: (lead: Lead) => boolean) => leads.filter(predicate).length;
     const pct = (present: number) => (total === 0 ? null : Math.round((present / total) * 1000) / 10);
+    const hasAdvancedRecords = leads.some((lead) => lead.source === "apollo" || lead.sourceTrace?.some((trace) => trace.searchMode !== "legacy"));
+    const returnedPhone = count((lead) => Boolean(lead.phone?.trim()));
+    const returnedWebsite = count((lead) => Boolean(lead.website?.trim()));
 
     const spec: Array<{
       field: LeadFieldCoverage["field"];
@@ -543,17 +548,19 @@ export const LeadPipelineService = {
       },
       {
         field: "phone",
-        present: count((l) => Boolean(l.phone?.trim())),
-        suppliedByProvider: false,
-        detail:
-          "Places text search does not return phone numbers. This column is empty because the field was never requested — it requires a separate Place Details call this deployment does not make.",
+        present: returnedPhone,
+        suppliedByProvider: hasAdvancedRecords ? returnedPhone > 0 : false,
+        detail: hasAdvancedRecords
+          ? "Phone values, where present, came from an authorized provider response. Missing values remain unknown; no number is inferred or enriched."
+          : "Places text search does not return phone numbers. This column is empty because the field was never requested — it requires a separate Place Details call this deployment does not make.",
       },
       {
         field: "website",
-        present: count((l) => Boolean(l.website?.trim())),
-        suppliedByProvider: false,
-        detail:
-          "Places text search does not return websites, for the same reason as the phone column.",
+        present: returnedWebsite,
+        suppliedByProvider: hasAdvancedRecords ? returnedWebsite > 0 : false,
+        detail: hasAdvancedRecords
+          ? "Website values, where present, came from an authorized provider response. Missing values remain unknown; no website is inferred."
+          : "Places text search does not return websites, for the same reason as the phone column.",
       },
     ];
 
