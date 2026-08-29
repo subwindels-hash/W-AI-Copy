@@ -114,6 +114,8 @@ export const Limits = {
   paymentStatus: { key: "rl:paymentstatus:user:", max: 120, refillPerSec: 2, blockSeconds: 30 },
   reviews: { key: "rl:reviews:ip:", max: 10, refillPerSec: 1 / 120, blockSeconds: 600 },          // Platform review write anti-spam
   reviewsWrite: { key: "rl:reviewswrite:user:", max: 10, refillPerSec: 1 / 60, blockSeconds: 120 },
+  // Paid provider calls: user-scoped, intentionally tighter than global API.
+  leadDiscovery: { key: "rl:lead-discovery:user:", max: 20, refillPerSec: 1 / 30, blockSeconds: 300 },
 } satisfies Record<string, Limit>;
 
 export type LimitName = keyof typeof Limits;

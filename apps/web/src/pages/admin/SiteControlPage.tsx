@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { adminApi, type AdmUserRow } from "@/lib/admin";
 import { siteAdminApi } from "@/lib/sitePlatform";
 import type {
@@ -13,6 +14,7 @@ import { Select } from "@/components/ui/Select";
 import { Badge } from "@/components/ui/Badge";
 import { Textarea } from "@/components/ui/Textarea";
 import { useAuthStore } from "@/store/auth";
+import { advancedLeadApi, type LeadDiscoveryAdminStatus } from "@/lib/leadDiscovery";
 
 const TABS = ["brand", "pages", "reviews", "map", "apis", "announcement", "seo", "smtp", "admins"] as const;
 type Tab = (typeof TABS)[number];
@@ -37,6 +39,7 @@ export function SiteControlPage({ embedded }: { embedded?: boolean }) {
   const [apis, setApis] = useState<SpApiCredentialPublic[]>([]);
   const [customApi, setCustomApi] = useState({ label: "", baseUrl: "", apiKey: "" });
   const [apiDraft, setApiDraft] = useState<Record<string, { apiKey: string; baseUrl: string }>>({});
+  const [leadDiscoveryStatus, setLeadDiscoveryStatus] = useState<LeadDiscoveryAdminStatus | null>(null);
 
   const flash = (m: string) => { setNotice(m); setTimeout(() => setNotice(null), 4000); };
   const fail = (e: unknown) => setErr(e instanceof Error ? e.message : String(e));
@@ -45,7 +48,7 @@ export function SiteControlPage({ embedded }: { embedded?: boolean }) {
     try {
       setAnn(await siteAdminApi.announcement());
       if (isSa) {
-        const [s, sm, b, imgs, pc, rv, mp, al, list] = await Promise.all([
+        const [s, sm, b, imgs, pc, rv, mp, al, list, leadStatus] = await Promise.all([
           siteAdminApi.seo(),
           siteAdminApi.smtp(),
           siteAdminApi.brand(),
@@ -55,8 +58,9 @@ export function SiteControlPage({ embedded }: { embedded?: boolean }) {
           siteAdminApi.map(),
           siteAdminApi.apis(),
           adminApi.listUsers({ role: "admin", perPage: 50 }),
+          advancedLeadApi.adminStatus(),
         ]);
-        setSeo(s); setSmtp(sm); setBrand(b); setImages(imgs); setPages(pc); setReviews(rv); setMap(mp); setApis(al); setAdmins(list.users);
+        setSeo(s); setSmtp(sm); setBrand(b); setImages(imgs); setPages(pc); setReviews(rv); setMap(mp); setApis(al); setAdmins(list.users); setLeadDiscoveryStatus(leadStatus);
       }
       setErr(null);
     } catch (e) { fail(e); }
@@ -245,6 +249,12 @@ export function SiteControlPage({ embedded }: { embedded?: boolean }) {
                 </div>
               );
             })}
+            {leadDiscoveryStatus && <div className="space-y-3 rounded-lg border border-azure/25 bg-azure/5 p-3">
+              <div><div className="text-sm font-semibold text-text-bright">Lead Discovery governance</div><p className="mt-1 text-xs text-text-muted">Provider status reports credential presence only; it is not a live-provider test. Search, verification, policy, and export actions are recorded in the platform audit and usage ledgers.</p><Link to="/app/audit" className="mt-2 inline-block text-xs font-semibold text-azure hover:underline">Review Lead Discovery audit trail →</Link></div>
+              <div className="grid gap-2 md:grid-cols-3">{leadDiscoveryStatus.providers.map((provider) => <div key={provider.provider} className="rounded border border-white/10 bg-black/10 p-2 text-xs"><div className="flex items-center justify-between gap-2"><strong className="text-text-bright">{provider.provider.replace(/_/g, " ")}</strong><Badge variant={provider.configured ? "emerald" : "amber"}>{provider.configured ? "Credential set" : "Not configured"}</Badge></div><p className="mt-1 text-text-muted">{provider.requiredConfiguration}</p><p className="mt-1 text-text-muted">Source: {provider.credentialSource} · Live test: not performed</p></div>)}</div>
+              <div className="grid gap-3 md:grid-cols-3"><label className="text-xs text-text-muted">Module enabled<Select value={leadDiscoveryStatus.policy.enabled ? "yes" : "no"} onChange={(e) => setLeadDiscoveryStatus({ ...leadDiscoveryStatus, policy: { ...leadDiscoveryStatus.policy, enabled: e.target.value === "yes" } })}><option value="yes">Enabled</option><option value="no">Disabled</option></Select></label><label className="text-xs text-text-muted">Email verification<Select value={leadDiscoveryStatus.policy.verificationEnabled ? "yes" : "no"} onChange={(e) => setLeadDiscoveryStatus({ ...leadDiscoveryStatus, policy: { ...leadDiscoveryStatus.policy, verificationEnabled: e.target.value === "yes" } })}><option value="yes">Enabled</option><option value="no">Disabled</option></Select></label><label className="text-xs text-text-muted">Structured export<Select value={leadDiscoveryStatus.policy.exportEnabled ? "yes" : "no"} onChange={(e) => setLeadDiscoveryStatus({ ...leadDiscoveryStatus, policy: { ...leadDiscoveryStatus.policy, exportEnabled: e.target.value === "yes" } })}><option value="yes">Enabled</option><option value="no">Disabled</option></Select></label><label className="text-xs text-text-muted">Personal-domain filtering<Select value={leadDiscoveryStatus.policy.allowPersonalEmailDomainFiltering ? "yes" : "no"} onChange={(e) => setLeadDiscoveryStatus({ ...leadDiscoveryStatus, policy: { ...leadDiscoveryStatus.policy, allowPersonalEmailDomainFiltering: e.target.value === "yes" } })}><option value="yes">Allowed by policy</option><option value="no">Disabled</option></Select></label><label className="text-xs text-text-muted">Max provider results/search<Input type="number" min="1" max="100" value={leadDiscoveryStatus.policy.maxResultsPerSearch} onChange={(e) => setLeadDiscoveryStatus({ ...leadDiscoveryStatus, policy: { ...leadDiscoveryStatus.policy, maxResultsPerSearch: Number(e.target.value) || 1 } })} /></label><label className="text-xs text-text-muted">Retention days<Input type="number" min="1" max="3650" value={leadDiscoveryStatus.policy.retentionDays} onChange={(e) => setLeadDiscoveryStatus({ ...leadDiscoveryStatus, policy: { ...leadDiscoveryStatus.policy, retentionDays: Number(e.target.value) || 1 } })} /></label></div>
+              <Button size="sm" onClick={async () => { try { const policy = await advancedLeadApi.updatePolicy(leadDiscoveryStatus.policy); setLeadDiscoveryStatus({ ...leadDiscoveryStatus, policy }); flash("Lead Discovery governance policy saved."); } catch (e) { fail(e); } }}>Save Lead Discovery policy</Button>
+            </div>}
             <div className="grid gap-2 rounded-lg border border-dashed border-white/15 p-3 md:grid-cols-4">
               <Input placeholder="Custom API name" value={customApi.label} onChange={(e) => setCustomApi({ ...customApi, label: e.target.value })} />
               <Input placeholder="https://api.example.com" value={customApi.baseUrl} onChange={(e) => setCustomApi({ ...customApi, baseUrl: e.target.value })} />

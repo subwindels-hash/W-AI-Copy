@@ -288,6 +288,18 @@ describe("deduplication", () => {
     expect(report.scanned).toBe(2);
   });
 
+  it("does not group a coincidentally identical identifier from different providers", async () => {
+    const records = [
+      { id: "lead-google-collision", name: "Google result", source: "google_places", sourceId: "shared-id", discoveredAt: new Date().toISOString(), verificationStatus: "source_returned", query: "google" },
+      { id: "lead-apollo-collision", name: "Apollo result", source: "apollo", sourceId: "shared-id", discoveredAt: new Date().toISOString(), verificationStatus: "unverified", query: "apollo" },
+    ];
+    for (const record of records) {
+      await kv.set(`leads85:${ORG_A}:lead:${record.id}`, JSON.stringify(record));
+      await kv.lpush(`leads85:${ORG_A}:leads`, record.id);
+    }
+    expect((await LeadPipelineService.duplicates(ORG_A)).groups).toEqual([]);
+  });
+
   it("does not group two different listings that merely share a name", async () => {
     await seed(ORG_A, "chains", [
       { place_id: "branch-1", name: "Same Name Ltd", formatted_address: "1 St" },

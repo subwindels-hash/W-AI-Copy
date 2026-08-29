@@ -62,10 +62,10 @@ export const LEAD_STATUS_NOTE =
   "A pipeline status records what an operator decided, not what was verified. Marking a lead qualified does not confirm that the business trades, is solvent, or wants to be contacted — the underlying record is still whatever the provider returned.";
 
 export const LEAD_CONTACT_COVERAGE_NOTE =
-  "Google Places text search does not return phone numbers or websites; those fields require a separate Place Details call this deployment does not make. A coverage of zero therefore describes the request that was made, not the businesses. Do not read an empty phone column as 'this business has no phone'.";
+  "Legacy Google Places text search does not return phone numbers or websites. Advanced Business Mode may retain those fields only when its authorized Place Details response returns them; Apollo People API Search commonly omits email and phone. A coverage of zero describes returned records, not the businesses. Do not read an empty phone column as 'this business has no phone'.";
 
 export const LEAD_DEDUPE_NOTE =
-  "Duplicates are grouped by the provider's own place identifier, so they are the same listing returned by more than one search — not a guess that two similarly named businesses are the same company. Resolving a group marks the later records and keeps the earliest; nothing is deleted, and a lead that was marked can be returned to the pipeline.";
+  "Pipeline duplicates are grouped by the same provider and that provider's own identifier, so identical IDs from different providers cannot collide. Advanced discovery also prevents duplicate inserts on confident same-provider ID, email, profile URL, phone, or exact name-plus-company matches and preserves every source trace. Resolving a pipeline group marks later records and keeps the earliest; nothing is deleted.";
 
 export const LEAD_HISTORY_NOTE =
   "Searches recorded since this ledger was introduced. Searches run before it existed were never written and are not reconstructed. The ledger keeps the most recent entries per organization; older ones are trimmed.";
@@ -77,7 +77,7 @@ export const LEAD_CSV_INJECTION_NOTE =
   "Cells beginning with =, +, - or @ are prefixed with an apostrophe so spreadsheets render them as text. Business names from a public directory are attacker-controlled input, and a leading = is executed as a formula on open.";
 
 export const LEAD_PROVIDER_NOTE =
-  "Every lead in this module came from Google Places text search. No other source is queried, nothing is inferred from the name or address, and no contact detail is enriched from a third party.";
+  "Legacy searches use Google Places text search. Advanced Lead Discovery can additionally retain Apollo People API Search records only when that authorized provider is configured. No field is inferred from a name, address, domain, or profile, and no contact detail is enriched from an unconfigured or unauthorized source.";
 
 /* ── Pipeline status ───────────────────────────────────────────────────── */
 
@@ -109,17 +109,39 @@ export interface Lead {
   name: string;
   category?: string;
   address?: string;
-  /** Never populated by text search — see LEAD_CONTACT_COVERAGE_NOTE. */
+  /** Provider-returned only. Never inferred from a name, domain, or profile. */
   phone?: string;
-  /** Never populated by text search — see LEAD_CONTACT_COVERAGE_NOTE. */
+  /** Provider-returned only. Never constructed from a domain. */
   website?: string;
-  source: "google_places";
-  /** The provider's own identifier; the only sound basis for deduplication. */
+  /** The legacy Google path remains supported; advanced discovery can add Apollo. */
+  source: "google_places" | "apollo";
+  /** The provider's own identifier. */
   sourceId: string;
   discoveredAt: string;
-  /** The provider listed it. Nobody confirmed it. Never upgraded by this layer. */
-  verificationStatus: "source_returned";
+  /** `source_returned` is preserved for legacy results. Advanced verification
+   * status is held in the dedicated verification record, never fabricated. */
+  verificationStatus: "source_returned" | "verified" | "likely_valid" | "unverified" | "invalid";
   query: string;
+  // Additive normalized fields used by Advanced Lead Discovery. Each is only
+  // written when a permitted provider actually returned it.
+  jobTitle?: string;
+  company?: string;
+  industry?: string;
+  country?: string;
+  stateRegion?: string;
+  city?: string;
+  email?: string;
+  emailStatus?: "verified" | "likely_valid" | "unverified" | "invalid" | "not_available";
+  professionalProfileUrl?: string;
+  sourceTrace?: Array<{
+    provider: "google_places" | "apollo";
+    providerRecordId: string;
+    sourceUrl: string | null;
+    discoveryMethod: "apollo_people_api_search" | "apollo_organization_search" | "google_places_textsearch";
+    searchMode: "apollo" | "business" | "person" | "legacy";
+    searchQuery: string;
+    discoveredAt: string;
+  }>;
 }
 
 /* ── Pipeline record ───────────────────────────────────────────────────── */

@@ -86,6 +86,7 @@ export * from "./security.js";
 export * from "./derivatives.js";
 export * from "./googleAuth.js";
 export * from "./leadDiscovery.js";
+export * from "./leadDiscoveryAdvanced.js";
 export * from "./mfa.js";
 export * from "./mobile.js";
 export * from "./mediaMetering.js";

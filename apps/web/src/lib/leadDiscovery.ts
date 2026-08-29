@@ -12,11 +12,19 @@ export interface Lead {
   address?: string;
   phone?: string;
   website?: string;
-  source: "google_places";
+  source: "google_places" | "apollo";
   sourceId: string;
   discoveredAt: string;
-  verificationStatus: "source_returned";
+  verificationStatus: "source_returned" | "verified" | "likely_valid" | "unverified" | "invalid";
   query: string;
+  jobTitle?: string;
+  company?: string;
+  industry?: string;
+  country?: string;
+  stateRegion?: string;
+  city?: string;
+  email?: string;
+  professionalProfileUrl?: string;
 }
 
 export interface LeadCollection {
@@ -78,6 +86,54 @@ export const leadApi = {
     a.click();
     URL.revokeObjectURL(url);
   },
+};
+
+/* ── Advanced multi-mode discovery (additive to the legacy client above) ── */
+import type {
+  AdvancedLead,
+  AdvancedLeadList,
+  LeadAdvancedSearchInput,
+  LeadAgentInterpretation,
+  LeadAgentLeadRecommendation,
+  LeadAgentRecommendationResult,
+  LeadDiscoveryAdminStatus,
+  LeadDiscoveryJob,
+  LeadDiscoveryJobHistory,
+  LeadDiscoveryPolicy,
+  LeadOutreachHandoff,
+} from "@windels/shared/leadDiscoveryAdvanced";
+
+export type {
+  AdvancedLead,
+  AdvancedLeadList,
+  LeadAdvancedSearchInput,
+  LeadAgentInterpretation,
+  LeadAgentLeadRecommendation,
+  LeadAgentRecommendationResult,
+  LeadDiscoveryAdminStatus,
+  LeadDiscoveryJob,
+  LeadDiscoveryJobHistory,
+  LeadDiscoveryPolicy,
+  LeadOutreachHandoff,
+} from "@windels/shared/leadDiscoveryAdvanced";
+
+export const advancedLeadApi = {
+  startSearch: (input: LeadAdvancedSearchInput) =>
+    api.post<{ job: LeadDiscoveryJob; pollAfterMs: number }>("/lead-discovery/advanced/search", input),
+  job: (id: string) => api.get<LeadDiscoveryJob>(`/lead-discovery/advanced/jobs/${id}`),
+  jobHistory: (limit = 25) => api.get<LeadDiscoveryJobHistory>("/lead-discovery/advanced/jobs", { limit }),
+  jobResults: (id: string) => api.get<AdvancedLead[]>(`/lead-discovery/advanced/jobs/${id}/results`),
+  list: (query: Record<string, unknown> = {}) => api.get<AdvancedLeadList>("/lead-discovery/advanced/leads", query),
+  get: (id: string) => api.get<AdvancedLead>(`/lead-discovery/advanced/leads/${id}`),
+  setTags: (id: string, tags: string[]) => api.patch<AdvancedLead>(`/lead-discovery/advanced/leads/${id}/tags`, { tags }),
+  verify: (id: string) => api.post<AdvancedLead>(`/lead-discovery/advanced/leads/${id}/verify`, { field: "email" }),
+  remove: (id: string) => api.del<{ id: string; deleted: true }>(`/lead-discovery/advanced/leads/${id}`),
+  prepareOutreach: (leadIds: string[]) => api.post<LeadOutreachHandoff>("/lead-discovery/advanced/outreach/handoff", { leadIds }),
+  interpret: (request: string) => api.post<LeadAgentInterpretation>("/lead-discovery/advanced/agent/interpret", { request }),
+  recommendations: (leadIds: string[]) => api.post<LeadAgentRecommendationResult>("/lead-discovery/advanced/agent/recommendations", { leadIds }),
+  export: (leadIds: string[]) => api.post<{ exportedAt: string; leads: AdvancedLead[]; note: string }>("/lead-discovery/advanced/export", { leadIds }),
+  adminStatus: () => api.get<LeadDiscoveryAdminStatus>("/lead-discovery/advanced/admin/status"),
+  updatePolicy: (policy: Partial<LeadDiscoveryPolicy>) => api.patch<LeadDiscoveryPolicy>("/lead-discovery/advanced/admin/policy", policy),
 };
 
 /* ════════════════════════════════════════════════════════════════════════
