@@ -1,0 +1,32 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: windels-config
+  namespace: windels
+data:
+  NODE_ENV: "production"
+  API_PORT: "4000"
+  API_HOST: "0.0.0.0"
+  API_CORS_ORIGIN: "https://windels.example.com"
+  JWT_ISSUER: "windels-ai-os"
+  JWT_ACCESS_TTL: "15m"
+  JWT_REFRESH_TTL: "7d"
+  SESSION_COOKIE_SECURE: "true"
+  BOOTSTRAP_SUPERADMIN_EMAIL: "admin@windels.ai"
+  LOG_LEVEL: "info"
+  # NOTE: secrets (JWT_SECRET, DATABASE_URL, REDIS_URL, BOOTSTRAP_SUPERADMIN_PASSWORD) live in Secret windels-secrets.
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: windels-secrets
+  namespace: windels
+type: Opaque
+stringData:
+  # Copy to secret.example.yaml — do NOT commit real values.
+  JWT_SECRET: "CHANGE-ME-AT-LEAST-32-CHARS"
+  DATABASE_URL: "postgresql://windels:CHANGE-ME@windels-postgres:5432/windels"
+  REDIS_URL: "redis://:CHANGE-ME@windels-redis:6379"
+  BOOTSTRAP_SUPERADMIN_PASSWORD: "ChangeMe!234"
+  SENTRY_DSN: ""
+  ENCRYPTION_KEY: ""

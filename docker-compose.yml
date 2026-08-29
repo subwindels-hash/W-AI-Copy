@@ -1,0 +1,43 @@
+# WINDELS AI OS — local development dependencies only
+#
+# Start with: docker compose up -d
+# Then run migrations and the app from the host (see README.md).
+# Production uses the standalone infra/docker/docker-compose.prod.yml file.
+
+name: windels-dev
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:5432:5432"
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-windels}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-windels}
+      POSTGRES_DB: ${POSTGRES_DB:-windels}
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:8.0-alpine
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:6379:6379"
+    command: ["redis-server", "--appendonly", "yes"]
+    volumes:
+      - redis-dev-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  postgres-dev-data:
+  redis-dev-data:

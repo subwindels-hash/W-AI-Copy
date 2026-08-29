@@ -1,0 +1,122 @@
+version: '3.8'
+
+# Development environment with hot reload and debugging
+services:
+  # ─── API Service (Development) ──────────────────────────────────────────
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: windels-api-dev
+    ports:
+      - "3000:3000"
+      - "9229:9229"  # Node.js debugger
+    environment:
+      - NODE_ENV=development
+      - PORT=3000
+      - DATABASE_URL=postgresql://windels:windels@postgres:5432/windels_dev
+      - REDIS_URL=redis://redis:6379
+      - JWT_SECRET=dev-jwt-secret-key
+      - LOG_LEVEL=debug
+      - ENABLE_SWAGGER=true
+    volumes:
+      - ./apps/api/src:/app/apps/api/src
+      - ./packages:/app/packages
+      - /app/node_modules
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - windels-dev-network
+    command: pnpm dev
+
+  # ─── PostgreSQL Database ────────────────────────────────────────────────
+  postgres:
+    image: postgres:15-alpine
+    container_name: windels-postgres-dev
+    ports:
+      - "5432:5432"
+    environment:
+      - POSTGRES_USER=windels
+      - POSTGRES_PASSWORD=windels
+      - POSTGRES_DB=windels_dev
+    volumes:
+      - postgres-dev-data:/var/lib/postgresql/data
+    networks:
+      - windels-dev-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U windels"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis Cache ────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: windels-redis-dev
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-dev-data:/data
+    networks:
+      - windels-dev-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # ─── Redis Commander (Redis GUI) ────────────────────────────────────────
+  redis-gui:
+    image: rediscommander/redis-commander:latest
+    container_name: windels-redis-gui
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+    networks:
+      - windels-dev-network
+
+  # ─── Postgres Admin (Database GUI) ─────────────────────────────────────
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: windels-pgadmin
+    ports:
+      - "8080:80"
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=admin@windels.ai
+      - PGADMIN_DEFAULT_PASSWORD=admin
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks:
+      - windels-dev-network
+
+  # ─── Mailhog (Email Testing) ───────────────────────────────────────────
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: windels-mailhog
+    ports:
+      - "1025:1025"  # SMTP
+      - "8025:8025"  # Web UI
+    networks:
+      - windels-dev-network
+
+volumes:
+  postgres-dev-data:
+    driver: local
+  redis-dev-data:
+    driver: local
+  pgadmin-data:
+    driver: local
+
+networks:
+  windels-dev-network:
+    driver: bridge

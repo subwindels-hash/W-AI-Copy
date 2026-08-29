@@ -1,0 +1,29 @@
+# ─── Development Dockerfile ───────────────────────────────────────────────────
+FROM node:20-alpine
+
+# Install pnpm
+RUN corepack enable && corepack prepare pnpm@8 --activate
+
+# Install additional tools
+RUN apk add --no-cache git
+
+# Set working directory
+WORKDIR /app
+
+# Copy package files
+COPY package.json pnpm-lock.yaml ./
+
+# Install all dependencies (including dev)
+RUN pnpm install --frozen-lockfile
+
+# Copy source code
+COPY . .
+
+# Set environment variables
+ENV NODE_ENV=development
+
+# Expose ports
+EXPOSE 3000 9229
+
+# Start application with hot reload
+CMD ["pnpm", "dev"]

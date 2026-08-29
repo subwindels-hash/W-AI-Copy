@@ -1,0 +1,53 @@
+# ── PostgreSQL (StatefulSet for persistent volume) ──────────────────────────
+apiVersion: v1
+kind: Service
+metadata:
+  name: windels-postgres
+  namespace: windels
+  labels: { app: windels-postgres }
+spec:
+  type: ClusterIP
+  ports: [{ port: 5432, targetPort: 5432, name: postgres }]
+  selector: { app: windels-postgres }
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: windels-postgres
+  namespace: windels
+  labels: { app: windels-postgres }
+spec:
+  serviceName: windels-postgres
+  replicas: 1
+  selector:
+    matchLabels: { app: windels-postgres }
+  template:
+    metadata:
+      labels: { app: windels-postgres }
+    spec:
+      containers:
+        - name: postgres
+          image: postgres:16-alpine
+          ports: [{ containerPort: 5432 }]
+          envFrom:
+            - secretRef: { name: windels-db-credentials }
+          env:
+            - { name: POSTGRES_DB, value: "windels" }
+            - { name: PGDATA, value: "/var/lib/postgresql/data/pgdata" }
+          volumeMounts: [{ name: pgdata, mountPath: "/var/lib/postgresql/data" }]
+          resources:
+            requests: { cpu: "100m", memory: "256Mi" }
+            limits: { cpu: "1", memory: "1Gi" }
+          readinessProbe:
+            exec: { command: ["pg_isready", "-U", "windels", "-d", "windels"] }
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            exec: { command: ["pg_isready", "-U", "windels", "-d", "windels"] }
+            initialDelaySeconds: 15
+            periodSeconds: 20
+  volumeClaimTemplates:
+    - metadata: { name: pgdata }
+      spec:
+        accessModes: ["ReadWriteOnce"]
+        resources: { requests: { storage: 20Gi } }

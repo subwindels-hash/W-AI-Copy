@@ -1,0 +1,84 @@
+node_modules
+dist
+build
+.next
+.turbo
+coverage
+.env
+.env.local
+.env.server
+*.log
+.DS_Store
+apps/api/prisma/migrations/dev.db*
+apps/api/uploads
+apps/api/audio-cache
+audio-cache
+
+# Test artifacts
+tests/reports/
+playwright-report/
+test-results/
+playwright/.cache/
+blob-report/
+
+# Infra / Terraform
+infra/terraform/**/.terraform
+infra/terraform/**/.terraform.lock.hcl
+infra/terraform/**/*.tfstate
+infra/terraform/**/*.tfstate.backup
+infra/terraform/**/*.tfplan
+infra/terraform/**/crash.log
+infra/terraform/**/.terraformrc
+
+# Desktop build artifacts
+apps/desktop/release/
+apps/desktop/dist/
+
+# K8s kustomize edits (local dev only)
+infra/k8s/kustomization.yaml.bak
+
+# Misc
+*.tsbuildinfo
+.cache/
+.pnpm-store/
+
+# .github/ was previously ignored ("due to API permissions"), which meant the
+# repository could not have CI at all. That gap is why a broken migration, 20
+# tables of schema drift, inert RLS policies and a crash-on-boot logger all
+# reached main unnoticed. The directory is now tracked.
+#
+# The pipeline lives at .github/workflows-staged/ci.yml rather than
+# .github/workflows/ because the token used by this automation is a GitHub App
+# without `workflows` permission, so pushes touching .github/workflows/ are
+# rejected outright. Run `bash .github/install-workflows.sh` from an account
+# that has the permission to activate it. See .github/README.md.
+
+media-cache
+windels-ai-os-sessions-1-88.zip
+
+# Local dev artifacts (Postgres/Redis binaries + data)
+.local/data/
+.local/pg/
+.local/redis/
+.local/logs/
+.local/run/
+
+# Session 84 project intake / Session 77B media cache (runtime dirs)
+project-intake/
+module-packages/
+media-cache/
+music-cache/
+music-video-cache/
+video-cache/
+video-transform-cache/
+cinematic-cache/
+
+# Local sandbox deployment scaffolding (runtime artifacts only — keep docs/scripts)
+.deploy/node_modules/
+.deploy/pgdata/
+.deploy/redis-server
+.deploy/redis-cli
+.deploy/dump.rdb
+.deploy/appendonlydir/
+.deploy/*.rdb
+.deploy/appendonly.aof*

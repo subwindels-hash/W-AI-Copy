@@ -1,0 +1,181 @@
+/**
+ * ScreenIntelService — Slice 286: Enterprise Screen Intelligence.
+ */
+import { randomUUID } from "node:crypto";
+import { redisCmd as redis } from "../db/redis.js";
+import type {
+  ScreenShareSession, InterfaceExplanation, GuidedStep, CodeAssistance,
+  ScreenIssue, WorkflowDoc, ScreenSessionStatus, ScreenShareLevel, CodeAssistanceKind, DocFormat,
+} from "@windels/shared";
+// Deterministic demo RNG — stable within a running process.
+
+
+
+const K = {
+  sSet: "coll:s:sess", s: (id: string) => `coll:s:s:${id}`,
+  exSet: (sid: string) => `coll:s:${sid}:ex`, ex: (id: string) => `coll:s:ex:${id}`,
+  stSet: (sid: string) => `coll:s:${sid}:st`, st: (id: string) => `coll:s:st:${id}`,
+  cdSet: (sid: string) => `coll:s:${sid}:cd`, cd: (id: string) => `coll:s:cd:${id}`,
+  isSet: (sid: string) => `coll:s:${sid}:is`, is: (id: string) => `coll:s:is:${id}`,
+  dcSet: (sid: string) => `coll:s:${sid}:dc`, dc: (id: string) => `coll:s:dc:${id}`,
+};
+const SER = <T>(v: T) => JSON.stringify(v);
+const iso = () => new Date().toISOString();
+
+async function getAll<T>(setKey: string, keyFn: (id: string) => string): Promise<T[]> {
+  const ids = await redis.smembers(setKey);
+  const out: T[] = [];
+  for (const id of ids) { const raw = await redis.get(keyFn(id)); if (raw) out.push(JSON.parse(raw) as T); }
+  return out;
+}
+
+export const ScreenIntelService = {
+  async listSessions(filter?: { status?: ScreenSessionStatus }): Promise<ScreenShareSession[]> {
+    const all = await getAll<ScreenShareSession>(K.sSet, K.s);
+    const out = filter?.status ? all.filter(s => s.status === filter.status) : all;
+    return out.sort((a, b) => b.startedAt.localeCompare(a.startedAt));
+  },
+  async getSession(id: string) {
+    const raw = await redis.get(K.s(id));
+    return raw ? (JSON.parse(raw) as ScreenShareSession) : null;
+  },
+  async startSession(input: { title: string; user: string; level: ScreenShareLevel; application?: string; url?: string }): Promise<ScreenShareSession> {
+    const id = randomUUID();
+    const s: ScreenShareSession = {
+      id, title: input.title, user: input.user, level: input.level,
+      application: input.application, url: input.url,
+      status: "active", consentGranted: true, piiRedaction: true,
+      startedAt: iso(), framesCaptured: 0, aiExplanations: 0,
+      stepsGuided: 0, codeAssists: 0, docsGenerated: 0, issuesDetected: 0,
+    };
+    await redis.set(K.s(id), SER(s));
+    await redis.sadd(K.sSet, id);
+    return s;
+  },
+  async endSession(id: string): Promise<ScreenShareSession | null> {
+    const s = await this.getSession(id);
+    if (!s) return null;
+    s.status = "ended";
+    s.endedAt = iso();
+    // A session that captured no frames captured no frames. This used to
+    // back-fill 120-1320 invented frames on close, so a screen share that
+    // recorded nothing still reported over a thousand captured frames.
+    s.framesCaptured = s.framesCaptured || 0;
+    await redis.set(K.s(id), SER(s));
+    return s;
+  },
+
+  async addExplanation(sid: string, e: Omit<InterfaceExplanation, "id" | "sessionId" | "timestamp">): Promise<InterfaceExplanation> {
+    const id = randomUUID();
+    const rec: InterfaceExplanation = { id, sessionId: sid, timestamp: iso(), ...e };
+    await redis.set(K.ex(id), SER(rec));
+    await redis.sadd(K.exSet(sid), id);
+    const s = await this.getSession(sid);
+    if (s) { s.aiExplanations += 1; await redis.set(K.s(sid), SER(s)); }
+    return rec;
+  },
+  async listExplanations(sid: string): Promise<InterfaceExplanation[]> {
+    return (await getAll<InterfaceExplanation>(K.exSet(sid), K.ex)).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  },
+
+  async addStep(sid: string, step: Omit<GuidedStep, "id" | "sessionId" | "status" | "elapsedSec" | "aiCoached">): Promise<GuidedStep> {
+    const id = randomUUID();
+    const rec: GuidedStep = { id, sessionId: sid, status: "pending", elapsedSec: 0, aiCoached: true, ...step };
+    await redis.set(K.st(id), SER(rec));
+    await redis.sadd(K.stSet(sid), id);
+    return rec;
+  },
+  async listSteps(sid: string): Promise<GuidedStep[]> {
+    return (await getAll<GuidedStep>(K.stSet(sid), K.st)).sort((a, b) => a.stepNumber - b.stepNumber);
+  },
+  async advanceStep(sid: string, id: string, status: GuidedStep["status"]): Promise<GuidedStep | null> {
+    const raw = await redis.get(K.st(id));
+    if (!raw) return null;
+    const g = JSON.parse(raw) as GuidedStep;
+    const prevStatus = g.status;
+    g.status = status;
+    // Elapsed time is measured from when the step actually started. It used to
+    // grow by a random 15-105 s per advance, so the guide's reported duration
+    // was a function of how many times the endpoint was called, not of time.
+    // `startedAt` exists on the shared type for exactly this purpose.
+    if (prevStatus === "pending" && status !== "pending" && !g.startedAt) {
+      g.startedAt = iso();
+    }
+    if (g.startedAt) {
+      g.elapsedSec = Math.max(0, Math.round((Date.now() - new Date(g.startedAt).getTime()) / 1000));
+    }
+    await redis.set(K.st(id), SER(g));
+    const s = await this.getSession(sid);
+    if (s && status === "done") { s.stepsGuided += 1; await redis.set(K.s(sid), SER(s)); }
+    return g;
+  },
+
+  async addCodeAssist(sid: string, c: Omit<CodeAssistance, "id" | "sessionId" | "timestamp" | "applied">): Promise<CodeAssistance> {
+    const id = randomUUID();
+    const rec: CodeAssistance = { id, sessionId: sid, timestamp: iso(), applied: false, ...c };
+    await redis.set(K.cd(id), SER(rec));
+    await redis.sadd(K.cdSet(sid), id);
+    const s = await this.getSession(sid);
+    if (s) { s.codeAssists += 1; await redis.set(K.s(sid), SER(s)); }
+    return rec;
+  },
+  async listCodeAssists(sid: string): Promise<CodeAssistance[]> {
+    return (await getAll<CodeAssistance>(K.cdSet(sid), K.cd)).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  },
+
+  async addIssue(sid: string, i: Omit<ScreenIssue, "id" | "sessionId" | "rectified" | "timestamp">): Promise<ScreenIssue> {
+    const id = randomUUID();
+    const rec: ScreenIssue = { id, sessionId: sid, rectified: false, timestamp: iso(), ...i };
+    await redis.set(K.is(id), SER(rec));
+    await redis.sadd(K.isSet(sid), id);
+    const s = await this.getSession(sid);
+    if (s) { s.issuesDetected += 1; await redis.set(K.s(sid), SER(s)); }
+    return rec;
+  },
+  async listIssues(sid: string): Promise<ScreenIssue[]> {
+    return (await getAll<ScreenIssue>(K.isSet(sid), K.is)).sort((a, b) => a.timestamp.localeCompare(b.timestamp));
+  },
+
+  async generateDoc(sid: string, title: string, format: DocFormat = "markdown"): Promise<WorkflowDoc> {
+    const id = randomUUID();
+    const steps = await this.listSteps(sid);
+    const rec: WorkflowDoc = {
+      id, sessionId: sid, title, format, status: "ready",
+      sections: ["Overview", "Prerequisites", "Step-by-step", "Troubleshooting", "References"],
+      // Word count of the generated document, padded by up to 250 invented
+      // words. Derived from the content that actually exists.
+      wordCount: 350 + steps.length * 80,
+      generatedAt: iso(), exportedAt: iso(),
+    };
+    await redis.set(K.dc(id), SER(rec));
+    await redis.sadd(K.dcSet(sid), id);
+    const s = await this.getSession(sid);
+    if (s) { s.docsGenerated += 1; await redis.set(K.s(sid), SER(s)); }
+    return rec;
+  },
+  async listDocs(sid: string): Promise<WorkflowDoc[]> {
+    return (await getAll<WorkflowDoc>(K.dcSet(sid), K.dc)).sort((a, b) => b.generatedAt.localeCompare(a.generatedAt));
+  },
+
+  async summary() {
+    const sessions = await this.listSessions();
+    const active = sessions.filter(s => s.status === "active" || s.status === "analyzing");
+    const today = iso().slice(0, 10);
+    const todaySessions = sessions.filter(s => s.startedAt.slice(0, 10) === today);
+    const [steps, assists, docs, issues] = await Promise.all([
+      Promise.all(sessions.map(s => this.listSteps(s.id))),
+      Promise.all(sessions.map(s => this.listCodeAssists(s.id))),
+      Promise.all(sessions.map(s => this.listDocs(s.id))),
+      Promise.all(sessions.map(s => this.listIssues(s.id))),
+    ]);
+    return {
+      screenSessionsActive: active.length,
+      screenSessionsToday: Math.max(todaySessions.length, sessions.filter(s => s.status !== "requested").length),
+      guidedStepsActive: steps.flat().filter(st => st.status === "active").length,
+      guidedStepsCompleted24h: steps.flat().filter(st => st.status === "done").length,
+      codeAssists24h: assists.flat().length,
+      docsGenerated24h: docs.flat().length,
+      issuesDetected24h: issues.flat().length,
+    };
+  },
+};

@@ -1,0 +1,3684 @@
+// WINDELS AI OS — Prisma schema
+// Sessions 1–3: Foundation, Universal Workspace, AI Chat.
+
+generator client {
+  provider = "prisma-client-js"
+  previewFeatures = ["driverAdapters"]
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ─── Enums ─────────────────────────────────────────────────────
+enum Role {
+  USER
+  ADMIN
+  SUPER_ADMIN
+}
+
+enum MembershipRole {
+  OWNER
+  ADMIN
+  MEMBER
+  GUEST
+}
+
+enum InvitationStatus {
+  PENDING
+  ACCEPTED
+  REVOKED
+  EXPIRED
+}
+
+enum TaskStatus {
+  TODO
+  IN_PROGRESS
+  BLOCKED
+  DONE
+  CANCELLED
+}
+
+enum TaskPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+enum ActivityType {
+  TASK_CREATED
+  TASK_COMPLETED
+  TASK_UPDATED
+  USER_JOINED
+  WORKSPACE_UPDATED
+  AGENT_STATUS_CHANGED
+  NOTE_ADDED
+  FILE_UPLOADED
+  COMMENT_ADDED
+  SYSTEM
+  MESSAGE_SENT
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+enum MessageStatus {
+  PENDING
+  STREAMING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum AgentStatus {
+  IDLE
+  ONLINE
+  WORKING
+  ERROR
+  PAUSED
+  OFFLINE
+}
+
+enum MemoryType {
+  FACT
+  PREFERENCE
+  PROCEDURE
+  CONVERSATION
+  TASK
+  FEEDBACK
+}
+
+enum KnowledgeType {
+  DOCUMENT
+  URL
+  SNIPPET
+  FILE
+}
+
+enum AgentEventType {
+  TASK_STARTED
+  TASK_COMPLETED
+  TASK_FAILED
+  MEMORY_STORED
+  KNOWLEDGE_ADDED
+  CONVERSATION_PARTICIPATED
+  ERROR
+  STATUS_CHANGED
+}
+
+enum BlockType {
+  TEXT
+  STICKY
+  AI
+  EMBED
+  HEADING
+  TODO
+}
+
+enum CanvasAccess {
+  PRIVATE
+  WORKSPACE
+  ORGANIZATION
+}
+
+// ─── Session 6 — Windels Talk ──────────────────────────────────
+enum TalkChannelType {
+  DM
+  CHANNEL
+}
+
+enum TalkChannelAccess {
+  PUBLIC
+  PRIVATE
+}
+
+enum TalkMessageType {
+  TEXT
+  SYSTEM
+  MEETING_SUMMARY
+  ACTION_ITEM
+  ATTACHMENT
+}
+
+enum MeetingStatus {
+  SCHEDULED
+  LIVE
+  ENDED
+  CANCELLED
+}
+
+enum NotetakerStatus {
+  IDLE
+  LISTENING
+  SUMMARIZING
+  DONE
+  ERROR
+}
+
+enum ActionItemStatus {
+  OPEN
+  IN_PROGRESS
+  DONE
+  CANCELLED
+}
+
+enum ActionItemPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
+// ─── Session 7 — Windels Flow (Workflow Automation) ────────────
+enum WorkflowNodeType {
+  TRIGGER
+  ACTION
+  AI
+  CONDITION
+  LOOP
+  APPROVAL
+  DELAY
+  END
+}
+
+enum WorkflowStatus {
+  DRAFT
+  ACTIVE
+  PAUSED
+  ARCHIVED
+}
+
+enum WorkflowRunStatus {
+  QUEUED
+  RUNNING
+  WAITING_APPROVAL
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+enum NodeRunStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  SKIPPED
+  WAITING_APPROVAL
+  RETRYING
+}
+
+// ─── Session 1 ─────────────────────────────────────────────────
+model User {
+  id                      String                 @id @default(cuid())
+  email                   String                 @unique
+  emailVerifiedAt         DateTime?
+  passwordHash            String
+  /// Public six-digit account number. Never the internal cuid.
+  publicUserId            String?                @unique
+  /// Unique login handle, stored lowercase. Independent of displayName.
+  username                String?                @unique
+  /// bcrypt of the 4-digit PIN. Never returned to clients.
+  pinHash                 String?
+  pinSetAt                DateTime?
+  pinExpiresAt            DateTime?
+  emailPending            String?
+  role                    Role                   @default(USER)
+  isActive                Boolean                @default(true)
+  isSuspended             Boolean                @default(false)
+  lastLoginAt             DateTime?
+  createdAt               DateTime               @default(now())
+  updatedAt               DateTime               @updatedAt
+
+  memberships             Membership[]
+  sentInvitations         Invitation[]           @relation("invitations_sent")
+  profile                 UserProfile?
+  sessions                UserSession[]
+  auditLogs               AuditLog[]
+  tasksCreated            Task[]                 @relation("tasks_created")
+  tasksAssigned           Task[]                 @relation("tasks_assigned")
+  activities              Activity[]
+  createdConversations    Conversation[]         @relation("conversations_created")
+  messages                Message[]
+  conversationParticipants ConversationParticipant[]
+  uploadedAttachments     MessageAttachment[]    @relation("attachments_uploaded")
+  createdPrompts          PromptTemplate[]       @relation("prompts_created")
+  createdCanvases         Canvas[]               @relation("canvas_created")
+  createdWorkflows        Workflow[]             @relation("workflows_created")
+  createdWorkflowRuns     WorkflowRun[]          @relation("workflow_runs_created")
+  talkChannelsCreated     TalkChannel[]          @relation("talk_channels_created")
+  talkMemberships         TalkMember[]
+  talkMessages            TalkMessage[]
+  meetingsCreated         Meeting[]              @relation("meetings_created")
+  meetingParticipants     MeetingParticipant[]
+  actionItemsCreated      ActionItem[]           @relation("action_items_created")
+  actionItemsAssigned     ActionItem[]           @relation("action_items_assigned")
+  apiKeys                 ApiKey[]              @relation("apikeys_created")
+  createdWebhooks         WebhookEndpoint[]      @relation("webhooks_created")
+  permissions             UserPermission[]
+  alertRules              AlertRule[]           @relation("alertrules_created")
+  dataExports             DataExport[]
+  mobileDevices           MobileDevice[]
+  pushSubscriptions       PushSubscription[]
+  biometricCredentials    BiometricCredential[]
+  notifications           Notification[]
+  conversationSharesCreated ConversationShare[] @relation("conversation_shares_created")
+  ownedDeveloperApps        DeveloperApp[]        @relation("developer_app_owner")
+  contactRequests           ContactRequest[]      @relation("contact_requests")
+  whatsappContacts          WhatsAppContact[]     @relation("whatsapp_linked_contacts")
+  whatsappJobs              WhatsAppJob[]         @relation("whatsapp_jobs_requested")
+  whatsappSessions          WhatsAppSession[]     @relation("whatsapp_sessions_user")
+  telegramConnections       TelegramConnection[]  @relation("telegram_linked_users")
+  // ── NFC Card Manager ──
+  nfcReadersRegistered      NfcReader[]            @relation("nfc_reader_registered_by")
+  nfcCardsCreated           NfcCard[]              @relation("nfc_card_created_by")
+  nfcCardsAssigned          NfcCard[]              @relation("nfc_card_assigned_user")
+  nfcProfilesCreated        NfcProfile[]           @relation("nfc_profile_created_by")
+  nfcOperations             NfcOperation[]         @relation("nfc_operation_requested_by")
+  // ── Super Admin Module & Plugin Center ──
+  moduleUploads             PlatformModuleUpload[] @relation("module_upload_uploaded_by")
+  moduleReleasesUploaded    PlatformModuleRelease[] @relation("module_release_uploaded_by")
+  moduleReleasesApproved    PlatformModuleRelease[] @relation("module_release_approved_by")
+  moduleReleasesInstalled   PlatformModuleRelease[] @relation("module_release_installed_by")
+  platformModulesInstalled  PlatformModule[]        @relation("platform_module_installed_by")
+  moduleOperations          PlatformModuleOperation[] @relation("module_operation_requested_by")
+  externalAgentRuns         ExternalAgentRun[]        @relation("external_agent_run_requested_by")
+  cloudAndroidDevices       CloudAndroidDevice[]      @relation("cloud_android_device_owner")
+  cloudAndroidTemplates     CloudAndroidTemplate[]    @relation("cloud_android_template_created_by")
+  cloudAndroidImages        CloudAndroidImage[]       @relation("cloud_android_image_created_by")
+  cloudAndroidSessions      CloudAndroidSession[]     @relation("cloud_android_session_user")
+  cloudAndroidActions       CloudAndroidAction[]      @relation("cloud_android_action_user")
+  cloudAndroidGrants        CloudAndroidAgentGrant[]  @relation("cloud_android_grant_assigned_by")
+  cloudAndroidApprovalsDecided CloudAndroidApproval[] @relation("cloud_android_approval_decided_by")
+
+  @@index([role])
+  @@index([createdAt])
+}
+
+model UserProfile {
+  id          String   @id @default(cuid())
+  userId      String   @unique
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  displayName String?
+  avatarUrl   String?
+  locale      String   @default("en-US")
+  timezone    String   @default("UTC")
+  theme       String   @default("dark")
+  bio         String?
+  metadata    Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+}
+
+model Organization {
+  id              String             @id @default(cuid())
+  name            String
+  slug            String             @unique
+  logoUrl         String?
+  settings        Json               @default("{}")
+  whiteLabel      Json               @default("{}") // {primaryColor, secondaryColor, appName, brandingHidden}
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  workspaces      Workspace[]
+  memberships     Membership[]
+  invitations     Invitation[]
+  agents          Agent[]
+  tasks           Task[]
+  activities      Activity[]
+  conversations   Conversation[]
+  attachments     MessageAttachment[]
+  promptTemplates PromptTemplate[]
+  canvases        Canvas[]
+  talkChannels    TalkChannel[]
+  meetings        Meeting[]
+  actionItems     ActionItem[]
+  workflows       Workflow[]
+  apiKeys         ApiKey[]
+  webhooks        WebhookEndpoint[]
+  subscription    BillingSubscription?
+  invoices        Invoice[]
+  paymentRecords  PaymentRecord[]
+  paymentAllocations InvoicePaymentAllocation[]
+  paymentWebhookEvents PaymentWebhookEvent[]
+  modelRegistry   ModelRegistry[]
+  aiRequests      AiRequest[]
+  plugins         Plugin[]
+  integrations    Integration[]
+  ssoConfig       SsoConfig?
+  auditLogs       AuditLog[]
+  alertRules      AlertRule[]
+  alerts          Alert[]
+  dataExports     DataExport[]
+  // ── Developer Platform (Session: developer API platform upgrade) ──
+  developerApps     DeveloperApp[]
+  apiSubscriptions  ApiSubscription[]
+  apiProducts       ApiProduct[]
+  apiUsage          ApiUsageRecord[]
+  // ── WhatsApp Channel ──
+  whatsappChannels  WhatsAppChannel[]
+  // ── Telegram Channel ──
+  telegramChannels  TelegramChannel[]
+  // ── NFC Card Manager ──
+  nfcReaders         NfcReader[]
+  nfcCards           NfcCard[]
+  nfcProfiles        NfcProfile[]
+  nfcOperations      NfcOperation[]
+  externalAgentRuns  ExternalAgentRun[]
+  cloudAndroidDevices CloudAndroidDevice[]
+  cloudAndroidTemplates CloudAndroidTemplate[]
+  cloudAndroidImages CloudAndroidImage[]
+  cloudAndroidSessions CloudAndroidSession[]
+  cloudAndroidActions CloudAndroidAction[]
+  cloudAndroidApprovals CloudAndroidApproval[]
+  cloudAndroidSnapshots CloudAndroidSnapshot[]
+  cloudAndroidUsage CloudAndroidUsageRecord[]
+  cloudAndroidGrants CloudAndroidAgentGrant[]
+}
+
+model Workspace {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  slug           String
+  description    String?
+  settings       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  memberships    Membership[]
+  tasks          Task[]
+  activities     Activity[]
+  conversations  Conversation[]
+  canvases       Canvas[]
+  talkChannels   TalkChannel[]
+  workflows      Workflow[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+model Membership {
+  id             String         @id @default(cuid())
+  userId         String
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId    String?
+  workspace      Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  role           MembershipRole @default(MEMBER)
+  joinedAt       DateTime       @default(now())
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@unique([userId, organizationId, workspaceId])
+  @@index([organizationId])
+  @@index([userId])
+}
+
+model Invitation {
+  id             String           @id @default(cuid())
+  organizationId String
+  organization   Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  email          String
+  role           MembershipRole   @default(MEMBER)
+  status         InvitationStatus @default(PENDING)
+  token          String           @unique
+  invitedById    String
+  invitedBy      User             @relation("invitations_sent", fields: [invitedById], references: [id])
+  expiresAt      DateTime
+  acceptedAt     DateTime?
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+
+  @@index([organizationId])
+  @@index([email])
+}
+
+model UserSession {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String   @unique
+  userAgent        String?
+  ipAddress        String?
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime @default(now())
+
+  @@index([userId])
+}
+
+model AuditLog {
+  id             String   @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  apiKeyId       String?
+  action         String
+  resourceType   String?
+  resourceId     String?
+  ipAddress      String?
+  userAgent      String?
+  requestId      String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([userId])
+  @@index([action])
+  @@index([resourceType, resourceId])
+}
+
+// ─── Session 2 + 4 ─────────────────────────────────────────────
+model Agent {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  role           String
+  color          String       @default("azure")
+  emoji          String?      @default("🤖")
+  description    String?
+  systemPrompt   String?
+  // structured employee profile
+  department     String?      @default("General")
+  capabilities   String[]     @default([])     // e.g. ["research","summarize","code"]
+  cloudAndroidRequirements Json @default("{}")
+  modelId        String?
+  temperature    Float        @default(0.7)
+  maxTokens      Int          @default(2048)
+  isBuiltIn      Boolean      @default(false)
+  avatarStyle    String?                       // e.g. "robot","orb","persona"
+  status         AgentStatus  @default(IDLE)
+  lastActivityAt DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  activeTaskId  String?  @unique
+  activeTask    Task?    @relation("agent_active_task", fields: [activeTaskId], references: [id], onDelete: SetNull)
+  tasks         Task[]   @relation("agent_tasks")
+  activities    Activity[]
+  messages      Message[]
+  conversationParticipants ConversationParticipant[]
+  skills        AgentSkill[]
+  memories      AgentMemory[]
+  knowledge     AgentKnowledge[]
+  events        AgentEvent[]
+  externalRuns  ExternalAgentRun[]
+  cloudAndroidGrants CloudAndroidAgentGrant[]
+  cloudAndroidSessions CloudAndroidSession[]
+  cloudAndroidActions CloudAndroidAction[]
+  talkMemberships       TalkMember[]
+  talkMessages          TalkMessage[]
+  meetingParticipations MeetingParticipant[]
+  notetakerMeetings     Meeting[]    @relation("meeting_notetaker")
+  assignedActionItems   ActionItem[] @relation("action_item_agent")
+
+  @@index([organizationId, status])
+}
+
+model Task {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId    String?
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  title          String
+  description    String?
+  status         TaskStatus    @default(TODO)
+  priority       TaskPriority  @default(MEDIUM)
+  progress       Int           @default(0)
+  dueDate        DateTime?
+  creatorId      String
+  creator        User          @relation("tasks_created", fields: [creatorId], references: [id])
+  assigneeId     String?
+  assignee       User?         @relation("tasks_assigned", fields: [assigneeId], references: [id])
+  agentId        String?
+  agent          Agent?        @relation("agent_tasks", fields: [agentId], references: [id])
+  activeForAgent Agent?        @relation("agent_active_task")
+  completedAt    DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  @@index([organizationId, status])
+  @@index([workspaceId])
+  @@index([assigneeId])
+  @@index([agentId])
+}
+
+model Activity {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId    String?
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  userId         String?
+  user           User?         @relation(fields: [userId], references: [id], onDelete: SetNull)
+  agentId        String?
+  agent          Agent?        @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  type           ActivityType
+  message        String
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([workspaceId])
+}
+
+// ─── Session 3 — AI Chat ───────────────────────────────────────
+model Conversation {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId    String?
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  title          String
+  summary        String?
+  createdById    String
+  createdBy      User          @relation("conversations_created", fields: [createdById], references: [id])
+  // ── Conversation-management state (Session 1xx sidebar upgrade) ──
+  pinned         Boolean       @default(false)
+  pinnedAt       DateTime?
+  isArchived     Boolean       @default(false)
+  archivedAt     DateTime?
+  modelId        String?
+  metadata       Json          @default("{}")
+  lastMessageAt  DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  messages       Message[]
+  participants   ConversationParticipant[]
+  attachments    MessageAttachment[]
+  shares         ConversationShare[]
+  whatsappThreads WhatsAppConversation[] @relation("whatsapp_conversations")
+  telegramChats   TelegramChat[]         @relation("telegram_conversations")
+
+  @@index([organizationId, lastMessageAt])
+  @@index([workspaceId])
+  @@index([createdById])
+  @@index([organizationId, isArchived, pinned, lastMessageAt])
+  @@index([organizationId, title])
+}
+
+model Message {
+  id              String        @id @default(cuid())
+  conversationId  String
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role            MessageRole
+  content         String        @default("")
+  agentId         String?
+  agent           Agent?        @relation(fields: [agentId], references: [id])
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  parentId        String?
+  parent          Message?      @relation("message_thread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies         Message[]     @relation("message_thread")
+  modelId         String?
+  tokensIn        Int?
+  tokensOut       Int?
+  costMicros      Int?
+  durationMs      Int?
+  status          MessageStatus @default(PENDING)
+// durationMs is set on completion for latency tracking
+
+  error           String?
+  citations       Json          @default("[]")
+  metadata        Json          @default("{}")
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  attachments     MessageAttachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([agentId])
+  @@index([userId])
+}
+
+model ConversationParticipant {
+  id              String        @id @default(cuid())
+  conversationId  String
+  conversation    Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?         @relation(fields: [userId], references: [id])
+  agentId         String?
+  agent           Agent?        @relation(fields: [agentId], references: [id])
+  joinedAt        DateTime      @default(now())
+  lastReadAt      DateTime?
+
+  @@unique([conversationId, userId, agentId])
+  @@index([conversationId])
+}
+
+model MessageAttachment {
+  id              String        @id @default(cuid())
+  organizationId  String
+  organization    Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageId       String?
+  message         Message?      @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  conversationId  String?
+  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  talkMessageId   String?
+  talkMessage     TalkMessage?  @relation(fields: [talkMessageId], references: [id], onDelete: SetNull)
+  uploaderId      String
+  uploader        User          @relation("attachments_uploaded", fields: [uploaderId], references: [id])
+  filename        String
+  mimeType        String
+  sizeBytes       Int
+  storageKey      String
+  checksum        String?
+  extractedText   String?
+  createdAt       DateTime      @default(now())
+
+  @@index([messageId])
+  @@index([conversationId])
+  @@index([organizationId])
+}
+
+model PromptTemplate {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  content         String
+  category        String       @default("general")
+  icon            String?
+  createdById     String
+  createdBy       User         @relation("prompts_created", fields: [createdById], references: [id])
+  isBuiltIn       Boolean      @default(false)
+  usageCount      Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId, category])
+}
+
+// ─── Session 4 — AI Employees ──────────────────────────────────
+model AgentSkill {
+  id          String   @id @default(cuid())
+  agentId     String
+  agent       Agent    @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  name        String                        // e.g. "web_search", "code_review"
+  description String?
+  enabled     Boolean  @default(true)
+  config      Json     @default("{}")
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@unique([agentId, name])
+}
+
+model AgentMemory {
+  id          String      @id @default(cuid())
+  agentId     String
+  agent       Agent       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  type        MemoryType  @default(FACT)
+  content     String
+  source      String?                        // "conversation", "task", "manual", "feedback"
+  sourceRef   String?                        // e.g. messageId, taskId
+  importance  Float       @default(0.5)     // 0..1 — higher = more likely to include in context
+  tags        String[]    @default([])
+  metadata    Json        @default("{}")
+  createdAt   DateTime    @default(now())
+  updatedAt   DateTime    @updatedAt
+
+  @@index([agentId, type])
+  @@index([agentId, importance])
+  @@index([agentId, createdAt])
+}
+
+model AgentKnowledge {
+  id          String        @id @default(cuid())
+  agentId     String
+  agent       Agent         @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  type        KnowledgeType @default(SNIPPET)
+  title       String
+  content     String        @db.Text
+  source      String?                        // URL or filename
+  mimeType    String?
+  tokens      Int           @default(0)
+  metadata    Json          @default("{}")
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
+  @@index([agentId, type])
+  @@index([agentId, createdAt])
+}
+
+model AgentEvent {
+  id          String         @id @default(cuid())
+  agentId     String
+  agent       Agent          @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  type        AgentEventType
+  message     String
+  metadata    Json           @default("{}")
+  createdAt   DateTime       @default(now())
+
+  @@index([agentId, createdAt])
+  @@index([agentId, type])
+}
+
+// ─── Session 5 — Windels Workspace / Canvas ────────────────────
+model Canvas {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId     String?
+  workspace       Workspace?   @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  title           String
+  description     String?
+  access          CanvasAccess @default(WORKSPACE)
+  createdById     String
+  createdBy       User         @relation("canvas_created", fields: [createdById], references: [id])
+  backgroundColor String?      @default("#0A0F1A")
+  thumbnailUrl    String?
+  isTemplate      Boolean      @default(false)
+  metadata        Json         @default("{}")
+  // Viewport defaults.
+  viewportX       Float        @default(0)
+  viewportY       Float        @default(0)
+  viewportZoom    Float        @default(1)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+  deletedAt       DateTime?
+
+  blocks          CanvasBlock[]
+  connections     CanvasConnection[]
+
+  @@index([organizationId, updatedAt])
+  @@index([workspaceId])
+}
+
+model CanvasBlock {
+  id         String   @id @default(cuid())
+  canvasId   String
+  canvas     Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  type       BlockType
+  x          Float    @default(0)
+  y          Float    @default(0)
+  width      Float    @default(280)
+  height     Float    @default(140)
+  zIndex     Int      @default(0)
+  // Generic content — structure depends on block type.
+  // text/sticky/heading: { text: string }
+  // ai:   { prompt: string, result?: string, modelId?: string, streaming?: boolean }
+  // embed:{ url: string, title?: string }
+  // todo: { items: [{ text, done }] }
+  content    Json     @default("{}")
+  style      Json     @default("{}") // color, fontSize, etc.
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+
+  fromConnections CanvasConnection[] @relation("from_block")
+  toConnections   CanvasConnection[] @relation("to_block")
+
+  @@index([canvasId])
+}
+
+model CanvasConnection {
+  id        String   @id @default(cuid())
+  canvasId  String
+  canvas    Canvas   @relation(fields: [canvasId], references: [id], onDelete: Cascade)
+  fromId    String
+  fromBlock CanvasBlock @relation("from_block", fields: [fromId], references: [id], onDelete: Cascade)
+  toId      String
+  toBlock   CanvasBlock @relation("to_block", fields: [toId], references: [id], onDelete: Cascade)
+  label     String?
+  color     String?  @default("azure")
+  style     Json     @default("{}") // dashed? thickness?
+  createdAt DateTime @default(now())
+
+  @@index([canvasId])
+  @@index([fromId])
+  @@index([toId])
+}
+
+// ─── Session 6 — Windels Talk ──────────────────────────────────
+model TalkChannel {
+  id              String            @id @default(cuid())
+  organizationId  String
+  organization    Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId     String?
+  workspace       Workspace?        @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  type            TalkChannelType
+  access          TalkChannelAccess @default(PUBLIC)
+  name            String            // channels: "#general"; DMs: auto-generated ("DM: a & b")
+  topic           String?
+  // DM-specific — null for CHANNEL; holds the other user (the non-creator side is implicit via members)
+  dmPeerId        String?
+  createdById     String
+  createdBy       User              @relation("talk_channels_created", fields: [createdById], references: [id])
+  isArchived      Boolean           @default(false)
+  lastMessageAt   DateTime          @default(now())
+  metadata        Json              @default("{}")
+  createdAt       DateTime          @default(now())
+  updatedAt       DateTime          @updatedAt
+
+  members         TalkMember[]
+  messages        TalkMessage[]
+  meetings        Meeting[]
+  actionItems     ActionItem[]
+
+  @@index([organizationId, type, lastMessageAt])
+  @@index([workspaceId])
+  @@index([dmPeerId])
+}
+
+model TalkMember {
+  id              String       @id @default(cuid())
+  channelId       String
+  channel         TalkChannel  @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id], onDelete: Cascade)
+  agentId         String?
+  agent           Agent?       @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  joinedAt        DateTime     @default(now())
+  lastReadAt      DateTime?
+  isMuted         Boolean      @default(false)
+  isPinned        Boolean      @default(false)
+
+  @@unique([channelId, userId, agentId])
+  @@index([channelId])
+  @@index([userId])
+  @@index([agentId])
+}
+
+model TalkMessage {
+  id              String         @id @default(cuid())
+  channelId       String
+  channel         TalkChannel    @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  type            TalkMessageType @default(TEXT)
+  content         String         @db.Text
+  userId          String?
+  user            User?          @relation(fields: [userId], references: [id])
+  agentId         String?
+  agent           Agent?         @relation(fields: [agentId], references: [id])
+  // Thread support
+  threadParentId  String?
+  threadParent    TalkMessage?   @relation("talk_thread", fields: [threadParentId], references: [id], onDelete: SetNull)
+  replies         TalkMessage[]  @relation("talk_thread")
+  replyCount      Int            @default(0)
+  lastReplyAt     DateTime?
+  // Reactions: { "👍": ["userId","agentId"], "🔥": ["userId"] }
+  reactions       Json           @default("{}")
+  // AI notetaker context for meeting messages
+  meetingId       String?
+  attachments     MessageAttachment[]
+  editedAt        DateTime?
+  deletedAt       DateTime?
+  metadata        Json           @default("{}")
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+
+  @@index([channelId, createdAt])
+  @@index([threadParentId])
+  @@index([userId])
+  @@index([agentId])
+}
+
+model Meeting {
+  id                String         @id @default(cuid())
+  organizationId    String
+  organization      Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  channelId         String?
+  channel           TalkChannel?   @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  title             String
+  description       String?
+  status            MeetingStatus  @default(SCHEDULED)
+  scheduledStart    DateTime?
+  startedAt         DateTime?
+  endedAt           DateTime?
+  createdById       String
+  createdBy         User           @relation("meetings_created", fields: [createdById], references: [id])
+  // Notetaker
+  notetakerAgentId  String?
+  notetakerAgent    Agent?         @relation("meeting_notetaker", fields: [notetakerAgentId], references: [id])
+  notetakerStatus   NotetakerStatus @default(IDLE)
+  transcript        String?        @db.Text
+  summary           String?        @db.Text
+  decisions         Json           @default("[]")
+  metadata          Json           @default("{}")
+  createdAt         DateTime       @default(now())
+  updatedAt         DateTime       @updatedAt
+
+  participants      MeetingParticipant[]
+  actionItems       ActionItem[]
+
+  @@index([organizationId, status, scheduledStart])
+  @@index([channelId])
+}
+
+model MeetingParticipant {
+  id              String       @id @default(cuid())
+  meetingId       String
+  meeting         Meeting      @relation(fields: [meetingId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
+  agentId         String?
+  agent           Agent?       @relation(fields: [agentId], references: [id])
+  role            String       @default("attendee") // organizer, attendee, notetaker
+  joinedAt        DateTime?
+  leftAt          DateTime?
+  isNotetaker     Boolean      @default(false)
+
+  @@unique([meetingId, userId, agentId])
+  @@index([meetingId])
+}
+
+model ActionItem {
+  id              String             @id @default(cuid())
+  organizationId  String
+  organization    Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  meetingId       String?
+  meeting         Meeting?           @relation(fields: [meetingId], references: [id], onDelete: SetNull)
+  channelId       String?
+  channel         TalkChannel?       @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  title           String
+  description     String?
+  status          ActionItemStatus   @default(OPEN)
+  priority        ActionItemPriority @default(MEDIUM)
+  dueDate         DateTime?
+  assigneeId      String?
+  assignee        User?              @relation("action_items_assigned", fields: [assigneeId], references: [id])
+  agentAssigneeId String?
+  agentAssignee   Agent?             @relation("action_item_agent", fields: [agentAssigneeId], references: [id], onDelete: SetNull)
+  createdById     String
+  createdBy       User               @relation("action_items_created", fields: [createdById], references: [id])
+  sourceMessageId String?
+  completedAt     DateTime?
+  metadata        Json               @default("{}")
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+
+  @@index([organizationId, status])
+  @@index([meetingId])
+  @@index([assigneeId])
+  @@index([agentAssigneeId])
+}
+
+model Workflow {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId    String?
+  workspace      Workspace?     @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  name           String
+  description    String?
+  status         WorkflowStatus @default(DRAFT)
+  // node graph JSON
+  nodes          Json           @default("[]")
+  edges          Json           @default("[]")
+  // settings: retryCount, retryDelayMs, trigger config, agentId, etc.
+  settings       Json           @default("{}")
+  triggers       Json           @default("[]") // [{type:"manual"|"schedule"|"event"|"webhook", config:{...}}]
+  createdById    String
+  createdBy      User           @relation("workflows_created", fields: [createdById], references: [id])
+  lastRunAt      DateTime?
+  runsCount      Int            @default(0)
+  successCount   Int            @default(0)
+  failureCount   Int            @default(0)
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  deletedAt      DateTime?
+
+  runs           WorkflowRun[]
+
+  @@index([organizationId, status])
+  @@index([workspaceId])
+}
+
+model WorkflowRun {
+  id          String           @id @default(cuid())
+  workflowId  String
+  workflow    Workflow         @relation(fields: [workflowId], references: [id], onDelete: Cascade)
+  triggerType String           @default("manual") // manual | schedule | event | webhook
+  triggerData Json             @default("{}")
+  status      WorkflowRunStatus @default(QUEUED)
+  startedAt   DateTime?
+  endedAt     DateTime?
+  // Input payload, output, and per-node execution records
+  input       Json             @default("{}")
+  output      Json             @default("{}")
+  error       String?
+  // [{nodeId, status, startedAt, endedAt, input, output, error, attempts}]
+  nodeRuns    Json             @default("[]")
+  createdById String?
+  createdBy   User?            @relation("workflow_runs_created", fields: [createdById], references: [id])
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+
+  @@index([workflowId, createdAt])
+  @@index([status])
+}
+
+// ─── Session 9 — Enterprise Platform ───────────────────────────
+enum ApiKeyScope {
+  READ
+  WRITE
+  ADMIN
+}
+
+model ApiKey {
+  id            String        @id @default(cuid())
+  organizationId String
+  organization  Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById   String
+  createdBy     User          @relation("apikeys_created", fields: [createdById], references: [id], onDelete: Cascade)
+  name          String
+  keyPrefix     String
+  keyHash       String        @unique
+  scopes        ApiKeyScope[] @default([READ])
+  // ── Developer Platform upgrade ────────────────────────────────────────
+  // Fine-grained capability scopes (e.g. "ai:read", "agents:execute"). The
+  // legacy READ/WRITE/ADMIN scopes remain for backwards compatibility; when
+  // granularScopes is non-empty it is authoritative for authorization.
+  granularScopes String[]      @default([])
+  appId          String?
+  app            DeveloperApp? @relation(fields: [appId], references: [id], onDelete: SetNull)
+  environment    String        @default("production") // development | test | production
+  ipRestrictions String[]      @default([])            // CIDRs allowed to use this key (empty = any)
+  lastUsedAt     DateTime?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  usage          ApiUsageRecord[]
+  externalAgentRuns ExternalAgentRun[]
+  cloudAndroidSessions CloudAndroidSession[]
+  cloudAndroidUsage CloudAndroidUsageRecord[]
+  @@index([organizationId])
+  @@index([appId])
+}
+
+model WebhookEndpoint {
+  id             String            @id @default(cuid())
+  organizationId String
+  organization   Organization      @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User              @relation("webhooks_created", fields: [createdById], references: [id], onDelete: Cascade)
+  url            String
+  description    String?
+  secret         String
+  events         String[]          @default(["*"])
+  active         Boolean           @default(true)
+  lastDeliveryAt DateTime?
+  lastStatus     Int?
+  failureCount   Int               @default(0)
+  deliveries     WebhookDelivery[]
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  @@index([organizationId])
+}
+
+model WebhookDelivery {
+  id           String         @id @default(cuid())
+  webhookId    String
+  webhook      WebhookEndpoint @relation(fields: [webhookId], references: [id], onDelete: Cascade)
+  event        String
+  payload      Json           @default("{}")
+  status       Int?
+  responseBody String?        @db.Text
+  attempts     Int            @default(1)
+  deliveredAt  DateTime?
+  nextRetryAt  DateTime?
+  createdAt    DateTime       @default(now())
+
+  @@index([webhookId])
+  @@index([nextRetryAt])
+}
+
+model BillingSubscription {
+  id                 String    @id @default(cuid())
+  organizationId     String    @unique
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  plan               String    @default("starter")
+  status             String    @default("active")
+  seats              Int       @default(5)
+  cycle              String    @default("monthly")
+  currentPeriodStart DateTime  @default(now())
+  currentPeriodEnd   DateTime  @default(now())
+  customerEmail      String?
+  externalId         String?
+  invoices           Invoice[]
+  payments           PaymentRecord[]
+  createdAt          DateTime  @default(now())
+  updatedAt          DateTime  @updatedAt
+}
+
+model Invoice {
+  id              String              @id @default(cuid())
+  organizationId  String
+  organization    Organization        @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  subscriptionId  String?
+  subscription    BillingSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  number          String              @unique
+  amountCents     Int                 @default(0)
+  currency        String              @default("USD")
+  status          String              @default("draft")
+  dueDate         DateTime?
+  paidAt          DateTime?
+  hostedUrl       String?
+  pdfUrl          String?
+  lines           Json                @default("[]")
+  payments        PaymentRecord[]
+  paymentAllocations InvoicePaymentAllocation[]
+  ledgerEntries   BillingLedgerEntry[]
+  createdAt       DateTime            @default(now())
+  updatedAt       DateTime            @updatedAt
+
+  @@index([organizationId])
+}
+
+// ─── Payment provider control plane + durable payment register ─────────────
+model PaymentProviderConfiguration {
+  id                    String   @id @default(cuid())
+  provider              String   @unique
+  enabled               Boolean  @default(false)
+  testMode              Boolean  @default(false)
+  apiKeyEnc             Json?
+  callbackSecretEnc     Json?
+  settings              Json     @default("{}")
+  version               Int      @default(1)
+  updatedById           String?
+  healthStatus          String   @default("NOT_CONFIGURED")
+  lastHealthAt          DateTime?
+  lastError             String?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([enabled, healthStatus])
+  @@map("payment_provider_configurations")
+}
+
+model PaymentRecord {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedById         String?
+  invoiceId             String?
+  invoice               Invoice? @relation(fields: [invoiceId], references: [id], onDelete: SetNull)
+  subscriptionId        String?
+  subscription          BillingSubscription? @relation(fields: [subscriptionId], references: [id], onDelete: SetNull)
+  provider              String
+  internalReference     String
+  providerPaymentId     String?
+  providerTransactionId String?
+  providerStatus        String?
+  status                String   @default("created")
+  amountCents           Int
+  currency              String
+  cryptoCurrency        String?
+  cryptoNetwork         String?
+  paymentAddress        String?
+  expectedCryptoUnits   BigInt?
+  receivedCryptoUnits   BigInt?
+  quotePrice            Decimal? @db.Decimal(36, 18)
+  quoteSource           String?
+  quoteObservedAt       DateTime?
+  confirmations         Int      @default(0)
+  requiredConfirmations Int      @default(2)
+  expiresAt             DateTime?
+  detectedAt            DateTime?
+  confirmedAt           DateTime?
+  completedAt           DateTime?
+  reconciliationStatus  String   @default("pending")
+  lastReconciledAt      DateTime?
+  metadata              Json     @default("{}")
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  webhookEvents         PaymentWebhookEvent[]
+  allocations           InvoicePaymentAllocation[]
+  ledgerEntries         BillingLedgerEntry[]
+
+  @@unique([provider, internalReference])
+  @@unique([provider, providerTransactionId])
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status, createdAt])
+  @@index([provider, paymentAddress])
+  @@index([invoiceId, status])
+  @@index([reconciliationStatus, updatedAt])
+  @@map("payment_records")
+}
+
+model PaymentWebhookEvent {
+  id                    String   @id @default(cuid())
+  organizationId        String?
+  organization          Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  paymentId             String?
+  payment               PaymentRecord? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  provider              String
+  eventKey              String   @unique
+  payloadHash           String
+  providerTransactionId String?
+  providerStatus        String?
+  processingStatus      String   @default("received")
+  attempts              Int      @default(0)
+  errorCode             String?
+  errorMessage          String?
+  receivedAt            DateTime @default(now())
+  processedAt           DateTime?
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  @@index([provider, receivedAt])
+  @@index([organizationId, receivedAt])
+  @@index([paymentId, receivedAt])
+  @@index([processingStatus, receivedAt])
+  @@map("payment_webhook_events")
+}
+
+model InvoicePaymentAllocation {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  invoiceId      String
+  invoice        Invoice @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  paymentId      String?
+  payment        PaymentRecord? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  sourceKind     String
+  sourceId       String
+  amountCents    Int
+  currency       String
+  status         String   @default("reserved")
+  appliedAt      DateTime?
+  reversedAt     DateTime?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([invoiceId, sourceKind, sourceId])
+  @@index([organizationId, createdAt])
+  @@index([invoiceId, status])
+  @@index([paymentId])
+  @@map("invoice_payment_allocations")
+}
+
+// ─── Session 10 — Enterprise Engineering ──────────────────────
+model ModelRegistry {
+  id               String   @id @default(cuid())
+  organizationId   String?  // null = global / system-provided
+  organization     Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider         String   // openai, anthropic, windels, ollama, custom
+  modelId          String   // e.g. "gpt-4o", "claude-3-sonnet"
+  name             String
+  version          String   @default("1.0")
+  description      String?
+  capabilities     String[] @default(["chat"])
+  contextWindow    Int      @default(128000)
+  maxOutputTokens  Int      @default(4096)
+  costInputPer1k   Float    @default(0)
+  costOutputPer1k  Float    @default(0)
+  isDefault        Boolean  @default(false)
+  enabled          Boolean  @default(true)
+  config           Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  aiRequests       AiRequest[]
+
+  @@index([organizationId])
+  @@unique([organizationId, provider, modelId, version])
+}
+
+model AiRequest {
+  id             String    @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String?
+  agentId        String?
+  conversationId String?
+  workflowRunId  String?
+  channel        String    // chat, agent, workflow, api, talk
+  provider       String
+  modelId        String
+  modelRegistryId String?
+  modelRegistry  ModelRegistry? @relation(fields: [modelRegistryId], references: [id], onDelete: SetNull)
+  durationMs     Int
+  promptTokens   Int       @default(0)
+  completionTokens Int     @default(0)
+  status         String    @default("succeeded")
+  error          String?
+  feature        String?   // which feature triggered it
+  createdAt      DateTime  @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([modelId])
+  @@index([status])
+}
+
+model Plugin {
+  id             String   @id @default(cuid())
+  organizationId String?  // null = system plugin available to all
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slug           String   // e.g. "slack-bot", "github-issues"
+  name           String
+  description    String?
+  version        String   @default("1.0.0")
+  author         String?
+  enabled        Boolean  @default(true)
+  config         Json     @default("{}")
+  hooks          String[] @default([]) // subscribed events
+  isSystem       Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+model Integration {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  type           String   // slack, discord, email, webhook, github, linear, jira, notion, google_drive, s3
+  name           String
+  config         Json     @default("{}")
+  credentials    Json     @default("{}") // encrypted at rest in production
+  status         String   @default("disconnected")
+  lastSyncAt     DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId, type])
+}
+
+model SsoConfig {
+  id             String   @id @default(cuid())
+  organizationId String   @unique
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  provider       String   // saml, oidc, google, microsoft
+  entryPoint     String?
+  issuer         String?
+  cert           String?  @db.Text
+  clientId       String?
+  clientSecret   String?
+  domains        String[] @default([])
+  enabled        Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+}
+
+// ─── Session 11 — Governance ───────────────────────────────────
+enum Permission {
+  ORG_READ
+  ORG_WRITE
+  ORG_ADMIN
+  WORKFLOW_READ
+  WORKFLOW_WRITE
+  WORKFLOW_RUN
+  AGENT_READ
+  AGENT_WRITE
+  TALK_READ
+  TALK_WRITE
+  CANVAS_READ
+  CANVAS_WRITE
+  BILLING_READ
+  BILLING_WRITE
+  DEVELOPER_READ
+  DEVELOPER_WRITE
+  AUDIT_READ
+  NFC_READ
+  NFC_WRITE
+  NFC_DESTRUCTIVE
+  NFC_ADMIN
+  CLOUD_ANDROID_READ
+  CLOUD_ANDROID_CONTROL
+  CLOUD_ANDROID_MANAGE
+  CLOUD_ANDROID_APP
+  CLOUD_ANDROID_FILE
+  CLOUD_ANDROID_SENSITIVE
+  CLOUD_ANDROID_ADMIN
+  ADMIN_STAR
+}
+
+enum AuditAction {
+  CREATE
+  UPDATE
+  DELETE
+  LOGIN
+  LOGIN_FAILED
+  LOGOUT
+  RUN
+  APPROVE
+  EXPORT
+  LOG
+  API_KEY_CREATE
+  API_KEY_REVOKE
+  WEBHOOK_CREATE
+  WEBHOOK_DELETE
+  SSO_UPDATE
+  INTEGRATION_CONNECT
+  PERMISSION_GRANT
+  PERMISSION_REVOKE
+  RETENTION_UPDATE
+  ALERT_CREATE
+  BACKUP_CREATE
+  USER_SUSPEND
+}
+
+enum AlertSeverity {
+  INFO
+  WARNING
+  CRITICAL
+}
+enum AlertChannel {
+  EMAIL
+  WEBHOOK
+  IN_APP
+}
+enum RetentionResource {
+  MESSAGES
+  RUNS
+  LOGS
+  AUDIT
+  CONVERSATIONS
+  ATTACHMENTS
+}
+
+model RolePermission {
+  id         String     @id @default(cuid())
+  role       Role
+  permission Permission
+  createdAt  DateTime   @default(now())
+
+  @@unique([role, permission])
+}
+
+model UserPermission {
+  id         String     @id @default(cuid())
+  userId     String
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  permission Permission
+  resourceId String?
+  createdAt  DateTime   @default(now())
+
+  @@index([userId])
+}
+
+model AlertRule {
+  id             String         @id @default(cuid())
+  organizationId String
+  organization   Organization   @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name           String
+  event          String
+  condition      String?
+  severity       AlertSeverity  @default(WARNING)
+  channels       AlertChannel[] @default([IN_APP])
+  enabled        Boolean        @default(true)
+  createdById    String
+  createdBy      User           @relation("alertrules_created", fields: [createdById], references: [id])
+  alerts         Alert[]
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+
+  @@index([organizationId])
+}
+
+model Alert {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ruleId         String?
+  rule           AlertRule?    @relation(fields: [ruleId], references: [id], onDelete: SetNull)
+  severity       AlertSeverity
+  title          String
+  message        String?
+  event          String?
+  metadata       Json          @default("{}")
+  readAt         DateTime?
+  dismissedAt    DateTime?
+  createdAt      DateTime      @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([readAt])
+}
+
+model HealthCheck {
+  id        String   @id @default(cuid())
+  service   String
+  status    String
+  latencyMs Int?
+  details   Json     @default("{}")
+  createdAt DateTime @default(now())
+
+  @@index([service, createdAt])
+}
+
+model DataExport {
+  id             String    @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type           String
+  status         String    @default("pending")
+  downloadUrl    String?
+  expiresAt      DateTime?
+  createdAt      DateTime  @default(now())
+  completedAt    DateTime?
+
+  @@index([organizationId])
+}
+
+// ─────────────────────────── Session 15: Mobile ───────────────────────────
+model MobileDevice {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  platform         String    // "ios" | "android" | "web-pwa" — stored as string to keep enums flexible
+  deviceName       String?
+  osVersion        String?
+  appVersion       String?
+  deviceModel      String?
+  /// bcrypt hash of the device PIN fallback.
+  ///
+  /// Must stay a dedicated column: this previously shared `deviceModel`, which
+  /// POST /mobile/devices/register writes straight from the request body
+  /// (`deviceModel: z.string().max(64)`). A bcrypt hash is 60 characters, so a
+  /// caller could overwrite the stored hash — or plant the hash of a PIN they
+  /// chose — and then satisfy the PIN check. Never expose this field in a
+  /// select or accept it from a request body.
+  pinHash          String?
+  pushTokenHash    String?   // sha256 of the push endpoint for quick lookups/rotations
+  biometricEnabled Boolean   @default(false)
+  lastSeenAt       DateTime  @default(now())
+  lastIp           String?
+  lastUserAgent    String?
+  createdAt        DateTime  @default(now())
+
+  subscriptions    PushSubscription[]
+  biometricCredentials BiometricCredential[]
+
+  @@index([userId])
+  @@index([lastSeenAt])
+}
+
+model PushSubscription {
+  id             String       @id @default(cuid())
+  userId         String
+  user           User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         MobileDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  endpoint       String       @unique
+  p256dh         String       // base64 client public key
+  auth           String       // base64 auth secret
+  vapidPublicKey String
+  userAgent      String?
+  failures       Int          @default(0)
+  lastDeliveredAt DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  @@index([userId])
+}
+
+model BiometricCredential {
+  id          String       @id @default(cuid())
+  userId      String
+  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
+  deviceId    String
+  device      MobileDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  credentialId String      // base64url WebAuthn credential id
+  publicKey   String       // base64url COSE public key
+  counter     Int          @default(0)
+  transports  String?      // comma-separated
+  aaguid      String?
+  createdAt   DateTime     @default(now())
+  lastUsedAt  DateTime?
+
+  @@index([userId])
+}
+
+model Notification {
+  id             String   @id @default(cuid())
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String?
+  type           String   // message | meeting | task | alert | mention | system
+  title          String
+  body           String
+  icon           String?
+  url            String?  // deep link
+  data           Json     @default("{}")
+  pushDelivered  Boolean  @default(false)
+  readAt         DateTime?
+  dismissedAt    DateTime?
+  createdAt      DateTime @default(now())
+
+  @@index([userId, createdAt])
+  @@index([readAt])
+}
+
+// ─────────────────── Session 1xx: Chat conversation management & sharing ───────────────────
+model ConversationShare {
+  id             String   @id @default(cuid())
+  conversationId String
+  conversation   Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User     @relation("conversation_shares_created", fields: [createdById], references: [id])
+  /// Opaque, unguessable link token. Never derivable from the conversation id.
+  token          String   @unique
+  /// anyone_with_link | organization | restricted | specific
+  access         String   @default("anyone_with_link")
+  /// view | comment | edit
+  permissions    String   @default("view")
+  /// For `restricted`/`specific`: the allowed user ids (cuid) or emails.
+  allowed        String[] @default([])
+  /// Optional link password (bcrypt). When set, resolution requires it.
+  passwordHash   String?
+  expiresAt      DateTime?
+  revokedAt      DateTime?
+  lastAccessedAt DateTime?
+  accessCount    Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  accessLog      ConversationShareAccess[]
+
+  @@index([conversationId])
+  @@index([createdById])
+  @@index([expiresAt])
+}
+
+model ConversationShareAccess {
+  id        String   @id @default(cuid())
+  shareId   String
+  share     ConversationShare @relation(fields: [shareId], references: [id], onDelete: Cascade)
+  userId    String?
+  ipAddress String?
+  userAgent String?
+  granted   Boolean  @default(false)
+  reason    String?
+  createdAt DateTime @default(now())
+
+  @@index([shareId])
+}
+
+// ─────────────────── Session: Developer / API Platform ───────────────────
+// A developer application owned by an organization. Multiple apps per org.
+model DeveloperApp {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerId         String
+  owner           User     @relation("developer_app_owner", fields: [ownerId], references: [id])
+  name            String
+  description     String?
+  logoUrl         String?
+  environment     String   @default("development") // development | test | production
+  redirectUrls    String[] @default([])            // OAuth redirect URLs
+  allowedScopes   String[] @default([])            // granted fine-grained scopes
+  active          Boolean  @default(true)
+  productionApproved Boolean @default(false)       // Super Admin approval gate
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  apiKeys         ApiKey[]
+  subscriptions   ApiSubscription[]
+
+  @@index([organizationId])
+  @@index([ownerId])
+}
+
+// API product catalog / marketplace entries.
+model ApiProduct {
+  id             String   @id @default(cuid())
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  slug           String
+  name           String
+  category       String   // agents | workforce | trading | media | voice | knowledge | workflows | ...
+  description    String?
+  version        String   @default("v1")
+  requiredScopes String[] @default([])
+  basePriceUsd   Float    @default(0) // per-1000-calls notional (for quota)
+  enabled        Boolean  @default(true)
+  rateLimitPerMin Int     @default(60)
+  docsUrl        String?
+  example        Json     @default("{}")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  subscriptions  ApiSubscription[]
+
+  @@unique([organizationId, slug])
+  @@index([organizationId])
+}
+
+// Which products an org/app is subscribed to (quota + status).
+model ApiSubscription {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  appId          String?
+  app            DeveloperApp? @relation(fields: [appId], references: [id], onDelete: SetNull)
+  productId      String
+  product        ApiProduct @relation(fields: [productId], references: [id], onDelete: Cascade)
+  status         String   @default("active") // active | suspended | cancelled
+  quota          Int      @default(0)        // monthly call allowance (0 = unlimited)
+  usedThisMonth  Int      @default(0)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([organizationId])
+  @@index([appId])
+  @@unique([appId, productId])
+}
+
+// Persistent API usage ledger (drives the Developer Dashboard metrics and
+// per-key billing). Recorded best-effort for every gateway request.
+model ApiUsageRecord {
+  id             String   @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  apiKeyId       String?
+  apiKey         ApiKey?  @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  appId          String?
+  userId         String?
+  method         String
+  path           String
+  endpoint       String   // product route key e.g. "agents.execute"
+  status         Int
+  durationMs     Int      @default(0)
+  channel        String   // agents | workflows | knowledge | trading | media | voice | ...
+  productSlug    String?
+  tokensIn       Int      @default(0)
+  tokensOut      Int      @default(0)
+  aiCostMicros   Int      @default(0)
+  sourceIp       String?
+  environment    String   @default("production")
+  permission     String   // the scope decision that granted the request
+  requestId      String?
+  model          String?
+  provider       String?
+  toolCalls      Int      @default(0)
+  actualCostMicros Int?
+  errorCode      String?
+  agentRuns      Int      @default(0)
+  workflowExecutions Int  @default(0)
+  images         Int      @default(0)
+  audioSeconds   Int      @default(0)
+  storageBytes   Int      @default(0)
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([apiKeyId])
+  @@index([endpoint])
+  @@index([appId])
+  @@index([requestId])
+  @@index([model])
+}
+
+// ─────────────────── Session: Contact & Support Center ───────────────────
+// Persistent contact requests and their communication/status history.
+model ContactRequest {
+  id             String        @id @default(cuid())
+  requestNumber  String        @unique
+  organizationId String?
+  userId         String?
+  user           User?         @relation("contact_requests", fields: [userId], references: [id], onDelete: SetNull)
+  accountId      String?
+  name           String
+  email          String
+  phone          String?
+  country        String?
+  company        String?
+  category       String
+  subject        String
+  message        String        @db.Text
+  preferredContactMethod String @default("email")
+  aiConversationId String?
+  aiSummary      String?       @db.Text
+  priority       String        @default("normal")
+  status         String        @default("new")
+  department     String        @default("general")
+  assignedUserId String?
+  assignedAgentId String?
+  source         String        @default("web")
+  resolvedAt     DateTime?
+  closedAt       DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  messages       ContactMessage[]
+  statusHistory  ContactStatusHistory[]
+
+  @@index([userId])
+  @@index([email])
+  @@index([status])
+  @@index([category])
+  @@index([department])
+  @@index([createdAt])
+}
+
+model ContactMessage {
+  id           String         @id @default(cuid())
+  requestId    String
+  request      ContactRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  authorType   String         @default("user") // user | staff | ai | system
+  authorId     String?
+  authorName   String?
+  body         String         @db.Text
+  isInternal   Boolean        @default(false)
+  createdAt    DateTime       @default(now())
+
+  @@index([requestId])
+}
+
+model ContactStatusHistory {
+  id              String         @id @default(cuid())
+  requestId       String
+  request         ContactRequest @relation(fields: [requestId], references: [id], onDelete: Cascade)
+  fromStatus      String?
+  toStatus        String
+  changedByUserId String?
+  createdAt       DateTime       @default(now())
+
+  @@index([requestId])
+}
+
+// ─────────────────────────── Enterprise Governance & Ledger Extensions ───────────────────────────
+enum AccessReviewStatus {
+  PENDING
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum AccessItemStatus {
+  PENDING
+  APPROVED
+  REVOKED
+  QUARANTINED
+}
+
+model AccessReviewCampaign {
+  id             String             @id @default(cuid())
+  organizationId String
+  status         AccessReviewStatus @default(IN_PROGRESS)
+  dormantDays    Int                @default(90)
+  completedAt    DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  items          AccessReviewItem[]
+
+  @@index([organizationId, status])
+}
+
+model AccessReviewItem {
+  id           String           @id @default(cuid())
+  campaignId   String
+  campaign     AccessReviewCampaign @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  userId       String
+  status       AccessItemStatus @default(PENDING)
+  reviewedById String?
+  notes        String?
+  createdAt    DateTime         @default(now())
+  updatedAt    DateTime         @updatedAt
+
+  @@index([campaignId])
+  @@index([userId])
+}
+
+model IncidentRunbook {
+  id              String   @id @default(cuid())
+  organizationId  String?
+  name            String
+  triggerSeverity String   // low, medium, high, critical
+  triggerArea     String   // auth, data, ai, billing, infra, abuse, other
+  actions         Json     @default("[]") // ["REVOKE_TOKENS", "NOTIFY_ADMIN", "QUARANTINE_USER"]
+  enabled         Boolean  @default(true)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  executions      RunbookExecution[]
+
+  @@index([organizationId, enabled])
+}
+
+model RunbookExecution {
+  id         String          @id @default(cuid())
+  runbookId  String
+  runbook    IncidentRunbook @relation(fields: [runbookId], references: [id], onDelete: Cascade)
+  incidentId String
+  status     String          @default("success") // success, failed
+  output     Json            @default("{}")
+  createdAt  DateTime        @default(now())
+
+  @@index([runbookId])
+  @@index([incidentId])
+}
+
+model BillingLedgerEntry {
+  id             String   @id @default(cuid())
+  organizationId String
+  invoiceId      String
+  invoice        Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  giftCardId     String?
+  paymentId      String?
+  payment        PaymentRecord? @relation(fields: [paymentId], references: [id], onDelete: SetNull)
+  sourceKind     String   @default("gift_card")
+  journalKey     String   @unique
+  amountCents    Int
+  debitAccount   String   // e.g. "crypto_clearing:blockonomics"
+  creditAccount  String   // e.g. "accounts_receivable"
+  reversalOfId   String?
+  metadata       Json     @default("{}")
+  createdAt      DateTime @default(now())
+
+  @@index([organizationId])
+  @@index([invoiceId])
+  @@index([giftCardId])
+  @@index([paymentId])
+  @@index([sourceKind, createdAt])
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// WhatsApp Channel — a communication channel INTO the existing WINDELS AI OS.
+//
+// These tables hold channel-specific plumbing ONLY. The conversation itself,
+// its messages, the agents, the users and the billing all live in the
+// existing WINDELS models: WhatsAppConversation.conversationId points at the
+// real `Conversation`, and every AI turn is persisted as a real `Message`.
+// Credentials are stored AES-256-GCM encrypted (never plaintext).
+// ═══════════════════════════════════════════════════════════════════════════
+
+model WhatsAppChannel {
+  id                 String   @id @default(cuid())
+  organizationId     String
+  organization       Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name               String
+  /// Meta phone number id — unique across the platform, used for inbound routing.
+  phoneNumberId      String   @unique
+  businessAccountId  String
+  displayPhoneNumber String?
+  status             WhatsAppChannelStatus @default(DISCONNECTED)
+  webhookStatus      WhatsAppWebhookStatus @default(UNVERIFIED)
+  enabled            Boolean  @default(false)
+  apiVersion         String   @default("v21.0")
+  /// AES-256-GCM encrypted blobs. Never returned to any client.
+  accessTokenEnc     Json?
+  appSecretEnc       Json?
+  verifyTokenEnc     Json?
+  appId              String?
+  webhookUrl         String?
+  settings           Json     @default("{}")
+  lastWebhookAt      DateTime?
+  lastErrorAt        DateTime?
+  lastError          String?
+  createdAt          DateTime @default(now())
+  updatedAt          DateTime @updatedAt
+  deletedAt          DateTime?
+
+  contacts       WhatsAppContact[]
+  conversations  WhatsAppConversation[]
+  webhookEvents  WhatsAppWebhookEvent[]
+
+  @@index([organizationId, enabled])
+  @@index([businessAccountId])
+}
+
+model WhatsAppContact {
+  id                String   @id @default(cuid())
+  organizationId    String
+  whatsappChannelId String
+  channel           WhatsAppChannel @relation(fields: [whatsappChannelId], references: [id], onDelete: Cascade)
+  /// The WhatsApp-assigned user id (wa_id).
+  whatsappUserId    String
+  phoneNumber       String
+  displayName       String?
+  /// Only set after a successful verification challenge — never on phone match alone.
+  linkedWindelsUserId String?
+  linkedUser        User?    @relation("whatsapp_linked_contacts", fields: [linkedWindelsUserId], references: [id], onDelete: SetNull)
+  linkedAt          DateTime?
+  status            WhatsAppContactStatus @default(ACTIVE)
+  firstSeenAt       DateTime @default(now())
+  lastSeenAt        DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  conversations WhatsAppConversation[]
+
+  @@unique([whatsappChannelId, whatsappUserId])
+  @@index([organizationId])
+  @@index([linkedWindelsUserId])
+  @@index([phoneNumber])
+}
+
+model WhatsAppConversation {
+  id                    String   @id @default(cuid())
+  organizationId        String
+  channelId             String
+  channel               WhatsAppChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  contactId             String
+  contact               WhatsAppContact @relation(fields: [contactId], references: [id], onDelete: Cascade)
+  /// FK into the EXISTING WINDELS conversation system. This is the bridge.
+  windelsConversationId String?
+  windelsConversation   Conversation? @relation("whatsapp_conversations", fields: [windelsConversationId], references: [id], onDelete: SetNull)
+  status                WhatsAppConversationStatus @default(OPEN)
+  /// Channel-level annotations (helpdesk ticket ref, escalation reason...).
+  metadata              Json     @default("{}")
+  lastMessageAt         DateTime @default(now())
+  createdAt             DateTime @default(now())
+  updatedAt             DateTime @updatedAt
+
+  messages WhatsAppMessage[]
+  media    WhatsAppMedia[]
+  jobs     WhatsAppJob[]
+  sessions WhatsAppSession[]
+
+  @@unique([channelId, contactId])
+  @@index([organizationId, lastMessageAt])
+  @@index([windelsConversationId])
+}
+
+model WhatsAppMessage {
+  id                String   @id @default(cuid())
+  organizationId    String
+  conversationId    String
+  conversation      WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// Meta message id (wamid). Unique when present — the idempotency anchor.
+  whatsappMessageId String?  @unique
+  direction         WhatsAppDirection
+  messageType       WhatsAppMessageType @default(UNKNOWN)
+  text              String?
+  mediaId           String?
+  status            WhatsAppMessageStatus @default(PENDING)
+  errorCode         String?
+  errorMessage      String?
+  /// Non-sensitive envelope data only (timestamps, media mime/sha, reply refs).
+  metadata          Json     @default("{}")
+  /// Links the WhatsApp turn to the persisted WINDELS Message row.
+  windelsMessageId  String?
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  readAt            DateTime?
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  media WhatsAppMedia[]
+
+  @@index([conversationId, createdAt])
+  @@index([organizationId, direction, status])
+  @@index([status])
+}
+
+model WhatsAppWebhookEvent {
+  id               String   @id @default(cuid())
+  organizationId   String?
+  channelId        String?
+  channel          WhatsAppChannel? @relation(fields: [channelId], references: [id], onDelete: SetNull)
+  /// Meta's event identifier (wamid or status id) — deduplication key.
+  eventId          String   @unique
+  eventType        String
+  /// SHA-256 of the raw payload. We keep the hash, not the sensitive payload.
+  payloadHash      String
+  processingStatus WhatsAppEventStatus @default(RECEIVED)
+  attempts         Int      @default(0)
+  receivedAt       DateTime @default(now())
+  processedAt      DateTime?
+  errorMessage     String?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([processingStatus, receivedAt])
+  @@index([channelId, receivedAt])
+  @@index([payloadHash])
+}
+
+/// Phase 2 — one row per WhatsApp media object we actually processed.
+/// Bytes themselves live in the EXISTING attachment store (MessageAttachment);
+/// this table records provenance, extraction state and the derived text so a
+/// media message never has to be downloaded or re-analysed twice.
+model WhatsAppMedia {
+  id                  String   @id @default(cuid())
+  organizationId      String
+  conversationId      String
+  conversation        WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  messageId           String?
+  message             WhatsAppMessage?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  /// Meta's media id. Unique per channel — the idempotency anchor for downloads.
+  mediaId             String
+  direction           WhatsAppDirection    @default(INBOUND)
+  mediaKind           WhatsAppMessageType  @default(UNKNOWN)
+  mimeType            String?
+  filename            String?
+  sizeBytes           Int?
+  /// SHA-256 of the downloaded bytes — cross-checked against Meta's own hash.
+  checksum            String?
+  /// FK into the EXISTING attachment store. Null when storage was skipped.
+  storageAttachmentId String?
+  extractionStatus    WhatsAppExtractionStatus @default(PENDING)
+  /// Extracted document text / OCR output. Truncated for storage sanity.
+  extractedText       String?
+  /// Speech-to-text output for audio and voice notes.
+  transcript          String?
+  /// Structured analysis (vision description, sheet names, page count...).
+  analysis            Json     @default("{}")
+  errorCode           String?
+  errorMessage        String?
+  processedAt         DateTime?
+  createdAt           DateTime @default(now())
+  updatedAt           DateTime @updatedAt
+
+  @@unique([conversationId, mediaId])
+  @@index([organizationId, extractionStatus])
+  @@index([checksum])
+}
+
+/// Phase 2 — long-running WhatsApp work. The webhook is never held open: the
+/// pipeline creates a job, ACKs the user, and a background worker completes it
+/// and notifies over WhatsApp.
+model WhatsAppJob {
+  id              String   @id @default(cuid())
+  organizationId  String
+  conversationId  String
+  conversation    WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// The inbound message that requested the work.
+  requestMessageId String?
+  /// Command verb resolved by the command layer (create_report, analyze_file...).
+  kind            String
+  status          WhatsAppJobStatus @default(QUEUED)
+  /// Bridges into the EXISTING workflow engine when the command runs a workflow.
+  workflowId      String?
+  workflowRunId   String?
+  /// The user on whose authority the job runs. Null is never privileged.
+  requestedByUserId String?
+  requestedBy     User?    @relation("whatsapp_jobs_requested", fields: [requestedByUserId], references: [id], onDelete: SetNull)
+  requestText     String?
+  params          Json     @default("{}")
+  resultText      String?
+  resultMediaId   String?
+  /// The "working on it" message we already sent, so we never ACK twice.
+  ackMessageId    String?
+  attempts        Int      @default(0)
+  errorCode       String?
+  errorMessage    String?
+  startedAt       DateTime?
+  completedAt     DateTime?
+  notifiedAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, status])
+  @@index([conversationId, createdAt])
+  @@index([status, createdAt])
+  @@index([workflowRunId])
+}
+
+/// Phase 2 — a bounded conversational session over a WhatsApp thread. Sessions
+/// expire; historical conversations are never destroyed by a new session.
+model WhatsAppSession {
+  id             String   @id @default(cuid())
+  organizationId String
+  conversationId String
+  conversation   WhatsAppConversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  /// Stable key so a redelivery cannot fork a second live session.
+  sessionKey     String   @unique
+  status         WhatsAppSessionStatus @default(ACTIVE)
+  /// Identity/org/permission context captured when the session opened.
+  linkedUserId   String?
+  linkedUser     User?    @relation("whatsapp_sessions_user", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  turnCount      Int      @default(0)
+  /// A high-risk action awaiting explicit confirmation (step-up auth).
+  pendingAction  Json?
+  pendingExpiresAt DateTime?
+  context        Json     @default("{}")
+  lastActivityAt DateTime @default(now())
+  expiresAt      DateTime
+  closedAt       DateTime?
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([conversationId, status])
+  @@index([organizationId, expiresAt])
+  @@index([status, expiresAt])
+}
+
+enum WhatsAppExtractionStatus {
+  PENDING
+  PROCESSING
+  COMPLETED
+  FAILED
+  SKIPPED
+  UNSUPPORTED
+}
+
+enum WhatsAppJobStatus {
+  QUEUED
+  RUNNING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+enum WhatsAppSessionStatus {
+  ACTIVE
+  EXPIRED
+  CLOSED
+}
+
+enum WhatsAppChannelStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+  DISABLED
+}
+
+enum WhatsAppWebhookStatus {
+  UNVERIFIED
+  VERIFIED
+  FAILING
+}
+
+enum WhatsAppContactStatus {
+  ACTIVE
+  BLOCKED
+  OPTED_OUT
+}
+
+enum WhatsAppConversationStatus {
+  OPEN
+  CLOSED
+  ESCALATED
+}
+
+enum WhatsAppDirection {
+  INBOUND
+  OUTBOUND
+}
+
+enum WhatsAppMessageType {
+  TEXT
+  IMAGE
+  AUDIO
+  VIDEO
+  DOCUMENT
+  LOCATION
+  INTERACTIVE
+  BUTTON
+  REACTION
+  STICKER
+  CONTACTS
+  ORDER
+  SYSTEM
+  UNKNOWN
+}
+
+enum WhatsAppMessageStatus {
+  PENDING
+  QUEUED
+  SENT
+  DELIVERED
+  READ
+  FAILED
+}
+
+enum WhatsAppEventStatus {
+  RECEIVED
+  PROCESSING
+  PROCESSED
+  FAILED
+  DUPLICATE
+  IGNORED
+}
+
+// ── AI Video Transformation Studio (Switch X) ──────────────────────
+model VideoTransformJob {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  workflowId      String?
+  kind            String
+  stage           String   @default("QUEUED")
+  status          String   @default("queued")
+  percent         Int      @default(0)
+  message         String?
+  input           Json
+  resultAssetIds  String[] @default([])
+  versions        Json     @default("[]")
+  error           String?
+  errorCode       String?
+  retriable       Boolean  @default(false)
+  modelId         String?
+  providerId      String?
+  creditsUsed     Int      @default(0)
+  estimatedCredits Int     @default(0)
+  estimatedSeconds Int     @default(0)
+  durationSec     Float?
+  resolution      String?
+  qualityReport   Json?
+  createdAt       DateTime @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  @@index([organizationId, createdAt])
+  @@index([organizationId, status])
+  @@map("video_transform_jobs")
+}
+
+model VideoTransformWorkflow {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  name            String
+  description     String?
+  nodes           Json     @default("[]")
+  connections     Json     @default("[]")
+  version         Int      @default(1)
+  isTemplate      Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, updatedAt])
+  @@map("video_transform_workflows")
+}
+
+// ── AI Video Studio (Cinematic) ────────────────────────────────────
+model CinematicProject {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  title           String
+  prompt          String
+  enhancedPrompt  String?
+  negativePrompt  String?
+  mode            String
+  style           String
+  aspectRatio     String
+  resolution      String
+  fps             Int      @default(24)
+  durationSec     Float
+  quality         String   @default("standard")
+  audioEnabled    Boolean  @default(true)
+  dialogueEnabled Boolean  @default(false)
+  musicEnabled    Boolean  @default(true)
+  sfxEnabled      Boolean  @default(true)
+  lipSync         Boolean  @default(false)
+  seed            BigInt?
+  variation       Int      @default(1)
+  camera          Json
+  lighting        Json
+  references      Json     @default("[]")
+  characterIds    String[] @default([])
+  storyboard      Json?
+  audioTracks     Json     @default("[]")
+  generations     Json     @default("[]")
+  finalAssetId    String?
+  status          String   @default("draft")
+  version         Int      @default(1)
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId, updatedAt])
+  @@map("cinematic_projects")
+}
+
+model CinematicJob {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  projectId       String
+  stage           String   @default("QUEUED")
+  percent         Int      @default(0)
+  message         String?
+  status          String   @default("queued")
+  currentShotId   String?
+  estimatedCredits Int     @default(0)
+  creditsUsed     Int      @default(0)
+  modelId         String?
+  providerId      String?
+  multiShot       Boolean  @default(false)
+  error           String?
+  errorCode       String?
+  retriable       Boolean  @default(false)
+  createdAt       DateTime @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+
+  @@index([organizationId, status])
+  @@index([projectId])
+  @@map("cinematic_jobs")
+}
+
+model CinematicCharacter {
+  id              String   @id @default(cuid())
+  organizationId  String
+  userId          String
+  name            String
+  description     String?
+  ageRange        String?
+  voiceId         String?
+  style           String?
+  clothing        String?
+  attributes      Json     @default("{}")
+  references      Json     @default("[]")
+  identityKey     String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@index([organizationId])
+  @@map("cinematic_characters")
+}
+
+// ── Telegram Bot Channel ───────────────────────────────────────────
+model TelegramChannel {
+  id              String   @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  name            String   @default("WINDELS AI")
+  botUsername     String?
+  /// Telegram-assigned numeric bot user id (from getMe). Immutable.
+  telegramBotId   BigInt?  @unique
+  status          TelegramChannelStatus @default(DISCONNECTED)
+  webhookStatus   TelegramWebhookStatus @default(UNVERIFIED)
+  enabled         Boolean  @default(false)
+  apiBaseUrl      String   @default("https://api.telegram.org")
+  /// AES-256-GCM encrypted bot token. Never returned to clients.
+  botTokenEnc     Json?
+  /// Webhook secret token used in X-Telegram-Bot-Api-Secret-Token header.
+  webhookSecretEnc Json?
+  allowedUserIds  BigInt[] @default([])
+  settings        Json     @default("{}")
+  lastWebhookAt   DateTime?
+  lastErrorAt     DateTime?
+  lastError       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  deletedAt       DateTime?
+
+  connections     TelegramConnection[]
+  chats           TelegramChat[]
+  messages        TelegramMessage[]
+  webhookEvents   TelegramWebhookEvent[]
+
+  @@index([organizationId, enabled])
+  @@map("telegram_channels")
+}
+
+model TelegramConnection {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  /// The immutable Telegram user id — never the mutable username.
+  telegramUserId    BigInt
+  telegramUsername  String?
+  displayName       String?
+  linkedUserId      String?
+  linkedUser        User?    @relation("telegram_linked_users", fields: [linkedUserId], references: [id], onDelete: SetNull)
+  status            TelegramConnectionStatus @default(LINKED)
+  linkedAt          DateTime?
+  firstSeenAt       DateTime @default(now())
+  lastActivityAt    DateTime @default(now())
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  chats             TelegramChat[]
+
+  @@unique([channelId, telegramUserId])
+  @@index([organizationId])
+  @@index([linkedUserId])
+  @@map("telegram_connections")
+}
+
+model TelegramChat {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  connectionId      String?
+  connection        TelegramConnection? @relation(fields: [connectionId], references: [id], onDelete: SetNull)
+  telegramChatId    BigInt
+  chatType          String
+  title             String?
+  windelsConversationId String?
+  windelsConversation Conversation? @relation("telegram_conversations", fields: [windelsConversationId], references: [id], onDelete: SetNull)
+  status            String   @default("OPEN")
+  lastMessageAt     DateTime @default(now())
+  metadata          Json     @default("{}")
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  messages          TelegramMessage[]
+
+  @@unique([channelId, telegramChatId])
+  @@index([organizationId, lastMessageAt])
+  @@map("telegram_chats")
+}
+
+model TelegramMessage {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  chatId            String
+  chat              TelegramChat @relation(fields: [chatId], references: [id], onDelete: Cascade)
+  telegramUpdateId  BigInt   @unique
+  telegramMessageId BigInt?
+  direction         TelegramDirection
+  messageType       String   @default("TEXT")
+  text              String?
+  mediaId           String?
+  mimeType          String?
+  fileSize          Int?
+  metadata          Json     @default("{}")
+  windelsMessageId  String?
+  status            String   @default("DELIVERED")
+  deliveredAt       DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@index([chatId, createdAt])
+  @@map("telegram_messages")
+}
+
+model TelegramWebhookEvent {
+  id                String   @id @default(cuid())
+  organizationId    String
+  channelId         String
+  channel           TelegramChannel @relation(fields: [channelId], references: [id], onDelete: Cascade)
+  updateId          BigInt   @unique
+  eventType         String
+  /// Hash of the raw update — never the raw payload.
+  payloadHash       String
+  processingStatus  String   @default("RECEIVED")
+  error             String?
+  receivedAt        DateTime @default(now())
+  processedAt       DateTime?
+
+  @@index([organizationId, receivedAt])
+  @@map("telegram_webhook_events")
+}
+
+model TelegramLinkToken {
+  tokenHash         String   @id
+  userId            String
+  organizationId    String
+  channelId         String?
+  status            String   @default("PENDING")
+  expiresAt         DateTime
+  consumedAt        DateTime?
+  createdAt         DateTime @default(now())
+
+  @@index([userId, status])
+  @@map("telegram_link_tokens")
+}
+
+enum TelegramChannelStatus {
+  DISCONNECTED
+  CONNECTED
+  ERROR
+  DISABLED
+}
+
+enum TelegramWebhookStatus {
+  UNVERIFIED
+  WEBHOOK_SET
+  VERIFIED
+  FAILED
+}
+
+enum TelegramConnectionStatus {
+  LINKED
+  UNLINKED
+  BLOCKED
+}
+
+enum TelegramDirection {
+  INBOUND
+  OUTBOUND
+}
+
+// ─── NFC Card Manager ───────────────────────────────────────────────────────
+// A capability is never inferred solely from a marketing card name. The reader
+// observation, card capability container and real-hardware qualification state
+// are persisted separately and evaluated together before a mutation is planned.
+enum NfcInterfaceType {
+  PCSC
+  WEB_NFC
+  ANDROID_NATIVE
+  IOS_CORE_NFC
+  READER_SDK
+}
+
+enum NfcSupportStatus {
+  SUPPORTED
+  PARTIALLY_SUPPORTED
+  READ_ONLY
+  WRITE_SUPPORTED
+  UNSUPPORTED
+  UNVERIFIED
+}
+
+enum NfcLockStatus {
+  UNLOCKED
+  LOCKED
+  PARTIALLY_LOCKED
+  UNKNOWN
+}
+
+enum NfcOperationType {
+  DETECT
+  READ
+  WRITE
+  UPDATE
+  VERIFY
+  ERASE
+  LOCK
+  PROTECT
+}
+
+enum NfcOperationStatus {
+  PENDING_CONFIRMATION
+  READY
+  IN_PROGRESS
+  VERIFYING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+  EXPIRED
+}
+
+model NfcReader {
+  id                    String           @id @default(cuid())
+  organizationId        String
+  organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  registeredById        String
+  registeredBy          User             @relation("nfc_reader_registered_by", fields: [registeredById], references: [id], onDelete: Restrict)
+  localIdHash           String
+  name                  String
+  vendor                String?
+  product               String?
+  interfaceType         NfcInterfaceType
+  status                String           @default("OFFLINE")
+  capabilities          Json             @default("{}")
+  qualifiedCombinations Json             @default("[]")
+  bridgeVersion         String?
+  platform              String?
+  lastSeenAt            DateTime?
+  lastError              String?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  cards                 NfcCard[]
+  operations            NfcOperation[]
+
+  @@unique([organizationId, localIdHash])
+  @@index([organizationId, lastSeenAt])
+  @@map("nfc_readers")
+}
+
+model NfcProfile {
+  id                    String       @id @default(cuid())
+  organizationId        String
+  organization          Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById           String
+  createdBy             User         @relation("nfc_profile_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  name                  String
+  profileType           String
+  targetType            String
+  targetId              String?
+  secureUrl             String
+  metadata              Json         @default("{}")
+  active                Boolean      @default(true)
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  cards                 NfcCard[]
+
+  @@index([organizationId, profileType])
+  @@index([targetType, targetId])
+  @@map("nfc_profiles")
+}
+
+model NfcCard {
+  id                    String           @id @default(cuid())
+  organizationId        String
+  organization          Organization     @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById           String
+  createdBy             User             @relation("nfc_card_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  assignedUserId        String?
+  assignedUser          User?            @relation("nfc_card_assigned_user", fields: [assignedUserId], references: [id], onDelete: SetNull)
+  readerId              String?
+  reader                NfcReader?       @relation(fields: [readerId], references: [id], onDelete: SetNull)
+  profileId             String?
+  profile               NfcProfile?      @relation(fields: [profileId], references: [id], onDelete: SetNull)
+  cardKeyHash           String
+  uidMasked             String?
+  name                  String
+  technology            String           @default("Unknown NFC Technology")
+  supportStatus         NfcSupportStatus @default(UNVERIFIED)
+  memoryBytes           Int?
+  writableBytes         Int?
+  ndefSupported         Boolean          @default(false)
+  readable              Boolean          @default(false)
+  writable              Boolean          @default(false)
+  erasable              Boolean          @default(false)
+  lockable              Boolean          @default(false)
+  protectable           Boolean          @default(false)
+  lockStatus            NfcLockStatus    @default(UNKNOWN)
+  capabilitySource      String           @default("UNKNOWN")
+  qualification         String           @default("NOT_QUALIFIED")
+  capabilities          Json             @default("{}")
+  ndefHash              String?
+  status                String           @default("ACTIVE")
+  lastDetectedAt        DateTime?
+  lastReadAt            DateTime?
+  lastWrittenAt         DateTime?
+  createdAt             DateTime         @default(now())
+  updatedAt             DateTime         @updatedAt
+
+  records               NfcNdefRecord[]
+  operations            NfcOperation[]
+
+  @@unique([organizationId, cardKeyHash])
+  @@index([organizationId, updatedAt])
+  @@index([profileId])
+  @@map("nfc_cards")
+}
+
+model NfcNdefRecord {
+  id                    String    @id @default(cuid())
+  cardId                String
+  card                  NfcCard   @relation(fields: [cardId], references: [id], onDelete: Cascade)
+  position              Int
+  kind                  String
+  tnf                   Int
+  recordType            String
+  payload               Json
+  payloadHash           String
+  sizeBytes             Int
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@unique([cardId, position])
+  @@index([cardId])
+  @@map("nfc_ndef_records")
+}
+
+model NfcOperation {
+  id                    String             @id @default(cuid())
+  organizationId        String
+  organization          Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  requestedById         String
+  requestedBy           User               @relation("nfc_operation_requested_by", fields: [requestedById], references: [id], onDelete: Restrict)
+  readerId              String?
+  reader                NfcReader?         @relation(fields: [readerId], references: [id], onDelete: SetNull)
+  cardId                String?
+  card                  NfcCard?           @relation(fields: [cardId], references: [id], onDelete: SetNull)
+  operationType         NfcOperationType
+  status                NfcOperationStatus
+  idempotencyKey        String
+  challengeHash         String?
+  requestedRecords      Json               @default("[]")
+  expectedNdefHash      String?
+  previousNdefHash      String?
+  readbackNdefHash      String?
+  requiredBytes         Int?
+  availableBytes        Int?
+  overwriteConfirmed    Boolean            @default(false)
+  irreversibleConfirmed Boolean            @default(false)
+  hardwareEvidence      Json               @default("{}")
+  result                Json               @default("{}")
+  errorCode             String?
+  errorMessage          String?
+  startedAt             DateTime?
+  completedAt           DateTime?
+  expiresAt             DateTime?
+  createdAt             DateTime           @default(now())
+  updatedAt             DateTime           @updatedAt
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, createdAt])
+  @@index([cardId, createdAt])
+  @@index([status, expiresAt])
+  @@map("nfc_operations")
+}
+
+// ─── Super Admin Module & Plugin Deployment Center ──────────────────────────
+enum PlatformModuleLifecycle {
+  UPLOADED
+  SCANNING
+  VALIDATING
+  COMPATIBILITY_CHECK
+  SANDBOX_TEST
+  VALIDATED
+  APPROVED
+  INSTALLING
+  MIGRATING
+  HEALTH_CHECK
+  ACTIVE
+  DISABLED
+  FAILED
+  ROLLING_BACK
+  QUARANTINED
+  REMOVING
+  REMOVED
+}
+
+enum PlatformModuleHealth {
+  UNKNOWN
+  HEALTHY
+  DEGRADED
+  UNHEALTHY
+  DISABLED
+  QUARANTINED
+}
+
+enum PlatformModuleOperationType {
+  UPLOAD
+  VERIFY
+  SANDBOX_TEST
+  APPROVE
+  INSTALL
+  UPDATE
+  ENABLE
+  DISABLE
+  RESTART
+  HEALTH_CHECK
+  ROLLBACK
+  REMOVE
+}
+
+enum PlatformModuleOperationStatus {
+  PENDING
+  RUNNING
+  SUCCEEDED
+  FAILED
+  CANCELLED
+}
+
+model PlatformModuleUpload {
+  id             String                  @id @default(cuid())
+  originalName   String
+  checksum       String                  @unique
+  sizeBytes      Int
+  artifactPath   String
+  status         PlatformModuleLifecycle @default(UPLOADED)
+  manifestId     String?
+  manifestVersion String?
+  signatureKeyId String?
+  report         Json                    @default("{}")
+  uploadedById   String
+  uploadedBy     User                    @relation("module_upload_uploaded_by", fields: [uploadedById], references: [id], onDelete: Restrict)
+  releaseId      String?                 @unique
+  release        PlatformModuleRelease?  @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  createdAt      DateTime                @default(now())
+  updatedAt      DateTime                @updatedAt
+
+  @@index([status, createdAt])
+  @@index([manifestId, manifestVersion])
+  @@map("platform_module_uploads")
+}
+
+model PlatformModule {
+  id                  String                  @id @default(cuid())
+  moduleKey           String                  @unique
+  name                String
+  packageType         String
+  description         String
+  vendor              String
+  status              PlatformModuleLifecycle @default(UPLOADED)
+  health              PlatformModuleHealth    @default(UNKNOWN)
+  currentVersion      String?
+  activeReleaseId     String?
+  enabled             Boolean                 @default(false)
+  manifest            Json                    @default("{}")
+  configuration       Json                    @default("{}")
+  runtimeRegistration Json                    @default("{}")
+  dependencies        Json                    @default("[]")
+  permissions         Json                    @default("[]")
+  installedById       String?
+  installedBy         User?                   @relation("platform_module_installed_by", fields: [installedById], references: [id], onDelete: SetNull)
+  installedAt         DateTime?
+  lastHealthCheckAt   DateTime?
+  lastError           String?
+  createdAt           DateTime                @default(now())
+  updatedAt           DateTime                @updatedAt
+
+  releases            PlatformModuleRelease[]
+  operations          PlatformModuleOperation[]
+
+  @@index([status, enabled])
+  @@index([health])
+  @@map("platform_modules")
+}
+
+model PlatformModuleRelease {
+  id                   String                  @id @default(cuid())
+  moduleRegistryId     String
+  moduleRegistry       PlatformModule          @relation(fields: [moduleRegistryId], references: [id], onDelete: Cascade)
+  version              String
+  status               PlatformModuleLifecycle @default(UPLOADED)
+  checksum             String                  @unique
+  artifactPath         String
+  packageSizeBytes     Int
+  manifest             Json
+  signatureKeyId       String?
+  signatureVerified    Boolean                 @default(false)
+  scanStatus           String                  @default("PENDING")
+  compatibilityStatus  String                  @default("PENDING")
+  sandboxStatus        String                  @default("PENDING")
+  approvalStatus       String                  @default("PENDING")
+  migrationStatus      String                  @default("NOT_STARTED")
+  verificationReport   Json                    @default("{}")
+  sandboxReport        Json                    @default("{}")
+  healthReport         Json                    @default("{}")
+  rollbackMetadata     Json                    @default("{}")
+  previousReleaseId    String?
+  uploadedById         String
+  uploadedBy           User                    @relation("module_release_uploaded_by", fields: [uploadedById], references: [id], onDelete: Restrict)
+  approvedById         String?
+  approvedBy           User?                   @relation("module_release_approved_by", fields: [approvedById], references: [id], onDelete: SetNull)
+  installedById        String?
+  installedBy          User?                   @relation("module_release_installed_by", fields: [installedById], references: [id], onDelete: SetNull)
+  uploadedAt           DateTime                @default(now())
+  verifiedAt           DateTime?
+  sandboxedAt          DateTime?
+  approvedAt           DateTime?
+  installedAt          DateTime?
+  createdAt            DateTime                @default(now())
+  updatedAt            DateTime                @updatedAt
+
+  upload               PlatformModuleUpload?
+  operations           PlatformModuleOperation[]
+
+  @@unique([moduleRegistryId, version])
+  @@index([status, createdAt])
+  @@index([moduleRegistryId, createdAt])
+  @@map("platform_module_releases")
+}
+
+model PlatformModuleOperation {
+  id               String                        @id @default(cuid())
+  moduleRegistryId String
+  moduleRegistry   PlatformModule                @relation(fields: [moduleRegistryId], references: [id], onDelete: Cascade)
+  releaseId        String?
+  release          PlatformModuleRelease?        @relation(fields: [releaseId], references: [id], onDelete: SetNull)
+  operationType    PlatformModuleOperationType
+  status           PlatformModuleOperationStatus @default(PENDING)
+  idempotencyKey   String                        @unique
+  correlationId    String
+  requestedById    String
+  requestedBy      User                          @relation("module_operation_requested_by", fields: [requestedById], references: [id], onDelete: Restrict)
+  fromVersion      String?
+  toVersion        String?
+  result           Json                          @default("{}")
+  logs             Json                          @default("[]")
+  errorCode        String?
+  errorMessage     String?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime                      @default(now())
+  updatedAt        DateTime                      @updatedAt
+
+  @@index([moduleRegistryId, createdAt])
+  @@index([status, createdAt])
+  @@map("platform_module_operations")
+}
+
+// ─── Native AI API — externally invoked WINDELS agent runs ──────────────────
+model ExternalAgentRun {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  agentId        String
+  agent          Agent        @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  apiKeyId       String?
+  apiKey         ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  requestedById  String
+  requestedBy    User         @relation("external_agent_run_requested_by", fields: [requestedById], references: [id], onDelete: Restrict)
+  idempotencyKey String
+  status         String       @default("running")
+  model          String?
+  input          Json
+  output         Json         @default("{}")
+  usage          Json         @default("{}")
+  provider       String?
+  toolCalls      Int          @default(0)
+  errorCode      String?
+  errorMessage   String?
+  cancelRequestedAt DateTime?
+  startedAt      DateTime     @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  messages       ExternalAgentMessage[]
+
+  @@unique([organizationId, idempotencyKey])
+  @@index([organizationId, createdAt])
+  @@index([agentId, createdAt])
+  @@index([apiKeyId])
+  @@index([status])
+  @@map("external_agent_runs")
+}
+
+model ExternalAgentMessage {
+  id         String           @id @default(cuid())
+  runId      String
+  run        ExternalAgentRun @relation(fields: [runId], references: [id], onDelete: Cascade)
+  role       String
+  content    String           @db.Text
+  toolCallId String?
+  metadata   Json             @default("{}")
+  createdAt  DateTime         @default(now())
+
+  @@index([runId, createdAt])
+  @@map("external_agent_messages")
+}
+
+// ─── WINDELS AI Cloud Android ────────────────────────────────────────────────
+enum CloudAndroidLifecycle {
+  CREATING
+  PROVISIONING
+  STOPPED
+  BOOTING
+  RUNNING
+  SUSPENDING
+  SUSPENDED
+  REBOOTING
+  SNAPSHOTTING
+  RESTORING
+  DEGRADED
+  FAILED
+  DESTROYING
+  DESTROYED
+}
+
+enum CloudAndroidSessionMode {
+  HUMAN
+  AI
+  COLLABORATIVE
+}
+
+enum CloudAndroidSessionStatus {
+  ACTIVE
+  PAUSED_FOR_APPROVAL
+  PAUSED_FOR_TAKEOVER
+  COMPLETED
+  CANCELLED
+  FAILED
+}
+
+enum CloudAndroidActionStatus {
+  PREPARING
+  APPROVAL_REQUIRED
+  EXECUTING
+  VERIFYING
+  SUCCEEDED
+  FAILED
+  REJECTED
+  CANCELLED
+}
+
+enum CloudAndroidApprovalStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  EXPIRED
+  CONSUMED
+}
+
+model CloudAndroidProviderRegistration {
+  id              String   @id @default(cuid())
+  providerKey     String   @unique
+  name            String
+  adapterVersion  String
+  status          String   @default("NOT_CONFIGURED")
+  capabilities    Json     @default("[]")
+  regions         String[] @default([])
+  androidVersions String[] @default([])
+  lastHealthAt    DateTime?
+  lastError       String?
+  metadata        Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  devices         CloudAndroidDevice[]
+
+  @@index([status])
+  @@map("cloud_android_providers")
+}
+
+model CloudAndroidTemplate {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation("cloud_android_template_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  name           String
+  description    String?
+  category       String
+  androidVersion String
+  cpuCores       Int
+  ramMb          Int
+  storageGb      Int
+  region         String
+  locale         String
+  timezone       String
+  networkPolicy  Json
+  securityProfile String
+  installedApplications Json @default("[]")
+  imageId        String?
+  active         Boolean      @default(true)
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  devices        CloudAndroidDevice[]
+
+  @@unique([organizationId, name])
+  @@index([organizationId, category])
+  @@map("cloud_android_templates")
+}
+
+model CloudAndroidImage {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  createdById    String
+  createdBy      User         @relation("cloud_android_image_created_by", fields: [createdById], references: [id], onDelete: Restrict)
+  name           String
+  version        String
+  status         String       @default("CREATING")
+  providerImageRef String?
+  androidVersion String
+  configuration  Json         @default("{}")
+  applications   Json         @default("[]")
+  agentConfiguration Json     @default("{}")
+  automationConfiguration Json @default("{}")
+  sizeBytes      BigInt?
+  checksum       String?
+  securityReport Json         @default("{}")
+  sourceDeviceId String?
+  createdAt      DateTime     @default(now())
+  updatedAt      DateTime     @updatedAt
+
+  devices        CloudAndroidDevice[]
+
+  @@unique([organizationId, name, version])
+  @@index([organizationId, status])
+  @@map("cloud_android_images")
+}
+
+model CloudAndroidDevice {
+  id             String                @id @default(cuid())
+  organizationId String
+  organization   Organization          @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  ownerId        String
+  owner          User                  @relation("cloud_android_device_owner", fields: [ownerId], references: [id], onDelete: Restrict)
+  providerId     String
+  provider       CloudAndroidProviderRegistration @relation(fields: [providerId], references: [id], onDelete: Restrict)
+  providerDeviceRef String?             @unique
+  templateId     String?
+  template       CloudAndroidTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  imageId        String?
+  image          CloudAndroidImage?    @relation(fields: [imageId], references: [id], onDelete: SetNull)
+  name           String
+  androidVersion String
+  lifecycle      CloudAndroidLifecycle @default(CREATING)
+  desiredState   String                @default("STOPPED")
+  cpuCores       Int
+  ramMb          Int
+  storageGb      Int
+  region         String
+  locale         String
+  timezone       String
+  networkPolicy  Json
+  securityProfile String
+  metrics        Json                  @default("{}")
+  runtimeState   Json                  @default("{}")
+  securityStatus String                @default("PENDING")
+  activeControllerType String?
+  activeControllerId String?
+  activeSessionId String?
+  controlLockVersion Int               @default(0)
+  controlLockExpiresAt DateTime?
+  lastObservedAt DateTime?
+  lastHealthAt   DateTime?
+  lastError      String?
+  provisionedAt  DateTime?
+  destroyedAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  grants         CloudAndroidAgentGrant[]
+  sessions       CloudAndroidSession[]
+  actions        CloudAndroidAction[]
+  snapshots      CloudAndroidSnapshot[]
+  usage          CloudAndroidUsageRecord[]
+
+  @@index([organizationId, lifecycle])
+  @@index([providerId, lifecycle])
+  @@index([activeSessionId])
+  @@map("cloud_android_devices")
+}
+
+model CloudAndroidAgentGrant {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  agentId        String
+  agent           Agent              @relation(fields: [agentId], references: [id], onDelete: Cascade)
+  assignedById   String
+  assignedBy     User               @relation("cloud_android_grant_assigned_by", fields: [assignedById], references: [id], onDelete: Restrict)
+  permissions    String[]
+  sensitiveActions String[]          @default([])
+  domainAllowlist String[]           @default([])
+  active         Boolean            @default(true)
+  expiresAt      DateTime?
+  createdAt      DateTime           @default(now())
+  updatedAt      DateTime           @updatedAt
+
+  @@unique([deviceId, agentId])
+  @@index([organizationId, active])
+  @@index([agentId, active])
+  @@map("cloud_android_agent_grants")
+}
+
+model CloudAndroidSession {
+  id             String                    @id @default(cuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  userId         String
+  user           User                      @relation("cloud_android_session_user", fields: [userId], references: [id], onDelete: Restrict)
+  agentId        String?
+  agent           Agent?                    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  apiKeyId       String?
+  apiKey         ApiKey?                   @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  mode           CloudAndroidSessionMode
+  status         CloudAndroidSessionStatus @default(ACTIVE)
+  controllerType String
+  controllerId   String
+  applicationPackage String?
+  permissions    Json
+  result         Json                      @default("{}")
+  startedAt      DateTime                  @default(now())
+  endedAt        DateTime?
+  lastActivityAt DateTime                  @default(now())
+  createdAt      DateTime                  @default(now())
+  updatedAt      DateTime                  @updatedAt
+
+  actions        CloudAndroidAction[]
+  approvals      CloudAndroidApproval[]
+  usage          CloudAndroidUsageRecord[]
+
+  @@index([organizationId, startedAt])
+  @@index([deviceId, status])
+  @@index([agentId, status])
+  @@map("cloud_android_sessions")
+}
+
+model CloudAndroidAction {
+  id             String                    @id @default(cuid())
+  organizationId String
+  organization   Organization              @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice        @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        CloudAndroidSession       @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  userId         String?
+  user           User?                     @relation("cloud_android_action_user", fields: [userId], references: [id], onDelete: SetNull)
+  agentId        String?
+  agent           Agent?                    @relation(fields: [agentId], references: [id], onDelete: SetNull)
+  actionType     String
+  payload        Json
+  sensitivity    String                    @default("UNKNOWN")
+  status         CloudAndroidActionStatus  @default(PREPARING)
+  providerOperationId String?
+  preparedTokenHash String?
+  beforeObservationHash String?
+  afterObservationHash String?
+  result         Json                      @default("{}")
+  errorCode      String?
+  errorMessage   String?
+  requestedAt    DateTime                  @default(now())
+  completedAt    DateTime?
+  createdAt      DateTime                  @default(now())
+
+  approval       CloudAndroidApproval?
+
+  @@index([organizationId, createdAt])
+  @@index([deviceId, createdAt])
+  @@index([sessionId, createdAt])
+  @@index([status])
+  @@map("cloud_android_actions")
+}
+
+model CloudAndroidApproval {
+  id             String                     @id @default(cuid())
+  organizationId String
+  organization   Organization               @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  actionId       String                     @unique
+  action         CloudAndroidAction         @relation(fields: [actionId], references: [id], onDelete: Cascade)
+  sessionId      String
+  session        CloudAndroidSession        @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  status         CloudAndroidApprovalStatus @default(PENDING)
+  sensitivity    String
+  description    String
+  target         Json                       @default("{}")
+  requestedByAgentId String?
+  expiresAt      DateTime
+  decidedById    String?
+  decidedBy      User?                      @relation("cloud_android_approval_decided_by", fields: [decidedById], references: [id], onDelete: SetNull)
+  decisionNote   String?
+  decidedAt      DateTime?
+  consumedAt     DateTime?
+  createdAt      DateTime                   @default(now())
+  updatedAt      DateTime                   @updatedAt
+
+  @@index([organizationId, status, createdAt])
+  @@index([sessionId, status])
+  @@map("cloud_android_approvals")
+}
+
+model CloudAndroidSnapshot {
+  id             String             @id @default(cuid())
+  organizationId String
+  organization   Organization       @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  name           String
+  status         String             @default("CREATING")
+  providerSnapshotRef String?
+  sizeBytes      BigInt?
+  checksum       String?
+  createdByType  String
+  createdById    String
+  metadata       Json               @default("{}")
+  createdAt      DateTime           @default(now())
+  completedAt    DateTime?
+
+  @@index([organizationId, createdAt])
+  @@index([deviceId, createdAt])
+  @@map("cloud_android_snapshots")
+}
+
+model CloudAndroidUsageRecord {
+  id             String       @id @default(cuid())
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  deviceId       String
+  device         CloudAndroidDevice @relation(fields: [deviceId], references: [id], onDelete: Cascade)
+  sessionId      String?
+  session        CloudAndroidSession? @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  apiKeyId       String?
+  apiKey         ApiKey?      @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  metric         String
+  quantity       BigInt
+  unit           String
+  costMicros     BigInt?
+  source         String
+  measuredAt     DateTime     @default(now())
+  createdAt      DateTime     @default(now())
+
+  @@index([organizationId, measuredAt])
+  @@index([deviceId, measuredAt])
+  @@index([sessionId])
+  @@map("cloud_android_usage")
+}
+
+// ─── WINDELS Sports Intelligence (durable historical store) ──────────────
+// Operational hot path uses the org-scoped Redis ledger (`si:*`). These
+// tables exist so large historical datasets can be archived with proper
+// indexes. organizationId is stored without a Prisma relation so we do not
+// mutate the existing Organization model graph.
+
+model SportsMatch {
+  id               String   @id
+  organizationId   String
+  providerId       String
+  providerMatchId  String
+  leagueId         String
+  leagueName       String
+  homeTeamId       String
+  homeTeamName     String
+  awayTeamId       String
+  awayTeamName     String
+  kickoffAt        DateTime
+  status           String
+  dataClass        String
+  payload          Json     @default("{}")
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([organizationId, providerId, providerMatchId])
+  @@index([organizationId, kickoffAt])
+  @@index([leagueId])
+  @@index([status])
+  @@map("sports_matches")
+}
+
+model SportsOdds {
+  id              String   @id
+  organizationId  String
+  matchId         String
+  providerId      String
+  market          String
+  selection       String
+  oddsDecimal     Float
+  observedAt      DateTime
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([matchId])
+  @@index([organizationId, observedAt])
+  @@index([market, selection])
+  @@index([providerId])
+  @@map("sports_odds")
+}
+
+model SportsPrediction {
+  id              String   @id
+  organizationId  String
+  matchId         String
+  market          String
+  selection       String
+  modelVersion    String
+  decision        String
+  result          String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([matchId])
+  @@index([organizationId, createdAt])
+  @@index([modelVersion])
+  @@map("sports_predictions")
+}
+
+model SportsTicket {
+  id              String   @id
+  organizationId  String
+  ticketCode      String
+  status          String
+  modelVersion    String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+  settledAt       DateTime?
+
+  @@unique([organizationId, ticketCode])
+  @@index([organizationId, createdAt])
+  @@index([status])
+  @@map("sports_tickets")
+}
+
+model SportsResult {
+  id              String   @id
+  organizationId  String
+  matchId         String
+  providerId      String
+  verified        Boolean  @default(false)
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([matchId])
+  @@index([organizationId, createdAt])
+  @@map("sports_results")
+}
+
+model SportsJobRun {
+  id              String   @id
+  organizationId  String
+  kind            String
+  status          String
+  executionId     String
+  providerId      String?
+  payload         Json     @default("{}")
+  startedAt       DateTime
+  endedAt         DateTime?
+
+  @@index([organizationId, startedAt])
+  @@index([executionId])
+  @@map("sports_job_runs")
+}
+
+// ─── WINDELS Lottery Intelligence (historical / archive store) ───────────
+model LotteryDraw {
+  id              String   @id
+  organizationId  String
+  lotteryId       String
+  providerId      String
+  providerDrawId  String
+  drawDate        DateTime
+  mainNumbers     Int[]
+  bonusNumbers    Int[]
+  dataClass       String
+  verified        Boolean  @default(false)
+  validationStatus String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, lotteryId, providerId, providerDrawId])
+  @@index([organizationId, drawDate])
+  @@index([lotteryId, drawDate])
+  @@map("lottery_draws")
+}
+
+model LotteryTicket {
+  id              String   @id
+  organizationId  String
+  userId          String
+  lotteryId       String
+  name            String
+  status          String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, createdAt])
+  @@index([lotteryId])
+  @@map("lottery_tickets")
+}
+
+model LotteryBacktest {
+  id              String   @id
+  organizationId  String
+  strategy        String
+  dataClass       String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, createdAt])
+  @@map("lottery_backtests")
+}
+
+// ─── WINDELS Language Learning (archive store; hot path is Redis ll:*) ──
+// organizationId is stored without a Prisma relation so we do not mutate
+// the existing Organization model graph.
+
+model LanguageProfile {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  currentLevel    String
+  levelSource     String
+  status          String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+
+  @@unique([organizationId, userId, languageCode])
+  @@index([organizationId, userId])
+  @@map("language_profiles")
+}
+
+model LanguageAssessment {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  overallLevel    String?
+  status          String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, createdAt])
+  @@map("language_assessments")
+}
+
+model LanguageLessonAttempt {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  lessonId        String
+  status          String
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, languageCode])
+  @@map("language_lesson_attempts")
+}
+
+model LanguageVocabCard {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  vocabId         String
+  nextReviewAt    DateTime
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@unique([organizationId, userId, languageCode, vocabId])
+  @@index([organizationId, userId, nextReviewAt])
+  @@map("language_vocab_cards")
+}
+
+model LanguageWritingAttempt {
+  id              String   @id
+  organizationId  String
+  userId          String
+  languageCode    String
+  originalText    String   @db.Text
+  payload         Json     @default("{}")
+  createdAt       DateTime @default(now())
+
+  @@index([organizationId, userId, createdAt])
+  @@map("language_writing_attempts")
+}

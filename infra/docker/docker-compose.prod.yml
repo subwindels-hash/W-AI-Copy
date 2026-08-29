@@ -1,0 +1,210 @@
+# WINDELS AI OS — standalone single-server production stack
+#
+# Quick start (run from the repository root):
+#   cp .env.server.example .env.server
+#   $EDITOR .env.server
+#   docker compose --env-file .env.server \
+#     -f infra/docker/docker-compose.prod.yml up -d --build
+#
+# This file is intentionally standalone. Do not merge it with the development
+# docker-compose.yml: production uses private database/cache networks, a
+# one-shot migration job, a non-superuser application DB role, and TLS.
+
+name: windels
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-windels_owner}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.server}
+      POSTGRES_DB: ${POSTGRES_DB:-windels}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env.server}
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 10s
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+
+  redis:
+    image: redis:8.0-alpine
+    restart: unless-stopped
+    environment:
+      REDIS_PASSWORD: ${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.server}
+    command: ["redis-server", "--appendonly", "yes", "--appendfsync", "everysec", "--requirepass", "${REDIS_PASSWORD:?Set REDIS_PASSWORD in .env.server}"]
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli -a \"$${REDIS_PASSWORD}\" ping | grep -q PONG"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 5s
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+
+  # Reconciles the non-superuser API login on every deployment (not only when a
+  # Postgres volume is first created), so credential rotation is deterministic.
+  database-role:
+    image: postgres:17-alpine
+    restart: "no"
+    environment:
+      PGHOST: postgres
+      PGPORT: "5432"
+      PGPASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env.server}
+      POSTGRES_USER: ${POSTGRES_USER:-windels_owner}
+      POSTGRES_DB: ${POSTGRES_DB:-windels}
+      POSTGRES_APP_PASSWORD: ${POSTGRES_APP_PASSWORD:?Set POSTGRES_APP_PASSWORD in .env.server}
+    volumes:
+      - ./postgres-init-app.sh:/usr/local/bin/windels-app-role:ro
+    command: ["/usr/local/bin/windels-app-role"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+
+  # Runs all committed migrations and the idempotent bootstrap seed before the
+  # API starts. It connects as the schema owner; the API itself does not.
+  bootstrap:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+      target: migrator
+    image: windels-ai-migrator:${IMAGE_TAG:-local}
+    restart: "no"
+    env_file:
+      - ../../.env.server
+    environment:
+      NODE_ENV: production
+      DATABASE_URL: postgresql://${POSTGRES_USER:-windels_owner}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB:-windels}?schema=public
+      BOOTSTRAP_SUPERADMIN_EMAIL: ${BOOTSTRAP_SUPERADMIN_EMAIL:?Set BOOTSTRAP_SUPERADMIN_EMAIL in .env.server}
+      BOOTSTRAP_SUPERADMIN_PASSWORD: ${BOOTSTRAP_SUPERADMIN_PASSWORD:?Set BOOTSTRAP_SUPERADMIN_PASSWORD in .env.server}
+    depends_on:
+      database-role:
+        condition: service_completed_successfully
+    networks: [backend]
+    security_opt: [no-new-privileges:true]
+
+  api:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.api
+      target: production
+    image: windels-ai-api:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    env_file:
+      - ../../.env.server
+    environment:
+      NODE_ENV: production
+      API_HOST: 0.0.0.0
+      API_PORT: "4000"
+      API_CORS_ORIGIN: https://${DOMAIN:?Set DOMAIN in .env.server}
+      WINDELS_PUBLIC_API_ORIGIN: https://${DOMAIN}
+      DATABASE_URL: postgresql://windels_app:${POSTGRES_APP_PASSWORD}@postgres:5432/${POSTGRES_DB:-windels}?schema=public
+      REDIS_URL: redis://:${REDIS_PASSWORD}@redis:6379/0
+      JWT_SECRET: ${JWT_SECRET:?Set JWT_SECRET in .env.server}
+      WEBHOOK_SECRET: ${WEBHOOK_SECRET:?Set WEBHOOK_SECRET in .env.server}
+      WINDELS_ENCRYPTION_KEY: ${WINDELS_ENCRYPTION_KEY:?Set WINDELS_ENCRYPTION_KEY in .env.server}
+      VAPID_PUBLIC_KEY: ${VAPID_PUBLIC_KEY:?Set VAPID_PUBLIC_KEY in .env.server}
+      VAPID_PRIVATE_KEY: ${VAPID_PRIVATE_KEY:?Set VAPID_PRIVATE_KEY in .env.server}
+      VAPID_SUBJECT: ${VAPID_SUBJECT:?Set VAPID_SUBJECT in .env.server}
+      SESSION_COOKIE_SECURE: "true"
+      WINDELS_DEMO_DATA: "false"
+      WINDELS_ALLOW_MOCK_DB_FALLBACK: "false"
+      MODULE_PACKAGE_STORAGE_PATH: /data/module-packages
+      GIT_COMMIT: ${GIT_COMMIT:-}
+    command: ["node", "/app/apps/api/dist/index.js"]
+    working_dir: /data
+    volumes:
+      - runtime-data:/data
+    tmpfs:
+      - /tmp:size=256m,mode=1777
+    depends_on:
+      bootstrap:
+        condition: service_completed_successfully
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:4000/api/v1/health"]
+      interval: 20s
+      timeout: 5s
+      retries: 6
+      start_period: 60s
+    # backend reaches Postgres/Redis; edge provides outbound access to configured
+    # AI/integration providers without publishing the API container itself.
+    networks: [backend, edge]
+    security_opt: [no-new-privileges:true]
+    cap_drop: [ALL]
+
+  web:
+    build:
+      context: ../..
+      dockerfile: infra/docker/Dockerfile.web
+    image: windels-ai-web:${IMAGE_TAG:-local}
+    restart: unless-stopped
+    environment:
+      API_UPSTREAM: http://api:4000
+    depends_on:
+      api:
+        condition: service_healthy
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.windels.rule=Host(`${DOMAIN}`)
+      - traefik.http.routers.windels.entrypoints=websecure
+      - traefik.http.routers.windels.tls=true
+      - traefik.http.routers.windels.tls.certresolver=letsencrypt
+      - traefik.http.services.windels.loadbalancer.server.port=80
+    # The web proxy reaches the API over edge, but has no direct database/cache
+    # network access.
+    networks: [edge]
+    security_opt: [no-new-privileges:true]
+
+  traefik:
+    image: traefik:v3.1
+    restart: unless-stopped
+    command:
+      - --api.dashboard=false
+      - --ping=true
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --certificatesresolvers.letsencrypt.acme.email=${ACME_EMAIL:?Set ACME_EMAIL in .env.server}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-acme:/letsencrypt
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck", "--ping"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [edge]
+    security_opt: [no-new-privileges:true]
+
+volumes:
+  postgres-data:
+  redis-data:
+  runtime-data:
+  traefik-acme:
+
+networks:
+  backend:
+    name: windels-backend
+    internal: true
+  edge:
+    name: windels-net
