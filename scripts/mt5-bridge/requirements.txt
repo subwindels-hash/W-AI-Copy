@@ -1,0 +1,24 @@
+# WINDELS AI OS — MT5 Python bridge dependencies.
+#
+# Install on the Windows / Wine host that runs the MT5 terminal:
+#
+#   python -m venv .venv && .venv\\Scripts\\activate
+#   pip install -r requirements.txt
+#
+# Then launch:
+#   python bridge.py --rpc 5555 --pub 5556        # ZeroMQ mode (recommended, lowest latency)
+#   python bridge.py --http 8765 --token <secret> # HTTP/SSE mode (easier firewall/container deploys)
+#
+# NOTE: The `MetaTrader5` pip package is only officially supported on Microsoft
+# Windows. On Linux run the MT5 terminal under Wine and point WINDELS_MT5_TERMINAL_PATH
+# at terminal64.exe. ZeroMQ transport is the recommended default; HTTP/SSE is
+# provided as an alternative when native zmq binaries are hard to compile.
+
+# Required in all transports.
+# (stdlib only for HTTP server)
+
+# Optional — ZeroMQ transport:
+pyzmq>=25.0.0 ; platform_system != "Unknown"
+
+# Required for live MT5 access (Windows or Linux+Wine):
+MetaTrader5>=5.0.45 ; platform_system == "Windows"

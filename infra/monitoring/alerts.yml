@@ -1,0 +1,42 @@
+groups:
+  - name: windels-api
+    rules:
+      - alert: WindelsAPIDown
+        expr: up{job="windels-api"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "WINDELS API is down"
+          description: "API {{ $labels.instance }} has been unreachable for >1 minute."
+
+      - alert: WindelsAPIHighErrorRate
+        expr: sum(rate(http_requests_total{status=~"5.."}[5m])) / sum(rate(http_requests_total[5m])) > 0.05
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "API error rate >5%"
+          description: "{{ $value | humanizePercentage }} of requests are 5xx over 5m."
+
+      - alert: WindelsAPISlow
+        expr: histogram_quantile(0.95, sum(rate(http_request_duration_seconds_bucket[5m])) by (le, route)) > 1
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "p95 latency >1s on {{ $labels.route }}"
+
+      - alert: WindelsDatabaseDown
+        expr: windels_db_up == 0
+        for: 1m
+        labels: { severity: critical }
+
+      - alert: WindelsRedisDown
+        expr: windels_redis_up == 0
+        for: 1m
+        labels: { severity: critical }
+
+      - alert: WindelsHighMemory
+        expr: nodejs_heap_used_bytes / nodejs_heap_total_bytes > 0.85
+        for: 5m
+        labels: { severity: warning }
+        annotations:
+          summary: "Node heap >85% utilization"

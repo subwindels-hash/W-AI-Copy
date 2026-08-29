@@ -1,0 +1,272 @@
+/**
+ * WINDELS AI OS — Broker Integration Layer tests.
+ *
+ * Pins the real, honest, governance-enforcing behavior:
+ *   - credentials are stored encrypted and never returned
+ *   - trading modes gate execution (analysis_only never executes; assisted
+ *     requires approval; semi/fully autonomous execute within risk rules)
+ *   - kill switch hard-halts all new execution
+ *   - the AI never bypasses risk controls
+ *   - strategy management + backtest produce real measured results
+ *   - org scoping is enforced
+ */
+import { describe, it, expect, beforeEach, vi } from "vitest";
+import { FakeKv } from "../mediaFactory/publishing/fakeKv.js";
+process.env.WINDELS_ENCRYPTION_KEY = "0".repeat(64);
+
+const kv = new FakeKv();
+vi.mock("../db/redis.js", () => ({ redis: kv, redisCmd: kv, redisSub: kv }));
+
+const { BrokerIntegrationService, CONNECTOR_CATALOG } = await import("./brokerIntegration.service.js");
+const { encryptString } = await import("../security/encryption.js");
+
+const ORG = "org-bri";
+const OTHER = "org-other";
+const USER = "user-1";
+
+beforeEach(() => {
+  kv.strings.clear(); kv.hashes.clear(); kv.zsets.clear(); kv.lists.clear(); kv.sets.clear();
+});
+
+const accInput = { name: "Main MT5", broker: "mt5" as const, login: "12345", server: "ICMarkets", password: "supersecret", mode: "assisted" as const, currency: "USD", leverage: 100 };
+
+describe("broker accounts", () => {
+  it("connector catalog lists all broker types (MT5 + crypto exchanges + traditional brokers)", () => {
+    expect(CONNECTOR_CATALOG.length).toBeGreaterThanOrEqual(20);
+    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("mt5");
+    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("binance");
+    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("coinbase");
+    expect(CONNECTOR_CATALOG.map((c) => c.broker)).toContain("interactive_brokers");
+  });
+
+  it("stores credentials encrypted and never returns them", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, accInput);
+    expect(a.status).toBe("disconnected"); // honest — created but not yet connected (no bridge in sandbox)
+    expect((a as any).password).toBeUndefined();
+    expect(a.login).toBe("12…45");
+    expect(a.loginMasked).toBe("12…45");
+    const stored = await kv.get(`bri:${ORG}:creds:${a.id}`);
+    expect(stored).toBeTruthy();
+    expect(stored).not.toContain("supersecret");
+    expect(stored).not.toContain("12345");
+    const loaded = await BrokerIntegrationService.loadCredentials(ORG, a.id);
+    expect(loaded).toMatchObject({ login: "12345", password: "supersecret", server: "ICMarkets" });
+    const v = await BrokerIntegrationService.verifyCredentials(ORG, a.id);
+    expect(v).toMatchObject({ valid: true, loginMasked: "12…45", credentialVersion: 1 });
+  });
+
+  it("stores every crypto credential field in one encrypted envelope", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, {
+      name: "OKX", broker: "okx", login: "api-key-visible-only-to-connector", server: "okx",
+      password: "api-secret", passphrase: "exchange-passphrase", subAccount: "desk-a", walletKey: "wallet-private-key",
+      mode: "analysis_only", environment: "sandbox",
+    });
+    const raw = await kv.get(`bri:${ORG}:creds:${a.id}`);
+    for (const secret of ["api-key-visible-only-to-connector", "api-secret", "exchange-passphrase", "desk-a", "wallet-private-key"]) {
+      expect(raw).not.toContain(secret);
+    }
+    const loaded = await BrokerIntegrationService.loadCredentials(ORG, a.id);
+    expect(loaded.login).toBe("api-key-visible-only-to-connector");
+    expect(loaded.password).toBe("api-secret");
+    expect(loaded.extra).toMatchObject({ passphrase: "exchange-passphrase", subAccount: "desk-a", walletKey: "wallet-private-key" });
+  });
+
+  it("adopts legacy password-only envelopes and removes plaintext login/MetaApi token", async () => {
+    const id = "legacy-account";
+    const timestamp = new Date().toISOString();
+    await kv.set(`bri:${ORG}:acct:${id}`, JSON.stringify({
+      id, organizationId: ORG, name: "Legacy", broker: "mt5", brokerLabel: "MetaTrader 5",
+      login: "legacy-login", server: "legacy-server", mode: "analysis_only", status: "disconnected",
+      connectorConfig: { metaapiToken: "legacy-metaapi-token", readOnly: true }, currency: "USD", leverage: 100,
+      account: { balance: 0, equity: 0, margin: 0, freeMargin: 0, profit: 0, dailyPnl: 0 },
+      createdAt: timestamp, updatedAt: timestamp,
+    }));
+    await kv.set(`bri:${ORG}:creds:${id}`, JSON.stringify(encryptString("legacy-password")));
+    await kv.sadd(`bri:${ORG}:accounts`, id);
+    const migrated = await BrokerIntegrationService.getAccount(ORG, id);
+    expect(migrated?.login).toBe("lega…ogin");
+    expect(migrated?.connectorConfig).toEqual({ readOnly: true });
+    const accountRaw = await kv.get(`bri:${ORG}:acct:${id}`);
+    const credentialRaw = await kv.get(`bri:${ORG}:creds:${id}`);
+    expect(accountRaw).not.toContain("legacy-login");
+    expect(accountRaw).not.toContain("legacy-metaapi-token");
+    expect(credentialRaw).not.toContain("legacy-password");
+    expect(credentialRaw).not.toContain("legacy-login");
+    const loaded = await BrokerIntegrationService.loadCredentials(ORG, id);
+    expect(loaded).toMatchObject({ login: "legacy-login", password: "legacy-password" });
+    expect(loaded.extra).toMatchObject({ metaapiToken: "legacy-metaapi-token" });
+  });
+
+  it("rotates and revokes credentials without exposing replacements", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, accInput);
+    const rotated = await BrokerIntegrationService.rotateCredentials(ORG, a.id, { password: "replacement-secret", passphrase: "new-passphrase" }, "admin-2");
+    expect(rotated.credentialVersion).toBe(2);
+    const raw = await kv.get(`bri:${ORG}:creds:${a.id}`);
+    expect(raw).not.toContain("replacement-secret");
+    expect(raw).not.toContain("new-passphrase");
+    expect((await BrokerIntegrationService.loadCredentials(ORG, a.id)).password).toBe("replacement-secret");
+    const revoked = await BrokerIntegrationService.revokeCredentials(ORG, a.id, "admin-2");
+    expect(revoked).toMatchObject({ credentialsConfigured: false, status: "requires_config" });
+    expect(await kv.get(`bri:${ORG}:creds:${a.id}`)).toBeNull();
+    expect((await BrokerIntegrationService.verifyCredentials(ORG, a.id)).valid).toBe(false);
+    const reconnected = await BrokerIntegrationService.rotateCredentials(ORG, a.id, {
+      login: "67890", server: "NewServer", password: "new-full-secret",
+    }, "admin-3");
+    expect(reconnected).toMatchObject({ credentialsConfigured: true, credentialVersion: 3, login: "67…90", server: "NewServer" });
+    expect((await BrokerIntegrationService.loadCredentials(ORG, a.id)).login).toBe("67890");
+  });
+
+  it("is org-scoped", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, accInput);
+    await expect(BrokerIntegrationService.getAccount(OTHER, a.id)).resolves.toBeNull();
+  });
+});
+
+describe("trade execution supervisor (modes + risk)", () => {
+  it("analysis_only never executes — blocks with a clear decision", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "analysis_only" });
+    const ex = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "EURUSD", side: "long", volume: 0.1 });
+    expect(ex.status).toBe("blocked");
+    expect(ex.decision).toContain("analysis_only");
+  });
+
+  it("assisted mode → pending_approval, then approve/reject", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "assisted" });
+    const ex = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "EURUSD", side: "long", volume: 0.1 });
+    expect(ex.status).toBe("pending_approval");
+    const approved = await BrokerIntegrationService.approveExecution(ORG, ex.id, USER);
+    // After approval, an unconnected account follows the paper/simulation path → submitted.
+    expect(["approved", "submitted"]).toContain(approved.status);
+    const rejected = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "GBPUSD", side: "short", volume: 0.2 });
+    const rej = await BrokerIntegrationService.rejectExecution(ORG, rejected.id, USER);
+    expect(rej.status).toBe("blocked");
+  });
+
+  it("semi_autonomous executes within rules but blocks on kill switch", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "semi_autonomous" });
+    const ex = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "EURUSD", side: "long", volume: 0.1 });
+    expect(["approved", "submitted"]).toContain(ex.status);
+    // Kill switch hard-halts.
+    await BrokerIntegrationService.updateRiskControls(ORG, { killSwitch: true });
+    const blocked = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "USDJPY", side: "long", volume: 0.1 });
+    expect(blocked.status).toBe("blocked");
+    expect(blocked.riskChecks.some((c) => c.rule === "KILL_SWITCH" && !c.pass)).toBe(true);
+  });
+
+  it("blocks positions exceeding the max position size limit", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "semi_autonomous" });
+    await BrokerIntegrationService.updateRiskControls(ORG, { maxPositionSizeUsd: 1000 });
+    const ex = await BrokerIntegrationService.submitSignal(ORG, USER, { accountId: a.id, symbol: "EURUSD", side: "long", volume: 100, stopLoss: 100 });
+    expect(ex.status).toBe("blocked");
+    expect(ex.riskChecks.some((c) => c.rule === "POSITION_SIZE_LIMIT" && !c.pass)).toBe(true);
+  });
+});
+
+describe("strategies", () => {
+  it("creates, toggles, backtests (real measured) and removes", async () => {
+    const s = await BrokerIntegrationService.createStrategy(ORG, USER, { name: "Trend v1", type: "rule", logic: { maxTrades: 30, winRate: 0.5 } });
+    expect(s.currentVersion).toBe(1);
+    const bt = await BrokerIntegrationService.backtestStrategy(ORG, s.id);
+    expect(bt.backtest).toBeTruthy();
+    expect(bt.backtest!.trades).toBeGreaterThan(0);
+    expect(bt.currentVersion).toBe(2); // version bumped
+    const off = await BrokerIntegrationService.toggleStrategy(ORG, s.id, false);
+    expect(off.enabled).toBe(false);
+    await BrokerIntegrationService.removeStrategy(ORG, s.id);
+    expect(await BrokerIntegrationService.listStrategies(ORG)).toEqual([]);
+  });
+});
+
+describe("cross-tenant broker isolation", () => {
+  it("Organization A cannot read, modify, revoke, or see Organization B trading data or credentials", async () => {
+    const ORG_A = "org-alpha-isolation";
+    const ORG_B = "org-beta-isolation";
+    const USER_A = "user-a";
+
+    // 1. Create account in Org B
+    const acctB = await BrokerIntegrationService.createAccount(ORG_B, "user-b", {
+      name: "Org B Secret MT5",
+      broker: "mt5",
+      login: "999888777",
+      server: "SecretBrokerServer",
+      password: "TopSecretPassword123",
+      mode: "semi_autonomous",
+    });
+
+    // 2. Org A cannot read Org B's account
+    await expect(BrokerIntegrationService.getAccount(ORG_A, acctB.id)).resolves.toBeNull();
+    await expect(BrokerIntegrationService.loadCredentials(ORG_A, acctB.id)).rejects.toThrow();
+
+    // 3. Org A cannot see Org B's account in list
+    const listA = await BrokerIntegrationService.listAccounts(ORG_A);
+    expect(listA.some((a) => a.id === acctB.id)).toBe(false);
+
+    // 4. Org A cannot modify Org B's account
+    await expect(
+      BrokerIntegrationService.rotateCredentials(
+        ORG_A,
+        acctB.id,
+        { password: "HackedPassword" },
+        USER_A,
+      ),
+    ).rejects.toThrow();
+
+    // 5. Org A cannot revoke Org B's credentials
+    await expect(BrokerIntegrationService.revokeCredentials(ORG_A, acctB.id, USER_A)).rejects.toThrow();
+
+    // 6. Org A cannot see Org B's positions, orders, or executions
+    const positionsA = await BrokerIntegrationService.listPositions(ORG_A, acctB.id);
+    expect(positionsA).toEqual([]);
+
+    const ordersA = await BrokerIntegrationService.listOrders(ORG_A, acctB.id);
+    expect(ordersA).toEqual([]);
+
+    const execsA = await BrokerIntegrationService.listExecutions(ORG_A);
+    expect(execsA.some((e) => e.accountId === acctB.id)).toBe(false);
+  });
+});
+
+describe("risk controls + command center", () => {
+  it("command center returns aggregate account/risk state", async () => {
+    await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "assisted" });
+    const cc = await BrokerIntegrationService.commandCenter(ORG);
+    expect(cc.accounts.length).toBe(1);
+    expect(cc.riskControls.killSwitch).toBe(false);
+    expect(cc.totalBalance).toBe(0);
+    expect(Array.isArray(cc.aiRecommendations)).toBe(true);
+  });
+});
+
+describe("AI broker trading agents (chat-routable workforce)", () => {
+  it("seeds and lists the specialized agents", async () => {
+    const agents = await BrokerIntegrationService.listAgents(ORG);
+    const keys = agents.map((a) => a.key);
+    expect(keys).toContain("trade-execution-supervisor");
+    expect(keys).toContain("strategy-optimizer");
+    expect(keys).toContain("portfolio-risk");
+    expect(agents.every((a) => a.routable === true)).toBe(true);
+  });
+
+  it("supervisor agent validates a signal and records the decision", async () => {
+    const a = await BrokerIntegrationService.createAccount(ORG, USER, { ...accInput, mode: "semi_autonomous" });
+    const res = await BrokerIntegrationService.runAgent(ORG, "trade-execution-supervisor", { accountId: a.id, symbol: "EURUSD", side: "long", volume: 0.1 });
+    expect(["approved", "submitted"]).toContain(res.verdict);
+    expect(res.agent).toContain("Supervisor");
+    const agent = await BrokerIntegrationService.getAgent(ORG, "trade-execution-supervisor");
+    expect(agent.decisions24h).toBeGreaterThanOrEqual(1);
+  });
+
+  it("strategy optimizer agent backtests and recommends the best strategy", async () => {
+    await BrokerIntegrationService.createStrategy(ORG, USER, { name: "A", type: "rule", logic: { maxTrades: 20, winRate: 0.6 } });
+    await BrokerIntegrationService.createStrategy(ORG, USER, { name: "B", type: "rule", logic: { maxTrades: 10, winRate: 0.4 } });
+    const res = await BrokerIntegrationService.runAgent(ORG, "strategy-optimizer");
+    expect(res.verdict).toContain("recommend");
+    expect(res.data.length).toBe(2);
+  });
+
+  it("portfolio-risk agent reports concentration breaches", async () => {
+    const res = await BrokerIntegrationService.runAgent(ORG, "portfolio-risk");
+    expect(res.agent).toContain("Risk");
+    expect(res.data).toHaveProperty("diversificationScore");
+  });
+});

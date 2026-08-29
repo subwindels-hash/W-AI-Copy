@@ -1,0 +1,138 @@
+// ── Session 3 additions: Conversations, Messages, Attachments, Prompt Templates
+
+model Conversation {
+  id             String        @id @default(cuid())
+  organizationId String
+  organization   Organization  @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  workspaceId    String?
+  workspace      Workspace?    @relation(fields: [workspaceId], references: [id], onDelete: SetNull)
+  title          String
+  summary        String?
+  createdById    String
+  createdBy      User          @relation(fields: [createdById], references: [id])
+  pinned         Boolean       @default(false)
+  modelId        String?       // chosen AI model (e.g. "gpt-4o", "claude-opus")
+  metadata       Json          @default("{}")
+  lastMessageAt  DateTime      @default(now())
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+  deletedAt      DateTime?
+
+  messages       Message[]
+  participants   ConversationParticipant[]
+  attachments    MessageAttachment[]
+
+  @@index([organizationId, lastMessageAt])
+  @@index([workspaceId])
+  @@index([createdById])
+}
+
+enum MessageRole {
+  USER
+  ASSISTANT
+  SYSTEM
+  TOOL
+}
+
+enum MessageStatus {
+  PENDING
+  STREAMING
+  COMPLETED
+  FAILED
+  CANCELLED
+}
+
+model Message {
+  id             String        @id @default(cuid())
+  conversationId String
+  conversation   Conversation  @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  role           MessageRole
+  content        String        @default("")  // text content (append during streaming)
+  agentId        String?       // if sent by an AI Employee
+  agent          Agent?        @relation(fields: [agentId], references: [id])
+  userId         String?       // if sent by a user
+  user           User?         @relation(fields: [userId], references: [id])
+  parentId       String?       // for threading
+  parent         Message?      @relation("message_thread", fields: [parentId], references: [id], onDelete: SetNull)
+  replies        Message[]     @relation("message_thread")
+  modelId        String?
+  tokensIn       Int?
+  tokensOut      Int?
+  costMicros     Int?          // cost in millionths of a dollar
+  durationMs     Int?
+  status         MessageStatus @default(PENDING)
+  error          String?
+  citations      Json          @default("[]")
+  metadata       Json          @default("{}")
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  attachments    MessageAttachment[]
+
+  @@index([conversationId, createdAt])
+  @@index([agentId])
+  @@index([userId])
+}
+
+model ConversationParticipant {
+  id              String       @id @default(cuid())
+  conversationId  String
+  conversation    Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  userId          String?
+  user            User?        @relation(fields: [userId], references: [id])
+  agentId         String?
+  agent           Agent?       @relation(fields: [agentId], references: [id])
+  joinedAt        DateTime     @default(now())
+ lastReadAt      DateTime?
+
+  @@unique([conversationId, userId, agentId])
+  @@index([conversationId])
+}
+
+model MessageAttachment {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  messageId       String?
+  message         Message?     @relation(fields: [messageId], references: [id], onDelete: SetNull)
+  conversationId  String?
+  conversation    Conversation? @relation(fields: [conversationId], references: [id], onDelete: SetNull)
+  uploaderId      String
+  uploader        User         @relation(fields: [uploaderId], references: [id])
+  filename        String
+  mimeType        String
+  sizeBytes       Int
+  storageKey      String       // path/key in storage (local fs in dev, S3 in prod)
+  checksum        String?
+  extractedText   String?      // OCR / parsed text for RAG
+  createdAt       DateTime     @default(now())
+
+  @@index([messageId])
+  @@index([conversationId])
+  @@index([organizationId])
+}
+
+model PromptTemplate {
+  id              String       @id @default(cuid())
+  organizationId  String
+  organization    Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  title           String
+  description     String?
+  content         String       // the prompt template (supports {{variable}} interpolation)
+  category        String       @default("general")  // general | coding | writing | analysis | custom
+  icon            String?
+  createdById     String
+  createdBy       User         @relation(fields: [createdById], references: [id])
+  isBuiltIn       Boolean      @default(false)
+  usageCount      Int          @default(0)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
+  @@index([organizationId, category])
+}
+
+// ── relation back-references ──────────────────────────────────
+// We need to add the reverse relations to existing models.
+// Because Prisma disallows duplicate relations, we add these fields to the existing models
+// (User, Organization, Workspace, Agent) below — but to avoid rewriting the entire file
+// I'll append them via a second migration. Easiest: extend existing models here.
