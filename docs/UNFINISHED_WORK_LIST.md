@@ -128,33 +128,34 @@ rather than noise — which is most of the work for Finding 2 item 7.
 ever imports a scaffold, if any security guard is removed, or if one of the
 three kept files is moved.
 
-### Still open — the 13 orphans outside `_scaffolds/`
+### Orphans outside `_scaffolds/` — ✅ resolved down to 2
 
-These are *not* generated scaffolds and each wants its own decision:
+The 13 were triaged individually rather than swept. Five were route files that
+merely needed mounting (item 10). Six were **superseded duplicates** — each had
+a live replacement already carrying the traffic — and were deleted:
 
-```
-src/architecture/notes.service.ts        src/services/activity.service.ts
-src/canvasCollab/canvasCollab.service.ts src/services/publicApi.service.ts
-src/enterprise/services/microservice.helper.ts  src/services/user.service.ts
-src/http/middleware/tenantContext.ts     src/utils/notes.ts
-src/http/routes/audit.ts                 src/http/routes/notifications.ts
-src/http/routes/permissions.ts           src/http/routes/voiceFoundry.ts
-src/http/routes/voiceStudio.ts
-```
+| Deleted | Superseded by |
+|---|---|
+| `canvasCollab/canvasCollab.service.ts` | a 2-line `export *` alias; every caller already imports `collaboration/canvasCollab.service.ts` directly |
+| `architecture/notes.service.ts` | `routes/architecture.ts` uses `tenantStore` directly (**35** modules use that pattern) |
+| `utils/notes.ts` | same — it advertised itself as "replaces duplicate notes implementations" but nothing ever adopted it |
+| `services/activity.service.ts` | `routes/profile.ts` calls `prisma` directly |
+| `services/user.service.ts` | same |
+| `services/publicApi.service.ts` | the real key-authenticated gateway at `/api/rest/v1` |
 
-⚠️ **Five were route files never mounted in `server.ts`** — ✅ **fixed 2026-08-30,
-see item 10.** They are now mounted and no longer orphans. Checking them
-mechanically turned up **two more** (`infrastructure`, `cloudAndroidPublic`)
-that the orphan scan could not see, because both are imported from somewhere and
-so never registered as unreachable. The remaining entries in the list above are
-genuine dead code awaiting a delete/revive decision.
+Git history preserves all six. **0 dangling references** after removal, and the
+orphan count fell 270 → 264.
 
-> **Note on the stale baseline.** The `tsconfig.orphans.json` committed at
-> `1a066ad` did not match what `find-orphans.mjs` actually produced — those 13
-> were already orphans but were absent from the file. Regenerate it rather than
-> trusting it.
+**`tsconfig.orphans.json` is now 6 entries** (`node_modules`, `dist`, `tests`,
+the `src/_scaffolds/**` glob, and the 2 files below) — down from **267**. The
+build gate no longer hides anything except one clearly-labelled quarantine.
 
----
+### The 2 that remain — genuine decisions, deliberately not made here
+
+| File | Why it is still here |
+|---|---|
+| `http/middleware/tenantContext.ts` (432 lines) | **Not dead code — an unadopted architecture.** It implements Postgres **row-level security**: `setTenantContext()` issues `set_config('app.current_organization_id', …)` so the *database* enforces isolation. The app instead scopes tenants in application code via `orgOr403` (**54 route files**). Enabling this needs a live Postgres with RLS policies actually installed, so it is **blocked on Finding 3** — and it is exactly the kind of change that must not be switched on untested, since a misconfigured RLS session either leaks across tenants or locks every query out. Note the isolation bugs fixed this session (S209 tradingIntel, S165/S179 before it) are the class of defect this middleware exists to prevent structurally. |
+| `enterprise/services/microservice.helper.ts` (57 lines) | `registerOnce()` / `createServiceConfig()` for Node microservices registering with a discovery service. **No microservice exists** — it is the only file in `enterprise/services/`. Delete it, or keep it as the contract for a service that has not been built. Harmless either way; it fabricates nothing. |
 
 ## Finding 2 — genuine in-product debt (small, specific, actionable)
 
