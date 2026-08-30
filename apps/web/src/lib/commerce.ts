@@ -5,6 +5,15 @@ export async function listProducts(params?: Record<string,string|number>) {
   return api<{ products: CommerceProduct[]; total: number }>(`/commerce/products${q?`?${q}`:""}`);
 }
 export async function getProduct(id:string){ return api<CommerceProduct>(`/commerce/products/${encodeURIComponent(id)}`); }
+/**
+ * Create or replace a catalog product.
+ *
+ * This is the only way a price enters the commerce module. Pricing is
+ * fail-closed: adding an uncatalogued product to a cart, or checking out with
+ * one, returns 400 rather than billing an invented amount.
+ */
+export async function upsertProduct(product: CommerceProduct){ return api<CommerceProduct>(`/commerce/products/${encodeURIComponent(product.id)}`,{method:"PUT", json: product}); }
+export async function deleteProduct(id:string){ return api<{deleted:boolean}>(`/commerce/products/${encodeURIComponent(id)}`,{method:"DELETE"}); }
 export async function getCart(){ return api<CommerceCart>(`/commerce/cart`); }
 export async function addToCart(body:{productId:string; quantity:number; variantId?:string}){ return api<CommerceCart>(`/commerce/cart/items`,{method:"POST", json: body}); }
 export async function updateCartItem(productId:string, quantity:number){ return api<CommerceCart>(`/commerce/cart/items/${encodeURIComponent(productId)}`,{method:"PATCH", json:{ quantity }}); }

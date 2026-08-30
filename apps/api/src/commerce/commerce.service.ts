@@ -21,9 +21,35 @@ export interface CustomerOrder {
 export interface ProductCatalogItem { id: string; name: string; description?: string; price: number; currency: string; stockQuantity: number; images?: string[]; category?: string; attributes?: Record<string, unknown>; isActive: boolean; }
 
 const CART_TTL_HOURS = 72;
-const PLACEHOLDER_UNIT_PRICE = 100; // honest placeholder when product not in catalog
+
+/**
+ * Pricing is fail-closed.
+ *
+ * This module previously fell back to `PLACEHOLDER_UNIT_PRICE = 100` whenever a
+ * product was absent from the catalog. Because nothing in the repository ever
+ * writes `commerce:product:*`, `getProduct()` always returned null — so *every*
+ * cart subtotal and *every* order total was the invented 100/unit, presented to
+ * the caller as a real price on a money path.
+ *
+ * An unknown price is now a hard error. A checkout that cannot be priced from
+ * the catalog must fail rather than bill a number nobody set.
+ */
+function priceOf(prod: ProductCatalogItem | null, productId: string): number {
+  if (!prod) {
+    throw AppError.badRequest(
+      `Product ${productId} is not in the catalog and cannot be priced. ` +
+        `Populate the product catalog before adding it to a cart or ordering it.`,
+    );
+  }
+  if (typeof prod.price !== "number" || !Number.isFinite(prod.price) || prod.price < 0) {
+    throw AppError.badRequest(`Product ${productId} has no valid catalog price.`);
+  }
+  return prod.price;
+}
 
 function cartKey(userId: string, orgId: string) { return `commerce:cart:${orgId}:${userId}`; }
+function productKey(orgId: string, id: string) { return `commerce:product:${orgId}:${id}`; }
+function productIdxKey(orgId: string) { return `commerce:product:idx:${orgId}`; }
 function orderItemKey(orgId: string, id: string) { return `commerce:order:i:${orgId}:${id}`; }
 function orderIdxKey(orgId: string) { return `commerce:order:idx:${orgId}`; }
 function orderLegacyKey(id: string) { return `commerce:order:${id}`; }
@@ -32,27 +58,63 @@ async function computeSubtotal(items: CartItem[], orgId: string): Promise<number
   let sum = 0;
   for (const it of items) {
     const prod = await (commerceService as any).getProduct(orgId, it.productId).catch(()=> null);
-    const unit = prod?.price ?? PLACEHOLDER_UNIT_PRICE;
-    sum += unit * it.quantity;
+    sum += priceOf(prod, it.productId) * it.quantity;
   }
   return sum;
 }
 
 export const commerceService = {
+  /**
+   * Read the org's product catalog.
+   *
+   * Previously this always returned an empty list and then *cached* that empty
+   * list for 300s, so the catalog could never be non-empty — which is what made
+   * the 100/unit fallback fire on every single order. It now reads the real
+   * `commerce:product:idx:<org>` index.
+   */
   async getProducts(organizationId: string, options?: { category?: string; search?: string; inStock?: boolean; limit?: number; offset?: number; }): Promise<{ products: ProductCatalogItem[]; total: number }> {
-    const cacheKey = `commerce:products:${organizationId}:${JSON.stringify(options||{})}`;
-    const cached = await (redis as any).get(cacheKey);
-    if (cached) return JSON.parse(cached);
-    const products: ProductCatalogItem[] = [];
-    const result = { products, total: 0 };
-    await (redis as any).set(cacheKey, JSON.stringify(result), "EX", 300);
-    return result;
+    let ids: string[] = [];
+    try { ids = (await (redis as any).smembers(productIdxKey(organizationId))) ?? []; } catch { ids = []; }
+    const all: ProductCatalogItem[] = [];
+    for (const id of ids) {
+      const raw = await (redis as any).get(productKey(organizationId, id));
+      if (!raw) continue;
+      try { all.push(JSON.parse(raw)); } catch { /* skip corrupt record */ }
+    }
+    let filtered = all;
+    if (options?.category) filtered = filtered.filter((p) => p.category === options.category);
+    if (options?.inStock) filtered = filtered.filter((p) => p.stockQuantity > 0);
+    if (options?.search) {
+      const q = options.search.toLowerCase();
+      filtered = filtered.filter((p) => p.name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q));
+    }
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    const total = filtered.length;
+    const offset = options?.offset ?? 0;
+    const limit = options?.limit ?? 20;
+    return { products: filtered.slice(offset, offset + limit), total };
   },
   async getProduct(organizationId: string, productId: string): Promise<ProductCatalogItem|null> {
-    const cacheKey = `commerce:product:${organizationId}:${productId}`;
-    const cached = await (redis as any).get(cacheKey);
-    if (cached) return JSON.parse(cached);
-    return null;
+    const raw = await (redis as any).get(productKey(organizationId, productId));
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  },
+  /** Create or replace a catalog product. This is the only way a price enters the system. */
+  async upsertProduct(organizationId: string, product: ProductCatalogItem): Promise<ProductCatalogItem> {
+    if (typeof product.price !== "number" || !Number.isFinite(product.price) || product.price < 0) {
+      throw AppError.badRequest("Product price must be a finite, non-negative number.");
+    }
+    await (redis as any).set(productKey(organizationId, product.id), JSON.stringify(product));
+    await (redis as any).sadd(productIdxKey(organizationId), product.id);
+    logger.info("Commerce product upserted", { organizationId, productId: product.id });
+    return product;
+  },
+  /** Remove a product from the catalog. Existing orders keep the price they were billed. */
+  async deleteProduct(organizationId: string, productId: string): Promise<boolean> {
+    const existed = await (redis as any).get(productKey(organizationId, productId));
+    await (redis as any).del(productKey(organizationId, productId));
+    try { await (redis as any).srem(productIdxKey(organizationId), productId); } catch { /* index cleanup best-effort */ }
+    return Boolean(existed);
   },
   async getCart(userId: string, organizationId: string): Promise<Cart> {
     const key = cartKey(userId, organizationId);
@@ -94,8 +156,8 @@ export const commerceService = {
     if (cart.items.length===0) throw AppError.badRequest("Cart is empty");
     const items = await Promise.all(cart.items.map(async it=> {
       const prod = await this.getProduct(organizationId, it.productId).catch(()=> null);
-      const unit = prod?.price ?? PLACEHOLDER_UNIT_PRICE;
-      const name = prod?.name ?? `Product ${it.productId}`;
+      const unit = priceOf(prod, it.productId);
+      const name = prod!.name;
       return { productId: it.productId, name, quantity: it.quantity, unitPrice: unit, totalPrice: unit*it.quantity };
     }));
     const subtotal = items.reduce((s,i)=> s+i.totalPrice, 0);

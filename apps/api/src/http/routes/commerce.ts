@@ -22,6 +22,25 @@ export function registerCommerceRoutes(router: Router) {
       res.json({ ok:true, data: prod, meta:{ requestId: req.requestId }});
     } catch(e){ next(e); }
   });
+  // Catalog writes — the only path by which a product price enters the system.
+  // Without these, getProduct() is always null and nothing can be priced.
+  router.put("/products/:id", validate({ params: commerceRoutesSchema.productId, body: commerceRoutesSchema.upsertProduct }), async (req, res, next) => {
+    try {
+      const orgId = req.user!.organizationId!;
+      if (req.body.id !== req.params.id) {
+        return res.status(400).json({ ok:false, error:{ code:"BAD_REQUEST", message:"Body id must match the path id" }});
+      }
+      const prod = await commerceService.upsertProduct(orgId, req.body);
+      res.json({ ok:true, data: prod, meta:{ requestId: req.requestId }});
+    } catch(e){ next(e); }
+  });
+  router.delete("/products/:id", validate({ params: commerceRoutesSchema.productId }), async (req, res, next) => {
+    try {
+      const deleted = await commerceService.deleteProduct(req.user!.organizationId!, req.params.id);
+      if (!deleted) return res.status(404).json({ ok:false, error:{ code:"NOT_FOUND" }});
+      res.json({ ok:true, data:{ deleted:true }, meta:{ requestId: req.requestId }});
+    } catch(e){ next(e); }
+  });
   router.get("/cart", async (req, res, next) => {
     try { const cart = await commerceService.getCart(req.user!.id, req.user!.organizationId!); res.json({ ok:true, data: cart, meta:{ requestId: req.requestId }}); } catch(e){ next(e); }
   });

@@ -51,7 +51,7 @@ export function CommercePage(){
               <Input type="number" value={qty[p.id]||1} onChange={e=> setQty({...qty,[p.id]: Number(e.target.value)})} className="w-16"/>
               <Button size="sm" onClick={()=> void add(p.id)}><Plus className="h-3 w-3"/>Add</Button>
             </div>
-          )): <p className="text-sm text-text-muted">No products — catalog syncs from ERP.</p>}
+          )): <p className="text-sm text-text-muted">No products in the catalog. Pricing is fail-closed — adding an uncatalogued product to the cart is rejected rather than billed at a placeholder price. Create products via PUT /commerce/products/:id.</p>}
           <div className="flex gap-2"><Input placeholder="productId (cuid) for manual add" id="manualPid" className="flex-1"/><Button size="sm" onClick={()=>{
             const el=document.getElementById("manualPid") as HTMLInputElement; if(!el?.value) return; void add(el.value);
           }}>Add ID</Button></div>

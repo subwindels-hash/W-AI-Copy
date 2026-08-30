@@ -115,9 +115,10 @@ These are in **reachable** code. This is the whole list; it is short.
 | 1 | `architecture` | `esiAggregation.service.ts:77` | ESI trading section reports the **global** catalogue and hardcodes `positionsOpen: null`, `pnl24hUsd: null` with a "see S194" note. Per-org portfolio state is never surfaced. | Expose per-org positions/PnL from `tradingIntel` and fill the two null metrics. *Honest today* — it reports `null`, not a fake number — but it is a declared, unfinished handoff. |
 | 2 | `videoTransform` | `transform.service.ts:555` | `default:` branch is a documented pass-through for "unimplemented-but-declared nodes". Declared node kinds silently do nothing. | Enumerate which node kinds land in `default`; either implement them or reject them at workflow-validation time so a user cannot build a graph with inert nodes. |
 | 3 | `mediaGen` | `mediaGen.service.ts:186` | `videoOpsStubbed` — video capabilities `throw "stubbed pending downstream session"`. Surfaced in the UI as `PlatformPage.tsx:6312` "Video Stubs: S62 stub". | Honest and visible. Close by routing video ops to the real `videoEngine`/`videoTransform` modules, which now exist. |
-| 4 | `sdk` / docs | `apps/web/src/lib/docs.ts:130` | Docs advertise **"Coming soon — TypeScript and Python clients"** with a commented-out import sample. | Either ship the clients or remove the section. A public docs page promising an unbuilt SDK is a user-facing claim. |
-| 5 | `commerce` | `commerce.service.ts:24` | `PLACEHOLDER_UNIT_PRICE = 100` used when a product is absent from the catalog — a **money path** falling back to an invented price. | Self-labelled "honest placeholder", but pricing should fail loudly (400 "unknown product") rather than silently bill 100. |
+| 4 | `sdk` / docs | `apps/web/src/lib/docs.ts:130` | ~~Docs advertise **"Coming soon — TypeScript and Python clients"** with a commented-out import sample.~~ | ✅ **DONE 2026-08-30.** Section retitled "API Clients" and rewritten against the real key-authenticated `/api/rest/v1` gateway: runnable TypeScript and Python samples using `X-Api-Key`, plus the 9 live endpoints. No unbuilt package is promised. |
+| 5 | `commerce` | `commerce.service.ts:24` | ~~`PLACEHOLDER_UNIT_PRICE = 100` used when a product is absent from the catalog.~~ **Worse than first reported** — nothing in the repo ever wrote `commerce:product:*`, and `getProducts()` cached its own empty result for 300s, so `getProduct()` *always* returned null and **every cart and every order in the module was billed at the invented 100/unit**. | ✅ **DONE 2026-08-30.** Constant deleted; pricing is fail-closed via `priceOf()` (400 naming the product). Added the missing catalog write path (`upsertProduct` / `deleteProduct`, `PUT`/`DELETE /commerce/products/:id`, `commerceRoutesSchema.upsertProduct`) and made `getProducts()` read a real `commerce:product:idx:<org>` index with category/search/inStock filters and paging. 6 regression tests added (19 pass; 14 fail against the old service, and the fail-closed case resolves instead of rejecting — the defect is genuinely pinned). |
 | 6 | `desktop/nfc` | `pcscBridge.ts:350` | Permanent locking `throw`s "not implemented for this identifier". | Correct behaviour (fails closed). Track only; no action needed. |
+| 8 | `commerce` | `CommercePage.tsx:47,52` vs `commerce.service.ts` | **New — found while fixing #5.** The console renders `${p.price/100}` and `${dashboard.totalRevenue/100}`, i.e. it treats price as **cents**, while the service stores and sums `price` as a plain number and the new zod schema accepts decimals (`9.99`). One of the two is wrong; a catalog seeded through the API at `9.99` will display as `$0.0999`. | Pick one unit, repo-wide. Recommend integer minor units (cents) in storage with a documented `currency` + a single formatting helper, then drop the ad-hoc `/100`. Not fixed here because it changes a display contract beyond the scope of the pricing fix. |
 | 7 | build gate | `apps/api/tsconfig.json` | Extends `tsconfig.orphans.json`, so the **265 orphans are excluded from typecheck**. `strict: false`, `noImplicitAny: false`, `strictNullChecks: false` repo-wide. | After Finding 1 is resolved, drop the orphans extend so `tsc` covers `src/**`. Re-enabling `strict` is a separate, larger project. |
 
 ---
@@ -160,13 +161,17 @@ third-party credentials. Not defects; procurement items.
 1. **Decide Finding 1** (delete / quarantine / revive). Blocks nothing else but
    dominates every "how much is unfinished?" question — 181k LOC is 94% of the
    services directory and 100% of the `// For now,` markers.
-2. **Finding 2, items 4 and 5** — smallest, and both are user-facing claims (a
-   promised SDK, an invented price). Hours, not days.
-3. **Finding 2, items 1–3** — real feature handoffs, one session each, in the
+2. ~~**Finding 2, items 4 and 5**~~ — ✅ **done 2026-08-30.** Both user-facing
+   claims closed: the docs no longer promise an unbuilt SDK, and commerce no
+   longer invents a price. Item 5 turned out to be a live mispricing bug
+   affecting every order, not a dormant fallback.
+3. **Finding 2, item 8** — the commerce cents-vs-units ambiguity surfaced by
+   that fix. Small, but it is a money-display bug.
+4. **Finding 2, items 1–3** — real feature handoffs, one session each, in the
    established Sessions 155–208 pattern.
-4. **Finding 3** — schedule one run in the target environment; it converts the
+5. **Finding 3** — schedule one run in the target environment; it converts the
    entire 🟡 column to 🟢 or produces the first real defect list in months.
-5. **Finding 2, item 7** — tighten the build gate once (1) has landed.
+6. **Finding 2, item 7** — tighten the build gate once (1) has landed.
 
 ---
 
