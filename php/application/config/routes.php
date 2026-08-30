@@ -5,6 +5,23 @@ $route['translate_uri_dashes'] = FALSE;
 $route['healthz'] = 'health/index';
 $route['api/v1/health'] = 'health/index';
 $route['api/v1/health/deep'] = 'health/deep';
+// Enterprise AI Kernel (Node Session 39 parity)
+$route['api/v1/kernel/status'] = 'kernel/status';
+$route['api/v1/kernel/components'] = 'kernel/components';
+$route['api/v1/kernel/dispatch'] = 'kernel/dispatch';
+$route['api/v1/kernel/events'] = 'kernel/events';
+$route['api/v1/kernel/policy/evaluate'] = 'kernel/policy_evaluate';
+$route['api/v1/kernel/resources/grant'] = 'kernel/resources_grant';
+$route['api/v1/kernel/model/select'] = 'kernel/model_select';
+$route['api/v1/kernel/diagnostics/run'] = 'kernel/diagnostics_run';
+// AI provider registry (Node routes/ai.ts parity)
+$route['api/v1/ai/models'] = 'ai/models';
+$route['api/v1/ai/providers'] = 'ai/providers';
+$route['api/v1/ai/health'] = 'ai/health';
+$route['api/v1/ai/usage'] = 'ai/usage';
+$route['api/v1/ai/complete'] = 'ai/complete';
+$route['api/v1/ai/embed'] = 'ai/embed';
+$route['api/v1/ai/test-providers'] = 'ai/test_providers';
 $route['api/v1/auth/forgot'] = 'auth/forgot';
 $route['api/v1/auth/reset'] = 'auth/reset';
 $route['api/v1/auth/register'] = 'auth/register';

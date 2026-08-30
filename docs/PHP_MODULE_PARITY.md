@@ -53,6 +53,11 @@ A module is marked complete only when its API paths, persistence, validation, au
 | Application Builder / software factory core | Yes | Yes | Yes | Yes | Projects, workforce tasks, provider-backed generation, build state machine, SHA-256 artifacts and approval-gated releases ported |
 | Gift Cards / payment method | Yes | Yes | Yes | Yes | Tenant-scoped issuance, PIN verification, activation, reload, locked/idempotent redemption, lifecycle, fraud, invoice allocation and dashboard ported |
 | Helpdesk / customer support | Yes | Yes | Yes | Yes | Tenant-scoped tickets, comments, assignment, enforced lifecycle, SLA rollup and CRM activity linkage ported |
+| AI Kernel + AI provider registry (`kernel`) | Yes | Yes — 5 new tables | Yes | Yes | **Runtime validated.** All 15 endpoints ported: `/api/v1/kernel/{status,components,dispatch,events,policy/evaluate,resources/grant,model/select,diagnostics/run}` and `/api/v1/ai/{models,providers,health,usage,complete,embed,test-providers}`. Redis state (components, event stream, counters, latency samples) is now MySQL in `kernel_components` / `kernel_events` / `kernel_counters` / `kernel_latencies` / `kernel_state`. Five real provider transports (OpenAI, OpenAI-compatible, Ollama, Anthropic, Gemini) plus the labelled Echo demo assistant, which is refused outright in the production environment. Validated: fresh install 43/43 cPanel acceptance + 81/81 parity, install upgraded with `application/migrations/002_kernel_module.sql` 43/43 + 81/81, and 84/84 in development mode where the demo branches are reachable. Two intentional divergences from Node, both fixes: the `...24h` counters are a true rolling 24h window (Node's Redis `INCR` keys had no expiry and reported lifetime totals), and Ollama counts as configured only when the operator sets `VP_OLLAMA_BASE_URL` or `VP_OLLAMA_MODEL` (Node's default localhost URL made every install look configured) |
 | Remaining modules | No | Partial | 501 fallback | No | Not ported |
 
-“Runtime validation pending” is retained because this workspace has no PHP or MySQL executable. It must not be interpreted as certified production parity.
+“Runtime validation pending” is retained for every row above except **AI Kernel**,
+which has now been executed against a real PHP 8.2.32 interpreter and a real
+MySQL 5.7.29 server (see the parity spec `tests/php-api/kernel.spec.mjs`). The
+remaining rows still await the same treatment, and no row should be read as
+certified production parity until its own endpoints have been exercised.

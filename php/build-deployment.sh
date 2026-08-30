@@ -10,8 +10,14 @@
 # no Composer or Node.js dependency) plus database/production.sql.
 #
 # Development-only files are deliberately excluded: Dockerfile, docker-compose
-# files, composer.json, framework readmes, editor configs, and
-# application/migrations/ (the SQL in `database/` is the deployment schema).
+# files, composer.json, framework readmes, editor configs and stray log files.
+#
+# application/migrations/ IS shipped. Fresh installs never need it (they import
+# database/production.sql, which already contains every object), but an account
+# that is already live upgrades by importing the numbered migration files
+# through phpMyAdmin — see "Upgrading an existing install" in
+# CPANEL_DEPLOYMENT.md. The .htaccess in this package denies web access to
+# *.sql, so shipping them costs nothing and keeps that path open.
 #
 # This script is for the developer packaging a release — deploying does not
 # require a shell.
@@ -55,7 +61,6 @@ cp -R "$SCRIPT_DIR/screenshots" "$PKG/screenshots"
 cp "$SCRIPT_DIR/CPANEL_DEPLOYMENT.md" "$PKG/"
 
 # --- development-only files are not part of the package ---------------------
-rm -rf "$PKG/application/migrations"
 rm -f  "$PKG/application/logs/"*.php
 rm -f  "$PKG/database/"*.sqlite
 
