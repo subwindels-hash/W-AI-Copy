@@ -5765,18 +5765,24 @@ function TradingIntelTab() {
         </div>
       </>)}
       {sub==="risk" && risk.data && (<>
+        {/* S209: risk metrics that need a model the platform does not run are
+            null. Render "not modelled" rather than a blank or a zero — the
+            seeded 1.82 Sharpe this replaced was the exact failure mode. */}
         <div className="grid md:grid-cols-4 gap-3">
-          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">VaR 95 (24h)</div><div className="text-xl font-semibold mt-1 text-crimson">${Math.abs(risk.data.var95Usd).toLocaleString()}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">Drawdown</div><div className="text-xl font-semibold mt-1 text-amber">{risk.data.currentDrawdownPct}% / {risk.data.maxDrawdownPct}%</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">Sharpe</div><div className="text-xl font-semibold mt-1 text-emerald">{risk.data.sharpeRatio}</div></CardContent></Card>
-          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">β vs market</div><div className="text-xl font-semibold mt-1 text-azure">{risk.data.betaVsMarket}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">Exposure</div><div className="text-xl font-semibold mt-1 text-text-bright">${risk.data.totalExposureUsd.toLocaleString()}</div><div className="text-[10px] text-text-muted mt-1">summed from open positions</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">VaR 95 (24h)</div><div className="text-xl font-semibold mt-1 text-crimson">{risk.data.var95Usd===null?<span className="text-text-muted">— not modelled</span>:`$${Math.abs(risk.data.var95Usd).toLocaleString()}`}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">Sharpe</div><div className="text-xl font-semibold mt-1 text-emerald">{risk.data.sharpeRatio===null?<span className="text-text-muted">— not modelled</span>:risk.data.sharpeRatio}</div></CardContent></Card>
+          <Card><CardContent className="p-4"><div className="text-xs text-text-muted">β vs market</div><div className="text-xl font-semibold mt-1 text-azure">{risk.data.betaVsMarket===null?<span className="text-text-muted">— not modelled</span>:risk.data.betaVsMarket}</div></CardContent></Card>
         </div>
         <Card className="mt-3"><CardContent className="p-3 text-xs">
-          <div className="font-semibold mb-1">Position sizing: <Badge variant="azure">{risk.data.positionSizing}</Badge> · Stop loss: <Badge variant={risk.data.stopLoss.enabled?"emerald":"slate"}>{risk.data.stopLoss.enabled?`${risk.data.stopLoss.defaultPct}%${risk.data.stopLoss.trailing?" trailing":""}`:"off"}</Badge> · Take profit: <Badge variant={risk.data.takeProfit.enabled?"emerald":"slate"}>{risk.data.takeProfit.enabled?`${risk.data.takeProfit.defaultPct}%`:"off"}</Badge></div>
-          <div className="text-text-muted mt-1">Volatility regime: <b className="text-text-bright">{risk.data.volatilityRegime}</b> · Stress tests passed <span className="text-emerald">{risk.data.stressTestsPassed}</span> / failed <span className="text-crimson">{risk.data.stressTestsFailed}</span></div>
-          <div className="flex gap-1 flex-wrap mt-2">Correlation concerns: {risk.data.correlationConcerns.map((c:any,i:any)=><Badge key={i} variant="amber">{c}</Badge>)}</div>
+          <div className="font-semibold mb-1">Position sizing: <Badge variant="slate">{risk.data.positionSizing ?? "not set"}</Badge> · Stop loss: <Badge variant={risk.data.stopLoss.enabled?"emerald":"slate"}>{risk.data.stopLoss.enabled?(risk.data.stopLoss.defaultPct===null?"on positions":`${risk.data.stopLoss.defaultPct}%`):"off"}</Badge> · Take profit: <Badge variant={risk.data.takeProfit.enabled?"emerald":"slate"}>{risk.data.takeProfit.enabled?(risk.data.takeProfit.defaultPct===null?"on positions":`${risk.data.takeProfit.defaultPct}%`):"off"}</Badge></div>
+          <div className="text-text-muted mt-1">Volatility regime: <b className="text-text-bright">{risk.data.volatilityRegime ?? "not modelled"}</b> · Stress tests: {risk.data.stressTestsPassed===null?<span>not run</span>:<><span className="text-emerald">{risk.data.stressTestsPassed}</span> passed / <span className="text-crimson">{risk.data.stressTestsFailed}</span> failed</>}</div>
+          {risk.data.correlationConcerns.length?<div className="flex gap-1 flex-wrap mt-2">Correlation concerns: {risk.data.correlationConcerns.map((c:any,i:any)=><Badge key={i} variant="amber">{c}</Badge>)}</div>:null}
         </CardContent></Card>
       </>)}
+      {sub==="risk" && !risk.data && (
+        <Card><CardContent className="p-4 text-sm text-text-muted">No risk profile — this organization has no open broker positions. Connect a broker to populate exposure.</CardContent></Card>
+      )}
       {sub==="sentiment" && (<>
         <div className="text-sm text-text-muted">Sentiment readings — weights modify technical/fundamental signals (never standalone)</div>
         <div className="space-y-1">
@@ -6309,9 +6315,19 @@ function MediaGenTab() {
       <Stat label="Avg Latency" value={`${d?.avgLatencyMs??"…"}ms`} tone="azure"/>
       <Stat label="Capabilities" value={d?.capabilities??"…"} tone="violet"/>
       <Stat label="GPU Util" value={`${d?.gpuUtilizationPct??"…"}%`} tone={(d?.gpuUtilizationPct ?? 0)>80?"amber":"emerald"}/>
-      <Stat label="Video Stubs" value={d?.videoOpsStubbed?"S62 stub":"none"} tone="amber"/>
+      {/* S211: the old "Video Stubs" stat keyed off a status nothing ever wrote,
+          so it always read "none" while the module fabricated completed jobs. */}
+      <Stat label="Generation" value={d?.simulated?"simulated":d?.providersConfigured?"live":"not configured"}
+            tone={d?.providersConfigured?"emerald":"amber"}/>
       <Stat label="Kernel Routed" value={d?.routedThroughKernel?"✓":"…"} tone="emerald"/>
     </div>)}
+    {sub==="overview" && d && !d.providersConfigured && (
+      <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+        {d.simulated
+          ? "SIMULATOR ACTIVE (MG_SIMULATE=1) — jobs complete but no real media is generated and no asset is downloadable."
+          : "MEDIA GENERATION NOT CONFIGURED — no inference provider is wired, so generation requests are refused (503). Capabilities are listed as offline."}
+      </div>
+    )}
     {sub==="capabilities" && (<div className="grid md:grid-cols-3 gap-3">
       {(caps.data??[]).map((c,i)=>(<Card key={i}><CardContent className="p-3 text-xs">
         <div className="flex items-center gap-2">

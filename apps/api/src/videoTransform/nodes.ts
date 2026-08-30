@@ -173,6 +173,105 @@ export function validateConnection(conn: VtWorkflowConnection, nodes: VtWorkflow
   return null;
 }
 
+/**
+ * S210 — node kinds that are declared in the palette but have no working
+ * executor. A workflow containing one cannot produce correct output, so it is
+ * rejected when saved rather than running to a green job that quietly returned
+ * the untouched input. Empty this set as implementations land; do not add to it
+ * without also hiding the node in the palette.
+ */
+export const UNIMPLEMENTED_NODE_KINDS = new Set<VtNodeKind>(["image_editor", "image_upscaler", "condition"]);
+
+export function isImplemented(kind: VtNodeKind): boolean {
+  return !UNIMPLEMENTED_NODE_KINDS.has(kind);
+}
+
+/**
+ * Validate a whole workflow before it is saved or run. Returns a list of
+ * human-readable problems; empty means the graph is runnable.
+ */
+export function validateWorkflow(wf: { nodes: VtWorkflowNode[]; connections: VtWorkflowConnection[] }): string[] {
+  const errors: string[] = [];
+  const byId = new Map(wf.nodes.map((n) => [n.id, n]));
+
+  for (const n of wf.nodes) {
+    let def: VtNodeDef;
+    try { def = getNodeDef(n.kind); }
+    catch { errors.push(`node ${n.id}: unknown kind "${n.kind}"`); continue; }
+
+    if (UNIMPLEMENTED_NODE_KINDS.has(n.kind)) {
+      errors.push(`node ${n.id} (${def.label}): this node is declared but not implemented, so the workflow cannot run — remove it`);
+      continue;
+    }
+
+    // A node whose required inputs are unconnected cannot do its job. Only
+    // check kinds whose executor genuinely dereferences an input.
+    if (def.category !== "input" && def.inputs.length > 0) {
+      const connected = new Set(wf.connections.filter((c) => c.targetNode === n.id).map((c) => c.targetPort));
+      if (connected.size === 0) {
+        errors.push(`node ${n.id} (${def.label}): no inputs are connected`);
+      } else if (REQUIRE_ALL_INPUTS.has(n.kind)) {
+        for (const port of def.inputs) {
+          if (!connected.has(port.id)) errors.push(`node ${n.id} (${def.label}): required input "${port.name}" is not connected`);
+        }
+      }
+    }
+
+    const settingErr = checkNodeSettings(n);
+    if (settingErr) errors.push(`node ${n.id} (${def.label}): ${settingErr}`);
+  }
+
+  for (const c of wf.connections) {
+    if (!byId.has(c.sourceNode) || !byId.has(c.targetNode)) { errors.push(`connection ${c.id}: references a node that does not exist`); continue; }
+    const err = validateConnection(c, wf.nodes);
+    if (err) errors.push(`connection ${c.id}: ${err}`);
+  }
+
+  return errors;
+}
+
+/** Kinds that need every declared input port wired, not just one. */
+const REQUIRE_ALL_INPUTS = new Set<VtNodeKind>(["video_merge", "video_composite"]);
+
+/**
+ * Settings checks for the nodes whose settings actually drive an ffmpeg filter.
+ * These used to be ignored entirely, so a Video Trim with endSec 0 (the default)
+ * looked configured and did nothing.
+ */
+function checkNodeSettings(n: VtWorkflowNode): string | null {
+  const num = (k: string) => Number(n.settings[k]);
+  switch (n.kind) {
+    case "video_trim": {
+      const start = num("startSec"), end = num("endSec");
+      if (!Number.isFinite(end) || end <= 0) return "set an End (s) greater than 0";
+      if (!Number.isFinite(start) || start < 0) return "Start (s) must be 0 or more";
+      if (end <= start) return `End (${end}s) must be greater than Start (${start}s)`;
+      return null;
+    }
+    case "video_crop": {
+      const w = num("w"), h = num("h");
+      if (!Number.isFinite(w) || !Number.isFinite(h) || w <= 0 || h <= 0) return "set both Width and Height";
+      return null;
+    }
+    case "video_fps": {
+      const f = num("fps");
+      if (!Number.isFinite(f) || f <= 0 || f > 240) return "FPS must be between 1 and 240";
+      return null;
+    }
+    case "video_transform": {
+      const sc = num("scale");
+      if (!Number.isFinite(sc) || sc <= 0 || sc > 4) return "Scale must be between 0 and 4";
+      return null;
+    }
+    case "video_resize": {
+      const r = String(n.settings.resolution ?? "");
+      if (!["480p", "720p", "1080p", "1440p", "4k"].includes(r)) return `unknown resolution "${r}"`;
+      return null;
+    }
+    default: return null;
+  }
+}
+
 /** Topological order; throws on cycles. */
 export function topoSort(workflow: VtWorkflow): VtWorkflowNode[] {
   const indeg = new Map<string, number>();

@@ -64,6 +64,18 @@ export interface VtNodeDef {
   inputs: VtPortDef[];
   outputs: VtPortDef[];
   settings: VtNodeSetting[];
+  /**
+   * S210 — false when the palette declares the node but no executor implements
+   * it. Set by `GET /video-transform/nodes`; the editor should disable these.
+   * Undefined on the raw definitions, which is why the API adds it.
+   */
+  implemented?: boolean;
+}
+
+/** Result of `GET /video-transform/workflows/:id/validate`. */
+export interface VtWorkflowValidation {
+  valid: boolean;
+  problems: string[];
 }
 
 export type VtNodeSetting =

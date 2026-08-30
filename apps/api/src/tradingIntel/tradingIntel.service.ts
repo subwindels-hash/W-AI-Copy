@@ -26,12 +26,36 @@ import type {
   TiEconomicEvent, TiLearningInsight,
 } from "@windels/shared";
 
+/** Portfolio reads are tenant-scoped; a session with no org must not fall back. */
+function assertOrg(oid: string | undefined | null, what: string): asserts oid is string {
+  if (!oid || typeof oid !== "string" || !oid.trim()) {
+    throw Object.assign(
+      new Error(`Trading ${what} is organization-scoped and this session carries no organization.`),
+      { status: 403, code: "FORBIDDEN" },
+    );
+  }
+}
+
+/** Best-effort market class for a broker symbol, for display grouping only. */
+function inferMarketClass(symbol: string): TiMarketClass {
+  const s = symbol.toUpperCase().replace(/[^A-Z0-9]/g, "");
+  if (/^(BTC|ETH|SOL|XRP|ADA|DOGE|USDT|USDC)/.test(s)) return "crypto";
+  if (/^XAU|^XAG|^GOLD|^SILVER/.test(s)) return "precious-metals";
+  if (/^(WTI|BRENT|NGAS|CL|NG)/.test(s)) return "energy";
+  if (/^(SPX|NDX|DJI|DAX|FTSE|NGX)/.test(s)) return "indices";
+  // Six-letter all-alpha pairs of two ISO currency codes are FX (EURUSD).
+  if (/^[A-Z]{6}$/.test(s)) return "forex";
+  return "stocks";
+}
+
 const K = {
   agents: "ti:agents", agent: (k: string) => `ti:agent:${k}`,
   indicators: "ti:indicators", indicator: (id: string) => `ti:ind:${id}`,
   instruments: (mc: TiMarketClass) => `ti:inst:${mc}`,
-  positions: "ti:positions", position: (id: string) => `ti:pos:${id}`,
-  risk: "ti:risk",
+  // NOTE: `ti:positions` / `ti:pos:*` / `ti:risk` were removed in S209. They
+  // were org-less global keys written only by the demo seed and read by every
+  // tenant. Portfolio state now comes from BrokerIntegrationService, which is
+  // org-scoped. Do not reintroduce a global portfolio key.
   sentiment: "ti:sent",
   sims: "ti:sims",
   events: "ti:econev",
@@ -199,30 +223,12 @@ export const TradingIntelService = {
       return;
     }
 
-    // Risk profile
-    const risk: TiRiskProfile = {
-      portfolioId: "default",
-      totalExposureUsd: 2_480_000,
-      var95Usd: -32_500,
-      maxDrawdownPct: 15,
-      currentDrawdownPct: 4.2,
-      sharpeRatio: 1.82,
-      betaVsMarket: 0.94,
-      correlationConcerns: ["BTC/ETH", "SPY/QQQ", "GC/SI"],
-      volatilityRegime: "normal",
-      stressTestsPassed: 7, stressTestsFailed: 1,
-      positionSizing: "kelly",
-      stopLoss: { enabled: true, defaultPct: 2, trailing: true },
-      takeProfit: { enabled: true, defaultPct: 4 },
-    };
-    await redis.set(K.risk, s(risk));
-    // Seed a couple of positions
-    const samplePositions: TiPosition[] = [
-      { id:"pos-"+randomUUID().slice(0,8), instrumentId:"BTC/USD", marketClass:"crypto", side:"long", size:0.5, entryPrice:64200, currentPrice:68412, pnlUsd:2106, pnlPct:6.6, openedAt:new Date(Date.now()-86400000*3).toISOString(), stopLoss:62000, takeProfit:72000 },
-      { id:"pos-"+randomUUID().slice(0,8), instrumentId:"AAPL", marketClass:"stocks", side:"long", size:120, entryPrice:214.2, currentPrice:224.18, pnlUsd:1197.6, pnlPct:4.7, openedAt:new Date(Date.now()-86400000*5).toISOString() },
-      { id:"pos-"+randomUUID().slice(0,8), instrumentId:"EURUSD", marketClass:"forex", side:"long", size:100000, entryPrice:1.078, currentPrice:1.0842, pnlUsd:620, pnlPct:0.57, openedAt:new Date(Date.now()-86400000).toISOString() },
-    ];
-    for (const p of samplePositions) { await redis.zadd(K.positions, Date.parse(p.openedAt), p.id); await redis.hset(K.position(p.id), "_doc", s(p)); }
+    // S209: the demo risk book and sample positions are gone entirely, not just
+    // gated. `/risk` and `/positions` now derive from the caller's own connected
+    // brokers, so a global `ti:risk` / `ti:positions` blob has no reader and
+    // writing one could only ever re-create the cross-tenant leak. The rest of
+    // the demo payload below (economic calendar, insights) is catalogue-shaped
+    // and stays behind the gate.
     // Economic events
     const econs: TiEconomicEvent[] = [
       { id:"ev-"+randomUUID().slice(0,6), country:"US", title:"FOMC Rate Decision", impact:"high", scheduledAt:new Date(Date.now()+86400000*2).toISOString(), forecast:"5.25%", previous:"5.25%", affectedInstruments:["SPX","NDX","USDJPY","GC"] },
@@ -259,7 +265,16 @@ export const TradingIntelService = {
   },
 
   // ── Dashboard
-  async dashboard(): Promise<TiDashboard> {
+  /**
+   * Rollup for one tenant.
+   *
+   * The catalogue half (markets, agents, indicators) is global by design. The
+   * portfolio half (`positionsOpen`, `pnl24hUsd`) is the caller's own and comes
+   * from its connected brokers; passing no `oid` yields an empty book rather
+   * than the global demo one, so callers that only want the catalogue are still
+   * honest about the portfolio being unscoped.
+   */
+  async dashboard(oid?: string): Promise<TiDashboard> {
     const mClasses: TiMarketClass[] = ["forex","crypto","stocks","etfs","commodities","futures","options","indices","bonds","precious-metals","energy","agriculture","digital-assets"];
     const markets = {} as TiDashboard["markets"];
     let totInst = 0; let totOpen = 0; let totVol = 0;
@@ -281,7 +296,7 @@ export const TradingIntelService = {
       redis.get(K.metrics.blocked24).then(n=>Number(n??0)),
       redis.get(K.metrics.sim24).then(n=>Number(n??0)),
     ]);
-    const positions = await this.listPositions();
+    const positions = oid ? await this.listPositions(oid) : [];
     const pnl = positions.reduce((a,p)=>a+p.pnlUsd,0);
     return {
       moduleEnabled: true, moduleStatus: "available", markets,
@@ -332,12 +347,80 @@ export const TradingIntelService = {
     return out;
   },
 
-  // ── Risk
-  async riskProfile(): Promise<TiRiskProfile | null> { const raw = await redis.get(K.risk); return raw ? j(raw) : null; },
-  async listPositions(): Promise<TiPosition[]> {
-    const ids = await redis.zrange(K.positions, 0, -1);
+  // ── Risk / portfolio (tenant-scoped)
+  //
+  // `ti:risk` and `ti:positions` are single global keys with no org segment.
+  // They are written by exactly one thing — the `WINDELS_DEMO_DATA` seed above,
+  // which installs a $2.48M exposure / 1.82-Sharpe risk book and three winning
+  // positions "belonging to nobody". No user action ever writes them.
+  //
+  // Before this change `/risk` and `/positions` served those global keys to
+  // every caller, so each tenant read the same book and, with the demo seed on,
+  // read a fabricated portfolio as their own. That is the S165/S179 defect
+  // shape applied to money.
+  //
+  // Both methods now require an org and resolve it from the real, already
+  // org-scoped broker integration. An org with no connected broker gets an
+  // empty book (a measured "nothing open"), never the global demo one.
+  async riskProfile(oid: string): Promise<TiRiskProfile | null> {
+    assertOrg(oid, "risk profile");
+    const positions = await this.listPositions(oid);
+    if (!positions.length) return null;
+    const totalExposureUsd = Math.round(
+      positions.reduce((a, p) => a + Math.abs(p.size * p.currentPrice), 0),
+    );
+    return {
+      portfolioId: oid,
+      totalExposureUsd,
+      // Every field below requires a risk model or a return series that this
+      // module does not compute. They are null rather than invented — the seed
+      // used to state a 1.82 Sharpe and a -$32,500 VaR for a book nobody held.
+      var95Usd: null,
+      maxDrawdownPct: null,
+      currentDrawdownPct: null,
+      sharpeRatio: null,
+      betaVsMarket: null,
+      correlationConcerns: [],
+      volatilityRegime: null,
+      stressTestsPassed: null,
+      stressTestsFailed: null,
+      positionSizing: null,
+      stopLoss: { enabled: positions.some((p) => p.stopLoss != null), defaultPct: null, trailing: null },
+      takeProfit: { enabled: positions.some((p) => p.takeProfit != null), defaultPct: null },
+    } as TiRiskProfile;
+  },
+
+  /** Open positions for `oid`, mapped from the org's connected brokers. */
+  async listPositions(oid: string): Promise<TiPosition[]> {
+    assertOrg(oid, "positions");
+    let broker: typeof import("./brokerIntegration.service.js").BrokerIntegrationService;
+    try {
+      ({ BrokerIntegrationService: broker } = await import("./brokerIntegration.service.js"));
+    } catch {
+      return [];
+    }
+    const accounts = await broker.listAccounts(oid).catch(() => []);
     const out: TiPosition[] = [];
-    for (const id of ids) { const r=await redis.hgetall(K.position(id)); if (r._doc) out.push(j(r._doc)); }
+    for (const acct of accounts) {
+      const positions = await broker.listPositions(oid, acct.id).catch(() => []);
+      for (const p of positions) {
+        const notional = p.openPrice * p.volume;
+        out.push({
+          id: p.id,
+          instrumentId: p.symbol,
+          marketClass: inferMarketClass(p.symbol),
+          side: p.side,
+          size: p.volume,
+          entryPrice: p.openPrice,
+          currentPrice: p.currentPrice,
+          pnlUsd: p.profit,
+          pnlPct: notional ? Math.round((p.profit / notional) * 10000) / 100 : 0,
+          openedAt: p.openTime,
+          ...(p.sl != null ? { stopLoss: p.sl } : {}),
+          ...(p.tp != null ? { takeProfit: p.tp } : {}),
+        });
+      }
+    }
     return out;
   },
 

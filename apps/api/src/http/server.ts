@@ -181,6 +181,8 @@ import { registerModuleRuntimeRoutes } from "./routes/moduleRuntime.js";
 import { registerNativeAiApiRoutes } from "./routes/nativeAiApi.js";
 import { registerNativeAiRoutes } from "./routes/nativeAi.js";
 import { registerCloudAndroidRoutes } from "./routes/cloudAndroid.js";
+import { registerCloudAndroidPublicRoutes } from "./routes/cloudAndroidPublic.js";
+import { registerInfrastructureRoutes } from "./routes/infrastructure.js";
 import { verifySignature, resolveCallbackOrgId, getWebhookConfig } from "../mediaFactory/publishing/webhooks.js";
 import { PublishingService } from "../mediaFactory/publishing.service.js";
 import { logger } from "../observability/logger.js";
@@ -189,6 +191,13 @@ import { rateLimit } from "./middleware/rateLimit.js";
 import { csrfMiddleware } from "../security/csrf.js";
 import { orgScope } from "./middleware/orgScope.js";
 import { registerSSERoutes } from "./routes/events.js";
+// S213 — five route modules existed but were never mounted; their endpoints
+// 404'd while the web app called them. See docs/UNFINISHED_WORK_LIST.md item 10.
+import { registerNotificationsRoutes } from "./routes/notifications.js";
+import { registerAuditRoutes } from "./routes/audit.js";
+import { registerPermissionsRoutes } from "./routes/permissions.js";
+import { registerVoiceFoundryRoutes } from "./routes/voiceFoundry.js";
+import { registerVoiceStudioRoutes } from "./routes/voiceStudio.js";
 import jwt from "jsonwebtoken";
 import type { ApiEnvelope } from "@windels/shared/api";
 
@@ -292,6 +301,38 @@ export function createApp() {
   registerProfileRoutes(v1);
   registerAttachmentRoutes(v1);
   registerProjectContinuityRoutes(v1);
+
+  // ── S213: previously-unmounted routers ──────────────────────────────────
+  // Each of these route files was complete and its service, shared schema and
+  // web client all existed — but `register*Routes` was never called, so every
+  // request 404'd. `apps/web/src/lib/notifications.ts` was calling four dead
+  // endpoints. Each gets its own sub-router because these modules define paths
+  // like "/" and "/:id" that would otherwise collide at the v1 root.
+  const notificationsRouter = express.Router();
+  v1.use("/notifications", notificationsRouter);
+  registerNotificationsRoutes(notificationsRouter);
+
+  const auditRouter = express.Router();
+  v1.use("/audit", auditRouter);
+  registerAuditRoutes(auditRouter);
+
+  const permissionsRouter = express.Router();
+  v1.use("/permissions", permissionsRouter);
+  registerPermissionsRoutes(permissionsRouter);
+
+  // voiceFoundry and voiceStudio import `authenticate` but never apply it,
+  // while their handlers dereference `req.user!.id` (voiceStudio.ts:88) — which
+  // would throw on an unauthenticated request. `authenticate` is attached at
+  // the mount point so they cannot be reached anonymously.
+  const voiceFoundryRouter = express.Router();
+  voiceFoundryRouter.use(authenticate);
+  v1.use("/voice-foundry", voiceFoundryRouter);
+  registerVoiceFoundryRoutes(voiceFoundryRouter);
+
+  const voiceStudioRouter = express.Router();
+  voiceStudioRouter.use(authenticate);
+  v1.use("/voice-studio", voiceStudioRouter);
+  registerVoiceStudioRoutes(voiceStudioRouter);
   // Session 115 — the lead pipeline shares the /lead-discovery prefix with
   // Session 85's discovery endpoints. Its router is registered first and
   // attaches `authenticate` per handler rather than with `router.use`, so an
@@ -450,6 +491,12 @@ export function createApp() {
   const platformRouter = express.Router();
   v1.use("/platform", platformRouter);
   registerPlatformRoutes(platformRouter);
+  // S213: infrastructure.ts declares full "/infra/..." paths and its own header
+  // says it expects a parent router that already applies `authenticate` — this
+  // is that parent. It was never registered, so every /platform/infra/* call
+  // from apps/web/src/lib/infrastructure.ts (overview, cluster, nodes, pods,
+  // workloads, alerts, metrics/series) 404'd.
+  registerInfrastructureRoutes(platformRouter);
 
   // /security (scorecard, self-test, prompt guard, encryption status, breakers, rate limits, events)
   const securityRouter = express.Router();
@@ -1591,6 +1638,13 @@ export function createApp() {
   // trading, media) mounted after the Session 120 predecessors so their exact
   // paths remain authoritative.
   registerDeveloperGatewayRoutes(publicRouter);
+  // S213: the API-key Cloud Android surface. This belongs on the key-authenticated
+  // gateway, NOT on the JWT /api/v1 router — it uses `requireScope` and reads
+  // `req.apiOrganization`, which only apiKeyAuth populates. It is a different
+  // surface from routes/cloudAndroid.ts (the JWT control plane at /api/v1), not
+  // a duplicate of it; mounting it on v1 would have shadowed the live router
+  // with handlers whose auth context is never populated there.
+  registerCloudAndroidPublicRoutes(publicRouter);
   app.use("/api/rest/v1", publicRouter);
 
   // Developer Platform (applications, products, usage dashboard) on the

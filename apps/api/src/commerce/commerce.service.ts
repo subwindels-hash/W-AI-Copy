@@ -8,22 +8,55 @@ import { logger } from "../config/logger.js";
 import { AppError } from "../utils/result.js";
 
 export interface CartItem { productId: string; quantity: number; variantId?: string; }
-export interface Cart { id: string; userId: string; organizationId: string; items: CartItem[]; subtotal: number; currency: string; createdAt: string; updatedAt: string; }
+export interface Cart { id: string; userId: string; organizationId: string; items: CartItem[]; subtotalCents: number; currency: string; createdAt: string; updatedAt: string; }
 export interface CustomerOrder {
   id: string; userId: string; organizationId: string;
-  items: { productId: string; name: string; quantity: number; unitPrice: number; totalPrice: number; }[];
-  subtotal: number; tax?: number; shipping?: number; total: number;
+  items: { productId: string; name: string; quantity: number; unitPriceCents: number; totalPriceCents: number; }[];
+  subtotalCents: number; taxCents?: number; shippingCents?: number; totalCents: number;
   status: "pending"|"confirmed"|"processing"|"shipped"|"delivered"|"cancelled"|"refunded";
   paymentStatus: "pending"|"authorized"|"captured"|"refunded"|"failed";
   shippingAddress?: Record<string, unknown>; billingAddress?: Record<string, unknown>;
   createdAt: string; updatedAt: string;
 }
-export interface ProductCatalogItem { id: string; name: string; description?: string; price: number; currency: string; stockQuantity: number; images?: string[]; category?: string; attributes?: Record<string, unknown>; isActive: boolean; }
+export interface ProductCatalogItem { id: string; name: string; description?: string; priceCents: number; currency: string; stockQuantity: number; images?: string[]; category?: string; attributes?: Record<string, unknown>; isActive: boolean; }
 
 const CART_TTL_HOURS = 72;
-const PLACEHOLDER_UNIT_PRICE = 100; // honest placeholder when product not in catalog
+
+/**
+ * Pricing is fail-closed.
+ *
+ * This module previously fell back to `PLACEHOLDER_UNIT_PRICE = 100` whenever a
+ * product was absent from the catalog. Because nothing in the repository ever
+ * writes `commerce:product:*`, `getProduct()` always returned null — so *every*
+ * cart subtotal and *every* order total was the invented 100/unit, presented to
+ * the caller as a real price on a money path.
+ *
+ * An unknown price is now a hard error. A checkout that cannot be priced from
+ * the catalog must fail rather than bill a number nobody set.
+ *
+ * Money is stored throughout this module as an integer number of minor units
+ * ("cents"), matching the repo-wide `*Cents` convention used by erp, crm,
+ * licensing and revenueGuardian. Never store a float: 0.1 + 0.2 is not 0.3, and
+ * a fractional cent has no meaning on an invoice.
+ */
+function priceOf(prod: ProductCatalogItem | null, productId: string): number {
+  if (!prod) {
+    throw AppError.badRequest(
+      `Product ${productId} is not in the catalog and cannot be priced. ` +
+        `Populate the product catalog before adding it to a cart or ordering it.`,
+    );
+  }
+  if (!Number.isInteger(prod.priceCents) || prod.priceCents < 0) {
+    throw AppError.badRequest(
+      `Product ${productId} has no valid catalog price (priceCents must be a non-negative integer).`,
+    );
+  }
+  return prod.priceCents;
+}
 
 function cartKey(userId: string, orgId: string) { return `commerce:cart:${orgId}:${userId}`; }
+function productKey(orgId: string, id: string) { return `commerce:product:${orgId}:${id}`; }
+function productIdxKey(orgId: string) { return `commerce:product:idx:${orgId}`; }
 function orderItemKey(orgId: string, id: string) { return `commerce:order:i:${orgId}:${id}`; }
 function orderIdxKey(orgId: string) { return `commerce:order:idx:${orgId}`; }
 function orderLegacyKey(id: string) { return `commerce:order:${id}`; }
@@ -32,27 +65,63 @@ async function computeSubtotal(items: CartItem[], orgId: string): Promise<number
   let sum = 0;
   for (const it of items) {
     const prod = await (commerceService as any).getProduct(orgId, it.productId).catch(()=> null);
-    const unit = prod?.price ?? PLACEHOLDER_UNIT_PRICE;
-    sum += unit * it.quantity;
+    sum += priceOf(prod, it.productId) * it.quantity;
   }
   return sum;
 }
 
 export const commerceService = {
+  /**
+   * Read the org's product catalog.
+   *
+   * Previously this always returned an empty list and then *cached* that empty
+   * list for 300s, so the catalog could never be non-empty — which is what made
+   * the 100/unit fallback fire on every single order. It now reads the real
+   * `commerce:product:idx:<org>` index.
+   */
   async getProducts(organizationId: string, options?: { category?: string; search?: string; inStock?: boolean; limit?: number; offset?: number; }): Promise<{ products: ProductCatalogItem[]; total: number }> {
-    const cacheKey = `commerce:products:${organizationId}:${JSON.stringify(options||{})}`;
-    const cached = await (redis as any).get(cacheKey);
-    if (cached) return JSON.parse(cached);
-    const products: ProductCatalogItem[] = [];
-    const result = { products, total: 0 };
-    await (redis as any).set(cacheKey, JSON.stringify(result), "EX", 300);
-    return result;
+    let ids: string[] = [];
+    try { ids = (await (redis as any).smembers(productIdxKey(organizationId))) ?? []; } catch { ids = []; }
+    const all: ProductCatalogItem[] = [];
+    for (const id of ids) {
+      const raw = await (redis as any).get(productKey(organizationId, id));
+      if (!raw) continue;
+      try { all.push(JSON.parse(raw)); } catch { /* skip corrupt record */ }
+    }
+    let filtered = all;
+    if (options?.category) filtered = filtered.filter((p) => p.category === options.category);
+    if (options?.inStock) filtered = filtered.filter((p) => p.stockQuantity > 0);
+    if (options?.search) {
+      const q = options.search.toLowerCase();
+      filtered = filtered.filter((p) => p.name.toLowerCase().includes(q) || (p.description ?? "").toLowerCase().includes(q));
+    }
+    filtered.sort((a, b) => a.name.localeCompare(b.name));
+    const total = filtered.length;
+    const offset = options?.offset ?? 0;
+    const limit = options?.limit ?? 20;
+    return { products: filtered.slice(offset, offset + limit), total };
   },
   async getProduct(organizationId: string, productId: string): Promise<ProductCatalogItem|null> {
-    const cacheKey = `commerce:product:${organizationId}:${productId}`;
-    const cached = await (redis as any).get(cacheKey);
-    if (cached) return JSON.parse(cached);
-    return null;
+    const raw = await (redis as any).get(productKey(organizationId, productId));
+    if (!raw) return null;
+    try { return JSON.parse(raw); } catch { return null; }
+  },
+  /** Create or replace a catalog product. This is the only way a price enters the system. */
+  async upsertProduct(organizationId: string, product: ProductCatalogItem): Promise<ProductCatalogItem> {
+    if (!Number.isInteger(product.priceCents) || product.priceCents < 0) {
+      throw AppError.badRequest("priceCents must be a non-negative integer number of minor units (e.g. 999 for $9.99).");
+    }
+    await (redis as any).set(productKey(organizationId, product.id), JSON.stringify(product));
+    await (redis as any).sadd(productIdxKey(organizationId), product.id);
+    logger.info("Commerce product upserted", { organizationId, productId: product.id });
+    return product;
+  },
+  /** Remove a product from the catalog. Existing orders keep the price they were billed. */
+  async deleteProduct(organizationId: string, productId: string): Promise<boolean> {
+    const existed = await (redis as any).get(productKey(organizationId, productId));
+    await (redis as any).del(productKey(organizationId, productId));
+    try { await (redis as any).srem(productIdxKey(organizationId), productId); } catch { /* index cleanup best-effort */ }
+    return Boolean(existed);
   },
   async getCart(userId: string, organizationId: string): Promise<Cart> {
     const key = cartKey(userId, organizationId);
@@ -62,7 +131,7 @@ export const commerceService = {
       if (cart.organizationId !== organizationId) throw AppError.forbidden("Cart belongs to different organization");
       return cart;
     }
-    const cart: Cart = { id: randomUUID(), userId, organizationId, items: [], subtotal: 0, currency: "USD", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const cart: Cart = { id: randomUUID(), userId, organizationId, items: [], subtotalCents: 0, currency: "USD", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     await (redis as any).set(key, JSON.stringify(cart), "EX", CART_TTL_HOURS*3600);
     return cart;
   },
@@ -71,7 +140,7 @@ export const commerceService = {
     const cart = await this.getCart(userId, organizationId);
     const idx = cart.items.findIndex(i=> i.productId===item.productId);
     if (idx>=0) cart.items[idx].quantity += item.quantity; else cart.items.push(item);
-    cart.subtotal = await computeSubtotal(cart.items, organizationId);
+    cart.subtotalCents = await computeSubtotal(cart.items, organizationId);
     cart.updatedAt = new Date().toISOString();
     await (redis as any).set(key, JSON.stringify(cart), "EX", CART_TTL_HOURS*3600);
     return cart;
@@ -82,7 +151,7 @@ export const commerceService = {
     const idx = cart.items.findIndex(i=> i.productId===productId);
     if (idx<0) throw AppError.notFound("Item not in cart");
     if (quantity<=0) cart.items.splice(idx,1); else cart.items[idx].quantity = quantity;
-    cart.subtotal = await computeSubtotal(cart.items, organizationId);
+    cart.subtotalCents = await computeSubtotal(cart.items, organizationId);
     cart.updatedAt = new Date().toISOString();
     await (redis as any).set(key, JSON.stringify(cart), "EX", CART_TTL_HOURS*3600);
     return cart;
@@ -94,12 +163,12 @@ export const commerceService = {
     if (cart.items.length===0) throw AppError.badRequest("Cart is empty");
     const items = await Promise.all(cart.items.map(async it=> {
       const prod = await this.getProduct(organizationId, it.productId).catch(()=> null);
-      const unit = prod?.price ?? PLACEHOLDER_UNIT_PRICE;
-      const name = prod?.name ?? `Product ${it.productId}`;
-      return { productId: it.productId, name, quantity: it.quantity, unitPrice: unit, totalPrice: unit*it.quantity };
+      const unit = priceOf(prod, it.productId);
+      const name = prod!.name;
+      return { productId: it.productId, name, quantity: it.quantity, unitPriceCents: unit, totalPriceCents: unit*it.quantity };
     }));
-    const subtotal = items.reduce((s,i)=> s+i.totalPrice, 0);
-    const order: CustomerOrder = { id: randomUUID(), userId, organizationId, items, subtotal, tax: 0, shipping: 0, total: subtotal, status: "pending", paymentStatus: "pending", shippingAddress, billingAddress, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    const subtotalCents = items.reduce((s,i)=> s+i.totalPriceCents, 0);
+    const order: CustomerOrder = { id: randomUUID(), userId, organizationId, items, subtotalCents, taxCents: 0, shippingCents: 0, totalCents: subtotalCents, status: "pending", paymentStatus: "pending", shippingAddress, billingAddress, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
     await (redis as any).set(orderItemKey(organizationId, order.id), JSON.stringify(order), "EX", 86400*30);
     // legacy key for backward read
     await (redis as any).set(orderLegacyKey(order.id), JSON.stringify(order), "EX", 86400*30);
@@ -164,7 +233,7 @@ export const commerceService = {
     await (redis as any).set(orderLegacyKey(orderId), JSON.stringify(o), "EX", 86400*30);
     return o;
   },
-  async getDashboard(organizationId: string): Promise<{ totalOrders: number; totalRevenue: number; avgOrderValue: number|null; ordersByStatus: Record<string,number> }> {
+  async getDashboard(organizationId: string): Promise<{ totalOrders: number; totalRevenueCents: number; avgOrderValueCents: number|null; ordersByStatus: Record<string,number> }> {
     let ids: string[] = [];
     try { const m = await (redis as any).smembers(orderIdxKey(organizationId)); if (m) ids = m; } catch {}
     if (!ids.length) {
@@ -178,7 +247,7 @@ export const commerceService = {
         if (o.organizationId===organizationId) ids.push(o.id);
       }
     }
-    let totalRevenue = 0;
+    let totalRevenueCents = 0;
     const byStatus: Record<string,number> = {};
     let count = 0;
     for (const id of ids) {
@@ -187,10 +256,10 @@ export const commerceService = {
       const o = JSON.parse(d);
       if (o.organizationId!==organizationId) continue;
       count += 1;
-      totalRevenue += o.total||0;
+      totalRevenueCents += o.totalCents||0;
       byStatus[o.status] = (byStatus[o.status]||0)+1;
     }
-    return { totalOrders: count, totalRevenue, avgOrderValue: count? Math.floor(totalRevenue/count) : null, ordersByStatus: byStatus };
+    return { totalOrders: count, totalRevenueCents, avgOrderValueCents: count? Math.round(totalRevenueCents/count) : null, ordersByStatus: byStatus };
   },
 };
 export default commerceService;

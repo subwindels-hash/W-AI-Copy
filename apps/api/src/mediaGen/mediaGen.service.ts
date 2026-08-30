@@ -70,31 +70,53 @@ const uid = (p: string) => p + randomUUID().slice(0, 8);
 const HOURLY_QUOTA = Number(process.env.MG_HOURLY_QUOTA ?? 200);
 const MAX_CONCURRENT = Number(process.env.MG_MAX_CONCURRENT ?? 4);
 
+/**
+ * S211 — a capability is only "online" when something can actually generate it.
+ * Nothing is wired, so the sole way to get a non-offline catalogue is to opt
+ * into the simulator explicitly. `MG_SIMULATE=1` is a demo/dev switch: jobs are
+ * clearly stamped `provider: "sim"` and their output is not real media.
+ */
+export const MG_SIMULATE = process.env.MG_SIMULATE === "1";
+const PROVIDER_STATUS: MgCapability["status"] = MG_SIMULATE ? "online" : "offline";
+
+/**
+ * S211 — capability catalogue.
+ *
+ * Every entry used to be seeded `status: "online"`, which made the
+ * `status === "stub"` guard in `submit()` dead code and `videoOpsStubbed`
+ * permanently false. The module therefore advertised 24 working capabilities,
+ * accepted jobs on all three modalities, slept for `avgMs`, and marked them
+ * `completed` with an asset URL that resolves to nothing.
+ *
+ * No inference provider is wired for ANY modality, so the honest catalogue
+ * status is `offline`. `avgMs` is retained only as a UI hint for how long a
+ * real provider would take; it no longer drives a fake job duration.
+ */
 const CAP_SEEDS: MgCapability[] = [
-  { modality: "image", op: "text-to-image",  gpuRequiredMb: 6000, avgMs: 3200, status: "online" },
-  { modality: "image", op: "image-edit",     gpuRequiredMb: 6500, avgMs: 3800, status: "online" },
-  { modality: "image", op: "restore",        gpuRequiredMb: 4500, avgMs: 2100, status: "online" },
-  { modality: "image", op: "upscale",        gpuRequiredMb: 5000, avgMs: 1800, status: "online" },
-  { modality: "image", op: "logo",           gpuRequiredMb: 4000, avgMs: 2400, status: "online" },
-  { modality: "image", op: "marketing",      gpuRequiredMb: 7000, avgMs: 4500, status: "online" },
-  { modality: "image", op: "mockup",         gpuRequiredMb: 6500, avgMs: 4100, status: "online" },
-  { modality: "image", op: "technical",      gpuRequiredMb: 5500, avgMs: 3600, status: "online" },
-  { modality: "audio", op: "music",          gpuRequiredMb: 4000, avgMs: 5200, status: "online" },
-  { modality: "audio", op: "sfx",            gpuRequiredMb: 2500, avgMs: 1400, status: "online" },
-  { modality: "audio", op: "podcast",        gpuRequiredMb: 3500, avgMs: 6200, status: "online" },
-  { modality: "audio", op: "ambient",        gpuRequiredMb: 2000, avgMs: 2400, status: "online" },
-  { modality: "audio", op: "branding",       gpuRequiredMb: 3500, avgMs: 3100, status: "online" },
-  { modality: "audio", op: "adaptive",       gpuRequiredMb: 3000, avgMs: 2800, status: "online" },
-  { modality: "video", op: "text-to-video",  gpuRequiredMb: 16000, avgMs: 28000, status: "online" },
-  { modality: "video", op: "image-to-video", gpuRequiredMb: 16000, avgMs: 22000, status: "online" },
-  { modality: "video", op: "avatar",         gpuRequiredMb: 12000, avgMs: 20000, status: "online" },
-  { modality: "video", op: "marketing",      gpuRequiredMb: 16000, avgMs: 32000, status: "online" },
-  { modality: "video", op: "training",       gpuRequiredMb: 14000, avgMs: 26000, status: "online" },
-  { modality: "video", op: "presentation",   gpuRequiredMb: 14000, avgMs: 24000, status: "online" },
-  { modality: "video", op: "storyboard",     gpuRequiredMb: 8000,  avgMs: 6000,  status: "online" },
-  { modality: "video", op: "subtitles",      gpuRequiredMb: 4000,  avgMs: 3200,  status: "online" },
-  { modality: "video", op: "translation",    gpuRequiredMb: 6000,  avgMs: 8400,  status: "online" },
-  { modality: "video", op: "enhancement",    gpuRequiredMb: 12000, avgMs: 14000, status: "online" },
+  { modality: "image", op: "text-to-image",  gpuRequiredMb: 6000, avgMs: 3200, status: PROVIDER_STATUS },
+  { modality: "image", op: "image-edit",     gpuRequiredMb: 6500, avgMs: 3800, status: PROVIDER_STATUS },
+  { modality: "image", op: "restore",        gpuRequiredMb: 4500, avgMs: 2100, status: PROVIDER_STATUS },
+  { modality: "image", op: "upscale",        gpuRequiredMb: 5000, avgMs: 1800, status: PROVIDER_STATUS },
+  { modality: "image", op: "logo",           gpuRequiredMb: 4000, avgMs: 2400, status: PROVIDER_STATUS },
+  { modality: "image", op: "marketing",      gpuRequiredMb: 7000, avgMs: 4500, status: PROVIDER_STATUS },
+  { modality: "image", op: "mockup",         gpuRequiredMb: 6500, avgMs: 4100, status: PROVIDER_STATUS },
+  { modality: "image", op: "technical",      gpuRequiredMb: 5500, avgMs: 3600, status: PROVIDER_STATUS },
+  { modality: "audio", op: "music",          gpuRequiredMb: 4000, avgMs: 5200, status: PROVIDER_STATUS },
+  { modality: "audio", op: "sfx",            gpuRequiredMb: 2500, avgMs: 1400, status: PROVIDER_STATUS },
+  { modality: "audio", op: "podcast",        gpuRequiredMb: 3500, avgMs: 6200, status: PROVIDER_STATUS },
+  { modality: "audio", op: "ambient",        gpuRequiredMb: 2000, avgMs: 2400, status: PROVIDER_STATUS },
+  { modality: "audio", op: "branding",       gpuRequiredMb: 3500, avgMs: 3100, status: PROVIDER_STATUS },
+  { modality: "audio", op: "adaptive",       gpuRequiredMb: 3000, avgMs: 2800, status: PROVIDER_STATUS },
+  { modality: "video", op: "text-to-video",  gpuRequiredMb: 16000, avgMs: 28000, status: PROVIDER_STATUS },
+  { modality: "video", op: "image-to-video", gpuRequiredMb: 16000, avgMs: 22000, status: PROVIDER_STATUS },
+  { modality: "video", op: "avatar",         gpuRequiredMb: 12000, avgMs: 20000, status: PROVIDER_STATUS },
+  { modality: "video", op: "marketing",      gpuRequiredMb: 16000, avgMs: 32000, status: PROVIDER_STATUS },
+  { modality: "video", op: "training",       gpuRequiredMb: 14000, avgMs: 26000, status: PROVIDER_STATUS },
+  { modality: "video", op: "presentation",   gpuRequiredMb: 14000, avgMs: 24000, status: PROVIDER_STATUS },
+  { modality: "video", op: "storyboard",     gpuRequiredMb: 8000,  avgMs: 6000,  status: PROVIDER_STATUS },
+  { modality: "video", op: "subtitles",      gpuRequiredMb: 4000,  avgMs: 3200,  status: PROVIDER_STATUS },
+  { modality: "video", op: "translation",    gpuRequiredMb: 6000,  avgMs: 8400,  status: PROVIDER_STATUS },
+  { modality: "video", op: "enhancement",    gpuRequiredMb: 12000, avgMs: 14000, status: PROVIDER_STATUS },
 ];
 
 async function emitKernel(kind: string, payload: Record<string, any>) {
@@ -163,7 +185,12 @@ export const MediaGenService = {
       avgLatencyMs: avg,
       gpuUtilizationPct: Math.min(95, Math.round((running / MAX_CONCURRENT) * 100)),
       capabilities: caps.length,
-      videoOpsStubbed: caps.some((c) => c.modality === "video" && c.status === "stub"),
+      // S211: true when any video capability cannot actually generate. The old
+      // expression tested only `"stub"`, a status nothing wrote, so this was
+      // permanently false and the console read "Video Stubs: none".
+      videoOpsStubbed: caps.some((c) => c.modality === "video" && c.status !== "online"),
+      providersConfigured: caps.some((c) => c.status === "online") && !MG_SIMULATE,
+      simulated: MG_SIMULATE,
       routedThroughKernel: true,
       pending,
       running,
@@ -183,7 +210,18 @@ export const MediaGenService = {
     const caps = await this.capabilities(input.modality);
     const cap = caps.find((c) => c.op === input.op);
     if (!cap) throw new Error(`Unsupported operation: ${input.modality}/${input.op}`);
-    if (cap.status === "stub") throw new Error(`Capability ${input.modality}/${input.op} is stubbed pending downstream session`);
+    // S211: fail closed. This guard used to check only `"stub"`, a status
+    // nothing ever wrote, so an unbacked capability sailed through and the job
+    // completed with fabricated output. Anything not online is refused here.
+    if (cap.status !== "online") {
+      throw Object.assign(
+        new Error(
+          `MEDIA GENERATION NOT CONFIGURED — ${input.modality}/${input.op} has no inference provider wired. ` +
+          `Configure a provider (or set MG_SIMULATE=1 for a clearly-labelled simulator in development).`,
+        ),
+        { code: "PROVIDER_NOT_CONFIGURED", status: 503 },
+      );
+    }
 
     // Hourly quota
     const usedRaw = await redis.get(K.quotaHourly(organizationId));
@@ -287,8 +325,9 @@ export const MediaGenService = {
   },
 
   /**
-   * The actual generation. Currently a simulator; replace with a provider
-   * fetch to enable real inference.
+   * S211: real generation is not implemented for any modality. Without
+   * MG_SIMULATE the job is marked `failed` with a configuration message rather
+   * than `completed` with output that does not exist. Wire a provider here.
    */
   async runJob(job: MgJob): Promise<void> {
     const caps = await this.capabilities(job.modality);
@@ -306,16 +345,30 @@ export const MediaGenService = {
       return;
     }
 
-    latest.status = "completed";
     latest.durationMs = duration;
     latest.completedAt = new Date().toISOString();
-    latest.gpuNodeId = "self-hosted-gpu-0";
-    latest.url = `/api/v1/media-generation/asset/${latest.modality}/${latest.promptHash}.${
-      latest.modality === "image" ? "png" : latest.modality === "audio" ? "mp3" : "mp4"
-    }`;
+
+    if (!MG_SIMULATE) {
+      // S211: unreachable while submit() fails closed, but this is the second
+      // gate. A job must never reach "completed" without real output.
+      latest.status = "failed";
+      latest.error = "MEDIA GENERATION NOT CONFIGURED — no inference provider is wired; no asset was produced.";
+      await saveJob(latest);
+      await redis.decr(K.running(job.organizationId));
+      await emitKernel("media-gen.failed", { id: latest.id, reason: latest.error });
+      return;
+    }
+
+    latest.status = "completed";
+    latest.gpuNodeId = "simulator";
+    // S211: the simulator produces no bytes, so it must not advertise an asset
+    // URL. The old value pointed at /api/v1/media-generation/asset/... — a
+    // route that does not exist — so every "completed" job 404'd on download.
+    latest.url = undefined;
+    latest.error = "SIMULATED — MG_SIMULATE=1 is set; no real media was generated and no asset is available.";
     await saveJob(latest);
     await redis.decr(K.running(job.organizationId));
-    await emitKernel("media-gen.completed", { id: latest.id, modality: latest.modality, url: latest.url });
+    await emitKernel("media-gen.completed", { id: latest.id, modality: latest.modality, simulated: true });
   },
 };
 

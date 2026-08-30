@@ -12,7 +12,7 @@ import { authenticate } from "../middleware/auth.js";
 import { validate } from "../middleware/validate.js";
 import { multipartSingle } from "../middleware/multipart.js";
 import { VtService, subscribeJob } from "../../videoTransform/transform.service.js";
-import { NODE_DEFS } from "../../videoTransform/nodes.js";
+import { NODE_DEFS, isImplemented, topoSort, validateWorkflow } from "../../videoTransform/nodes.js";
 
 const orgOr403 = (req: any, res: any): string | null => {
   if (!req.user?.organizationId) {
@@ -73,7 +73,12 @@ export function registerVideoTransformRoutes(router: Router) {
   router.use(authenticate);
 
   // ── Catalogue & providers ──
-  router.get("/nodes", (_req, res) => res.json({ ok: true, data: NODE_DEFS }));
+  // S210: flag nodes the palette offers but the executor cannot run, so the
+  // editor can disable them instead of letting a user build an inert graph.
+  router.get("/nodes", (_req, res) => res.json({
+    ok: true,
+    data: NODE_DEFS.map((d) => ({ ...d, implemented: isImplemented(d.kind) })),
+  }));
   router.get("/providers", (req, res, next) => {
     try {
       const kind = (req.query.kind as string) || undefined;
@@ -210,11 +215,33 @@ export function registerVideoTransformRoutes(router: Router) {
       res.json({ ok: true, data: wf });
     } catch (e) { next(e); }
   });
+  /**
+   * S210: report whether a graph can actually run, so the editor can mark bad
+   * nodes before the user hits Run.
+   */
+  router.get("/workflows/:id/validate", async (req, res, next) => {
+    try {
+      const oid = orgOr403(req, res); if (!oid) return;
+      const wf = await VtService.getWorkflow(oid, req.params.id);
+      if (!wf) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND" } });
+      let problems = validateWorkflow(wf);
+      try { topoSort(wf); } catch (e) { problems = [...problems, (e as Error).message]; }
+      res.json({ ok: true, data: { valid: problems.length === 0, problems } });
+    } catch (e) { next(e); }
+  });
   router.post("/workflows/:id/run", validate({ body: z.object({ inputs: z.record(z.string()).optional() }).default({}) }), async (req, res, next) => {
     try {
       const oid = orgOr403(req, res); if (!oid) return;
       const wf = await VtService.getWorkflow(oid, req.params.id);
       if (!wf) return res.status(404).json({ ok: false, error: { code: "NOT_FOUND" } });
+      // Validate before enqueueing: a 202 followed by an async failure reads
+      // to the user as "it ran". Reject an unrunnable graph synchronously.
+      try { topoSort(wf); }
+      catch (e) { return res.status(400).json({ ok: false, error: { code: "WORKFLOW_INVALID", message: (e as Error).message, problems: [(e as Error).message] } }); }
+      const problems = validateWorkflow(wf);
+      if (problems.length) {
+        return res.status(400).json({ ok: false, error: { code: "WORKFLOW_INVALID", message: `workflow cannot run: ${problems.length} problem(s)`, problems } });
+      }
       const job = await VtService.createJob(oid, req.user!.id, { kind: "workflow", workflowId: wf.id, inputs: req.body.inputs }, wf.id);
       res.status(202).json({ ok: true, data: job });
     } catch (e) { next(e); }

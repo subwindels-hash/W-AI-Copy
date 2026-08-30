@@ -122,6 +122,8 @@ describe("fabric keeps its real side effect while gating its contents", () => {
   });
 });
 
+const SEED_ORG = "org-seedgate-trading";
+
 describe("trading intelligence installs its catalogue but never a portfolio", () => {
   it("registers agents, indicators and instruments", async () => {
     await TradingIntelService.ensureBootstrapped(undefined);
@@ -136,13 +138,22 @@ describe("trading intelligence installs its catalogue but never a portfolio", ()
     // A fresh install previously showed three winning positions and a risk
     // book claiming $2,480,000 of exposure at a 1.82 Sharpe — belonging to
     // nobody, and summed into the dashboard's pnl24hUsd.
-    expect(await TradingIntelService.listPositions()).toEqual([]);
-    expect(await TradingIntelService.riskProfile()).toBeNull();
+    //
+    // S209: these are now org-scoped and derive from the caller's connected
+    // brokers, so an org with none has an empty book and no risk profile.
+    expect(await TradingIntelService.listPositions(SEED_ORG)).toEqual([]);
+    expect(await TradingIntelService.riskProfile(SEED_ORG)).toBeNull();
+  });
+
+  it("refuses portfolio reads with no organization", async () => {
+    // Fail closed: an org-less session must not fall back to a global book.
+    await expect(TradingIntelService.listPositions("" as any)).rejects.toThrow(/organization/i);
+    await expect(TradingIntelService.riskProfile(undefined as any)).rejects.toThrow(/organization/i);
   });
 
   it("reports a flat, empty book on the dashboard", async () => {
     await TradingIntelService.ensureBootstrapped(undefined);
-    const d = await TradingIntelService.dashboard();
+    const d = await TradingIntelService.dashboard(SEED_ORG);
     expect(d.positionsOpen).toBe(0);
     expect(d.pnl24hUsd).toBe(0);
     // The 24h counters were hard-set to 12 jobs / 480 signals / 3 blocked / 38

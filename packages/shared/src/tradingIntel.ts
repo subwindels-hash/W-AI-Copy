@@ -150,21 +150,31 @@ export interface TiCommodity extends TiInstrument {
 }
 
 // ── Risk Management enhancements ────────────────────────────────────────
+/**
+ * A tenant's risk profile, derived from its own connected-broker positions.
+ *
+ * Every field that needs a risk model or a return series the platform does not
+ * compute is `number | null`. The pre-S209 shape made them all required
+ * `number`, which is why the demo seed could state a 1.82 Sharpe, a -$32,500
+ * VaR and 7-of-8 passing stress tests for a portfolio nobody held — the type
+ * left no way to say "not computed". `totalExposureUsd` is real: it is summed
+ * from live position notionals.
+ */
 export interface TiRiskProfile {
   portfolioId: string;
   totalExposureUsd: number;
-  var95Usd: number;             // value-at-risk 95%
-  maxDrawdownPct: number;
-  currentDrawdownPct: number;
-  sharpeRatio: number;
-  betaVsMarket: number;
+  var95Usd: number | null;             // value-at-risk 95%
+  maxDrawdownPct: number | null;
+  currentDrawdownPct: number | null;
+  sharpeRatio: number | null;
+  betaVsMarket: number | null;
   correlationConcerns: string[];
-  volatilityRegime: "low" | "normal" | "high" | "extreme";
-  stressTestsPassed: number;
-  stressTestsFailed: number;
-  positionSizing: "fixed" | "kelly" | "risk-parity" | "inverse-vol";
-  stopLoss: { enabled: boolean; defaultPct: number; trailing: boolean };
-  takeProfit: { enabled: boolean; defaultPct: number };
+  volatilityRegime: "low" | "normal" | "high" | "extreme" | null;
+  stressTestsPassed: number | null;
+  stressTestsFailed: number | null;
+  positionSizing: "fixed" | "kelly" | "risk-parity" | "inverse-vol" | null;
+  stopLoss: { enabled: boolean; defaultPct: number | null; trailing: boolean | null };
+  takeProfit: { enabled: boolean; defaultPct: number | null };
 }
 
 export interface TiPosition {
