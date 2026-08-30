@@ -65,7 +65,13 @@ export type TiFindingSeverity = "high" | "medium" | "low";
 
 export interface TiFinding {
   severity: TiFindingSeverity;
-  scope: "redis" | "probe" | "policy";
+  /**
+   * `redis`    — a Redis namespace scan (Node runtime)
+   * `database` — a row-level tenancy scan of org-scoped tables (PHP runtime)
+   * `probe`    — a real cross-tenant self-test
+   * `policy`   — the org's own policy reviewed against the platform baseline
+   */
+  scope: "redis" | "database" | "probe" | "policy";
   message: string;
   detail?: string;
 }

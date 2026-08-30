@@ -188,6 +188,7 @@ already applied, changes nothing.
 | Migration | Adds |
 |---|---|
 | `002_kernel_module.sql` | The AI Kernel: `kernel_components`, `kernel_events`, `kernel_counters`, `kernel_latencies`, `kernel_state`, plus the 20 seeded kernel components. Until it is imported, `/api/v1/kernel/*` and `/api/v1/ai/*` return `501 MODULE_NOT_MIGRATED`. |
+| `003_tenant_isolation_and_usage.sql` | Tenant Isolation and Usage Intelligence: `tenant_isolation_policies`, `tenant_isolation_runs`, `tenant_isolation_probes`, `usage_events`. Until it is imported, `/api/v1/tenant-isolation/*` and `/api/v1/usage-intel/*` return `501 MODULE_NOT_MIGRATED`. |
 
 Upgrading files (uploading a newer package over an older one) is independent of
 this step and safe on its own — but the new endpoints will keep returning 501

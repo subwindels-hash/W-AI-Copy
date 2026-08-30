@@ -8,10 +8,10 @@ Companion to `docs/UNFINISHED_MODULES.md`, which is the historical Sessions 155�
 |---|---|---|
 | Source of truth | `audit/build-inventory.mjs` (re-run) | `php/application/controllers/` + `docs/PHP_MODULE_PARITY.md` |
 | Modules considered | 156 | 155 (the 156 minus `_scaffolds`) |
-| Finished | 155 `COMPLETE` | 29 ported |
-| **Unfinished** | **1 STUB** | **2 partial + 124 not ported** |
+| Finished | 155 `COMPLETE` | 31 ported |
+| **Unfinished** | **1 STUB** | **2 partial + 122 not ported** |
 
-**Completed since this ledger was written:** `kernel` (2026-08-30) — all 15
+**Completed since this ledger was written:** `kernel`, `tenantIsolation` and `usage` (2026-08-30) — 26 endpoints, 9 new MySQL tables, migrations `002_kernel_module.sql` and `003_tenant_isolation_and_usage.sql`, and two parity specs under `tests/php-api/`. They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
 endpoints, 5 new MySQL tables, migration `002_kernel_module.sql`, and
 `tests/php-api/kernel.spec.mjs`. It is now listed as ported in
 `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
@@ -451,7 +451,7 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 12 | `marketing` | marketing | 21 | 1071 |
 | 13 | `platformServices` | Platform Services (CDN/etc) | 43 | 2306 |
 
-#### Platform / infra — 27
+#### Platform / infra — 25
 
 | # | Module | Title | Routes | SLOC |
 |---|---|---|---|---|
@@ -478,10 +478,8 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 21 | `selfHosted` | Self-Hosted Inference (S38) | 14 | 511 |
 | 22 | `sitePlatform` | sitePlatform | 36 | 2538 |
 | 23 | `softwareFactory` | softwareFactory | 8 | 978 |
-| 24 | `tenantIsolation` | tenantIsolation | 6 | 2370 |
-| 25 | `updates` | Updates / OTA (S54) | 9 | 644 |
-| 26 | `usage` | Usage Intelligence (S55) | 5 | 1176 |
-| 27 | `websiteBuilder` | websiteBuilder | 21 | 1440 |
+| 24 | `updates` | Updates / OTA (S54) | 9 | 644 |
+| 25 | `websiteBuilder` | websiteBuilder | 21 | 1440 |
 
 #### Mobile / devices / channels — 20
 
@@ -520,7 +518,7 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 6 | `sportsIntelligence` | sportsIntelligence | 24 | 4510 |
 | 7 | `uxIntelligence` | UX Intelligence (S78) | 12 | 862 |
 
-Totals: AI / ML platform 12, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 27, Mobile / devices / channels 20, Other 7 = **124**.
+Totals: AI / ML platform 12, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 25, Mobile / devices / channels 20, Other 7 = **122**.
 
 ### 2.3 Named gaps inside the 28 "fully ported" modules
 
@@ -547,7 +545,6 @@ Totals: AI / ML platform 12, Media / creative 16, Voice / wake 1, Commerce / pay
 - The "not ported" set is a diff of the 155 non-scaffold module keys against a hand-built
   Node-module → PHP-controller map (30 entries). Two boundary calls are debatable; both are
   counted as **not ported** here:
-  - `kernel` — PHP ships the `Ai_provider` library but has no AI-kernel controller.
   - `healthEcosystem` — PHP `Health.php` is only the health probe, not the 39-route Health
     Ecosystem V10 module.
 - Route and SLOC columns are per-module totals from the freshly generated inventory.

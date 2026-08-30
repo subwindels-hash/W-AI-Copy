@@ -22,6 +22,16 @@ $route['api/v1/ai/usage'] = 'ai/usage';
 $route['api/v1/ai/complete'] = 'ai/complete';
 $route['api/v1/ai/embed'] = 'ai/embed';
 $route['api/v1/ai/test-providers'] = 'ai/test_providers';
+// Tenant Isolation (Node Session 89 parity)
+$route['api/v1/tenant-isolation/policy'] = 'tenant_isolation/policy';
+$route['api/v1/tenant-isolation/compliance/run'] = 'tenant_isolation/compliance_run';
+$route['api/v1/tenant-isolation/compliance/runs/(:any)'] = 'tenant_isolation/compliance_run_item/$1';
+$route['api/v1/tenant-isolation/compliance/runs'] = 'tenant_isolation/compliance_runs';
+$route['api/v1/tenant-isolation/export-check'] = 'tenant_isolation/export_check';
+// Usage Intelligence (Node Session 55/123 parity)
+$route['api/v1/usage-intel/dashboard/rollup'] = 'usage_intel/dashboard_rollup';
+$route['api/v1/usage-intel/events/(:any)'] = 'usage_intel/events_item/$1';
+$route['api/v1/usage-intel/events'] = 'usage_intel/events_index';
 $route['api/v1/auth/forgot'] = 'auth/forgot';
 $route['api/v1/auth/reset'] = 'auth/reset';
 $route['api/v1/auth/register'] = 'auth/register';

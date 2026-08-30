@@ -133,7 +133,7 @@ export function TenantIsolationPage() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2"><Lock className="h-5 w-5 text-azure" /> Organization isolation policy</CardTitle>
-          <CardDescription>Stored under an org-scoped Redis key. Defaults are isolated-by-default (no cross-tenant export, basic PII redaction).</CardDescription>
+          <CardDescription>Stored per organization (Redis key on the Node runtime, MySQL row on the PHP runtime). Defaults are isolated-by-default (no cross-tenant export, basic PII redaction).</CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
           {policy ? (
