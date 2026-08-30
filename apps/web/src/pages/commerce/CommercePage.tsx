@@ -1,6 +1,7 @@
 import { useEffect, useState, useCallback } from "react";
 import { ShoppingCart, Package, RefreshCw, Trash2, Plus, CreditCard } from "lucide-react";
 import * as commerce from "@/lib/commerce";
+import { formatCents } from "@/lib/money";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Input } from "@/components/ui/Input";
@@ -39,15 +40,15 @@ export function CommercePage(){
       {err? <div className="rounded border border-crimson/30 bg-crimson/10 p-3 text-sm text-crimson">{err}<button className="float-right" onClick={()=> setErr(null)}>✕</button></div>:null}
       {dashboard? <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         <Card><CardContent className="p-4"><div className="text-xs text-text-muted">Orders</div><div className="text-xl font-black text-text-bright">{dashboard.totalOrders}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-text-muted">Revenue</div><div className="text-xl font-black text-text-bright">${dashboard.totalRevenue/100}</div></CardContent></Card>
-        <Card><CardContent className="p-4"><div className="text-xs text-text-muted">AOV</div><div className="text-xl font-black text-text-bright">{dashboard.avgOrderValue===null? "—": `$${dashboard.avgOrderValue/100}`}</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-xs text-text-muted">Revenue</div><div className="text-xl font-black text-text-bright">{formatCents(dashboard.totalRevenueCents)}</div></CardContent></Card>
+        <Card><CardContent className="p-4"><div className="text-xs text-text-muted">AOV</div><div className="text-xl font-black text-text-bright">{formatCents(dashboard.avgOrderValueCents)}</div></CardContent></Card>
         <Card><CardContent className="p-4"><div className="text-xs text-text-muted">By status</div><div className="text-xs text-text-bright">{Object.entries(dashboard.ordersByStatus).map(([k,v])=> `${k}:${v}`).join(" ") || "—"}</div></CardContent></Card>
       </div>:null}
       <div className="grid md:grid-cols-2 gap-4">
-        <Card><CardHeader><CardTitle className="flex gap-2"><Package className="h-5 w-5"/>Catalog</CardTitle><CardDescription>{products.length} products (empty when ERP has no sync — honest).</CardDescription></CardHeader><CardContent className="space-y-2">
+        <Card><CardHeader><CardTitle className="flex gap-2"><Package className="h-5 w-5"/>Catalog</CardTitle><CardDescription>{products.length} products · prices are integer minor units (cents).</CardDescription></CardHeader><CardContent className="space-y-2">
           {products.length? products.map((p:any)=>(
             <div key={p.id} className="flex items-center gap-2 border border-white/10 rounded p-2">
-              <div className="flex-1"><div className="font-medium text-text-bright">{p.name}</div><div className="text-xs text-text-muted">${p.price/100} · stock {p.stockQuantity}</div></div>
+              <div className="flex-1"><div className="font-medium text-text-bright">{p.name}</div><div className="text-xs text-text-muted">{formatCents(p.priceCents, p.currency)} · stock {p.stockQuantity}</div></div>
               <Input type="number" value={qty[p.id]||1} onChange={e=> setQty({...qty,[p.id]: Number(e.target.value)})} className="w-16"/>
               <Button size="sm" onClick={()=> void add(p.id)}><Plus className="h-3 w-3"/>Add</Button>
             </div>
@@ -56,7 +57,7 @@ export function CommercePage(){
             const el=document.getElementById("manualPid") as HTMLInputElement; if(!el?.value) return; void add(el.value);
           }}>Add ID</Button></div>
         </CardContent></Card>
-        <Card><CardHeader><CardTitle className="flex gap-2"><ShoppingCart className="h-5 w-5"/>Cart</CardTitle><CardDescription>{cart?.items?.length||0} items · subtotal ${cart? cart.subtotal/100:0}</CardDescription></CardHeader><CardContent className="space-y-2">
+        <Card><CardHeader><CardTitle className="flex gap-2"><ShoppingCart className="h-5 w-5"/>Cart</CardTitle><CardDescription>{cart?.items?.length||0} items · subtotal {formatCents(cart?.subtotalCents ?? 0, cart?.currency)}</CardDescription></CardHeader><CardContent className="space-y-2">
           {cart?.items?.map((it:any)=>(
             <div key={it.productId} className="flex items-center gap-2 text-sm border border-white/10 rounded p-2">
               <span className="font-mono text-text-bright">{it.productId.slice(0,12)}</span><span>×{it.quantity}</span>
@@ -74,7 +75,7 @@ export function CommercePage(){
       <Card><CardHeader><CardTitle>Orders</CardTitle></CardHeader><CardContent className="space-y-1">
         {orders.map((o:any)=>(
           <div key={o.id} className="flex items-center gap-2 border border-white/10 rounded p-2 text-sm">
-            <Badge variant="slate">{o.status}</Badge><span className="font-mono text-text-bright">{o.id.slice(0,12)}</span><span>${o.total/100}</span><span className="text-text-muted">{o.items?.length} items</span>
+            <Badge variant="slate">{o.status}</Badge><span className="font-mono text-text-bright">{o.id.slice(0,12)}</span><span>{formatCents(o.totalCents)}</span><span className="text-text-muted">{o.items?.length} items</span>
           </div>
         ))}
         {!orders.length? <p className="text-sm text-text-muted">No orders.</p>:null}

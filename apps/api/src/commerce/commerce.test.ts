@@ -23,9 +23,9 @@ const USER_A = "user-commerce-a";
 const USER_B = "user-commerce-b";
 
 /** Seed a real catalog product so the item can be priced. */
-async function seedProduct(org: string, id: string, price: number) {
+async function seedProduct(org: string, id: string, priceCents: number) {
   return commerceService.upsertProduct(org, {
-    id, name: `Product ${id}`, price, currency: "USD",
+    id, name: `Product ${id}`, priceCents, currency: "USD",
     stockQuantity: 100, isActive: true,
   } as any);
 }
@@ -90,7 +90,7 @@ describe("commerce", ()=>{
     await commerceService.addToCart(USER_A, ORG_A, { productId: pid, quantity: 3});
     const order = await commerceService.createOrder(USER_A, ORG_A, {street:"123"}, {street:"123"});
     expect(order.items).toHaveLength(1);
-    expect(order.total).toBe(300);
+    expect(order.totalCents).toBe(300);
     expect(order.status).toBe("pending");
     const cart = await commerceService.getCart(USER_A, ORG_A);
     expect(cart.items).toHaveLength(0);
@@ -134,7 +134,7 @@ describe("commerce", ()=>{
   it("dashboard null avg when no orders", async()=>{
     const d = await commerceService.getDashboard("org-empty-dashboard-"+Date.now());
     expect(d.totalOrders).toBe(0);
-    expect(d.avgOrderValue).toBeNull();
+    expect(d.avgOrderValueCents).toBeNull();
   });
   it("dashboard computes totals", async()=>{
     const org = "org-dashboard-"+Date.now();
@@ -147,8 +147,8 @@ describe("commerce", ()=>{
     await commerceService.createOrder(user, org, {street:"a"});
     const d = await commerceService.getDashboard(org);
     expect(d.totalOrders).toBe(2);
-    expect(d.totalRevenue).toBe(300);
-    expect(d.avgOrderValue).toBe(150);
+    expect(d.totalRevenueCents).toBe(300);
+    expect(d.avgOrderValueCents).toBe(150);
   });
   it("products returns empty honest for an org with no catalog", async()=>{
     const res = await commerceService.getProducts("org-no-catalog-"+Date.now());
@@ -189,18 +189,55 @@ describe("commerce", ()=>{
     const org = "org-realprice-"+Date.now();
     const user = "user-realprice";
     const pid = "cabc999999999999999999902";
-    await seedProduct(org, pid, 37.5);
+    await seedProduct(org, pid, 3750); // $37.50
     await commerceService.addToCart(user, org, { productId: pid, quantity: 4 });
     const order = await commerceService.createOrder(user, org, { street: "x" });
-    expect(order.items[0].unitPrice).toBe(37.5);
-    expect(order.total).toBe(150);
+    expect(order.items[0].unitPriceCents).toBe(3750);
+    expect(order.totalCents).toBe(15000); // $150.00
     expect(order.items[0].name).toBe(`Product ${pid}`);
   });
 
   it("upsertProduct rejects a negative price", async()=>{
     await expect(
-      commerceService.upsertProduct("org-badprice", { id: "p1", name: "P", price: -1, currency: "USD", stockQuantity: 0, isActive: true } as any),
-    ).rejects.toThrow(/non-negative/i);
+      commerceService.upsertProduct("org-badprice", { id: "p1", name: "P", priceCents: -1, currency: "USD", stockQuantity: 0, isActive: true } as any),
+    ).rejects.toThrow(/non-negative integer/i);
+  });
+
+  // ── Integer minor units (regression) ──────────────────────────────
+  // The console rendered `price / 100` while the service stored a bare number
+  // and the schema accepted decimals, so a product created at 9.99 displayed
+  // as "$0.0999". Money is now integer cents end to end.
+  it("rejects a fractional price", async()=>{
+    await expect(
+      commerceService.upsertProduct("org-frac", { id: "p-frac", name: "P", priceCents: 9.99, currency: "USD", stockQuantity: 1, isActive: true } as any),
+    ).rejects.toThrow(/non-negative integer/i);
+  });
+
+  it("checkout refuses a catalog record carrying a fractional price", async()=>{
+    const org = "org-frac2-"+Date.now();
+    const user = "user-frac2";
+    const pid = "cabc999999999999999999903";
+    await seedProduct(org, pid, 500);
+    await commerceService.addToCart(user, org, { productId: pid, quantity: 1 });
+    // Corrupt the stored record behind the service's back (e.g. a bad import).
+    const { redisCmd } = await import("../db/redis.js");
+    await (redisCmd as any).set(`commerce:product:${org}:${pid}`, JSON.stringify({
+      id: pid, name: "P", priceCents: 12.5, currency: "USD", stockQuantity: 1, isActive: true,
+    }));
+    await expect(commerceService.createOrder(user, org, { street: "x" })).rejects.toThrow(/non-negative integer/i);
+  });
+
+  it("totals stay exact integers across quantities that would drift as floats", async()=>{
+    const org = "org-exact-"+Date.now();
+    const user = "user-exact";
+    const pid = "cabc999999999999999999904";
+    await seedProduct(org, pid, 10); // $0.10 — the classic 0.1 float trap
+    await commerceService.addToCart(user, org, { productId: pid, quantity: 3 });
+    const cart = await commerceService.getCart(user, org);
+    expect(cart.subtotalCents).toBe(30);
+    expect(Number.isInteger(cart.subtotalCents)).toBe(true);
+    const order = await commerceService.createOrder(user, org, { street: "x" });
+    expect(order.totalCents).toBe(30);
   });
 
   it("catalog is org-scoped and listable", async()=>{
