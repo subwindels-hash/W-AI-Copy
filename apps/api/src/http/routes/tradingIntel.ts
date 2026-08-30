@@ -19,7 +19,22 @@ import { listAgents, runAgent } from "../../tradingIntel/agents.js";
 import { JournalService } from "../../tradingIntel/journal.js";
 import { tenantStore } from "../../utils/tenantStore.js";
 import { authenticate as _authenticate } from "../middleware/auth.js";
+import { AppError } from "../../utils/result.js";
 import { z as z_notes } from "zod";
+
+/**
+ * Resolve the caller's organization for tenant-scoped trading reads.
+ *
+ * S209: `/dashboard/rollup`, `/risk` and `/positions` previously took `_req`
+ * and served a single global book (`ti:risk`, `ti:positions`) to every tenant.
+ * The router already applies `authenticate` + an ORG_ADMIN check, so a missing
+ * org here is a broken session, not an anonymous caller — fail closed.
+ */
+function orgOf(req: any): string {
+  const org = (req.user as any)?.organizationId ?? null;
+  if (!org) throw AppError.forbidden("Trading portfolio data is organization-scoped and this session carries no organization.");
+  return org;
+}
 
 const simBody = z.object({
   instrumentId: z.string(),
@@ -46,8 +61,8 @@ const analyzeQuery = z.object({
 });
 
 export function registerTradingIntelRoutes(router: Router) {
-  router.get("/dashboard/rollup", async (_req, res, next) => {
-    try { res.json({ ok: true, data: await TradingIntelService.dashboard() }); } catch (e) { next(e); }
+  router.get("/dashboard/rollup", async (req, res, next) => {
+    try { res.json({ ok: true, data: await TradingIntelService.dashboard(orgOf(req)) }); } catch (e) { next(e); }
   });
   router.get("/agents", async (_req, res, next) => {
     try { res.json({ ok: true, data: await TradingIntelService.listAgents() }); } catch (e) { next(e); }
@@ -67,11 +82,12 @@ export function registerTradingIntelRoutes(router: Router) {
       res.json({ ok: true, data: await TradingIntelService.listInstruments(mc) });
     } catch (e) { next(e); }
   });
-  router.get("/risk", async (_req, res, next) => {
-    try { res.json({ ok: true, data: await TradingIntelService.riskProfile() }); } catch (e) { next(e); }
+  // S209: both were `_req` and served a single global book to every tenant.
+  router.get("/risk", async (req, res, next) => {
+    try { res.json({ ok: true, data: await TradingIntelService.riskProfile(orgOf(req)) }); } catch (e) { next(e); }
   });
-  router.get("/positions", async (_req, res, next) => {
-    try { res.json({ ok: true, data: await TradingIntelService.listPositions() }); } catch (e) { next(e); }
+  router.get("/positions", async (req, res, next) => {
+    try { res.json({ ok: true, data: await TradingIntelService.listPositions(orgOf(req)) }); } catch (e) { next(e); }
   });
   router.get("/sentiment", async (req, res, next) => {
     try { res.json({ ok: true, data: await TradingIntelService.listSentiment(Number(req.query.limit) || 40) }); } catch (e) { next(e); }

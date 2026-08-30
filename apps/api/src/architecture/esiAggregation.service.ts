@@ -93,7 +93,7 @@ export const EsiAggregationService = {
       // portfolio rows `null` rather than claiming a flat book.
       measure("trading", "Trading Intelligence", async () => {
         const { TradingIntelService } = await import("../tradingIntel/tradingIntel.service.js");
-        const d = await TradingIntelService.dashboard();
+        const d = await TradingIntelService.dashboard(oid);
 
         let positionsOpen: number | null = null;
         let pnlTodayUsd: number | null = null;

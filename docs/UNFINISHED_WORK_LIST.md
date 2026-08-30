@@ -174,10 +174,35 @@ third-party credentials. Not defects; procurement items.
    *Adjacent cleanup available:* `ErpPage`, `CrmPage` and `LicensingPage` each
    hand-roll their own `fmtCents`/`usd`. They can now import the shared helper;
    deferred to keep the commerce change scoped.
-   *Also surfaced:* `tradingIntel`'s `/positions` and `/risk` routes take
-   `_req` and read global `ti:*` keys, so every tenant sees the same book —
-   the same defect shape S165/S179 fixed elsewhere. Not in scope here (ESI now
-   bypasses it), but it is a real tenant-isolation gap worth its own session.
+   *Also surfaced (now fixed):* see item 5b.
+5b. ~~**`tradingIntel` cross-tenant portfolio leak**~~ — ✅ **done 2026-08-30.**
+   `/positions`, `/risk` and `/dashboard/rollup` took `_req` and read three
+   global keys (`ti:positions`, `ti:pos:*`, `ti:risk`) written by exactly one
+   thing: the `WINDELS_DEMO_DATA` seed. Every authenticated org admin was
+   therefore served the *same* book, and with the seed on that book was
+   fabricated — three winning positions and a $2.48M / 1.82-Sharpe risk
+   profile — presented as the tenant's own. Same defect shape as S165/S179.
+
+   Fixed by deriving portfolio state per-org rather than org-scoping the demo
+   keys: a global portfolio key has no legitimate reader, so the seed block and
+   the three `K` entries were **deleted** (grep confirms zero remaining
+   references). `riskProfile(oid)` / `listPositions(oid)` now read the already
+   org-scoped `BrokerIntegrationService`, mapping `BrokerPosition` →
+   `TiPosition`; `dashboard(oid?)` passes it through and yields an **empty**
+   book without an org, never the global one. Both fail closed with 403
+   `FORBIDDEN` when the session carries no org (a missing org is a broken
+   session, not an anonymous caller — the router already requires
+   `authenticate` + `ORG_ADMIN`).
+
+   `TiRiskProfile`'s metric fields were widened to `number | null`: the old
+   all-required shape is *why* the seed could assert a 1.82 Sharpe — there was
+   no way to encode "not computed". `totalExposureUsd` is summed from live
+   notionals; every metric needing a risk model or return series is `null`, and
+   `PlatformPage` renders those as "not modelled" instead of a blank. 6
+   regression tests in `portfolioIsolation.test.ts`; **all 5 logic tests fail
+   against the pre-fix service** (`expected [ 'NVDA' ] to deeply equal
+   [ 'BTCUSD', 'EURUSD' ]`, `promise resolved instead of rejecting`, …).
+
 6. **Finding 3** — schedule one run in the target environment; it converts the
    entire 🟡 column to 🟢 or produces the first real defect list in months.
 7. **Finding 2, item 7** — tighten the build gate once (1) has landed.
