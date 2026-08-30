@@ -6315,9 +6315,19 @@ function MediaGenTab() {
       <Stat label="Avg Latency" value={`${d?.avgLatencyMs??"…"}ms`} tone="azure"/>
       <Stat label="Capabilities" value={d?.capabilities??"…"} tone="violet"/>
       <Stat label="GPU Util" value={`${d?.gpuUtilizationPct??"…"}%`} tone={(d?.gpuUtilizationPct ?? 0)>80?"amber":"emerald"}/>
-      <Stat label="Video Stubs" value={d?.videoOpsStubbed?"S62 stub":"none"} tone="amber"/>
+      {/* S211: the old "Video Stubs" stat keyed off a status nothing ever wrote,
+          so it always read "none" while the module fabricated completed jobs. */}
+      <Stat label="Generation" value={d?.simulated?"simulated":d?.providersConfigured?"live":"not configured"}
+            tone={d?.providersConfigured?"emerald":"amber"}/>
       <Stat label="Kernel Routed" value={d?.routedThroughKernel?"✓":"…"} tone="emerald"/>
     </div>)}
+    {sub==="overview" && d && !d.providersConfigured && (
+      <div className="mt-3 rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+        {d.simulated
+          ? "SIMULATOR ACTIVE (MG_SIMULATE=1) — jobs complete but no real media is generated and no asset is downloadable."
+          : "MEDIA GENERATION NOT CONFIGURED — no inference provider is wired, so generation requests are refused (503). Capabilities are listed as offline."}
+      </div>
+    )}
     {sub==="capabilities" && (<div className="grid md:grid-cols-3 gap-3">
       {(caps.data??[]).map((c,i)=>(<Card key={i}><CardContent className="p-3 text-xs">
         <div className="flex items-center gap-2">

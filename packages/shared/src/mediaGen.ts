@@ -38,6 +38,11 @@ export interface MgDashboard {
   avgLatencyMs: number;
   gpuUtilizationPct: number;
   capabilities: number;
+  /** True when any video capability cannot actually generate (S211). */
   videoOpsStubbed: boolean;
+  /** True only when a real inference provider is wired (S211). */
+  providersConfigured?: boolean;
+  /** True when MG_SIMULATE=1 — jobs complete but produce no real media (S211). */
+  simulated?: boolean;
   routedThroughKernel: boolean;
 }

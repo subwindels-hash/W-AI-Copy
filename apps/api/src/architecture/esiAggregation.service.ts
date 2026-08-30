@@ -130,6 +130,15 @@ export const EsiAggregationService = {
             { key: "jobs24h", label: "Jobs (24h)", value: d.jobs24h ?? 0 },
             { key: "ready", label: "Ready", value: d.ready ?? 0 },
             { key: "failed", label: "Failed", value: d.failed ?? 0 },
+            // S211: without this row the section reports a healthy-looking
+            // queue for a module that cannot generate anything. The metric
+            // contract is numeric, so this is a count of usable capabilities:
+            // 0 when no provider is wired (the honest answer today).
+            {
+              key: "capabilitiesOnline",
+              label: "Capabilities online",
+              value: d.providersConfigured ? d.capabilities : 0,
+            },
           ],
         };
       }),
