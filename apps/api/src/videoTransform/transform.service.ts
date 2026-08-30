@@ -24,9 +24,9 @@ import {
   VT_CACHE_DIR, assetDir, ensureDir, extForMime, hashBuffer, localAssetPath, publicAssetUrl,
   purgeJobIntermediates, recordStorageUsage, writeAsset,
 } from "./storage.js";
-import { compositeSwitchX, extractFrame, generateMatte, hasFfmpeg, hasFfprobe, probeVideo } from "./ffmpegOps.js";
+import { applyFilterOp, compositeOver, compositeSwitchX, concatVideos, extractFrame, generateMatte, hasFfmpeg, hasFfprobe, probeVideo, type VtFilterOp } from "./ffmpegOps.js";
 import { vtProviderGateway } from "./providers.js";
-import { executeWorkflow, getNodeDef, makeConnectionId, makeNodeId, topoSort, validateConnection } from "./nodes.js";
+import { executeWorkflow, getNodeDef, makeConnectionId, makeNodeId, topoSort, validateConnection, validateWorkflow } from "./nodes.js";
 
 const K = {
   jobs: (oid: string) => `vt:tenant:${oid}:jobs`,
@@ -72,6 +72,23 @@ function emptyUsage(): VtJob {
   throw new Error("not used");
 }
 void emptyUsage;
+
+/**
+ * S210 — map a workflow node's settings onto a concrete ffmpeg filter op.
+ * Settings arrive as `Record<string, unknown>` from the graph editor, so each
+ * value is coerced here and validated inside `applyFilterOp`.
+ */
+function filterOpFor(node: VtWorkflowNode): VtFilterOp {
+  const n = (k: string, d?: number) => { const v = Number(node.settings[k]); return Number.isFinite(v) ? v : d as number; };
+  switch (node.kind) {
+    case "video_trim": return { kind: "trim", startSec: n("startSec", 0), endSec: n("endSec", 0) };
+    case "video_crop": return { kind: "crop", w: n("w", 0), h: n("h", 0), x: n("x", 0), y: n("y", 0) };
+    case "video_resize": return { kind: "resize", resolution: String(node.settings.resolution ?? "1080p") };
+    case "video_fps": return { kind: "fps", fps: n("fps", 30) };
+    case "video_transform": return { kind: "scale", scale: n("scale", 1) };
+    default: throw new Error(`no filter op for ${node.kind}`);
+  }
+}
 
 export const VtService = {
   // ── Dashboard / providers ───────────────────────────────────────
@@ -251,6 +268,49 @@ export const VtService = {
     const written = await writeAsset(job.organizationId, `frame-${job.id}-${frameNo}.png`, buf);
     await recordStorageUsage(job.organizationId, job.id, buf.length);
     return { assetId: written.url, frameNumber: frameNo, timestamp: frameNo / (src.meta.fps || 30) };
+  },
+
+  /** S210: run one real single-input ffmpeg filter and store the result. */
+  async runFilterOp(job: VtJob, sourceAssetId: string | undefined, op: VtFilterOp) {
+    const src = sourceAssetId ? await this.getSource(sourceAssetId) : null;
+    if (!src) throw Object.assign(new Error(`${op.kind}: no source video on the input port`), { code: "SOURCE_NOT_FOUND", status: 400 });
+    const dir = path.join(VT_CACHE_DIR, "jobs", job.id);
+    await ensureDir(dir);
+    const outPath = path.join(dir, `${op.kind}-${randomUUID().slice(0, 8)}.mp4`);
+    await applyFilterOp(src.path, outPath, op, src.meta);
+    return this.storeDerived(job, outPath, `${op.kind}-${job.id}`);
+  },
+
+  async runMerge(job: VtJob, aAssetId?: string, bAssetId?: string) {
+    const a = aAssetId ? await this.getSource(aAssetId) : null;
+    const b = bAssetId ? await this.getSource(bAssetId) : null;
+    if (!a || !b) throw Object.assign(new Error("video_merge requires a video on both the A and B input ports"), { code: "SOURCE_NOT_FOUND", status: 400 });
+    const dir = path.join(VT_CACHE_DIR, "jobs", job.id);
+    await ensureDir(dir);
+    const outPath = path.join(dir, `merge-${randomUUID().slice(0, 8)}.mp4`);
+    await concatVideos(a.path, b.path, outPath);
+    return this.storeDerived(job, outPath, `merge-${job.id}`);
+  },
+
+  async runComposite(job: VtJob, bgAssetId?: string, fgAssetId?: string) {
+    const bg = bgAssetId ? await this.getSource(bgAssetId) : null;
+    const fg = fgAssetId ? await this.getSource(fgAssetId) : null;
+    if (!bg || !fg) throw Object.assign(new Error("video_composite requires a background and a foreground input"), { code: "SOURCE_NOT_FOUND", status: 400 });
+    const dir = path.join(VT_CACHE_DIR, "jobs", job.id);
+    await ensureDir(dir);
+    const outPath = path.join(dir, `composite-${randomUUID().slice(0, 8)}.mp4`);
+    await compositeOver(bg.path, fg.path, outPath);
+    return this.storeDerived(job, outPath, `composite-${job.id}`);
+  },
+
+  /** Read a rendered file back, publish it as an org asset, meter the bytes. */
+  async storeDerived(job: VtJob, outPath: string, name: string) {
+    const buf = await fs.readFile(outPath);
+    const written = await writeAsset(job.organizationId, `${name}-${randomUUID().slice(0, 8)}.mp4`, buf);
+    await recordStorageUsage(job.organizationId, job.id, buf.length);
+    // Register as a source so downstream nodes in the same graph can read it.
+    await redis.set(K.sourceMeta(written.url), s2({ path: outPath, url: written.url, meta: await probeVideo(outPath).catch(() => ({ durationSec: 0, fps: 30, width: 0, height: 0, frameCount: 0 })) }));
+    return { assetId: written.url, url: written.url };
   },
 
   async runImageGenerate(job: VtJob, input: Extract<VtJobInput, { kind: "image_generate" }>) {
@@ -454,8 +514,18 @@ export const VtService = {
     const input = job.input as Extract<VtJobInput, { kind: "workflow" }>;
     const wf = await this.getWorkflow(job.organizationId, input.workflowId);
     if (!wf) throw new Error("workflow not found");
-    // Validate DAG
+    // Validate DAG shape...
     topoSort(wf);
+    // ...and that every node can actually do something. S210: a graph with an
+    // unimplemented node or unset filter settings used to run to a green job
+    // that returned the untouched input. Refuse it instead.
+    const problems = validateWorkflow(wf);
+    if (problems.length) {
+      throw Object.assign(
+        new Error(`workflow cannot run:\n- ${problems.join("\n- ")}`),
+        { code: "WORKFLOW_INVALID", status: 400, problems },
+      );
+    }
     await executeWorkflow(wf, {
       organizationId: job.organizationId, userId: job.userId, jobId: job.id,
       onProgress: (m, pct) => emit(job.id, "TRANSFORMING_VIDEO", pct, m),
@@ -541,19 +611,63 @@ export const VtService = {
         out.video = res("video", "video", r.assetId, r.assetId); break;
       }
       case "image_editor": case "image_upscaler": {
-        out.image = inputs.image?.[0] ? { ...inputs.image[0]! } : res("image", "image", undefined); break;
+        // S210: no real implementation exists for these. Previously they
+        // returned the input image unchanged, so an upscale silently produced
+        // the original at the original size. Fail loudly instead.
+        throw Object.assign(
+          new Error(`${getNodeDef(node.kind).label} is declared but not implemented — remove it from the workflow or route the image through Image Generator`),
+          { code: "NODE_NOT_IMPLEMENTED", status: 501 },
+        );
       }
-      case "video_trim": case "video_crop": case "video_resize": case "video_fps":
-      case "video_merge": case "video_composite": case "video_transform": {
-        out.video = (inputs.video?.[0] ?? inputs.a?.[0] ?? inputs.bg?.[0]) ? { ...(inputs.video?.[0] ?? inputs.a?.[0] ?? inputs.bg?.[0])! } : res("video", "video", undefined); break;
+      case "video_trim": case "video_crop": case "video_resize":
+      case "video_fps": case "video_transform": {
+        // S210: these used to spread the input onto the output — the job went
+        // green and returned the untouched source. They are real filters now.
+        const op = filterOpFor(node);
+        const r = await this.runFilterOp(job, firstAsset("video"), op);
+        out.video = res("video", "video", r.url, r.assetId);
+        break;
+      }
+      case "video_merge": {
+        const r = await this.runMerge(job, firstAsset("a"), firstAsset("b"));
+        out.video = res("video", "video", r.url, r.assetId); break;
+      }
+      case "video_composite": {
+        const r = await this.runComposite(job, firstAsset("bg"), firstAsset("fg"));
+        out.video = res("video", "video", r.url, r.assetId); break;
       }
       case "switch": { const sel = String(node.settings.selected ?? "a"); out.out = inputs[sel]?.[0] ? { ...inputs[sel][0]! } : res("out", "video", undefined); break; }
-      case "condition": case "router": case "combine": case "cache": case "delay": case "output": {
+      case "delay": {
+        // S210: the ms setting used to be ignored entirely.
+        const ms = Math.max(0, Math.min(60_000, Number(node.settings.ms ?? 0)));
+        if (ms > 0) await new Promise((r) => setTimeout(r, ms));
+        for (const [k, v] of Object.entries(inputs)) if (v[0]) out[k === "in" ? "out" : k] = { ...v[0]! };
+        break;
+      }
+      case "router": case "combine": case "cache": case "output": {
+        // Genuine pass-throughs: these route or mark data, they do not transform it.
         for (const [k, v] of Object.entries(inputs)) if (v[0]) out[k === "in" ? "out" : k] = { ...v[0]! }; break;
       }
+      case "condition": {
+        // S210: this used to emit on BOTH the true and false ports regardless
+        // of `expression`, so every downstream branch ran. There is no
+        // expression evaluator in the platform, so the node is rejected at
+        // validation time; reaching here means validation was bypassed.
+        throw Object.assign(
+          new Error("Condition is declared but has no expression evaluator — remove it from the workflow"),
+          { code: "NODE_NOT_IMPLEMENTED", status: 501 },
+        );
+      }
       default: {
-        // Pass-through for unimplemented-but-declared nodes (honest no-op).
-        for (const [k, v] of Object.entries(inputs)) if (v[0]) out[k] = { ...v[0]! };
+        // S210: the switch above is exhaustive over VtNodeKind. This branch is
+        // unreachable today; `never` makes adding a kind without an executor a
+        // compile error instead of the silent pass-through that used to live
+        // here (which is how the inert nodes went unnoticed).
+        const unhandled: never = node.kind;
+        throw Object.assign(
+          new Error(`node kind ${String(unhandled)} has no executor`),
+          { code: "NODE_NOT_IMPLEMENTED", status: 501 },
+        );
       }
     }
     return out;

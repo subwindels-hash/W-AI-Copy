@@ -169,6 +169,104 @@ export async function compositeSwitchX(
   ], { timeout: 300_000 });
 }
 
+/**
+ * S210 — real single-input video filter ops.
+ *
+ * Trim / crop / resize / fps / scale were previously "implemented" as an
+ * object-spread of the input port onto the output port, so a graph containing
+ * them ran to completion and returned the *untouched* source video. The user
+ * saw a green job and settings that had done nothing. These are ordinary
+ * ffmpeg filters — there was never a reason for them to be inert.
+ */
+export type VtFilterOp =
+  | { kind: "trim"; startSec: number; endSec: number }
+  | { kind: "crop"; w: number; h: number; x?: number; y?: number }
+  | { kind: "resize"; resolution: string }
+  | { kind: "fps"; fps: number }
+  | { kind: "scale"; scale: number };
+
+/** Validate op settings. Returns a human-readable reason, or null when usable. */
+export function checkFilterOp(op: VtFilterOp, meta?: VtVideoMeta): string | null {
+  switch (op.kind) {
+    case "trim": {
+      if (!Number.isFinite(op.startSec) || op.startSec < 0) return "trim: startSec must be >= 0";
+      if (!Number.isFinite(op.endSec) || op.endSec <= 0) return "trim: endSec must be set and > 0";
+      if (op.endSec <= op.startSec) return `trim: endSec (${op.endSec}s) must be greater than startSec (${op.startSec}s)`;
+      if (meta && op.startSec >= meta.durationSec) return `trim: startSec (${op.startSec}s) is beyond the source duration (${meta.durationSec}s)`;
+      return null;
+    }
+    case "crop": {
+      if (!Number.isFinite(op.w) || !Number.isFinite(op.h) || op.w <= 0 || op.h <= 0) return "crop: width and height must both be set and > 0";
+      if (meta && (op.w > meta.width || op.h > meta.height)) return `crop: ${op.w}x${op.h} is larger than the source (${meta.width}x${meta.height})`;
+      return null;
+    }
+    case "resize":
+      if (!RES_DIMS[op.resolution]) return `resize: unknown resolution "${op.resolution}" (expected one of ${Object.keys(RES_DIMS).join(", ")})`;
+      return null;
+    case "fps":
+      if (!Number.isFinite(op.fps) || op.fps <= 0 || op.fps > 240) return "fps: must be between 1 and 240";
+      return null;
+    case "scale":
+      if (!Number.isFinite(op.scale) || op.scale <= 0) return "scale: must be > 0";
+      if (op.scale > 4) return "scale: must be <= 4";
+      return null;
+  }
+}
+
+/** The ffmpeg `-vf` filter string for an op (empty when the op is a seek/trim). */
+export function filterStringFor(op: VtFilterOp): string {
+  switch (op.kind) {
+    case "trim": return "";
+    case "crop": return `crop=${Math.round(op.w)}:${Math.round(op.h)}:${Math.round(op.x ?? 0)}:${Math.round(op.y ?? 0)}`;
+    case "resize": {
+      const d = RES_DIMS[op.resolution]!;
+      // Preserve aspect, pad to the exact target so downstream nodes get
+      // predictable dimensions. Force even dims for yuv420p.
+      return `scale=${d.w}:${d.h}:force_original_aspect_ratio=decrease,pad=${d.w}:${d.h}:(ow-iw)/2:(oh-ih)/2`;
+    }
+    case "fps": return `fps=${op.fps}`;
+    case "scale": return `scale=trunc(iw*${op.scale}/2)*2:trunc(ih*${op.scale}/2)*2`;
+  }
+}
+
+/** Apply one filter op, producing a real re-encoded MP4. */
+export async function applyFilterOp(inputPath: string, outPath: string, op: VtFilterOp, meta?: VtVideoMeta): Promise<void> {
+  if (!(await hasFfmpeg())) {
+    throw Object.assign(new Error(`ffmpeg is not installed — cannot apply ${op.kind}`), { code: "FFMPEG_REQUIRED" });
+  }
+  const reason = checkFilterOp(op, meta);
+  if (reason) throw Object.assign(new Error(reason), { code: "INVALID_NODE_SETTINGS", status: 400 });
+
+  const args: string[] = ["-y"];
+  if (op.kind === "trim") args.push("-ss", String(op.startSec));
+  args.push("-i", inputPath);
+  if (op.kind === "trim") args.push("-t", String(op.endSec - op.startSec));
+  const vf = filterStringFor(op);
+  if (vf) args.push("-vf", vf);
+  args.push("-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "copy", outPath);
+  await execFileP("ffmpeg", args, { timeout: 300_000 });
+}
+
+/** Concatenate two clips (Video Merge). Re-encodes so mismatched inputs join. */
+export async function concatVideos(aPath: string, bPath: string, outPath: string): Promise<void> {
+  if (!(await hasFfmpeg())) throw Object.assign(new Error("ffmpeg is not installed — cannot merge videos"), { code: "FFMPEG_REQUIRED" });
+  await execFileP("ffmpeg", [
+    "-y", "-i", aPath, "-i", bPath,
+    "-filter_complex", "[0:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[a];[1:v]scale=1280:720:force_original_aspect_ratio=decrease,pad=1280:720:(ow-iw)/2:(oh-ih)/2,setsar=1[b];[a][b]concat=n=2:v=1:a=0[out]",
+    "-map", "[out]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", outPath,
+  ], { timeout: 600_000 });
+}
+
+/** Overlay a foreground (with alpha) over a background video (Video Composite). */
+export async function compositeOver(bgPath: string, fgPath: string, outPath: string): Promise<void> {
+  if (!(await hasFfmpeg())) throw Object.assign(new Error("ffmpeg is not installed — cannot composite"), { code: "FFMPEG_REQUIRED" });
+  await execFileP("ffmpeg", [
+    "-y", "-i", bgPath, "-i", fgPath,
+    "-filter_complex", "[1:v]format=rgba[fg];[0:v][fg]overlay=(W-w)/2:(H-h)/2:format=auto:shortest=1[out]",
+    "-map", "[out]", "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", outPath,
+  ], { timeout: 600_000 });
+}
+
 export function mattePreviewFilter(mode: VtMattePreviewMode): string {
   switch (mode) {
     case "alpha": return "format=gray";

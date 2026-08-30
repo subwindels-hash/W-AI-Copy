@@ -4,8 +4,7 @@
 import { api } from "./api";
 import type {
   VtDashboard, VtJob, VtJobInput, VtNodeDef, VtProviderModel,
-  VtWorkflow, VtWorkflowConnection, VtWorkflowNode, VtActivityEvent,
-} from "@windels/shared";
+  VtWorkflow, VtWorkflowConnection, VtWorkflowNode, VtActivityEvent, VtWorkflowValidation,} from "@windels/shared";
 
 export type {
   VtDashboard, VtJob, VtJobInput, VtNodeDef, VtProviderModel,
@@ -20,6 +19,8 @@ export interface UploadedSource {
 
 export const vtApi = {
   nodes: () => api<VtNodeDef[]>("/video-transform/nodes"),
+  /** S210: pre-flight a graph so the editor can show problems before Run. */
+  validateWorkflow: (id: string) => api<VtWorkflowValidation>(`/video-transform/workflows/${id}/validate`),
   providers: (kind?: string) => api<VtProviderModel[]>("/video-transform/providers", kind ? { params: { kind } } : {}),
   dashboard: () => api<VtDashboard>("/video-transform/dashboard"),
   activity: () => api<VtActivityEvent[]>("/video-transform/activity"),

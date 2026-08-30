@@ -43,6 +43,7 @@ export default function VideoTransformStudioPage() {
   const [resultUrl, setResultUrl] = useState<string | null>(null);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
+  const [problems, setProblems] = useState<string[]>([]);
   const [prompt, setPrompt] = useState("Place the person inside a cinematic luxury yacht travelling across the Mediterranean.");
   const [frameNumber, setFrameNumber] = useState(0);
   const [preserve, setPreserve] = useState("high");
@@ -156,7 +157,12 @@ export default function VideoTransformStudioPage() {
   const runWorkflow = useCallback(async () => {
     if (!workflow) return;
     await run("workflow", async () => {
-      // Persist then run server-side workflow execution.
+      // S210: pre-flight the graph. The server rejects an unrunnable workflow
+      // too, but checking here lets us list every problem at once instead of
+      // surfacing a single error string.
+      setProblems([]);
+      const v = await vtApi.validateWorkflow(workflow.id);
+      if (!v.valid) { setProblems(v.problems); throw new Error(`Workflow has ${v.problems.length} problem(s) — fix them before running.`); }
       const j = await vtApi.runWorkflow(workflow.id);
       setActiveJob(j);
     });
@@ -165,6 +171,7 @@ export default function VideoTransformStudioPage() {
   const addNode = useCallback((kind: string) => {
     if (!workflow) return;
     const def = defs.find((d) => d.kind === kind); if (!def) return;
+    if (def.implemented === false) { setErr(`${def.label} is declared but not implemented — it cannot run in a workflow.`); return; }
     const node: VtWorkflowNode = { id: uid("n_"), kind: kind as any, x: 200 + Math.random() * 200, y: 120 + Math.random() * 120, settings: {} };
     setWorkflow({ ...workflow, nodes: [...workflow.nodes, node], version: workflow.version + 1 });
   }, [workflow, defs]);
@@ -189,6 +196,12 @@ export default function VideoTransformStudioPage() {
       </div>
 
       {err && <div className="rounded-lg border border-rose-500/30 bg-rose-500/10 px-4 py-2 text-sm text-rose-200">{err}</div>}
+      {problems.length > 0 && (
+        <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 px-4 py-2 text-sm text-amber-200">
+          <div className="font-semibold mb-1">This workflow cannot run:</div>
+          <ul className="list-disc pl-5 space-y-0.5">{problems.map((p, i) => <li key={i}>{p}</li>)}</ul>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 xl:grid-cols-4 gap-5">
         {/* Left: source + controls */}
@@ -230,8 +243,15 @@ export default function VideoTransformStudioPage() {
               <div className="flex gap-2">
                 <Select value="" onChange={(e) => addNode(e.target.value)}>
                   <option value="">+ Add node…</option>
+                  {/* S210: nodes with no executor are disabled rather than
+                      offered — adding one used to build a graph that ran green
+                      and returned the input untouched. */}
                   {Object.entries(groupedDefs).map(([cat, list]) => (
-                    <optgroup key={cat} label={cat}>{list.map((d) => <option key={d.kind} value={d.kind}>{d.label}</option>)}</optgroup>
+                    <optgroup key={cat} label={cat}>{list.map((d) => (
+                      <option key={d.kind} value={d.kind} disabled={d.implemented === false}>
+                        {d.label}{d.implemented === false ? " (not implemented)" : ""}
+                      </option>
+                    ))}</optgroup>
                   ))}
                 </Select>
                 <Button size="sm" variant="secondary" onClick={runWorkflow} loading={busy === "workflow"} disabled={!workflow}><Play className="w-4 h-4 mr-1" />Run</Button>
