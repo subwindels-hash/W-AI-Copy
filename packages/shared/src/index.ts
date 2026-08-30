@@ -164,6 +164,7 @@ export * from "./sportsIntelligence.js";
 export * from "./lotteryIntelligence.js";
 export * from "./languageLearning.js";
 export * from "./sitePlatform.js";
+export * from "./superAdminCron.js";
 export * from "./account.js";
 export * from "./githubConnector.js";
 export * from "./financial.js";

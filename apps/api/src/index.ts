@@ -20,6 +20,7 @@ let sportsJobTicker: NodeJS.Timeout | null = null;
 let lotteryJobTicker: NodeJS.Timeout | null = null;
 let languageLearningTicker: NodeJS.Timeout | null = null;
 let pinRotationTicker: NodeJS.Timeout | null = null;
+let cronSchedulerTicker: NodeJS.Timeout | null = null;
 let stopWhatsAppWorker: (() => void) | null = null;
 
 async function main() {
@@ -732,6 +733,14 @@ async function main() {
     } catch (e) {
       logger.warn("account PIN rotation ticker failed to start", { err: e });
     }
+    // Super Admin cron scheduler — dispatches platform-level cron jobs.
+    try {
+      const { startCronScheduler } = await import("./cronJobs/cronJobs.service.js");
+      cronSchedulerTicker = startCronScheduler();
+      logger.info("super admin cron scheduler started");
+    } catch (e) {
+      logger.warn("cron scheduler failed to start", { err: e });
+    }
     if (env.BLOCKONOMICS_RECONCILIATION_ENABLED) {
       blockonomicsReconciliationTicker = setInterval(() => {
         void (async () => {
@@ -779,6 +788,7 @@ async function main() {
     if (lotteryJobTicker) clearInterval(lotteryJobTicker);
     if (languageLearningTicker) clearInterval(languageLearningTicker);
     if (pinRotationTicker) clearInterval(pinRotationTicker);
+    if (cronSchedulerTicker) clearInterval(cronSchedulerTicker);
     if (stopWhatsAppWorker) stopWhatsAppWorker();
 
     // Stop accepting new connections and drain in-flight requests

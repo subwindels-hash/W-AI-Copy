@@ -10,12 +10,18 @@
 
 | Status | Count |
 |---|---|
-| COMPLETE | **153** |
+| COMPLETE | **155** |
 | PARTIAL | **0** |
 | STUB | **0** |
-| TOTAL | **153** |
+| TOTAL | **155** |
 
-**There are currently no unfinished modules by the scanner's gates.**
+**There are currently no unfinished modules by the scanner's gates.** The last
+holdout, `advancedLeadDiscovery` (which the scanner reported as 1 PARTIAL after
+the earlier 153-module count), was completed — it gained a first-party web
+client (`lib/advancedLeadDiscovery.ts`) and a dedicated routed console
+(`/app/advanced-leads`, `AdvancedLeadDiscoveryPage`) — see `PROGRESS.md` S207.
+The platform also gained a new `cronJobs` module (Super Admin cron scheduling)
+in S208, bringing the total to 155.
 
 ---
 
