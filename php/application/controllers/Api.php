@@ -1,0 +1,2 @@
+<?php defined('BASEPATH') OR exit('No direct script access allowed');
+class Api extends MY_Controller { public function dispatch($module='',$path=''){ if(!$this->require_auth())return; return $this->fail('MODULE_NOT_MIGRATED','The requested module has not yet been ported to the PHP runtime.',501,array('module'=>$module,'path'=>$path)); } public function not_found(){ return $this->fail('NOT_FOUND','Route not found',404); } }

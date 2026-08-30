@@ -1,0 +1,11 @@
+RewriteEngine On
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php/$1 [L]
+
+# Never expose secrets, SQL dumps, logs, or framework internals.
+<FilesMatch "^(\.env|\.env\..*|composer\.(json|lock)|.*\.sql)$">
+  Require all denied
+</FilesMatch>
+RewriteRule ^(?:application|system|database)/ - [F,L]
+Options -Indexes

@@ -1,0 +1,1 @@
+import{c as s}from"./index-DDIy3B33.js";const a={dashboard:()=>s("/sdk/dashboard/rollup"),cli:()=>s("/sdk/cli"),templates:()=>s("/sdk/templates"),startEmulator:o=>s("/sdk/emulators",{method:"POST",json:o}),profile:o=>s("/sdk/profiler",{method:"POST",json:{target:o}})};export{a as s};

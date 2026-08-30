@@ -1,0 +1,1 @@
+import{c as t}from"./index-DDIy3B33.js";const i={status:()=>t("/github/status"),startOauth:o=>t("/github/oauth/start",{method:"POST",json:{returnTo:o}}),connectPat:(o,s)=>t("/github/pat",{method:"POST",json:{token:o,label:s}}),verify:()=>t("/github/verify",{method:"POST"}),disconnect:()=>t("/github",{method:"DELETE"}),repos:()=>t("/github/repos")};export{i as g};

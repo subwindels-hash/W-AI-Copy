@@ -1,0 +1,6 @@
+import{d as n,c as t}from"./index-DDIy3B33.js";import"./derivatives-Dspv8eYn.js";/**
+ * @license lucide-react v0.460.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const s=n("CircleDot",[["circle",{cx:"12",cy:"12",r:"10",key:"1mglay"}],["circle",{cx:"12",cy:"12",r:"1",key:"41hilf"}]]),a={dashboard:()=>t("/trading-intel/dashboard/rollup"),agents:()=>t("/trading-intel/agents"),indicators:()=>t("/trading-intel/indicators"),instruments:i=>t("/trading-intel/instruments",i?{params:{marketClass:i}}:{}),risk:()=>t("/trading-intel/risk"),positions:()=>t("/trading-intel/positions"),sentiment:(i=40)=>t("/trading-intel/sentiment",{params:{limit:i}}),simulate:i=>t("/trading-intel/simulate",{method:"POST",json:i}),economicCalendar:(i=7)=>t("/trading-intel/economic-calendar",{params:{days:i}}),insights:(i=30)=>t("/trading-intel/insights",{params:{limit:i}}),propose:i=>t("/trading-intel/propose",{method:"POST",json:i})},r={optionGreeks:i=>t("/derivatives/option-greeks",{method:"POST",json:i}),impliedVol:i=>t("/derivatives/implied-vol",{method:"POST",json:i}),optionPayoff:i=>t("/derivatives/option-payoff",{method:"POST",json:i}),bondAnalytics:i=>t("/fixed-income/bond-analytics",{method:"POST",json:i})};export{s as C,r as d,a as t};

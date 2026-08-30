@@ -1,0 +1,1 @@
+import{c as e}from"./index-DDIy3B33.js";const o={dashboard:()=>e("/media-generation/dashboard/rollup"),capabilities:a=>e("/media-generation/capabilities",a?{params:{modality:a}}:{}),generate:a=>e("/media-generation/generate",{method:"POST",json:a}),jobs:()=>e("/media-generation/jobs")};export{o as m};

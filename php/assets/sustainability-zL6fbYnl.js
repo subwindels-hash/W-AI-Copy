@@ -1,0 +1,1 @@
+import{c as r}from"./index-DDIy3B33.js";const i={dashboard:()=>r("/sustainability/dashboard/rollup"),records:s=>r("/sustainability/records",{params:s?{limit:s}:{}}),record:s=>r(`/sustainability/records/${s}`),recordActivity:s=>r("/sustainability/activity",{method:"POST",json:s}),removeRecord:s=>r(`/sustainability/records/${s}`,{method:"DELETE"})};export{i as e};

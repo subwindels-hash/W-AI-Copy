@@ -1,0 +1,1 @@
+import{c as e}from"./index-DDIy3B33.js";const p={dashboard:()=>e("/experts/dashboard/rollup"),agents:()=>e("/experts/agents"),query:(s,r)=>e(`/experts/agents/${s}/query`,{method:"POST",json:{question:r}}),courses:()=>e("/experts/courses"),packages:()=>e("/experts/packages")};export{p as e};

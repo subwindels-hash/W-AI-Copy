@@ -1,0 +1,2 @@
+<?php defined('BASEPATH') OR exit('No direct script access allowed');
+class Health extends MY_Controller { public function index(){ $db='ok'; try{$this->load->database();$this->db->query('SELECT 1');}catch(Throwable $e){$db='error';} return $this->respond(array('service'=>'windels-php-api','status'=>$db==='ok'?'ok':'degraded','version'=>'1.0.0','timestamp'=>gmdate('c'),'checks'=>array('db'=>$db))); } public function deep(){ return $this->index(); } }
