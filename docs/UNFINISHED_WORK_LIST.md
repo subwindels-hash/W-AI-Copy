@@ -112,7 +112,7 @@ These are in **reachable** code. This is the whole list; it is short.
 
 | # | Module | File:line | Defect | Fix |
 |---|---|---|---|---|
-| 1 | `architecture` | `esiAggregation.service.ts:77` | ESI trading section reports the **global** catalogue and hardcodes `positionsOpen: null`, `pnl24hUsd: null` with a "see S194" note. Per-org portfolio state is never surfaced. | Expose per-org positions/PnL from `tradingIntel` and fill the two null metrics. *Honest today* — it reports `null`, not a fake number — but it is a declared, unfinished handoff. |
+| 1 | `architecture` | `esiAggregation.service.ts:77` | ~~ESI trading section reports the **global** catalogue and hardcodes `positionsOpen: null`, `pnl24hUsd: null` with a "see S194" note.~~ | ✅ **DONE 2026-08-30.** The per-org column is real. `tradingIntel` keeps positions under one global `ti:positions` key belonging to no tenant (and seeded with a demo book), so rather than org-scope that, the section now reads `BrokerIntegrationService.dashboard(oid)` — already org-scoped — for `connectedBrokerAccounts`, `positionsOpen` and `pnlTodayUsd`. Catalogue rows are labelled "(global)", portfolio rows "(this org)". An org with no broker reports a **measured 0**; an unreachable broker module leaves the rows **null** rather than claiming a flat book. 4 regression tests (7 total pass; all 4 fail against the previous commit). |
 | 2 | `videoTransform` | `transform.service.ts:555` | `default:` branch is a documented pass-through for "unimplemented-but-declared nodes". Declared node kinds silently do nothing. | Enumerate which node kinds land in `default`; either implement them or reject them at workflow-validation time so a user cannot build a graph with inert nodes. |
 | 3 | `mediaGen` | `mediaGen.service.ts:186` | `videoOpsStubbed` — video capabilities `throw "stubbed pending downstream session"`. Surfaced in the UI as `PlatformPage.tsx:6312` "Video Stubs: S62 stub". | Honest and visible. Close by routing video ops to the real `videoEngine`/`videoTransform` modules, which now exist. |
 | 4 | `sdk` / docs | `apps/web/src/lib/docs.ts:130` | ~~Docs advertise **"Coming soon — TypeScript and Python clients"** with a commented-out import sample.~~ | ✅ **DONE 2026-08-30.** Section retitled "API Clients" and rewritten against the real key-authenticated `/api/rest/v1` gateway: runnable TypeScript and Python samples using `X-Api-Key`, plus the 9 live endpoints. No unbuilt package is promised. |
@@ -167,14 +167,20 @@ third-party credentials. Not defects; procurement items.
    affecting every order, not a dormant fallback.
 3. ~~**Finding 2, item 8**~~ — ✅ **done 2026-08-30.** Commerce now uses integer
    minor units end to end, with a shared `formatCents` helper.
-4. **Finding 2, items 1–3** — real feature handoffs, one session each, in the
-   established Sessions 155–208 pattern.
+4. ~~**Finding 2, item 1**~~ — ✅ **done 2026-08-30.** ESI's trading section now
+   reports real per-org broker positions and P&L.
+5. **Finding 2, items 2–3** — the remaining feature handoffs
+   (`videoTransform` inert nodes, `mediaGen` video stubs), one session each.
    *Adjacent cleanup available:* `ErpPage`, `CrmPage` and `LicensingPage` each
    hand-roll their own `fmtCents`/`usd`. They can now import the shared helper;
-   deferred here to keep this change scoped to commerce.
-5. **Finding 3** — schedule one run in the target environment; it converts the
+   deferred to keep the commerce change scoped.
+   *Also surfaced:* `tradingIntel`'s `/positions` and `/risk` routes take
+   `_req` and read global `ti:*` keys, so every tenant sees the same book —
+   the same defect shape S165/S179 fixed elsewhere. Not in scope here (ESI now
+   bypasses it), but it is a real tenant-isolation gap worth its own session.
+6. **Finding 3** — schedule one run in the target environment; it converts the
    entire 🟡 column to 🟢 or produces the first real defect list in months.
-6. **Finding 2, item 7** — tighten the build gate once (1) has landed.
+7. **Finding 2, item 7** — tighten the build gate once (1) has landed.
 
 ---
 

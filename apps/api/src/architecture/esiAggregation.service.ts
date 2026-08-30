@@ -12,13 +12,17 @@
  *    `"org-windels"` for benchmarks and mediaGen, so every tenant
  *    received org-windels' dashboard — the same S165 deployment /
  *    S179 disasterRecovery defect shape.
- *  - Trading intelligence's `dashboard(oid)` was added (a thin shim
- *    around the existing global keys — the catalogue is global, but
- *    per-org positions/insights are not yet exposed; that refactor is
- *    the S194 work). For now `tiSection` reports the catalogue state
- *    (markets, agents, indicators) which is genuinely global, and the
- *    per-org portfolio values (positions, pnl) report 0 unless
- *    `tradingIntel` has been upgraded to expose per-org calls.
+ *  - Trading intelligence reports the catalogue state (markets, agents,
+ *    indicators), which is genuinely global.
+ *
+ * Session 209 — the trading section's per-org column is now real. The two
+ * portfolio metrics were hardcoded `null` with a "see S194" note because
+ * `TradingIntelService` keeps positions under a single global `ti:positions`
+ * key that belongs to no tenant. They now read
+ * `BrokerIntegrationService.dashboard(oid)` — already org-scoped — so open
+ * positions, connected accounts and today's realised P&L are the caller's own.
+ * Catalogue rows are labelled "(global)" and portfolio rows "(this org)" so the
+ * two can never be read as the same scope.
  *  - When a source module's dashboard throws, the section reports
  *    `available: false` with the error message — never an invented
  *    value.
@@ -72,23 +76,47 @@ export const EsiAggregationService = {
           ],
         };
       }),
-      // Trading intelligence — catalogue state (markets / agents / indicators)
-      // is global by design. The S194 refactor will lift the per-org
-      // positions / PnL into the report. For now, the trading section
-      // reports the global catalogue state and an honest "positions per
-      // org not yet exposed" note for the per-org column.
+      // Trading intelligence — the catalogue (markets / agents / indicators) is
+      // global by design; the *portfolio* is per-org.
+      //
+      // Before this change the two per-org metrics were hardcoded `null` with a
+      // "see S194" note, because `TradingIntelService.dashboard()` reads a
+      // single global `ti:positions` key that belongs to no tenant. Rather than
+      // org-scope that seeded demo book, the per-org column now comes from
+      // `BrokerIntegrationService.dashboard(oid)`, which is already org-scoped
+      // and reports *real* connected-broker positions and realised P&L.
+      //
+      // The distinction is kept explicit in the labels: catalogue rows say
+      // "(global)", portfolio rows say "(this org)". An org with no connected
+      // broker reports 0 open positions — that is a measured zero, not a
+      // structural one — while an unreachable broker module leaves the two
+      // portfolio rows `null` rather than claiming a flat book.
       measure("trading", "Trading Intelligence", async () => {
         const { TradingIntelService } = await import("../tradingIntel/tradingIntel.service.js");
         const d = await TradingIntelService.dashboard();
+
+        let positionsOpen: number | null = null;
+        let pnlTodayUsd: number | null = null;
+        let connectedAccounts: number | null = null;
+        try {
+          const { BrokerIntegrationService } = await import("../tradingIntel/brokerIntegration.service.js");
+          const b = await BrokerIntegrationService.dashboard(oid);
+          positionsOpen = b.positions.length;
+          pnlTodayUsd = Math.round(b.pnl.today);
+          connectedAccounts = b.health.connectedAccounts;
+        } catch {
+          // Broker module unavailable — leave the per-org rows null rather than
+          // reporting a zero that would read as "no open positions".
+        }
+
         return {
           metrics: [
             { key: "agentsOnline", label: "Agents online (global)", value: d.agentsOnline ?? 0 },
             { key: "markets", label: "Markets (global)", value: Object.keys(d.markets ?? {}).length },
             { key: "indicators", label: "Indicators (global)", value: d.indicators ?? 0 },
-            // Per-org portfolio state is not yet exposed by tradingIntel
-            // (S194). We report it as null so the section is honest.
-            { key: "positionsOpen", label: "Open positions (per-org, see S194)", value: null },
-            { key: "pnl24hUsd", label: "P&L 24h (per-org, see S194)", value: null },
+            { key: "connectedBrokerAccounts", label: "Connected broker accounts (this org)", value: connectedAccounts },
+            { key: "positionsOpen", label: "Open positions (this org)", value: positionsOpen },
+            { key: "pnlTodayUsd", label: "P&L today, USD (this org)", value: pnlTodayUsd },
           ],
         };
       }),
