@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { Card, CardTitle, CardDescription } from "@/components/ui/Card";
 import { Badge } from "@/components/ui/Badge";
-import { Activity, Mail, MessageCircle, Globe, KeyRound, MapPin } from "lucide-react";
+import { Activity, Mail, MessageCircle, Globe, KeyRound, MapPin, PlugZap, CalendarClock } from "lucide-react";
 import { siteAdminApi, type SpControlSummary } from "@/lib/sitePlatform";
 import { SiteControlPage } from "@/pages/admin/SiteControlPage";
 
@@ -38,6 +39,19 @@ export function SuperAdminDashboard() {
           Developer marketplace products remain at /admin/api-platform.
         </CardDescription>
       </Card>
+
+      <div className="grid gap-3 md:grid-cols-2">
+        <Link to="/platform/providers" className="rounded-xl border border-white/10 bg-black/10 p-4 transition hover:border-azure/40 hover:bg-azure/5">
+          <div className="mb-2 grid h-9 w-9 place-items-center rounded-lg bg-azure/15 text-azure"><PlugZap className="h-5 w-5" /></div>
+          <div className="font-semibold text-text-bright">Connect all provider APIs</div>
+          <div className="mt-1 text-xs text-text-muted">Configure every external provider (AI, payments, social, messaging, lead discovery, trading and more) with encrypted keys stored in the dashboard.</div>
+        </Link>
+        <Link to="/platform/cron" className="rounded-xl border border-white/10 bg-black/10 p-4 transition hover:border-azure/40 hover:bg-azure/5">
+          <div className="mb-2 grid h-9 w-9 place-items-center rounded-lg bg-violet/15 text-violet"><CalendarClock className="h-5 w-5" /></div>
+          <div className="font-semibold text-text-bright">Set cron jobs</div>
+          <div className="mt-1 text-xs text-text-muted">Schedule and run platform-level jobs on standard cron expressions — webhooks, exchange-rate refreshes, health reports, and cleanup.</div>
+        </Link>
+      </div>
 
       <SiteControlPage embedded />
     </div>

@@ -151,6 +151,33 @@ function catalogEnvConfigured(slot: string): boolean {
     case "google-places-lead-discovery": return Boolean(process.env.GOOGLE_PLACES_API_KEY);
     case "apollo": return Boolean(process.env.LEAD_APOLLO_API_KEY);
     case "neverbounce": return Boolean(process.env.LEAD_NEVERBOUNCE_API_KEY);
+    case "elevenlabs": return Boolean(process.env.ELEVENLABS_API_KEY);
+    case "playht": return Boolean(process.env.PLAYHT_API_KEY);
+    case "paystack": return Boolean(process.env.PAYSTACK_SECRET_KEY);
+    case "flutterwave": return Boolean(process.env.FLUTTERWAVE_SECRET_KEY);
+    case "stripe": return Boolean(process.env.STRIPE_SECRET_KEY);
+    case "paypal": return Boolean(process.env.PAYPAL_CLIENT_ID);
+    case "blockonomics": return Boolean(process.env.BLOCKONOMICS_API_KEY);
+    case "youtube-client-id": return Boolean(process.env.YOUTUBE_CLIENT_ID);
+    case "youtube-client-secret": return Boolean(process.env.YOUTUBE_CLIENT_SECRET);
+    case "tiktok-client-id": return Boolean(process.env.TIKTOK_CLIENT_ID);
+    case "tiktok-client-secret": return Boolean(process.env.TIKTOK_CLIENT_SECRET);
+    case "instagram-client-id": return Boolean(process.env.INSTAGRAM_CLIENT_ID);
+    case "instagram-client-secret": return Boolean(process.env.INSTAGRAM_CLIENT_SECRET);
+    case "facebook-client-id": return Boolean(process.env.FACEBOOK_CLIENT_ID);
+    case "facebook-client-secret": return Boolean(process.env.FACEBOOK_CLIENT_SECRET);
+    case "x-client-id": return Boolean(process.env.X_CLIENT_ID);
+    case "x-client-secret": return Boolean(process.env.X_CLIENT_SECRET);
+    case "pinterest-client-id": return Boolean(process.env.PINTEREST_CLIENT_ID);
+    case "pinterest-client-secret": return Boolean(process.env.PINTEREST_CLIENT_SECRET);
+    case "whatsapp": return Boolean(process.env.WHATSAPP_ACCESS_TOKEN);
+    case "cloud-android": return Boolean(process.env.CLOUD_ANDROID_PROVIDER_HMAC_SECRET);
+    case "module-runner": return Boolean(process.env.MODULE_RUNNER_HMAC_SECRET);
+    case "mt5-bridge": return Boolean(process.env.WINDELS_MT5_BRIDGE_TOKEN);
+    case "metaapi": return Boolean(process.env.WINDELS_METAAPI_TOKEN);
+    case "robotics-mqtt": return Boolean(process.env.WINDELS_ROBOTICS_MQTT_URL);
+    case "ibm-quantum": return Boolean(process.env.WINDELS_IBM_QUANTUM_TOKEN);
+    case "dwave": return Boolean(process.env.WINDELS_DWAVE_TOKEN);
     default: return false;
   }
 }
@@ -158,7 +185,7 @@ function catalogEnvConfigured(slot: string): boolean {
 function publicApi(
   slot: string,
   rec: StoredApi | undefined,
-  cat: Pick<SpApiCatalogItem, "slot" | "label" | "category" | "needsKey" | "needsUrl" | "defaultBaseUrl" | "removable">,
+  cat: Pick<SpApiCatalogItem, "slot" | "label" | "category" | "needsKey" | "needsUrl" | "defaultBaseUrl" | "removable" | "envHint">,
   envFallback: boolean,
 ): SpApiCredentialPublic {
   return {
@@ -166,6 +193,7 @@ function publicApi(
     slot,
     label: rec?.label ?? cat.label,
     category: rec?.category ?? cat.category,
+    envHint: cat.envHint,
     enabled: rec?.enabled ?? envFallback,
     baseUrl: rec?.baseUrl ?? null,
     keySet: Boolean(rec?.apiKeyEnc),
@@ -782,6 +810,7 @@ export const SitePlatformService = {
       out.push(publicApi(rec.slot, rec, {
         slot: rec.slot, label: rec.label, category: rec.category,
         needsKey: true, needsUrl: true, defaultBaseUrl: null, removable: true,
+        envHint: rec.slot.replace(/-/g, "_").toUpperCase(),
       }, false));
     }
     return out;

@@ -37,6 +37,7 @@ const LearnPage = lazy(() => import("./pages/learn/LearnPage").then((m) => ({ de
 const ProjectsPage = lazy(() => import("./pages/projects/ProjectsPage").then((m) => ({ default: m.ProjectsPage })));
 const LeadsPage = lazy(() => import("./pages/leads/LeadsPage").then((m) => ({ default: m.LeadsPage })));
 const LeadPipelinePage = lazy(() => import("./pages/leads/LeadPipelinePage").then((m) => ({ default: m.LeadPipelinePage })));
+const AdvancedLeadDiscoveryPage = lazy(() => import("./pages/advancedLeadDiscovery/AdvancedLeadDiscoveryPage").then((m) => ({ default: m.AdvancedLeadDiscoveryPage })));
 const MfaAssurancePage = lazy(() => import("./pages/security/MfaAssurancePage").then((m) => ({ default: m.MfaAssurancePage })));
 const MobileDevicesPage = lazy(() => import("./pages/mobile/MobileDevicesPage").then((m) => ({ default: m.MobileDevicesPage })));
 const OpexAssurancePage = lazy(() => import("./pages/admin/OpexAssurancePage").then((m) => ({ default: m.OpexAssurancePage })));
@@ -204,6 +205,8 @@ const HowItWorksPage = lazy(() => import("./pages/marketing/MarketingPages").the
 const FaqPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.FaqPage })));
 const HelpPage = lazy(() => import("./pages/marketing/MarketingPages").then((m) => ({ default: m.HelpPage })));
 const SiteControlPage = lazy(() => import("./pages/admin/SiteControlPage").then((m) => ({ default: m.SiteControlPage })));
+const ProviderConnectionsPage = lazy(() => import("./pages/platformAdmin/ProviderConnectionsPage").then((m) => ({ default: m.ProviderConnectionsPage })));
+const CronJobsPage = lazy(() => import("./pages/platformAdmin/CronJobsPage").then((m) => ({ default: m.CronJobsPage })));
 const PublicShell = lazy(() => import("./app/PublicShell").then((m) => ({ default: m.PublicShell })));
 const MySupportPage = lazy(() => import("./pages/support/MySupportPage").then((m) => ({ default: m.MySupportPage })));
 const ContactCenterPage = lazy(() => import("./pages/support/ContactCenterPage").then((m) => ({ default: m.ContactCenterPage })));
@@ -422,6 +425,7 @@ export const router = createBrowserRouter([
       { path: "projects", element: withSuspense(<ProjectsPage />) },
       { path: "leads", element: withSuspense(<LeadsPage />) },
       { path: "lead-pipeline", element: withSuspense(<LeadPipelinePage />) },
+      { path: "advanced-leads", element: withSuspense(<AdvancedLeadDiscoveryPage />) },
       { path: "mfa-assurance", element: withSuspense(<MfaAssurancePage />) },
       { path: "mobile-devices", element: withSuspense(<MobileDevicesPage />) },
       { path: "nfc", element: withSuspense(<NfcCardManagerPage />) },
@@ -607,6 +611,8 @@ export const router = createBrowserRouter([
       { path: "blockonomics", element: withSuspense(<BlockonomicsAdminPage />) },
       { path: "crypto-transactions", element: withSuspense(<CryptoTransactionsPage />) },
       { path: "site", element: withSuspense(<SiteControlPage />) },
+      { path: "providers", element: withSuspense(<ProviderConnectionsPage />) },
+      { path: "cron", element: withSuspense(<CronJobsPage />) },
     ],
   },
   { path: "*", element: withSuspense(<NotFoundPage />) },

@@ -383,8 +383,28 @@ export const SpContactMapPatchSchema = z.object({
 });
 export type SpContactMapPatch = z.infer<typeof SpContactMapPatchSchema>;
 
-export const SP_API_CATEGORIES = ["ai", "sports", "lottery", "maps", "email", "lead_discovery", "integrations", "custom"] as const;
+export const SP_API_CATEGORIES = ["ai", "voice", "sports", "lottery", "maps", "email", "lead_discovery", "payments", "social", "messaging", "integrations", "infra", "trading", "robotics", "quantum", "custom"] as const;
 export type SpApiCategory = (typeof SP_API_CATEGORIES)[number];
+
+/** Human labels for every provider category shown in the Super Admin UI. */
+export const SP_API_CATEGORY_LABELS: Record<SpApiCategory, string> = {
+  ai: "AI Model Providers",
+  voice: "Voice Synthesis & Cloning",
+  sports: "Sports Intelligence",
+  lottery: "Lottery Feeds",
+  maps: "Maps & Location",
+  email: "Email & SMTP",
+  lead_discovery: "Lead Discovery & Verification",
+  payments: "Payment Providers",
+  social: "Social Platforms",
+  messaging: "Messaging Channels",
+  integrations: "Developer Integrations",
+  infra: "Infrastructure & Runners",
+  trading: "Trading & Markets",
+  robotics: "Robotics",
+  quantum: "Quantum Computing",
+  custom: "Custom / Other",
+};
 
 export interface SpApiCatalogItem {
   slot: string;
@@ -413,6 +433,33 @@ export const SP_API_CATALOG: SpApiCatalogItem[] = [
   { slot: "google-places-lead-discovery", label: "Google Places Lead Discovery", category: "lead_discovery", envHint: "GOOGLE_PLACES_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://maps.googleapis.com", removable: false },
   { slot: "apollo", label: "Apollo Lead Intelligence", category: "lead_discovery", envHint: "LEAD_APOLLO_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.apollo.io", removable: false },
   { slot: "neverbounce", label: "NeverBounce Email Verification", category: "lead_discovery", envHint: "LEAD_NEVERBOUNCE_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.neverbounce.com", removable: false },
+  { slot: "elevenlabs", label: "ElevenLabs", category: "voice", envHint: "ELEVENLABS_API_KEY", needsKey: true, needsUrl: false, defaultBaseUrl: "https://api.elevenlabs.io", removable: false },
+  { slot: "playht", label: "Play.ht", category: "voice", envHint: "PLAYHT_API_KEY", needsKey: true, needsUrl: false, defaultBaseUrl: "https://api.play.ht", removable: false },
+  { slot: "paystack", label: "Paystack", category: "payments", envHint: "PAYSTACK_SECRET_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.paystack.co", removable: false },
+  { slot: "flutterwave", label: "Flutterwave", category: "payments", envHint: "FLUTTERWAVE_SECRET_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.flutterwave.com/v3", removable: false },
+  { slot: "stripe", label: "Stripe", category: "payments", envHint: "STRIPE_SECRET_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api.stripe.com/v1", removable: false },
+  { slot: "paypal", label: "PayPal", category: "payments", envHint: "PAYPAL_CLIENT_ID", needsKey: true, needsUrl: true, defaultBaseUrl: "https://api-m.paypal.com", removable: false },
+  { slot: "blockonomics", label: "Blockonomics (crypto)", category: "payments", envHint: "BLOCKONOMICS_API_KEY", needsKey: true, needsUrl: true, defaultBaseUrl: "https://www.blockonomics.co/api", removable: false },
+  { slot: "youtube-client-id", label: "YouTube client id", category: "social", envHint: "YOUTUBE_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "youtube-client-secret", label: "YouTube client secret", category: "social", envHint: "YOUTUBE_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "tiktok-client-id", label: "TikTok client id", category: "social", envHint: "TIKTOK_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "tiktok-client-secret", label: "TikTok client secret", category: "social", envHint: "TIKTOK_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "instagram-client-id", label: "Instagram client id", category: "social", envHint: "INSTAGRAM_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "instagram-client-secret", label: "Instagram client secret", category: "social", envHint: "INSTAGRAM_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "facebook-client-id", label: "Facebook client id", category: "social", envHint: "FACEBOOK_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "facebook-client-secret", label: "Facebook client secret", category: "social", envHint: "FACEBOOK_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "x-client-id", label: "X (Twitter) client id", category: "social", envHint: "X_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "x-client-secret", label: "X (Twitter) client secret", category: "social", envHint: "X_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "pinterest-client-id", label: "Pinterest client id", category: "social", envHint: "PINTEREST_CLIENT_ID", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "pinterest-client-secret", label: "Pinterest client secret", category: "social", envHint: "PINTEREST_CLIENT_SECRET", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "whatsapp", label: "WhatsApp Business", category: "messaging", envHint: "WHATSAPP_ACCESS_TOKEN", needsKey: true, needsUrl: true, defaultBaseUrl: "https://graph.facebook.com/v18.0", removable: false },
+  { slot: "cloud-android", label: "Cloud Android Provider", category: "infra", envHint: "CLOUD_ANDROID_PROVIDER_HMAC_SECRET", needsKey: true, needsUrl: true, defaultBaseUrl: null, removable: false },
+  { slot: "module-runner", label: "Module Runner", category: "infra", envHint: "MODULE_RUNNER_HMAC_SECRET", needsKey: true, needsUrl: true, defaultBaseUrl: null, removable: false },
+  { slot: "mt5-bridge", label: "MetaTrader 5 Bridge", category: "trading", envHint: "WINDELS_MT5_BRIDGE_TOKEN", needsKey: true, needsUrl: false, defaultBaseUrl: null, removable: false },
+  { slot: "metaapi", label: "MetaApi", category: "trading", envHint: "WINDELS_METAAPI_TOKEN", needsKey: true, needsUrl: false, defaultBaseUrl: "https://trade.metaapi.cloud", removable: false },
+  { slot: "robotics-mqtt", label: "Robotics MQTT Broker", category: "robotics", envHint: "WINDELS_ROBOTICS_MQTT_URL", needsKey: false, needsUrl: true, defaultBaseUrl: null, removable: false },
+  { slot: "ibm-quantum", label: "IBM Quantum", category: "quantum", envHint: "WINDELS_IBM_QUANTUM_TOKEN", needsKey: true, needsUrl: false, defaultBaseUrl: "https://api.quantum-computing.ibm.com", removable: false },
+  { slot: "dwave", label: "D-Wave Leap", category: "quantum", envHint: "WINDELS_DWAVE_TOKEN", needsKey: true, needsUrl: false, defaultBaseUrl: "https://cloud.dwavesys.com", removable: false },
 ];
 
 export interface SpApiCredentialPublic {
@@ -420,6 +467,8 @@ export interface SpApiCredentialPublic {
   slot: string;
   label: string;
   category: SpApiCategory;
+  /** The environment-variable name that also configures this provider. */
+  envHint: string;
   enabled: boolean;
   baseUrl: string | null;
   keySet: boolean;

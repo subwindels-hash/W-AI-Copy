@@ -65,6 +65,7 @@ import { registerDeveloperGatewayRoutes } from "./routes/developerGateway.js";
 import { registerDeveloperPlatformRoutes } from "./routes/developerPlatform.js";
 import { registerAdminApiControlRoutes } from "./routes/adminApiControl.js";
 import { registerBlockonomicsAdminRoutes } from "./routes/blockonomicsAdmin.js";
+import { registerCronJobRoutes } from "./routes/cronJobs.js";
 import { registerContactRoutes } from "./routes/contact.js";
 import { registerMobileRoutes } from "./routes/mobile.js";
 import { registerMobileSyncRoutes } from "./routes/mobileSync.js";
@@ -1599,6 +1600,8 @@ export function createApp() {
   registerAdminApiControlRoutes(v1);
   // Blockonomics payment-provider control plane (Super Admin only).
   registerBlockonomicsAdminRoutes(v1);
+  // Platform-level cron jobs (Super Admin only).
+  registerCronJobRoutes(v1);
   // Contact & Support Center (public form, AI assistant, my-requests, admin).
   registerContactRoutes(v1);
   // Platform Reviews (public aggregate + authenticated write/rate, admin moderation).
