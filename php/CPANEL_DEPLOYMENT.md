@@ -1,87 +1,220 @@
-# cPanel deployment — no Terminal required
+# Portable cPanel deployment — no Terminal required
 
-The deployment archive is `application-deployment.zip`. It already contains CodeIgniter 3.1.13 and every runtime dependency. PHP 7.4–8.3 with `mysqli`, Apache `mod_rewrite`, and MySQL 5.7+/MariaDB 10.3+ are required. Composer, Node.js, npm, pnpm, Docker, SSH, and Terminal are not used.
+```text
+Upload files  →  Create database  →  Import database/production.sql  →  Edit .env  →  Open the site
+```
 
-## New cPanel deployment
+That is the whole deployment. **Terminal, SSH, Composer, Node.js, npm, pnpm,
+Docker and migration/seed commands are never used.** The deployment archive
+already contains every runtime dependency: CodeIgniter 3.1.13 ships inside
+`system/`, there is no `vendor/` directory, and no build step exists.
 
-### 1. Upload
+Requirements on the hosting account: PHP 7.4–8.3 with the `mysqli` extension,
+MySQL 5.7+ / MariaDB 10.3+, and Apache with `mod_rewrite` (both are standard on
+cPanel).
 
-In **cPanel → File Manager**, open the domain's document root (commonly `public_html`). Upload `application-deployment.zip`, select it, and click **Extract**. The archive's `index.php` and `.htaccess` must be directly in the document root, not in an extra nested folder. Enable “Show Hidden Files” so `.env` and `.htaccess` are visible.
+---
 
-### 2. Create the database
+## 1. New cPanel deployment
 
-In **cPanel → MySQL Databases**:
+### 1.1 Upload
 
-1. Create a database and database user.
-2. Add the user to the database.
-3. grant **ALL PRIVILEGES**.
+1. Download `application-deployment.zip`.
+2. **cPanel → File Manager** → open the domain's document root
+   (usually `public_html`; for an add-on domain use that domain's folder).
+3. Turn on **Settings → Show Hidden Files (dotfiles)** so `.htaccess` and
+   `.env` are visible.
+4. **Upload** the ZIP, select it, and press **Extract**.
+5. Check that `index.php`, `index.html` and `.htaccess` are directly inside the
+   document root — not inside an extra nested folder. (If they are, move them
+   up one level and delete the empty folder.)
 
-cPanel usually prefixes both names with the account name; use the complete displayed names in `.env`.
+### 1.2 Create the database
 
-### 3. Import the database
+**cPanel → MySQL Databases**
 
-Open **cPanel → phpMyAdmin**, select the new database, choose **Import**, and upload `database/production.sql`. This single idempotent file contains the complete schema, foreign keys, indexes, roles, permissions, settings, reference records, and templates. No migrations or seed commands are needed.
+1. **Create a new database** — cPanel prefixes it with the account name, e.g.
+   `cpaneluser_windels`. Copy the full name.
+2. **Create a database user** with a strong password. Copy the full user name
+   (also prefixed) and the password.
+3. **Add the user to the database**.
+4. On the privileges screen select **ALL PRIVILEGES**.
 
-### 4. Configure `.env`
+That is everything phpMyAdmin needs. Do not create any tables — the import in
+the next step creates all 103 of them.
 
-Edit `.env` in File Manager:
+### 1.3 Import the database
+
+**cPanel → phpMyAdmin**
+
+1. Select the new database in the left sidebar.
+2. Open the **Import** tab.
+3. Choose `database/production.sql` from the extracted files
+   (File Manager path: `public_html/database/production.sql`).
+4. Leave every option at its default and press **Go**.
+
+`database/production.sql` is one complete, idempotent file. It contains every
+table, column, index and foreign key, plus the default records the application
+needs to start: roles, permissions, role-permission mappings, application
+settings, templates, the AI model registry, plugins, governance standards,
+event schemas, the service registry, the API version row and the schema version
+marker. Importing it twice is safe.
+
+There is **no migration command and no seed command**. phpMyAdmin is the only
+tool needed.
+
+### 1.4 Configure `.env`
+
+Create `.env` in the document root (**File Manager → + File**), or copy
+`.env.example` to `.env` and edit it. Only these values normally change:
 
 ```ini
 CI_ENV=production
+
 VP_BASE_URL=https://yourdomain.com
+
 VP_DB_HOST=localhost
 VP_DB_PORT=3306
-VP_DB_NAME=CPANEL_DATABASE_NAME
-VP_DB_USER=CPANEL_DATABASE_USER
-VP_DB_PASS=DATABASE_PASSWORD
-VP_ENCRYPTION_KEY=YOUR_EXISTING_ENCRYPTION_KEY
-VP_AUTH_SECRET=YOUR_EXISTING_AUTH_SECRET
-VP_SETUP_KEY=A_PRIVATE_RANDOM_VALUE_OF_AT_LEAST_16_CHARACTERS
+VP_DB_NAME=cpaneluser_windels
+VP_DB_USER=cpaneluser_windels
+VP_DB_PASS=the-password-you-created
+
+VP_ENCRYPTION_KEY=your-existing-encryption-key
+VP_AUTH_SECRET=your-existing-auth-secret
 ```
 
-Keep `VP_ENCRYPTION_KEY` and `VP_AUTH_SECRET` unchanged when moving an existing database. Add mail/API credentials in the same file when those integrations are used. `.htaccess` denies web access to `.env` and SQL files.
+* `VP_DB_HOST` is `localhost` on virtually every cPanel account.
+* Use the **complete** database and user names shown by cPanel, including the
+  account prefix.
+* Optional values (mail, OpenAI, webhook secret, upload limit, CORS origin) are
+  documented inside `.env.example`. The application runs without them; mail
+  delivery and AI features simply stay inactive until they are filled in.
+* `.htaccess` blocks web access to `.env`, `.env.*`, `composer.*` and `*.sql`,
+  so the file cannot be downloaded by visitors.
 
-### 5. First administrator (new databases only)
+### 1.5 First administrator
 
-For a completely new database, visit:
+A brand-new database has no users, so one account must be created once. Pick
+either option — neither uses a command line.
 
-`https://yourdomain.com/setup?key=YOUR_VP_SETUP_KEY`
+**Option A — seed it with the import (nothing else to do)**
 
-Create the first administrator in the browser. Setup disables itself as soon as any user exists. Then remove `VP_SETUP_KEY` from `.env` or replace its value. When migrating an existing production database, its existing users and administrator are preserved and this step is neither available nor needed.
+Right after `database/production.sql`, import `database/seed-admin.sql`. It
+creates:
 
-### 6. Open the website
+| Field | Default value |
+|---|---|
+| Email | `admin@example.com` |
+| Password | `Windels!Admin#2026` |
+| Role | Administrator (owner of the default organisation) |
 
-Visit `https://yourdomain.com`. No additional installation operation is required.
+Edit the three `SET` lines at the top of that file first if you want a
+different email, organisation name or password hash (the file explains how to
+produce a bcrypt hash without a command line).
 
-## Writable folders
+> **Change that password immediately after the first login** — the default is
+> published in this repository. Then delete `VP_SETUP_KEY` from `.env`.
 
-The ZIP includes all required folders. Standard cPanel extraction normally creates them writable by the account owner. If a host uses restrictive permissions, use **File Manager → Change Permissions** and set these directories to `755` (or `775` only when the host requires group write):
+The file is a no-op when the database already contains a user, so it is safe to
+import at any time.
 
-- `application/cache/`
-- `application/cache/sessions/`
-- `application/logs/`
-- `assets/uploads/`
-- `assets/logs/cache/`
-- `assets/logs/ratelimit/`
+**Option B — one-time browser setup page**
 
-Never use `777`. Uploaded executable script extensions are blocked by `assets/uploads/.htaccess`.
+1. Set `VP_SETUP_KEY` in `.env` to a private value of at least 16 characters.
+2. Open `https://yourdomain.com/setup?key=YOUR_VP_SETUP_KEY`.
+3. Fill in email, organisation, display name and a password of 12+ characters.
+4. The page locks itself as soon as an account exists. Remove or replace
+   `VP_SETUP_KEY` afterwards.
 
-## Moving an existing installation
+### 1.6 Open the website
 
-Export its database in phpMyAdmin, upload/extract the same application package on the new account, import that export, and update only domain/database fields in `.env`. Copy the old encryption and authentication secret values exactly. This preserves passwords, refresh-token validation, and encrypted application data.
+Visit `https://yourdomain.com`. Nothing else has to be run.
 
-## Browser checks
+Quick self-checks:
 
-- `/` displays the login page.
-- `/healthz` reports database status.
-- Existing users and administrators can sign in.
-- `/setup` is forbidden after an account exists.
-- File uploads use authenticated `POST /api/v1/files` and write to `assets/uploads/`.
+| URL | Expected result |
+|---|---|
+| `/` | The application loads |
+| `/healthz` | `{"status":"ok","checks":{"db":"ok"},"bootstrap":"complete"}` |
+| `/.env` | 403 Forbidden |
+| `/database/production.sql` | 403 Forbidden |
 
-If every non-home URL returns cPanel's 404 page, enable Apache `mod_rewrite` through the hosting provider and confirm `.htaccess` exists in the document root.
+If `/healthz` reports `bootstrap: "pending"`, no administrator exists yet —
+see §1.5. If it reports `db: "error"`, re-check the six `VP_DB_*` values.
 
-### Private attachment storage
-Ensure `application/storage/uploads` is writable by PHP (normally directory mode `0750` or `0770`, depending on the host). Attachment bytes are stored outside the public `assets` directory and are only served after API authentication and organization checks.
+---
 
-### Webhook retries without cron
-Failed outbound webhook deliveries are retried automatically when an authenticated administrator opens an endpoint's delivery history. This request-driven mechanism requires no cron job, worker, Terminal, or daemon. Up to 10 due deliveries are processed per request, with exponential backoff and a maximum of five attempts.
+## 2. Writable folders
+
+The ZIP already contains these directories. Standard cPanel extraction makes
+them writable by the account owner, and PHP (which runs as the account owner)
+can write to them. If your host uses restrictive permissions, use
+**File Manager → right-click the folder → Change Permissions** and set `755`
+(or `775` when the host requires group write). Never use `777`.
+
+| Folder | Used for |
+|---|---|
+| `assets/uploads/` | Public uploads (files, avatars) |
+| `application/storage/uploads/` | Private attachments, served only after authentication |
+| `application/cache/` | Framework cache |
+| `application/cache/sessions/` | PHP session files (created automatically if missing) |
+| `application/logs/` | Application log files |
+| `assets/logs/cache/` | File-based cache |
+| `assets/logs/ratelimit/` | Rate-limit counters |
+
+`assets/uploads/.htaccess` blocks script execution inside the upload folder,
+and `.htaccess` denies web access to `application/`, `system/` and `database/`.
+
+---
+
+## 3. Moving an existing installation to another cPanel account
+
+Encryption keys and authentication secrets are **not** regenerated by a move, so
+passwords, refresh tokens and encrypted data keep working.
+
+1. **Export the database** on the old account: phpMyAdmin → select the
+   database → **Export** → Quick or Custom (default options) → **Go**. Keep
+   the resulting `.sql` file.
+2. **Upload and extract** `application-deployment.zip` on the new account
+   (§1.1).
+3. **Create the database and user** on the new account (§1.2).
+4. **Import** your exported `.sql` file with phpMyAdmin (§1.3). Uploaded files
+   and attachments must be copied over with File Manager as well:
+   `assets/uploads/` and `application/storage/uploads/`.
+5. **Edit `.env`** (§1.4) and change only the server-specific values:
+   `VP_BASE_URL` and the six `VP_DB_*` entries.
+   **Copy `VP_ENCRYPTION_KEY` and `VP_AUTH_SECRET` across unchanged.**
+6. Open the site. Existing users and the administrator sign in with their
+   existing passwords; nothing is re-created and no command is run.
+
+A brand-new database can also be built from scratch: import
+`database/production.sql`, then restore your own data export on top of it.
+
+---
+
+## 4. Troubleshooting
+
+| Symptom | Cause and fix |
+|---|---|
+| Every page except `/` shows the host's 404 page | `mod_rewrite` is disabled (ask the provider to enable it) or `.htaccess` is missing from the document root. |
+| Blank page | Check the PHP version (7.4–8.3) and confirm `.env` exists. Set `CI_ENV=development` temporarily to see the error, then switch back to `production`. |
+| `/healthz` reports `db: "error"` | Database name/user/password in `.env` do not match cPanel, or the user was not granted privileges on the database. |
+| Database error mentioning a table | The import was incomplete. Re-import `database/production.sql` — it is idempotent. |
+| Login works but the page immediately logs out | `VP_BASE_URL` does not match the domain actually being used (including `https://` and `www`). |
+| Uploads fail | `assets/uploads/` is not writable — apply `755` through File Manager. |
+| Emails are not sent | Fill in `VP_MAIL_*` in `.env`. The application keeps working and logs instead when mail is unconfigured. |
+
+---
+
+## 5. For developers: rebuilding the package
+
+```sh
+php/build-deployment.sh          # writes php/application-deployment.zip
+php/build-deployment.sh out.zip  # or a custom path
+```
+
+The script stages the runtime files, recreates the writable directories, drops
+development-only files (`Dockerfile`, `composer.json`, framework readmes,
+`application/migrations/`), and zips everything at the archive root so it can be
+extracted straight into `public_html`. Running it is a packaging step for
+maintainers — deploying never requires a shell.

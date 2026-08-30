@@ -34,6 +34,36 @@ specification (`uploads/CLAUDE.md`).
 > for the honest per-module inventory and **[audit/module-inventory.json](./audit/module-inventory.json)**
 > for machine-readable status. Do not assume session dashboards reflect real data.
 
+## Portable cPanel deployment (no Terminal)
+
+The repository also ships a **portable shared-hosting build** of the platform in
+[`php/`](./php) — a self-contained CodeIgniter 3 application with a MySQL
+schema. It deploys to any cPanel account with nothing but File Manager, MySQL
+Databases and phpMyAdmin:
+
+```text
+Upload application-deployment.zip → extract in the document root
+        ↓
+cPanel → MySQL Databases → create database + user + privileges
+        ↓
+cPanel → phpMyAdmin → Import database/production.sql
+        ↓
+Edit .env (base URL + database credentials; keep the existing secrets)
+        ↓
+Open the domain
+```
+
+No Terminal, SSH, Composer, Node.js, npm, pnpm, Docker, migration command, seed
+command or CLI admin-creation command is used at any point. Every runtime
+dependency is inside the archive, and the whole database (103 tables, indexes,
+foreign keys, roles, permissions, settings, templates and reference data) comes
+from the single `database/production.sql` file.
+
+- Full install guide: **[php/CPANEL_DEPLOYMENT.md](./php/CPANEL_DEPLOYMENT.md)**
+- Deployment package: **[`application-deployment.zip`](./application-deployment.zip)**
+  (rebuild it any time with `php/build-deployment.sh`)
+- Verification evidence: **[php/DEPLOYMENT_VERIFICATION.md](./php/DEPLOYMENT_VERIFICATION.md)**
+
 ## Quick start
 
 ```bash
@@ -97,6 +127,8 @@ tests/e2e/                # Playwright specs
 
 | File | Purpose |
 |---|---|
+| [php/CPANEL_DEPLOYMENT.md](./php/CPANEL_DEPLOYMENT.md) | Portable cPanel deployment: upload → create database → import SQL → edit `.env` → open the site, with no Terminal at any step |
+| [php/DEPLOYMENT_VERIFICATION.md](./php/DEPLOYMENT_VERIFICATION.md) | Evidence for the cPanel acceptance test (fresh install + migration to a second account) |
 | [docs/SYSTEM_ARCHITECTURE.md](./docs/SYSTEM_ARCHITECTURE.md) | Four-layer architecture overview |
 | [docs/NFC_CARD_MANAGER.md](./docs/NFC_CARD_MANAGER.md) | NFC architecture, security/API model, capability truth table, PC/SC prerequisites, and mandatory real-hardware qualification protocol |
 | [docs/MODULE_PLUGIN_CENTER.md](./docs/MODULE_PLUGIN_CENTER.md) | Signed `.wmod` format, fail-closed verification, isolated Module Runner contract, Super Admin lifecycle, runtime registration, rollback, and production validation |
