@@ -1,0 +1,15 @@
+import{d as m,j as e,g as d,ar as p,ao as u,b5 as b,bv as f,I as h,r as n,v as x,b as l,c as v,bb as g,bw as y}from"./index-DDIy3B33.js";import{M as j}from"./MBadge-Cv1YE0NC.js";import{u as k}from"./useHaptics-DkQznIOO.js";import{u as w}from"./useOnlineStatus-BtgSCW8U.js";import{f as M}from"./offlineQueue-CxN5SrGJ.js";import"./sync-CQF0Ljmm.js";import"./mobile-BICSXvrn.js";/**
+ * @license lucide-react v0.460.0 - ISC
+ *
+ * This source code is licensed under the ISC license.
+ * See the LICENSE file in the root directory of this source tree.
+ */const E=m("House",[["path",{d:"M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8",key:"5wwlr5"}],["path",{d:"M3 10a2 2 0 0 1 .709-1.528l7-5.999a2 2 0 0 1 2.582 0l7 5.999A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z",key:"1d0kgt"}]]),N=[{to:"/m",label:"Home",icon:E,end:!0},{to:"/m/chat",label:"Chat",icon:d},{to:"/m/agents",label:"Agents",icon:p},{to:"/m/talk",label:"Talk",icon:u},{to:"/m/profile",label:"Profile",icon:b}];function A(){const s=k();return e.jsx("nav",{className:"fixed bottom-0 inset-x-0 z-30 bg-bg-dark/95 backdrop-blur-xl border-t border-white/10 flex items-stretch",style:{paddingBottom:"var(--sab)"},children:N.map(t=>e.jsx(f,{to:t.to,end:t.end,onClick:()=>s.light(),className:({isActive:a})=>h("flex-1 flex flex-col items-center justify-center gap-0.5 py-2 text-[10px] font-medium transition relative",a?"text-azure-400":"text-text-muted"),children:({isActive:a})=>e.jsxs(e.Fragment,{children:[e.jsx(t.icon,{size:22,strokeWidth:a?2.4:2}),e.jsx("span",{children:t.label}),t.to==="/m/chat"&&e.jsx(j,{count:0,className:"absolute top-1 right-4"})]})},t.to))})}function B(){n.useEffect(()=>{if(!document.getElementById("windels-safe-area-style")){const s=document.createElement("style");s.id="windels-safe-area-style",s.textContent=`
+        :root {
+          --sat: env(safe-area-inset-top, 0px);
+          --sar: env(safe-area-inset-right, 0px);
+          --sab: env(safe-area-inset-bottom, 0px);
+          --sal: env(safe-area-inset-left, 0px);
+        }
+        html, body { overscroll-behavior-y: contain; -webkit-tap-highlight-color: transparent; touch-action: manipulation; }
+        body { padding-top: calc(var(--announcement-bar-height, 36px) + var(--sat)); padding-bottom: var(--sab); }
+      `,document.head.appendChild(s)}},[])}function W(){B();const{isOnline:s}=w(),t=x(),a=l(o=>o.deviceId),i=l(o=>o.setDevice),r=t.pathname.startsWith("/m/chat/")||t.pathname.startsWith("/m/meetings/")||t.pathname==="/m/auth";return n.useEffect(()=>{if(a)return;let o=!1;return(async()=>{try{const c=await v.post("/mobile/devices/register",{platform:"web-pwa",deviceName:navigator.platform||"Mobile",osVersion:navigator.userAgent.slice(0,80),appVersion:"0.15.0"});o||i(c.id)}catch{}})(),()=>{o=!0}},[a,i]),n.useEffect(()=>{s&&a&&M(a).catch(()=>null)},[s,a]),e.jsxs("div",{className:"app-min-screen w-full bg-bg-deep text-text-main relative pb-[calc(76px+var(--sab))]",children:[e.jsx(g,{}),!r&&e.jsx(y,{compact:!0}),!r&&e.jsx(A,{})]})}export{W as MobileShell};

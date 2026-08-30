@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0F1525" />
+  <title>Offline — WINDELS AI OS</title>
+  <style>
+    :root { color-scheme: dark; }
+    html, body { margin:0; padding:0; height:100%; background:#0A0F1A; color:#E2E8F0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, Roboto, sans-serif; -webkit-font-smoothing:antialiased; }
+    .wrap { min-height:100%; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 24px; text-align:center; padding-top: max(48px, env(safe-area-inset-top)); padding-bottom: max(48px, env(safe-area-inset-bottom)); }
+    .orb { width:72px; height:72px; border-radius:24px; background:linear-gradient(135deg,#3B82F6,#8B5CF6); display:grid; place-items:center; color:white; font-weight:800; font-size:32px; box-shadow:0 20px 40px rgba(59,130,246,.3); }
+    h1 { margin:24px 0 8px; font-size:22px; color:#fff; }
+    p { color:#6B7FA0; margin:0 0 24px; max-width:320px; font-size:14px; line-height:1.5; }
+    button { appearance:none; border:0; background:#3B82F6; color:white; padding:12px 24px; border-radius:14px; font-size:15px; font-weight:600; min-height:44px; }
+    button:active { transform:scale(.97); }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="orb">W</div>
+    <h1>You're offline</h1>
+    <p>WINDELS AI OS is still available. Queued actions will sync when you're back online.</p>
+    <button onclick="location.reload()">Try again</button>
+  </div>
+</body>
+</html>

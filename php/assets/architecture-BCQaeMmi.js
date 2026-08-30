@@ -1,0 +1,1 @@
+import{c as e}from"./index-DDIy3B33.js";const r={dashboard:()=>e("/architecture/dashboard/rollup"),status:()=>e("/architecture/status"),modules:()=>e("/architecture/modules"),esi:()=>e("/architecture/esi"),esiReport:()=>e("/architecture/esi/report"),pushSignal:t=>e("/architecture/esi/signals",{method:"POST",json:t})},a=r;export{a,r as b};

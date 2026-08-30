@@ -1,0 +1,1 @@
+import{c as s}from"./index-DDIy3B33.js";const a={dashboard:()=>s("/usage-intel/dashboard/rollup"),recordEvent:e=>s("/usage-intel/events",{method:"POST",json:e}),events:(e=100)=>s("/usage-intel/events",{params:{limit:e}}),event:e=>s(`/usage-intel/events/${e}`),removeEvent:e=>s(`/usage-intel/events/${e}`,{method:"DELETE"})};export{a as u};

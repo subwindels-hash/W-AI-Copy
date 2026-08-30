@@ -1,0 +1,2 @@
+<?php defined('BASEPATH') OR exit('No direct script access allowed');
+class CorsHook { public function handle() { $origin=getenv('CORS_ORIGIN') ?: '*'; header('Access-Control-Allow-Origin: '.$origin); header('Access-Control-Allow-Headers: Authorization, Content-Type, X-Requested-With'); header('Access-Control-Allow-Methods: GET, POST, PUT, PATCH, DELETE, OPTIONS'); if ($_SERVER['REQUEST_METHOD']==='OPTIONS') { http_response_code(204); exit; } } }

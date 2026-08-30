@@ -1,0 +1,1 @@
+import{c as i}from"./index-DDIy3B33.js";const t={listPipelines:()=>i("/etl/pipelines"),createPipeline:e=>i("/etl/pipelines",{method:"POST",json:e}),triggerRun:e=>i(`/etl/pipelines/${e}/run`,{method:"POST"}),listRuns:e=>i(`/etl/pipelines/${e}/runs`)};export{t as e};

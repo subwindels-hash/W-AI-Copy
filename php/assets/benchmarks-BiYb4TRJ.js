@@ -1,0 +1,1 @@
+import{c as r}from"./index-DDIy3B33.js";const a={dashboard:()=>r("/benchmarks/dashboard/rollup"),runs:()=>r("/benchmarks/runs"),record:s=>r("/benchmarks/run",{method:"POST",json:s}),schedule:s=>r("/benchmarks/schedule",{method:"POST",json:s})};export{a as b};
