@@ -28,6 +28,22 @@ $route['api/v1/tenant-isolation/compliance/run'] = 'tenant_isolation/compliance_
 $route['api/v1/tenant-isolation/compliance/runs/(:any)'] = 'tenant_isolation/compliance_run_item/$1';
 $route['api/v1/tenant-isolation/compliance/runs'] = 'tenant_isolation/compliance_runs';
 $route['api/v1/tenant-isolation/export-check'] = 'tenant_isolation/export_check';
+// Security & governance (Node routes/security.ts parity)
+$route['api/v1/security/scorecard'] = 'security/scorecard';
+$route['api/v1/security/self-test'] = 'security/self_test';
+$route['api/v1/security/prompt-guard/scan'] = 'security/prompt_scan';
+$route['api/v1/security/password-strength'] = 'security/password_strength';
+$route['api/v1/security/breakers/(:any)/reset'] = 'security/breaker_reset/$1';
+$route['api/v1/security/breakers'] = 'security/breakers';
+$route['api/v1/security/rate-limits'] = 'security/rate_limits';
+$route['api/v1/security/events'] = 'security/events';
+$route['api/v1/security/encryption'] = 'security/encryption';
+$route['api/v1/security/incidents/(:any)'] = 'security/incident_item/$1';
+$route['api/v1/security/incidents'] = 'security/incidents_index';
+$route['api/v1/security/access-reviews/run'] = 'security/access_review_run';
+$route['api/v1/security/access-reviews/latest'] = 'security/access_review_latest';
+$route['api/v1/security/access-reviews/attest'] = 'security/access_review_attest';
+$route['api/v1/security/runbooks'] = 'security/runbooks_index';
 // Usage Intelligence (Node Session 55/123 parity)
 $route['api/v1/usage-intel/dashboard/rollup'] = 'usage_intel/dashboard_rollup';
 $route['api/v1/usage-intel/events/(:any)'] = 'usage_intel/events_item/$1';

@@ -1,7 +1,7 @@
 <?php defined('BASEPATH') OR exit('No direct script access allowed');
 class MY_Controller extends CI_Controller {
  protected $started; protected $identity;
- public function __construct(){ parent::__construct(); $this->started=microtime(TRUE); $this->output->set_content_type('application/json'); }
+ public function __construct(){ parent::__construct(); $this->started=microtime(TRUE); $this->output->set_content_type('application/json'); $this->load->library('security_headers'); $this->security_headers->apply(); }
  protected function body(){ $raw=$this->input->raw_input_stream; $data=json_decode($raw,TRUE); return is_array($data)?$data:$this->input->post(NULL,TRUE); }
  protected function respond($data,$status=200){ return $this->output->set_status_header($status)->set_output(json_encode(array('ok'=>TRUE,'data'=>$data,'meta'=>array('requestId'=>$this->request_id(),'tookMs'=>(int)((microtime(TRUE)-$this->started)*1000))),JSON_UNESCAPED_SLASHES)); }
  protected function fail($code,$message,$status=400,$details=NULL){ $e=array('code'=>$code,'message'=>$message); if($details!==NULL)$e['details']=$details; return $this->output->set_status_header($status)->set_output(json_encode(array('ok'=>FALSE,'error'=>$e,'meta'=>array('requestId'=>$this->request_id())))); }

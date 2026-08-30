@@ -8,13 +8,10 @@ Companion to `docs/UNFINISHED_MODULES.md`, which is the historical Sessions 155�
 |---|---|---|
 | Source of truth | `audit/build-inventory.mjs` (re-run) | `php/application/controllers/` + `docs/PHP_MODULE_PARITY.md` |
 | Modules considered | 156 | 155 (the 156 minus `_scaffolds`) |
-| Finished | 155 `COMPLETE` | 31 ported |
-| **Unfinished** | **1 STUB** | **2 partial + 122 not ported** |
+| Finished | 155 `COMPLETE` | 32 ported |
+| **Unfinished** | **1 STUB** | **2 partial + 119 not ported** |
 
-**Completed since this ledger was written:** `kernel`, `tenantIsolation` and `usage` (2026-08-30) — 26 endpoints, 9 new MySQL tables, migrations `002_kernel_module.sql` and `003_tenant_isolation_and_usage.sql`, and two parity specs under `tests/php-api/`. They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
-endpoints, 5 new MySQL tables, migration `002_kernel_module.sql`, and
-`tests/php-api/kernel.spec.mjs`. It is now listed as ported in
-`docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
+**Completed since this ledger was written:** `kernel`, `tenantIsolation`, `usage` and `security` (2026-08-30) — 43 endpoints, 16 new MySQL tables, migrations `002_kernel_module.sql`, `003_tenant_isolation_and_usage.sql` and `004_security_module.sql`, and three parity specs under `tests/php-api/`. They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
 
 > **The committed `audit/module-inventory.json` is stale** — 153 records, every status `COMPLETE`.
 > It predates later modules and the `_scaffolds/` quarantine. Reproduce this document with:
@@ -336,7 +333,7 @@ deployment concern (move the key to KMS/Vault), not a fabricated guarantee.
 
 ---
 
-## 2. PHP / cPanel build — 127 unfinished modules
+## 2. PHP / cPanel build — 121 unfinished modules
 
 PHP ships 41 controllers and 47 models. Every path with no controller falls through
 `application/config/routes.php` (`$route['api/v1/(:any)'] = 'api/dispatch/$1'`) to
@@ -349,7 +346,7 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | `composer` (Composer / Workflows) | 27 | 2262 | `Workflows.php` | workflow engine only — task, action-item, Talk, condition, loop, delay, AI and approval nodes; other node types return HTTP 501 `NODE_NOT_IMPLEMENTED`; the Composer canvas is not ported |
 | `collaboration` (Collaboration primitives) | 71 | 2722 | `Workspace.php` | workspace dashboard + tasks only; the other collaboration primitives have no PHP controller |
 
-### 2.2 Not ported at all (125) — each returns 501 on the PHP build
+### 2.2 Not ported at all (119) — each returns 501 on the PHP build
 
 #### AI / ML platform — 12
 
@@ -451,7 +448,7 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 12 | `marketing` | marketing | 21 | 1071 |
 | 13 | `platformServices` | Platform Services (CDN/etc) | 43 | 2306 |
 
-#### Platform / infra — 25
+#### Platform / infra — 24
 
 | # | Module | Title | Routes | SLOC |
 |---|---|---|---|---|
@@ -474,12 +471,11 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 17 | `qa` | QA Engine | 13 | 1634 |
 | 18 | `release` | Release Pipeline | 19 | 1278 |
 | 19 | `sdk` | SDK Packages (S59) | 9 | 392 |
-| 20 | `security` | security | 17 | 2525 |
-| 21 | `selfHosted` | Self-Hosted Inference (S38) | 14 | 511 |
-| 22 | `sitePlatform` | sitePlatform | 36 | 2538 |
-| 23 | `softwareFactory` | softwareFactory | 8 | 978 |
-| 24 | `updates` | Updates / OTA (S54) | 9 | 644 |
-| 25 | `websiteBuilder` | websiteBuilder | 21 | 1440 |
+| 20 | `selfHosted` | Self-Hosted Inference (S38) | 14 | 511 |
+| 21 | `sitePlatform` | sitePlatform | 36 | 2538 |
+| 22 | `softwareFactory` | softwareFactory | 8 | 978 |
+| 23 | `updates` | Updates / OTA (S54) | 9 | 644 |
+| 24 | `websiteBuilder` | websiteBuilder | 21 | 1440 |
 
 #### Mobile / devices / channels — 20
 

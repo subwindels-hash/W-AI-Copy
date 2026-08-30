@@ -64,7 +64,12 @@ async function main() {
     p0.allowCrossTenantExport === false && p0.allowExternalSharing === false
       && p0.piiRedactionLevel === "basic" && p0.retentionDays === 365,
     JSON.stringify(p0));
-  check("default policy is attributed to the system", p0.updatedBy === "system", String(p0.updatedBy));
+  // "system" on a policy nobody has edited; the acting user's id afterwards.
+  // This spec PUTs the policy (see the relaxed/restore sections below), so a
+  // repeat run legitimately sees the last editor rather than "system" —
+  // asserting "system" unconditionally made the spec pass only once per
+  // database.
+  check("policy records who last set it", typeof p0.updatedBy === "string" && p0.updatedBy.length > 0, String(p0.updatedBy));
   check("policy carries its org id and an ISO updatedAt",
     typeof p0.orgId === "string" && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(String(p0.updatedAt)),
     `${p0.orgId} / ${p0.updatedAt}`);
