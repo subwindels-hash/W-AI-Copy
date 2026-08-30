@@ -16,14 +16,21 @@
 | Check | Command | Result |
 |---|---|---|
 | Module inventory | `node audit/build-inventory.mjs` | 155 modules, 155 COMPLETE, 0 PARTIAL, 0 STUB |
-| Dead-code graph | `node scripts/find-orphans.mjs` | 1377 source files, 1109 reachable, **268 orphans** |
+| Dead-code graph | `node scripts/find-orphans.mjs` | 1380 source files, 1105 reachable, **275 orphans** — 262 quarantined in `_scaffolds/`, **13 outside it awaiting a decision** (S212) |
 | Marker sweep | `grep` for `TODO`/`FIXME`/`HACK` in comments | **5 hits** repo-wide (3 are prose, not debt) |
-| Marker sweep (honest) | `grep` for `for now,` / `in a real implementation` / `mock data` | 429 hits, **all inside orphaned files** |
+| Marker sweep (honest) | `grep` for `for now,` / `in a real implementation` / `mock data` | **25 hits** repo-wide, 21 of them in 10 quarantined files. The previously-reported 429 could not be reproduced (S212) |
 
 The first grep is the important one. The repo is *not* littered with TODOs — it
 has five, and three of those are explanatory prose. The debt is not marked
 `TODO`; it is marked `// For now, ...` and it lives almost entirely in one
-directory.
+directory — now `apps/api/src/_scaffolds/`.
+
+> **Correction (S212).** An earlier revision of this file reported **429**
+> `// For now,` markers. The real count is **25** across the whole repo. The
+> inflated figure appears to have counted substring matches such as the
+> `for (const name of ...)` loop in `projectIntake.service.ts`. The *specific*
+> examples listed under Finding 1 were each re-read and are accurate; only the
+> aggregate was wrong.
 
 ---
 
@@ -81,28 +88,72 @@ Largest single files: `aiEthicalMonitoring` (1254), `aiCompressionBenchmarking`
 (1171), `twinSimulationEngine` (1144), `aiModelShadowTesting` (1113),
 `smartContractManagement` (1111).
 
-### Recommended decision — pick one, per theme, not per file
+### Decision — ✅ **RESOLVED S212: (B) quarantine the bulk, guard the dangerous**
 
-This is a **product decision, not a coding task**, and it should be made before
-any code is written. The options:
+The user chose to act rather than defer. What was done:
 
-- **(A) Delete.** 181k LOC of unreachable scaffolding removed. Git history
-  preserves it; `git revert` or a tag restores it. Cheapest, honest, and makes
-  `find-orphans.mjs` report ~3 instead of 268.
-- **(B) Quarantine.** Move to `apps/api/src/_scaffolds/` with a README stating
-  they are unwired generated drafts. Keeps the code visible as a design sketch
-  without it reading as shipped product.
-- **(C) Revive selectively.** Choose the handful with genuine product intent,
-  fix their types, wire routes + shared contract + client + tests, and let them
-  become real inventory modules — the same treatment Sessions 155–208 gave the
-  other modules.
+**263 files moved** from `apps/api/src/services/` to
+`apps/api/src/_scaffolds/services/` via `git mv` (history preserved). The
+services directory went from **304 files (94% unreachable)** to **41 reachable
+services** — it is now readable. Relative imports in the moved files were
+re-pointed one level deeper so the code still resolves and remains useful as a
+design reference; **0 unresolved imports remain**.
 
-**My recommendation: (B) for the bulk, (C) for a shortlist, never (A) blind.**
-And if any file is revived, the always-passing checks
-(`automatedComplianceScanning`) and the fake crypto (`modelPackaging`,
-`tamperProofAudit`) must be fixed **in the same change** or replaced with an
-explicit `throw new Error("not configured")` — a security control that silently
-returns "no violations" is the single most dangerous artifact in this set.
+**3 files stayed behind** because reachable code depends on them — this is the
+part a blind move would have broken:
+
+| File | Depended on by |
+|---|---|
+| `automatedBackup.service.ts` | `src/qa/drTest.service.ts` (real `pg_dump`/prisma code, a genuine (C) revive candidate) |
+| `rowLevelSecurity.service.ts` | `src/index.ts`, `http/middleware/tenantContext.ts` |
+| `serviceToServiceAuth.service.ts` | `src/services/serviceToServiceAuth.test.ts` |
+
+**Security scaffolds neutralized in place.** Per the standing rule that an
+always-passing control is worse than an absent one, four compliance checks and
+three crypto functions now `throw`/return an explicit failure instead of
+silently certifying. The original code is left directly beneath each guard.
+See `apps/api/src/_scaffolds/README.md` for the table.
+
+Deliberately **not** guarded: `tamperProofAudit.service.ts` uses genuine
+asymmetric crypto and already fails safe (no key ⇒ empty signature ⇒
+verification rejects). Its weakness is key *storage*, a deployment concern, not
+a fabricated guarantee.
+
+**Build gate collapsed.** `tsconfig.orphans.json` went from **267 per-file
+exclusions to 17**: one `src/_scaffolds/**` glob plus the 13 genuine orphans
+that are *not* quarantined. The exclude list now reads as a decision queue
+rather than noise — which is most of the work for Finding 2 item 7.
+
+**5 enforcement tests** (`_scaffolds/quarantine.test.ts`) fail if reachable code
+ever imports a scaffold, if any security guard is removed, or if one of the
+three kept files is moved.
+
+### Still open — the 13 orphans outside `_scaffolds/`
+
+These are *not* generated scaffolds and each wants its own decision:
+
+```
+src/architecture/notes.service.ts        src/services/activity.service.ts
+src/canvasCollab/canvasCollab.service.ts src/services/publicApi.service.ts
+src/enterprise/services/microservice.helper.ts  src/services/user.service.ts
+src/http/middleware/tenantContext.ts     src/utils/notes.ts
+src/http/routes/audit.ts                 src/http/routes/notifications.ts
+src/http/routes/permissions.ts           src/http/routes/voiceFoundry.ts
+src/http/routes/voiceStudio.ts
+```
+
+⚠️ **Five are route files that are never mounted in `server.ts`** — and at
+least one is actively called by the frontend: `apps/web/src/lib/notifications.ts`
+requests `/notifications`, `/notifications/unread-count`,
+`/notifications/:id/read` and `/notifications/read-all`, none of which are
+registered. **Those calls 404 today.** Logged as Finding 2 item 10; it is a
+live bug, not dead code, and was only visible once the scaffolds stopped
+drowning the orphan report.
+
+> **Note on the stale baseline.** The `tsconfig.orphans.json` committed at
+> `1a066ad` did not match what `find-orphans.mjs` actually produced — those 13
+> were already orphans but were absent from the file. Regenerate it rather than
+> trusting it.
 
 ---
 
@@ -120,7 +171,8 @@ These are in **reachable** code. This is the whole list; it is short.
 | 6 | `desktop/nfc` | `pcscBridge.ts:350` | Permanent locking `throw`s "not implemented for this identifier". | Correct behaviour (fails closed). Track only; no action needed. |
 | 8 | `commerce` | `CommercePage.tsx:47,52` vs `commerce.service.ts` | ~~**Found while fixing #5.** The console renders `${p.price/100}` and `${dashboard.totalRevenue/100}` — treating price as **cents** — while the service stored a plain number and the schema accepted decimals (`9.99`), so a product created at 9.99 displayed as **`$0.0999`**.~~ | ✅ **DONE 2026-08-30.** Migrated commerce to the repo-wide `*Cents` integer convention already used by `erp`, `crm`, `licensing` and `revenueGuardian`: `priceCents`, `subtotalCents`, `unitPriceCents`/`totalPriceCents`, `taxCents`/`shippingCents`/`totalCents`, `totalRevenueCents`/`avgOrderValueCents`. Schema is `z.number().int().min(0)`, and `priceOf()` rejects any non-integer, so a fractional price fails closed instead of drifting. Added `apps/web/src/lib/money.ts` (`formatCents`, `formatCentsCompact`, `parseMajorUnitsToCents`) with 7 tests, replacing every inline `/100` on the page; unmeasured amounts render `—`, never `$0.00`. 3 new service regression tests (26 total pass). |
 | 9 | `mediaGen` | `mediaGen.service.ts` / `http/routes/mediaGen.ts` | **Found while fixing #3, deferred by decision.** There is no asset-serving route: `/api/v1/media-generation/asset/:modality/:hash.:ext` was referenced by completed jobs but never registered. S211 stopped *advertising* the dangling URL, so nothing 404s today, but the module still has **no way to deliver output** once a real provider is wired. | Add the asset route (and a storage path) as part of provider integration — `videoTransform`'s `publicAssetUrl` + `writeAsset` in `storage.ts` is the working precedent. |
-| 7 | build gate | `apps/api/tsconfig.json` | Extends `tsconfig.orphans.json`, so the **265 orphans are excluded from typecheck**. `strict: false`, `noImplicitAny: false`, `strictNullChecks: false` repo-wide. | After Finding 1 is resolved, drop the orphans extend so `tsc` covers `src/**`. Re-enabling `strict` is a separate, larger project. |
+| 10 | `notifications` (+4 routes) | `http/routes/notifications.ts`, `audit.ts`, `permissions.ts`, `voiceFoundry.ts`, `voiceStudio.ts` | **Found while resolving Finding 1.** Five route files exist but are **never mounted** in `server.ts`. `apps/web/src/lib/notifications.ts` calls `/notifications`, `/notifications/unread-count`, `/notifications/:id/read` and `/notifications/read-all` — **all 404 today**. This is a live frontend-facing bug, not dead code; it was invisible while 263 scaffolds dominated the orphan report. | Decide per file: mount the router in `server.ts` (and verify the handlers against the client's expected shapes), or delete the file and the client calls. `notifications` is the urgent one — the UI depends on it. |
+| 7 | build gate | `apps/api/tsconfig.json` | Extends `tsconfig.orphans.json`. **Partly addressed S212:** the exclude list collapsed from 267 per-file entries to 17 (one `src/_scaffolds/**` glob + 13 real orphans), so the gate now excludes a clearly-labelled quarantine rather than an opaque blob. Still open: `strict: false`, `noImplicitAny: false`, `strictNullChecks: false` repo-wide. | Resolve the 13 remaining orphans (item 10 covers 5 of them), then the only exclude left is `_scaffolds/**` — which is correct and should stay. Re-enabling `strict` remains a separate, larger project. **UNVERIFIED:** the claimed ~377 type errors could not be checked; `tsc` cannot run without `node_modules` (`npx tsc` prints "This is not the tsc command you are looking for" and exits 0 — never read that as success). |
 
 ---
 
