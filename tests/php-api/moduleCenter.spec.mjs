@@ -209,6 +209,7 @@ async function call(method, path, { token, json, raw } = {}) {
     method,
     headers,
     body: json !== undefined ? JSON.stringify(json) : raw,
+    signal: AbortSignal.timeout(30000),
   });
   const text = await response.text();
   let body = null;

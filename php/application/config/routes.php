@@ -63,6 +63,12 @@ $route['api/v1/benchmarks/run'] = 'benchmarks/run';
 $route['api/v1/benchmarks/schedule'] = 'benchmarks/schedule';
 $route['api/v1/benchmarks/notes/(:any)'] = 'benchmarks/notes_dispatch/$1';
 $route['api/v1/benchmarks/notes'] = 'benchmarks/notes_dispatch';
+// Memory Evolution (Node routes/memoryEvolution.ts parity - 6 routes, admin only)
+$route['api/v1/memory-evolution/dashboard/rollup'] = 'memory_evolution/dashboard_rollup';
+$route['api/v1/memory-evolution/memories/(:any)/share'] = 'memory_evolution/memory_share/$1';
+$route['api/v1/memory-evolution/memories'] = 'memory_evolution/memories_dispatch';
+$route['api/v1/memory-evolution/consolidate'] = 'memory_evolution/consolidate';
+$route['api/v1/memory-evolution/consolidations'] = 'memory_evolution/consolidations';
 // Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
 $route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
 $route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';

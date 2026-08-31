@@ -57,7 +57,7 @@ async function call(method, path, { token, json } = {}) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (json !== undefined) headers["Content-Type"] = "application/json";
-  const response = await fetch(base + path, { method, headers, body: json !== undefined ? JSON.stringify(json) : undefined });
+  const response = await fetch(base + path, { method, headers, body: json !== undefined ? JSON.stringify(json) : undefined, signal: AbortSignal.timeout(30000) });
   const text = await response.text();
   let body = null;
   try { body = JSON.parse(text); } catch { body = null; }

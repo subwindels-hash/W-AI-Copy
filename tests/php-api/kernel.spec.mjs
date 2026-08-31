@@ -37,6 +37,7 @@ async function call(method, path, { token, json, expect } = {}) {
   if (json !== undefined) headers["Content-Type"] = "application/json";
   const res = await fetch(base + path, {
     method, headers, body: json === undefined ? undefined : JSON.stringify(json),
+    signal: AbortSignal.timeout(30000),
   });
   let body = null;
   try { body = await res.json(); } catch { body = null; }

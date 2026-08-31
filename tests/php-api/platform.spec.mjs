@@ -55,6 +55,7 @@ async function call(method, path, { token, json, headers } = {}) {
   if (json !== undefined) h["Content-Type"] = "application/json";
   const res = await fetch(base + path, {
     method, headers: h, body: json === undefined ? undefined : JSON.stringify(json),
+    signal: AbortSignal.timeout(30000),
   });
   let body = null;
   try { body = await res.json(); } catch { body = null; }
@@ -273,7 +274,9 @@ async function main() {
 
   // A failed AI call must be visible here, and as an error log row.
   const aiFail = await call("POST", "/api/v1/ai/complete", { token, json: { messages: [{ role: "user", content: "spec probe" }] } });
-  const aiAfter = await call("GET", "/api/v1/platform/ai-observability?minutes=60", { token });
+  // Same window as `a` above: comparing a 60-minute count against a
+  // 120-minute one silently depends on when the spec last ran.
+  const aiAfter = await call("GET", "/api/v1/platform/ai-observability?minutes=120", { token });
   check("the AI window covers calls made during the run",
     (aiAfter.body?.data?.totals?.requests ?? 0) >= (a.totals?.requests ?? 0),
     `${a.totals?.requests} → ${aiAfter.body?.data?.totals?.requests} (probe status ${aiFail.status})`);

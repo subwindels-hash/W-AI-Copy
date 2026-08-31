@@ -1062,3 +1062,58 @@ CREATE TABLE IF NOT EXISTS benchmark_notes (
   UNIQUE KEY uk_benchmark_notes_seq (seq),
   KEY idx_benchmark_notes_org (organization_id, seq)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Memory Evolution Engine (Session 47) — ported from
+-- apps/api/src/memoryEvolution/memoryEvolution.service.ts; see migration
+-- 009_memory_evolution_module.sql for an existing installation.
+--
+-- Scoped by organization_id even though Node's `me:*` Redis keys are global:
+-- the register holds enterprise knowledge, and the admin gate Node relies on
+-- does not separate tenants from each other. No memories are seeded — Node's
+-- nine sample memories were opt-in demo data, and production starts empty.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS memory_evolution_memories (
+  id                CHAR(12)      NOT NULL PRIMARY KEY,        -- 'mem-' + 8 hex
+  organization_id   CHAR(36)      NOT NULL,
+  type              ENUM('episodic','semantic','procedural','organizational','department',
+                         'project','user','team','knowledge') NOT NULL,
+  content           TEXT          NOT NULL,
+  confidence        DECIMAL(4,3)  NOT NULL DEFAULT 0.800,
+  access_count      INT UNSIGNED  NOT NULL DEFAULT 1,
+  last_accessed_at  DATETIME      NOT NULL,
+  created_at        DATETIME      NOT NULL,
+  decayed_strength  DECIMAL(6,4)  NOT NULL DEFAULT 1.0000,     -- 1% per day since last access
+  tags              JSON          NOT NULL,
+  scope             VARCHAR(200)  NOT NULL DEFAULT 'enterprise:windels',
+  seq               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_memory_evolution_memories_seq (seq),
+  KEY idx_me_memories_org (organization_id, seq),
+  KEY idx_me_memories_type (organization_id, type),
+  KEY idx_me_memories_scope (organization_id, scope)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- One row per consolidation pass. Node counts every job ever run for
+-- `consolidationJobs24h`; the name says 24h but the zset is never trimmed, so
+-- the count is reproduced as it is rather than silently time-boxed.
+CREATE TABLE IF NOT EXISTS memory_evolution_jobs (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'cj-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  kind            ENUM('merge','deduplicate','refine','age','forget') NOT NULL,
+  processed_at    DATETIME      NOT NULL,
+  affected        INT UNSIGNED  NOT NULL DEFAULT 0,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_memory_evolution_jobs_seq (seq),
+  KEY idx_me_jobs_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The three counters Node kept as Redis strings. They cannot be derived: a
+-- share leaves no row of its own, and a merge deletes the duplicate it counts.
+CREATE TABLE IF NOT EXISTS memory_evolution_metrics (
+  organization_id     CHAR(36)     NOT NULL PRIMARY KEY,
+  duplicates_merged   INT UNSIGNED NOT NULL DEFAULT 0,
+  memories_forgotten  INT UNSIGNED NOT NULL DEFAULT 0,
+  cross_agent_shares  INT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at          DATETIME     NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

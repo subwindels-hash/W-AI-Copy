@@ -69,7 +69,7 @@ async function call(method, path, { token, json, expect } = {}) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (json !== undefined) headers["Content-Type"] = "application/json";
-  const res = await fetch(base + path, { method, headers, body: json === undefined ? undefined : JSON.stringify(json) });
+  const res = await fetch(base + path, { method, headers, body: json === undefined ? undefined : JSON.stringify(json) , signal: AbortSignal.timeout(30000) });
   let body = null;
   try { body = await res.json(); } catch { body = null; }
   return { status: res.status, body, headers: res.headers };

@@ -32,7 +32,7 @@ async function call(method, p, { token, json, raw } = {}) {
   const headers = {};
   if (token) headers.Authorization = `Bearer ${token}`;
   if (json !== undefined) headers["Content-Type"] = "application/json";
-  const res = await fetch(base + p, { method, headers, body: json === undefined ? undefined : JSON.stringify(json) });
+  const res = await fetch(base + p, { method, headers, body: json === undefined ? undefined : JSON.stringify(json) , signal: AbortSignal.timeout(30000) });
   const text = await res.text();
   let body = null;
   try { body = JSON.parse(text); } catch { body = null; }
@@ -117,6 +117,7 @@ async function main() {
   check("the refresh token is rejected once logged out", reuse.status === 401, `status ${reuse.status}`);
   const preflight = await fetch(base + "/api/v1/auth/login", {
     method: "OPTIONS", headers: { Origin: "https://windels.test", "Access-Control-Request-Method": "POST" },
+      signal: AbortSignal.timeout(30000),
   });
   check("a CORS preflight is answered", preflight.status === 200 || preflight.status === 204, `status ${preflight.status}`);
 
@@ -139,7 +140,7 @@ async function main() {
   check("at least one writable upload directory exists in the package", uploadDirs.length > 0, uploadDirs.join(","));
   const form = new FormData();
   form.append("file", new Blob([Buffer.from("acceptance probe file")], { type: "text/plain" }), "acceptance-probe.txt");
-  const uploadRes = await fetch(base + "/api/v1/files", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form });
+  const uploadRes = await fetch(base + "/api/v1/files", { method: "POST", headers: { Authorization: `Bearer ${token}` }, body: form, signal: AbortSignal.timeout(30000) });
   let upload = { status: uploadRes.status, body: null };
   try { upload.body = await uploadRes.json(); } catch { /* not JSON */ }
   check("POST /api/v1/files → 201", upload.status === 201, `status ${upload.status} ${JSON.stringify(upload.body).slice(0, 160)}`);
