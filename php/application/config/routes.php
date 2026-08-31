@@ -44,6 +44,21 @@ $route['api/v1/security/access-reviews/run'] = 'security/access_review_run';
 $route['api/v1/security/access-reviews/latest'] = 'security/access_review_latest';
 $route['api/v1/security/access-reviews/attest'] = 'security/access_review_attest';
 $route['api/v1/security/runbooks'] = 'security/runbooks_index';
+// Global Platform (Node routes/platform.ts parity — 15 routes)
+$route['api/v1/platform/metrics'] = 'platform/metrics';
+$route['api/v1/platform/logs'] = 'platform/logs';
+$route['api/v1/platform/traces/(:any)'] = 'platform/trace/$1';
+$route['api/v1/platform/traces'] = 'platform/traces';
+$route['api/v1/platform/spans/(:any)'] = 'platform/span/$1';
+$route['api/v1/platform/ai-observability'] = 'platform/ai_observability';
+$route['api/v1/platform/regions'] = 'platform/regions';
+$route['api/v1/platform/dr'] = 'platform/dr';
+$route['api/v1/platform/failover'] = 'platform/failover';
+$route['api/v1/platform/cdn/sign-url'] = 'platform/cdn_sign_url';
+$route['api/v1/platform/cdn/rules'] = 'platform/cdn_rules';
+$route['api/v1/platform/cdn/purge'] = 'platform/cdn_purge';
+$route['api/v1/platform/cdn'] = 'platform/cdn';
+$route['api/v1/platform/overview'] = 'platform/overview';
 // Usage Intelligence (Node Session 55/123 parity)
 $route['api/v1/usage-intel/dashboard/rollup'] = 'usage_intel/dashboard_rollup';
 $route['api/v1/usage-intel/events/(:any)'] = 'usage_intel/events_item/$1';

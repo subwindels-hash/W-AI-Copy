@@ -22,15 +22,18 @@ its own**; both are limitations of the PHP-WebAssembly build used to emulate a
 cPanel host, not of the application:
 
 1. `stricton => NULL` in `application/config/database.php` — the WASM build
-   aborts inside `mysqli_real_connect()` when CodeIgniter passes
-   `MYSQLI_INIT_COMMAND`.
-2. `if (getenv('VP_TEST_NO_TRANSACTIONS')) return TRUE;` guards in
-   `system/database/drivers/mysqli/mysqli_driver.php` — the WASM build aborts
-   inside `zend_spprintf()` when mysqlnd runs `begin_transaction/commit`.
+   traps inside `mysqli_real_connect()` when CodeIgniter passes
+   `MYSQLI_INIT_COMMAND` (`RuntimeError: null function or function signature
+   mismatch` in `mysqlnd_execute_init_commands`).
+2. `mysqli::autocommit()` removed from `_trans_begin()`, `_trans_commit()` and
+   `_trans_rollback()` in `system/database/drivers/mysqli/mysqli_driver.php` —
+   the asyncify build traps with `RuntimeError: unreachable` in
+   `zif_mysqli_autocommit`. The three methods now issue `START TRANSACTION` /
+   `COMMIT` / `ROLLBACK` directly, so statements still run; only an explicit
+   rollback of an already-executed statement would behave differently.
 
-Neither file in the shipped package contains those edits. Transactions and
-`MYSQLI_INIT_COMMAND` are ordinary, well-supported `mysqli` features on any
-cPanel host.
+Neither edit is in the shipped package. Transactions and `MYSQLI_INIT_COMMAND`
+are ordinary, well-supported `mysqli` features on any cPanel host.
 
 ---
 
@@ -39,13 +42,13 @@ cPanel host.
 ```
 1. File Manager   : uploaded application-deployment.zip, extracted → 22 top-level entries
 2. MySQL Databases: CREATE DATABASE windels_final_a + user wnd_final_a + ALL PRIVILEGES
-3. phpMyAdmin     : Import database/production.sql → 103 tables, 0.51 s
+3. phpMyAdmin     : Import database/production.sql → 125 tables, 0.51 s
 4. Edit .env      : CI_ENV, VP_BASE_URL, VP_DB_* , VP_ENCRYPTION_KEY, VP_AUTH_SECRET, VP_SETUP_KEY
 5. Browser        : /healthz  → {"status":"ok","checks":{"db":"ok"},"bootstrap":"pending"}
                     /setup?key=<correct>  → 200
                     /setup?key=<wrong>    → 403
                     POST /setup           → 201 "Administrator created"
-6. Open the site  : 43 / 43 acceptance checks pass
+6. Open the site  : 45 / 45 acceptance checks pass
 ```
 
 No Terminal, SSH, Composer, Node, npm, pnpm, Docker, migration command, seed
@@ -57,23 +60,23 @@ Same flow, but step 3 also imports `database/seed-admin.sql`, so the very first
 browser action is signing in:
 
 ```
-phpMyAdmin: Import database/production.sql → 103 tables
+phpMyAdmin: Import database/production.sql → 125 tables
 phpMyAdmin: Import database/seed-admin.sql → admin@example.com (Administrator, OWNER)
-Open the site: 43 / 43 acceptance checks pass
+Open the site: 45 / 45 acceptance checks pass
 ```
 
 ## 4. Scenario B — migration to a second new cPanel account
 
 ```
-1. phpMyAdmin      : Export site A's database (103 tables, 140 KiB of SQL)
+1. phpMyAdmin      : Export site A's database (125 tables)
 2. File Manager    : extract the same application-deployment.zip into the new
                      account, copy assets/uploads/ and application/storage/uploads/
 3. MySQL Databases : CREATE DATABASE windels_final_b + new user wnd_final_b
                      (deliberately a different account prefix, as cPanel would)
-4. phpMyAdmin      : Import the export → 103 tables
+4. phpMyAdmin      : Import the export → 125 tables
 5. Edit .env       : VP_BASE_URL + the six VP_DB_* values ONLY.
                      VP_ENCRYPTION_KEY and VP_AUTH_SECRET copied unchanged.
-6. Open the site   : 43 / 43 acceptance checks pass with the original credentials
+6. Open the site   : 45 / 45 acceptance checks pass with the original credentials
 ```
 
 Migration-specific checks (12/12):
@@ -117,15 +120,23 @@ Migration-specific checks (12/12):
 | # | Defect | Symptom on a real host | Fix |
 |---|---|---|---|
 | 1 | `invoices.lines` written without backticks (`LINES` is reserved) | **phpMyAdmin import fails** with a syntax error | Column quoted as `` `lines` `` |
-| 2 | 8 tables declared `DEFAULT CHARSET=utf8mb4` without `COLLATE` | Import fails with *“Cannot add foreign key constraint”* on hosts whose default collation is not `utf8mb4_unicode_ci` | Explicit `COLLATE=utf8mb4_unicode_ci` on all 103 tables |
+| 2 | 8 tables declared `DEFAULT CHARSET=utf8mb4` without `COLLATE` | Import fails with *“Cannot add foreign key constraint”* on hosts whose default collation is not `utf8mb4_unicode_ci` | Explicit `COLLATE=utf8mb4_unicode_ci` on all 125 tables |
 | 3 | Two `ALTER TABLE … ADD CONSTRAINT` statements at the end of the schema | Re-importing (or importing over an existing database) fails with *“duplicate key in table #sql-…”* | The `agents` table moved earlier in the file and both foreign keys are declared inline; the file is now idempotent |
 | 4 | `url` helper not autoloaded while three controllers call `base_url()` | **Fatal error** `Call to undefined function base_url()` on file upload and avatar update | `$autoload['helper'] = array('url', 'file');` |
 | 5 | `application/cache/sessions/` absent from the package | Session directory had to be created by PHP at runtime and could not be given permissions in File Manager | Directory shipped (with `index.html`) and listed as writable |
 
-Also corrected while verifying: the schema file is now byte-identical in
-`database/production.sql` and `application/migrations/001_initial_mysql.sql`,
-and `.env.example` documents every environment variable the code reads
+Also corrected while verifying: the two schema files were reconciled, and
+`.env.example` documents every environment variable the code reads
 (`CORS_ORIGIN` and `JWT_ISSUER` were missing).
+
+> **Note on the two schema files.** `database/production.sql` is the file a
+> fresh install imports, and it is the one that carries every object the
+> application needs — 125 tables at the time of writing, including everything
+> added by the kernel, tenant-isolation, usage, security and platform ports.
+> `application/migrations/001_initial_mysql.sql` is the baseline that existed
+> before those modules and is retained for reference; the modules' own objects
+> ship as `002`–`005` for installations that are already live. Importing
+> `production.sql` needs no migration import afterwards, by design.
 
 ---
 

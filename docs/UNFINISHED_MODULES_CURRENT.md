@@ -8,10 +8,10 @@ Companion to `docs/UNFINISHED_MODULES.md`, which is the historical Sessions 155�
 |---|---|---|
 | Source of truth | `audit/build-inventory.mjs` (re-run) | `php/application/controllers/` + `docs/PHP_MODULE_PARITY.md` |
 | Modules considered | 156 | 155 (the 156 minus `_scaffolds`) |
-| Finished | 155 `COMPLETE` | 32 ported |
-| **Unfinished** | **1 STUB** | **2 partial + 119 not ported** |
+| Finished | 155 `COMPLETE` | 33 ported |
+| **Unfinished** | **1 STUB** | **2 partial + 118 not ported** |
 
-**Completed since this ledger was written:** `kernel`, `tenantIsolation`, `usage` and `security` (2026-08-30) — 43 endpoints, 16 new MySQL tables, migrations `002_kernel_module.sql`, `003_tenant_isolation_and_usage.sql` and `004_security_module.sql`, and three parity specs under `tests/php-api/`. They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
+**Completed since this ledger was written:** `kernel`, `tenantIsolation`, `usage`, `security` and `platform` (2026-08-30) — 58 endpoints, 22 new MySQL tables, migrations `002_kernel_module.sql`, `003_tenant_isolation_and_usage.sql`, `004_security_module.sql` and `005_platform_module.sql`, and four parity specs under `tests/php-api/`. They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
 
 > **The committed `audit/module-inventory.json` is stale** — 153 records, every status `COMPLETE`.
 > It predates later modules and the `_scaffolds/` quarantine. Reproduce this document with:
@@ -333,7 +333,7 @@ deployment concern (move the key to KMS/Vault), not a fabricated guarantee.
 
 ---
 
-## 2. PHP / cPanel build — 121 unfinished modules
+## 2. PHP / cPanel build — 120 unfinished modules
 
 PHP ships 41 controllers and 47 models. Every path with no controller falls through
 `application/config/routes.php` (`$route['api/v1/(:any)'] = 'api/dispatch/$1'`) to
@@ -346,7 +346,7 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | `composer` (Composer / Workflows) | 27 | 2262 | `Workflows.php` | workflow engine only — task, action-item, Talk, condition, loop, delay, AI and approval nodes; other node types return HTTP 501 `NODE_NOT_IMPLEMENTED`; the Composer canvas is not ported |
 | `collaboration` (Collaboration primitives) | 71 | 2722 | `Workspace.php` | workspace dashboard + tasks only; the other collaboration primitives have no PHP controller |
 
-### 2.2 Not ported at all (119) — each returns 501 on the PHP build
+### 2.2 Not ported at all (118) — each returns 501 on the PHP build
 
 #### AI / ML platform — 12
 
@@ -448,7 +448,7 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 12 | `marketing` | marketing | 21 | 1071 |
 | 13 | `platformServices` | Platform Services (CDN/etc) | 43 | 2306 |
 
-#### Platform / infra — 24
+#### Platform / infra — 23
 
 | # | Module | Title | Routes | SLOC |
 |---|---|---|---|---|
@@ -464,18 +464,17 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 10 | `infrastructure` | Infrastructure Monitoring | 30 | 1226 |
 | 11 | `moduleCenter` | moduleCenter | 13 | 1514 |
 | 12 | `moduleRuntime` | moduleRuntime | 5 | 1084 |
-| 13 | `platform` | Platform Admin UI Shell | 15 | 1922 |
-| 14 | `pluginOs` | pluginOs | 20 | 1838 |
-| 15 | `projectContinuity` | projectContinuity | 5 | 1443 |
-| 16 | `publicApi` | Public API | 8 | 2597 |
-| 17 | `qa` | QA Engine | 13 | 1634 |
-| 18 | `release` | Release Pipeline | 19 | 1278 |
-| 19 | `sdk` | SDK Packages (S59) | 9 | 392 |
-| 20 | `selfHosted` | Self-Hosted Inference (S38) | 14 | 511 |
-| 21 | `sitePlatform` | sitePlatform | 36 | 2538 |
-| 22 | `softwareFactory` | softwareFactory | 8 | 978 |
-| 23 | `updates` | Updates / OTA (S54) | 9 | 644 |
-| 24 | `websiteBuilder` | websiteBuilder | 21 | 1440 |
+| 13 | `pluginOs` | pluginOs | 20 | 1838 |
+| 14 | `projectContinuity` | projectContinuity | 5 | 1443 |
+| 15 | `publicApi` | Public API | 8 | 2597 |
+| 16 | `qa` | QA Engine | 13 | 1634 |
+| 17 | `release` | Release Pipeline | 19 | 1278 |
+| 18 | `sdk` | SDK Packages (S59) | 9 | 392 |
+| 19 | `selfHosted` | Self-Hosted Inference (S38) | 14 | 511 |
+| 20 | `sitePlatform` | sitePlatform | 36 | 2538 |
+| 21 | `softwareFactory` | softwareFactory | 8 | 978 |
+| 22 | `updates` | Updates / OTA (S54) | 9 | 644 |
+| 23 | `websiteBuilder` | websiteBuilder | 21 | 1440 |
 
 #### Mobile / devices / channels — 20
 
@@ -514,7 +513,7 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 6 | `sportsIntelligence` | sportsIntelligence | 24 | 4510 |
 | 7 | `uxIntelligence` | UX Intelligence (S78) | 12 | 862 |
 
-Totals: AI / ML platform 12, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 25, Mobile / devices / channels 20, Other 7 = **122**.
+Totals: AI / ML platform 12, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 23, Mobile / devices / channels 20, Other 7 = **120**.
 
 ### 2.3 Named gaps inside the 28 "fully ported" modules
 

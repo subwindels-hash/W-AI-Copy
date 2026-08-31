@@ -747,3 +747,93 @@ CREATE TABLE IF NOT EXISTS security_access_review_items (
   CONSTRAINT fk_sec_review_campaign FOREIGN KEY (campaign_id) REFERENCES security_access_review_campaigns(id) ON DELETE CASCADE,
   CONSTRAINT fk_sec_review_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Global Platform — observability, regions/DR, CDN control plane.
+-- Seeded here so a fresh install needs no post-import migration. Existing
+-- installs get the identical objects from
+-- application/migrations/005_platform_module.sql.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS platform_metric_counters (
+  name VARCHAR(80) NOT NULL,
+  tag_key VARCHAR(120) NOT NULL DEFAULT '',
+  bucket_at DATETIME NOT NULL,
+  value BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (name, tag_key, bucket_at),
+  KEY idx_pmc_time (bucket_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_metric_histograms (
+  name VARCHAR(80) NOT NULL,
+  tag_key VARCHAR(120) NOT NULL DEFAULT '',
+  bucket_at DATETIME NOT NULL,
+  count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `sum` DOUBLE NOT NULL DEFAULT 0,
+  `min` DOUBLE NOT NULL DEFAULT 0,
+  `max` DOUBLE NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (name, tag_key, bucket_at),
+  KEY idx_pmh_time (bucket_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_spans (
+  span_id CHAR(16) NOT NULL,
+  trace_id CHAR(32) NOT NULL,
+  parent_span_id CHAR(16) NULL,
+  name VARCHAR(120) NOT NULL,
+  kind ENUM('server','client','internal','producer','consumer') NOT NULL DEFAULT 'internal',
+  organization_id CHAR(36) NULL,
+  user_id CHAR(36) NULL,
+  status ENUM('ok','error') NOT NULL DEFAULT 'ok',
+  started_at DATETIME NOT NULL,
+  ended_at DATETIME NULL,
+  duration_ms INT UNSIGNED NULL,
+  error_message VARCHAR(500) NULL,
+  attributes JSON NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (span_id),
+  KEY idx_pspan_trace (trace_id),
+  KEY idx_pspan_time (started_at),
+  CONSTRAINT fk_pspan_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_state (
+  state_key VARCHAR(60) NOT NULL,
+  value JSON NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (state_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_cdn_rules (
+  id CHAR(36) NOT NULL,
+  path_pattern VARCHAR(200) NOT NULL,
+  ttl_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+  stale_while_revalidate INT UNSIGNED NOT NULL DEFAULT 0,
+  cache_key_includes JSON NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_pcdn_rule_order (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_cdn_purges (
+  id CHAR(36) NOT NULL,
+  paths JSON NOT NULL,
+  status ENUM('pending','complete','skipped') NOT NULL DEFAULT 'pending',
+  detail VARCHAR(500) NULL,
+  requested_by CHAR(36) NULL,
+  created_at DATETIME NOT NULL,
+  completed_at DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY idx_pcdn_purge_time (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Cache rules are configuration, not measurement: these are the three defaults
+-- cdn.service.ts ships, so an operator sees the same starting policy.
+INSERT IGNORE INTO platform_cdn_rules (id, path_pattern, ttl_seconds, stale_while_revalidate, cache_key_includes, enabled, sort_order, updated_at) VALUES
+('00000000-0000-4000-8000-000000000301', '/assets/*',       31536000, 0, '[]',                 1, 1, NOW()),
+('00000000-0000-4000-8000-000000000302', '/api/rest/v1/*',         0, 0, '["Authorization"]',  0, 2, NOW()),
+('00000000-0000-4000-8000-000000000303', '/*',                     0, 0, '[]',                 1, 3, NOW());

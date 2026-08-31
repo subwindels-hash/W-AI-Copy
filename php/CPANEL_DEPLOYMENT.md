@@ -215,7 +215,8 @@ importing them — still no Terminal:
 
 1. cPanel → **File Manager** → open the deployed folder → `application/migrations/`
 2. **Download** the migration file you need (`002_kernel_module.sql`,
-   `003_tenant_isolation_and_usage.sql` or `004_security_module.sql`) to your computer.
+   `003_tenant_isolation_and_usage.sql`, `004_security_module.sql` or
+   `005_platform_module.sql`) to your computer.
 3. cPanel → **phpMyAdmin** → select the database → **Import** → **Choose File** →
    pick the downloaded file → **Go**.
 4. Reload the site. Nothing else changes: no files are replaced, no keys are
@@ -229,6 +230,7 @@ already applied, changes nothing.
 | `002_kernel_module.sql` | The AI Kernel: `kernel_components`, `kernel_events`, `kernel_counters`, `kernel_latencies`, `kernel_state`, plus the 20 seeded kernel components. Until it is imported, `/api/v1/kernel/*` and `/api/v1/ai/*` return `501 MODULE_NOT_MIGRATED`. |
 | `003_tenant_isolation_and_usage.sql` | Tenant Isolation and Usage Intelligence: `tenant_isolation_policies`, `tenant_isolation_runs`, `tenant_isolation_probes`, `usage_events`. Until it is imported, `/api/v1/tenant-isolation/*` and `/api/v1/usage-intel/*` return `501 MODULE_NOT_MIGRATED`. |
 | `004_security_module.sql` | Security & governance: `security_counters`, `security_breakers`, `security_incidents`, `security_incident_runbooks`, `security_runbook_executions`, `security_access_review_campaigns`, `security_access_review_items`. Until it is imported, `/api/v1/security/*` returns `501 MODULE_NOT_MIGRATED`. |
+| `005_platform_module.sql` | Global Platform: `platform_metric_counters`, `platform_metric_histograms`, `platform_spans`, `platform_state`, `platform_cdn_rules` (plus the three default cache rules) and `platform_cdn_purges`. Until it is imported, `/api/v1/platform/*` returns `501 MODULE_NOT_MIGRATED`. |
 
 Upgrading files (uploading a newer package over an older one) is independent of
 this step and safe on its own — but the new endpoints will keep returning 501

@@ -92,7 +92,19 @@ class Ai_provider {
       return array('ok' => FALSE, 'code' => 'AI_PROVIDER_CONFIGURATION_REQUIRED', 'message' => $this->configuration_message());
     }
 
-    $result = $this->call($id, $messages, $requestedModel ?: $this->model_for($id));
+    $model = $requestedModel ?: $this->model_for($id);
+    // A child span under the current request, so GET /api/v1/platform/traces
+    // shows how long the provider call took and whether it failed. Telemetry is
+    // optional: an AI call must work whether or not the request opened a span.
+    $ci     =& get_instance();
+    $spanId = (isset($ci->telemetry)) ? $ci->telemetry->start_span('ai.completion', array(
+      'kind' => 'client',
+      'attrs'=> array('provider' => $id, 'model' => $model),
+    )) : NULL;
+    $result = $this->call($id, $messages, $model);
+    if ($spanId) {
+      $ci->telemetry->end_span($spanId, empty($result['ok']) ? 'error' : 'ok', $result['message'] ?? NULL);
+    }
 
     // Node retries a failed real provider; here we simply surface the error so
     // callers can decide. A misconfiguration must never be masked as content.
