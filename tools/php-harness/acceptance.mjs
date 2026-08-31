@@ -89,7 +89,9 @@ async function main() {
   const token = login.body?.data?.token;
   check("a bearer token is issued", typeof token === "string" && token.split(".").length === 3);
   const claims = token ? JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString()) : {};
-  check("the account is an administrator on the live database", claims.role === "admin", JSON.stringify(claims.role));
+  // A super administrator is an administrator: the module specs promote the
+  // harness account to SUPER_ADMIN, and refusing that here would be a false alarm.
+  check("the account is an administrator on the live database", claims.role === "admin" || claims.role === "super_admin", JSON.stringify(claims.role));
   check("an anonymous request to a protected endpoint → 401",
     (await call("GET", "/api/v1/auth/me")).status === 401);
   check("a wrong password → 401",

@@ -543,6 +543,34 @@ class Module_center_model extends CI_Model {
     return $out;
   }
 
+  /**
+   * Runtime registrations visible to $role, for apps/api/src/http/routes/moduleRuntime.ts.
+   * The upstream serviceUrl is stripped: it is an internal address and the
+   * browser must reach module backends through this gateway, not around it.
+   */
+  public function runtime_registrations($role) {
+    $rows = $this->db->where(array('status' => 'ACTIVE', 'enabled' => 1))->get('platform_modules')->result_array();
+    $out = array();
+    foreach ($rows as $row) {
+      $module = $this->module_row($row);
+      $registration = is_array($module['runtime_registration']) ? $module['runtime_registration'] : array();
+      if (!isset($registration['moduleId'])) continue;
+      $roles = isset($registration['accessRoles']) && is_array($registration['accessRoles']) ? $registration['accessRoles'] : array();
+      if (!in_array($role, $roles, TRUE)) continue;
+      unset($registration['serviceUrl'], $registration['instanceId'], $registration['imageDigest']);
+      $out[] = $registration;
+    }
+    return $out;
+  }
+
+  /** One module row keyed for the gateway: manifest, registration and status. */
+  public function runtime_module($module_key) {
+    $module = $this->module_by_key($module_key);
+    if (!$module) return NULL;
+    if ($module['status'] !== 'ACTIVE' || !$module['enabled']) return NULL;
+    return $module;
+  }
+
   public function dashboard($runner_configured, $scanner_configured, $signature_keys) {
     $modules = $this->all_modules();
     $releases = $this->all_releases();

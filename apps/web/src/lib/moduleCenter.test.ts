@@ -22,6 +22,7 @@ vi.mock("./api", () => ({
 }));
 
 import { moduleCenterApi, moduleRuntimeApi } from "./moduleCenter";
+import { moduleRuntimeApi as aliasedRuntimeApi } from "./moduleRuntime";
 
 beforeEach(() => { apiGet.mockReset(); apiPost.mockReset(); apiRaw.mockReset(); apiRaw.mockResolvedValue({ data: { upload: {}, release: {}, module: {}, nextAction: "VERIFY" } }); });
 
@@ -115,5 +116,20 @@ describe("idempotency keys", () => {
     await moduleCenterApi.moduleAction("mod-9", "disable");
     const [, body] = apiPost.mock.calls[0] as [string, { idempotencyKey: string }];
     expect(body.idempotencyKey).toContain("module-disable-");
+  });
+});
+
+describe("module runtime client alias", () => {
+  // apps/web/src/lib/moduleRuntime.ts exists so the module inventory finds a
+  // client for the `moduleRuntime` key. It must re-export the *runtime* client,
+  // not the control-plane one: the two share a module but not an API surface.
+  it("re-exports the runtime client, not the control-plane client", () => {
+    expect(aliasedRuntimeApi).toBe(moduleRuntimeApi);
+    expect(aliasedRuntimeApi).not.toBe(moduleCenterApi);
+  });
+
+  it("keeps registrations on the role-scoped gateway endpoint", async () => {
+    await aliasedRuntimeApi.registrations();
+    expect(apiGet).toHaveBeenCalledWith("/module-runtime/registrations");
   });
 });

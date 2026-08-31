@@ -44,6 +44,13 @@ $route['api/v1/security/access-reviews/run'] = 'security/access_review_run';
 $route['api/v1/security/access-reviews/latest'] = 'security/access_review_latest';
 $route['api/v1/security/access-reviews/attest'] = 'security/access_review_attest';
 $route['api/v1/security/runbooks'] = 'security/runbooks_index';
+// Module Runtime (Node routes/moduleRuntime.ts parity - registration surface
+// plus the guarded module gateway; open to any authenticated user)
+$route['api/v1/module-runtime/health'] = 'module_runtime/health';
+$route['api/v1/module-runtime/modules'] = 'module_runtime/modules';
+$route['api/v1/module-runtime/registrations'] = 'module_runtime/registrations';
+$route['api/v1/module-runtime/(:any)/(.+)'] = 'module_runtime/proxy/$1/$2';
+$route['api/v1/module-runtime/(:any)'] = 'module_runtime/proxy/$1';
 // Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
 $route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
 $route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';

@@ -8,7 +8,7 @@ Companion to `docs/UNFINISHED_MODULES.md`, which is the historical Sessions 155�
 |---|---|---|
 | Source of truth | `audit/build-inventory.mjs` (re-run) | `php/application/controllers/` + `docs/PHP_MODULE_PARITY.md` |
 | Modules considered | 156 | 155 (the 156 minus `_scaffolds`) |
-| Finished | 155 `COMPLETE` | 34 ported |
+| Finished | 155 `COMPLETE` | 35 ported |
 | **Unfinished** | **1 STUB** | **2 partial + 118 not ported** |
 
 **Completed since this ledger was written:** `kernel`, `tenantIsolation`, `usage`, `security` and `platform` (2026-08-30) — 58 endpoints, 22 new MySQL tables, migrations `002_kernel_module.sql`, `003_tenant_isolation_and_usage.sql`, `004_security_module.sql` and `005_platform_module.sql`, and four parity specs under `tests/php-api/`. They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
@@ -333,7 +333,7 @@ deployment concern (move the key to KMS/Vault), not a fabricated guarantee.
 
 ---
 
-## 2. PHP / cPanel build — 119 unfinished modules
+## 2. PHP / cPanel build — 118 unfinished modules
 
 PHP ships 41 controllers and 47 models. Every path with no controller falls through
 `application/config/routes.php` (`$route['api/v1/(:any)'] = 'api/dispatch/$1'`) to
@@ -462,7 +462,6 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 8 | `engineering` | Engineering / Observability (S26) | 16 | 1275 |
 | 9 | `extensions` | Plugin System | 29 | 1525 |
 | 10 | `infrastructure` | Infrastructure Monitoring | 30 | 1226 |
-| 12 | `moduleRuntime` | moduleRuntime | 5 | 1084 |
 | 13 | `pluginOs` | pluginOs | 20 | 1838 |
 | 14 | `projectContinuity` | projectContinuity | 5 | 1443 |
 | 15 | `publicApi` | Public API | 8 | 2597 |
@@ -512,9 +511,9 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 6 | `sportsIntelligence` | sportsIntelligence | 24 | 4510 |
 | 7 | `uxIntelligence` | UX Intelligence (S78) | 12 | 862 |
 
-Totals: AI / ML platform 12, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 22, Mobile / devices / channels 20, Other 7 = **119**.  
+Totals: AI / ML platform 12, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 21, Mobile / devices / channels 20, Other 7 = **118**.  
 
-Removed since the last revision: `moduleCenter` (13 routes) is ported and validated — see `docs/PHP_MODULE_PARITY.md`.
+Removed since the last revision: `moduleCenter` (13 routes) and `moduleRuntime` (4 routes) are ported and validated — see `docs/PHP_MODULE_PARITY.md`.
 
 ### 2.3 Named gaps inside the 28 "fully ported" modules
 
