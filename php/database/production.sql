@@ -989,3 +989,76 @@ CREATE TABLE IF NOT EXISTS autonomous_decisions (
   KEY idx_autonomous_decisions_status (organization_id, status),
   KEY idx_autonomous_decisions_department (organization_id, department)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Benchmark Center — result registry (Session 50). Ported from
+-- apps/api/src/benchmarks/benchmarks.service.ts; see migration
+-- 008_benchmarks_module.sql for an existing installation.
+--
+-- The centre records evaluations performed elsewhere. It does not grade, run
+-- or synthesise them, so no rows are seeded: an organization with no recorded
+-- evaluation reports zero runs, zero average and an all-zero area score card.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS benchmark_runs (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'br-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  area            ENUM('ai_models','ai_employees','ai_workflows','voice_models','vision_models',
+                       'translation_quality','coding_performance','response_accuracy','latency',
+                       'resource_consumption','cost_efficiency','safety_metrics','reliability',
+                       'user_satisfaction') NOT NULL,
+  target_id       VARCHAR(200)  NULL,
+  target_name     VARCHAR(200)  NULL,
+  status          ENUM('queued','running','completed','failed') NOT NULL DEFAULT 'completed',
+  started_at      DATETIME      NOT NULL,
+  completed_at    DATETIME      NULL,
+  duration_ms     INT UNSIGNED  NOT NULL DEFAULT 0,
+  metrics         JSON          NOT NULL,
+  overall_score   DECIMAL(10,4) NOT NULL,
+  passed          TINYINT(1)    NOT NULL DEFAULT 0,
+  notes           VARCHAR(1000) NULL,
+  evaluator       VARCHAR(200)  NOT NULL,
+  evidence        VARCHAR(2000) NOT NULL,
+  imported        TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_benchmark_runs_seq (seq),
+  KEY idx_benchmark_runs_org (organization_id, seq),
+  KEY idx_benchmark_runs_area (organization_id, area, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Scheduling stores the schedule only. Nothing here runs it: no cron daemon is
+-- started, and creating a schedule must never manufacture a run.
+CREATE TABLE IF NOT EXISTS benchmark_schedules (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'sc-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  area            ENUM('ai_models','ai_employees','ai_workflows','voice_models','vision_models',
+                       'translation_quality','coding_performance','response_accuracy','latency',
+                       'resource_consumption','cost_efficiency','safety_metrics','reliability',
+                       'user_satisfaction') NOT NULL,
+  target_id       VARCHAR(200)  NULL,
+  cron            VARCHAR(64)   NOT NULL DEFAULT '0 0 * * *',
+  enabled         TINYINT(1)    NOT NULL DEFAULT 1,
+  next_run_at     DATETIME      NULL,
+  created_at      DATETIME      NOT NULL,
+  KEY idx_benchmark_schedules_org (organization_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The user-authored annotations ledger (Node's tenantStore with prefix
+-- "bm:notes" and id prefix "bm-"). Only the benchmark centre owns this table:
+-- the other modules that use tenantStore carry different payload shapes and
+-- get their own table when they are ported, rather than sharing a table of
+-- opaque JSON.
+CREATE TABLE IF NOT EXISTS benchmark_notes (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'bm-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  title           VARCHAR(200)  NOT NULL,
+  body            TEXT          NOT NULL,
+  tags            JSON          NOT NULL,
+  created_by      CHAR(36)      NULL,
+  created_at      DATETIME      NOT NULL,
+  updated_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_benchmark_notes_seq (seq),
+  KEY idx_benchmark_notes_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

@@ -216,8 +216,9 @@ importing them — still no Terminal:
 1. cPanel → **File Manager** → open the deployed folder → `application/migrations/`
 2. **Download** the migration file you need (`002_kernel_module.sql`,
    `003_tenant_isolation_and_usage.sql`, `004_security_module.sql`,
-   `005_platform_module.sql`, `006_module_center.sql` or
-   `007_autonomous_module.sql`) to your computer.
+   `005_platform_module.sql`, `006_module_center.sql`,
+   `007_autonomous_module.sql` or `008_benchmarks_module.sql`) to your
+   computer.
 3. cPanel → **phpMyAdmin** → select the database → **Import** → **Choose File** →
    pick the downloaded file → **Go**.
 4. Reload the site. Nothing else changes: no files are replaced, no keys are
@@ -234,6 +235,7 @@ already applied, changes nothing.
 | `005_platform_module.sql` | Global Platform: `platform_metric_counters`, `platform_metric_histograms`, `platform_spans`, `platform_state`, `platform_cdn_rules` (plus the three default cache rules) and `platform_cdn_purges`. Until it is imported, `/api/v1/platform/*` returns `501 MODULE_NOT_MIGRATED`. |
 | `006_module_center.sql` | Module Center **and** Module Runtime: `platform_modules`, `platform_module_releases`, `platform_module_uploads` and `platform_module_operations`. Until it is imported, `/api/v1/super-admin/module-center/*` and `/api/v1/module-runtime/*` return `404`/`501`. The package storage directory (`application/storage/module-packages` by default) is created on first upload; if PHP cannot create it, make it in File Manager and set it to `0700`. The runtime gateway additionally needs `VP_MODULE_RUNNER_HMAC_SECRET` (32+ characters) before it will call a module backend. |
 | `007_autonomous_module.sql` | The Autonomous Organization approval register: `autonomous_decisions`. Until it is imported, `/api/v1/autonomous/*` returns `501 MODULE_NOT_MIGRATED`. No seed data is added — an organization with no proposals is the correct empty state, and the dashboard's budgets, board seats and AI executives stay zero because no backing ledger is shipped with it. |
+| `008_benchmarks_module.sql` | The Benchmark Center result registry: `benchmark_runs`, `benchmark_schedules` and `benchmark_notes`. Until it is imported, `/api/v1/benchmarks/*` returns `501 MODULE_NOT_MIGRATED`. No runs are seeded: an organization that has never recorded an evaluation reports zero runs, a zero average and fourteen zero area scores, and a result can only be recorded with an evaluator and an evidence reference. |
 Upgrading files (uploading a newer package over an older one) is independent of
 this step and safe on its own — but the new endpoints will keep returning 501
 until the matching migration has been imported.

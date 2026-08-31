@@ -56,6 +56,13 @@ $route['api/v1/autonomous/dashboard/rollup'] = 'autonomous/dashboard_rollup';
 $route['api/v1/autonomous/decisions/(:any)/resolve'] = 'autonomous/decisions_resolve/$1';
 $route['api/v1/autonomous/decisions/(:any)'] = 'autonomous/decisions_item_dispatch/$1';
 $route['api/v1/autonomous/decisions'] = 'autonomous/decisions_dispatch';
+// Benchmark Center (Node routes/benchmarks.ts parity - 8 routes)
+$route['api/v1/benchmarks/dashboard/rollup'] = 'benchmarks/dashboard_rollup';
+$route['api/v1/benchmarks/runs'] = 'benchmarks/runs';
+$route['api/v1/benchmarks/run'] = 'benchmarks/run';
+$route['api/v1/benchmarks/schedule'] = 'benchmarks/schedule';
+$route['api/v1/benchmarks/notes/(:any)'] = 'benchmarks/notes_dispatch/$1';
+$route['api/v1/benchmarks/notes'] = 'benchmarks/notes_dispatch';
 // Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
 $route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
 $route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';
