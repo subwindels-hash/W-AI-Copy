@@ -18,6 +18,22 @@ cPanel package: `php/build-deployment.sh` zips `php/` and never looks here.
 | Apache + the shipped `.htaccess` | `server.mjs`: `DirectoryIndex`, the `!-f` front-controller rewrite, and 403 for `/.env`, `*.sql`, `/application/**`, `/system/**`, `/database/**` |
 | File Manager / phpMyAdmin | `reset-db.mjs` and plain `cp` |
 
+## One command, from nothing
+
+The out-of-repo working copy (`~/ _tools`) is scratch state and is not part of
+the repository, so it can disappear between sessions. Two scripts rebuild it:
+
+```bash
+bash tools/php-harness/bootstrap.sh [port] [dbname]   # node deps, libaio stub, mysqld, docroot, schema, admin
+bash tools/php-harness/sync.sh      [docroot]         # re-copy php/ after an edit, keeping .env and the workarounds
+```
+
+`bootstrap.sh` is idempotent — re-running it skips whatever is already up — and
+ends by printing the admin credentials and the spec invocations. `sync.sh`
+exists because a plain `cp -r php/ <docroot>` overwrites the generated `.env`
+(rotating `VP_AUTH_SECRET` out from under every issued token) and reverts the
+WASM patches.
+
 ## Setup (one time)
 
 ```bash
@@ -100,6 +116,15 @@ node tools/php-harness/acceptance.mjs http://localhost:8082 owner@windels.exampl
 Both are ordinary, well-supported `mysqli` features on a cPanel host.
 
 ## Known limits
+
+* **InnoDB native AIO is off in this sandbox.** `db.cjs` writes
+  `.mysql-serverrc` with `innodb_use_native_aio = 0` before starting `mysqld`.
+  Without it, InnoDB calls `io_getevents()`, the sandbox's syscall filter makes
+  it return `-1`, and the server dies mid-session with
+  `[FATAL] InnoDB: Unexpected ret_code[-1] from io_getevents()!` followed by an
+  assertion failure in `ut0ut.cc`. With simulated AIO the `libaio` stub is not
+  on the hot path at all. (Keep `LD_LIBRARY_PATH` pointing at the stub anyway:
+  `mysqld` still links the symbols.)
 
 * PHP inside WASM cannot open outbound sockets — even to loopback — so a real
   AI provider call cannot be demonstrated here. AI endpoints are exercised

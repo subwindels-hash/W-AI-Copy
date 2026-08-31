@@ -51,6 +51,11 @@ $route['api/v1/module-runtime/modules'] = 'module_runtime/modules';
 $route['api/v1/module-runtime/registrations'] = 'module_runtime/registrations';
 $route['api/v1/module-runtime/(:any)/(.+)'] = 'module_runtime/proxy/$1/$2';
 $route['api/v1/module-runtime/(:any)'] = 'module_runtime/proxy/$1';
+// Autonomous Organization (Node routes/autonomous.ts parity - 6 routes)
+$route['api/v1/autonomous/dashboard/rollup'] = 'autonomous/dashboard_rollup';
+$route['api/v1/autonomous/decisions/(:any)/resolve'] = 'autonomous/decisions_resolve/$1';
+$route['api/v1/autonomous/decisions/(:any)'] = 'autonomous/decisions_item_dispatch/$1';
+$route['api/v1/autonomous/decisions'] = 'autonomous/decisions_dispatch';
 // Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
 $route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
 $route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';
