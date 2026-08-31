@@ -837,3 +837,125 @@ INSERT IGNORE INTO platform_cdn_rules (id, path_pattern, ttl_seconds, stale_whil
 ('00000000-0000-4000-8000-000000000301', '/assets/*',       31536000, 0, '[]',                 1, 1, NOW()),
 ('00000000-0000-4000-8000-000000000302', '/api/rest/v1/*',         0, 0, '["Authorization"]',  0, 2, NOW()),
 ('00000000-0000-4000-8000-000000000303', '/*',                     0, 0, '[]',                 1, 3, NOW());
+
+-- ---------------------------------------------------------------------------
+-- Module Center — signed module package registry (.wmod) + lifecycle state
+-- machine. Seeded here so a fresh install needs no post-import migration.
+-- Existing installs get the identical objects from
+-- application/migrations/006_module_center.sql.
+--
+-- Note: no seed rows. A module registry with zero modules is the correct empty
+-- state; modules only appear when a Super Admin uploads a signed package.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS platform_modules (
+  id                    CHAR(36)     NOT NULL PRIMARY KEY,
+  module_key            VARCHAR(80)  NOT NULL,
+  name                  VARCHAR(100) NOT NULL,
+  package_type          ENUM('module','plugin','integration','approved_software') NOT NULL DEFAULT 'module',
+  description           TEXT         NULL,
+  vendor                VARCHAR(120) NULL,
+  status                ENUM('UPLOADED','SCANNING','VALIDATING','COMPATIBILITY_CHECK','SANDBOX_TEST','VALIDATED','APPROVED','INSTALLING','MIGRATING','HEALTH_CHECK','ACTIVE','DISABLED','FAILED','ROLLING_BACK','QUARANTINED','REMOVING','REMOVED') NOT NULL DEFAULT 'UPLOADED',
+  health                ENUM('UNKNOWN','HEALTHY','DEGRADED','UNHEALTHY','DISABLED','QUARANTINED') NOT NULL DEFAULT 'UNKNOWN',
+  enabled               TINYINT(1)   NOT NULL DEFAULT 0,
+  current_version       VARCHAR(40)  NULL,
+  active_release_id     CHAR(36)     NULL,
+  manifest              JSON         NULL,
+  dependencies          JSON         NULL,
+  permissions           JSON         NULL,
+  runtime_registration  JSON         NULL,
+  installed_by_id       CHAR(36)     NULL,
+  installed_at          DATETIME     NULL,
+  last_health_check_at  DATETIME     NULL,
+  last_error            TEXT         NULL,
+  created_at            DATETIME     NOT NULL,
+  updated_at            DATETIME     NOT NULL,
+  UNIQUE KEY uq_platform_modules_key (module_key),
+  KEY idx_platform_modules_status (status),
+  KEY idx_platform_modules_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_module_releases (
+  id                   CHAR(36)     NOT NULL PRIMARY KEY,
+  module_registry_id   CHAR(36)     NOT NULL,
+  version              VARCHAR(40)  NOT NULL,
+  status               ENUM('UPLOADED','SCANNING','VALIDATING','COMPATIBILITY_CHECK','SANDBOX_TEST','VALIDATED','APPROVED','INSTALLING','MIGRATING','HEALTH_CHECK','ACTIVE','DISABLED','FAILED','ROLLING_BACK','QUARANTINED','REMOVING','REMOVED') NOT NULL DEFAULT 'UPLOADED',
+  checksum             CHAR(64)     NOT NULL,
+  artifact_path        VARCHAR(500) NOT NULL,
+  package_size_bytes   BIGINT       NOT NULL DEFAULT 0,
+  manifest             JSON         NULL,
+  signature_key_id     VARCHAR(120) NULL,
+  signature_verified   TINYINT(1)   NOT NULL DEFAULT 0,
+  scan_status          ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_CONFIGURED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  compatibility_status ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_CONFIGURED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  sandbox_status       ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_CONFIGURED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  approval_status      ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  migration_status     ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_REQUIRED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  verification_report  JSON         NULL,
+  sandbox_report       JSON         NULL,
+  health_report        JSON         NULL,
+  rollback_metadata    JSON         NULL,
+  previous_release_id  CHAR(36)     NULL,
+  uploaded_by_id       CHAR(36)     NULL,
+  verified_at          DATETIME     NULL,
+  sandboxed_at         DATETIME     NULL,
+  approved_by_id       CHAR(36)     NULL,
+  approved_at          DATETIME     NULL,
+  installed_by_id      CHAR(36)     NULL,
+  installed_at         DATETIME     NULL,
+  created_at           DATETIME     NOT NULL,
+  updated_at           DATETIME     NOT NULL,
+  UNIQUE KEY uq_platform_module_releases_version (module_registry_id, version),
+  KEY idx_platform_module_releases_module (module_registry_id),
+  KEY idx_platform_module_releases_status (status),
+  KEY idx_platform_module_releases_checksum (checksum),
+  CONSTRAINT fk_platform_module_releases_module FOREIGN KEY (module_registry_id) REFERENCES platform_modules (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_module_uploads (
+  id               CHAR(36)      NOT NULL PRIMARY KEY,
+  original_name    VARCHAR(255)  NOT NULL,
+  checksum         CHAR(64)      NOT NULL,
+  size_bytes       BIGINT        NOT NULL DEFAULT 0,
+  artifact_path    VARCHAR(500)  NULL,
+  status           ENUM('UPLOADED','SCANNING','VALIDATED','INSTALLING','ACTIVE','DISABLED','FAILED','QUARANTINED','REMOVED') NOT NULL DEFAULT 'UPLOADED',
+  manifest_id      VARCHAR(80)   NULL,
+  manifest_version VARCHAR(40)   NULL,
+  signature_key_id VARCHAR(120)  NULL,
+  report           JSON          NULL,
+  release_id       CHAR(36)      NULL,
+  uploaded_by_id   CHAR(36)      NULL,
+  created_at       DATETIME      NOT NULL,
+  updated_at       DATETIME      NOT NULL,
+  KEY idx_platform_module_uploads_checksum (checksum),
+  KEY idx_platform_module_uploads_release (release_id),
+  KEY idx_platform_module_uploads_created (created_at),
+  CONSTRAINT fk_platform_module_uploads_release FOREIGN KEY (release_id) REFERENCES platform_module_releases (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_module_operations (
+  id                CHAR(36)     NOT NULL PRIMARY KEY,
+  module_registry_id CHAR(36)    NOT NULL,
+  release_id        CHAR(36)     NULL,
+  operation_type    ENUM('UPLOAD','VERIFY','SANDBOX_TEST','APPROVE','INSTALL','UPDATE','ENABLE','DISABLE','RESTART','HEALTH_CHECK','ROLLBACK','REMOVE') NOT NULL,
+  status            ENUM('RUNNING','SUCCEEDED','FAILED') NOT NULL DEFAULT 'RUNNING',
+  idempotency_key   VARCHAR(180) NOT NULL,
+  correlation_id    VARCHAR(100) NULL,
+  from_version      VARCHAR(40)  NULL,
+  to_version        VARCHAR(40)  NULL,
+  requested_by_id   CHAR(36)     NULL,
+  request           JSON         NULL,
+  result            JSON         NULL,
+  logs              JSON         NULL,
+  error_code        VARCHAR(80)  NULL,
+  error_message     TEXT         NULL,
+  started_at        DATETIME     NULL,
+  finished_at       DATETIME     NULL,
+  created_at        DATETIME     NOT NULL,
+  updated_at        DATETIME     NOT NULL,
+  UNIQUE KEY uq_platform_module_operations_key (idempotency_key),
+  KEY idx_platform_module_operations_module (module_registry_id),
+  KEY idx_platform_module_operations_type (operation_type),
+  KEY idx_platform_module_operations_created (created_at),
+  CONSTRAINT fk_platform_module_operations_module FOREIGN KEY (module_registry_id) REFERENCES platform_modules (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

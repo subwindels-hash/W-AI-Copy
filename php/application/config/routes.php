@@ -44,6 +44,22 @@ $route['api/v1/security/access-reviews/run'] = 'security/access_review_run';
 $route['api/v1/security/access-reviews/latest'] = 'security/access_review_latest';
 $route['api/v1/security/access-reviews/attest'] = 'security/access_review_attest';
 $route['api/v1/security/runbooks'] = 'security/runbooks_index';
+// Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
+$route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
+$route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';
+$route['api/v1/super-admin/module-center/modules'] = 'module_center/modules_index';
+$route['api/v1/super-admin/module-center/uploads'] = 'module_center/uploads_dispatch';
+$route['api/v1/super-admin/module-center/operations'] = 'module_center/operations_index';
+$route['api/v1/super-admin/module-center/releases/(:any)/verify'] = 'module_center/release_verify/$1';
+$route['api/v1/super-admin/module-center/releases/(:any)/sandbox-test'] = 'module_center/release_sandbox/$1';
+$route['api/v1/super-admin/module-center/releases/(:any)/approve'] = 'module_center/release_approve/$1';
+$route['api/v1/super-admin/module-center/releases/(:any)/install'] = 'module_center/release_install/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/enable'] = 'module_center/module_enable/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/disable'] = 'module_center/module_disable/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/restart'] = 'module_center/module_restart/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/health-check'] = 'module_center/module_health_check/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/rollback'] = 'module_center/module_rollback/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/remove'] = 'module_center/module_remove/$1';
 // Global Platform (Node routes/platform.ts parity — 15 routes)
 $route['api/v1/platform/metrics'] = 'platform/metrics';
 $route['api/v1/platform/logs'] = 'platform/logs';
