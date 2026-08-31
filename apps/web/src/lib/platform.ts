@@ -25,15 +25,30 @@ export interface DRReport {
   status: "healthy"|"degraded"|"failover-active";
   primaryRegion?: string; drRegion?: string;
   replicas: { id: string; status: string; rpoSeconds: number; rtoSeconds: number }[];
-  lastBackupAt: string; backupStatus: string; replicationLagMs: number;
+  // Nullable, and null for a reason. Node returns `replicationLagMs: 42` as a
+  // literal and `lastBackupAt` as a hardcoded timestamp; a single-database
+  // deployment has neither a replica to measure nor a backup that has run, so
+  // the PHP build reports null instead of a number nothing produced.
+  lastBackupAt: string|null; backupStatus: string; replicationLagMs: number|null;
   failover: { active: boolean; toRegion: string|null; reason: string|null; since: string|null };
 }
 export interface CdnConfig {
-  enabled: boolean; provider: string; popCount: number; cacheHitRate: number; bandwidthGb: number;
+  enabled: boolean;
+  // Node's getCdnConfig() returns popCount 42, cacheHitRate 0.87 (labelled
+  // "simulated" in its own source) and bandwidthGb 12.4 as literals. They are
+  // null here unless a provider is configured and reporting.
+  provider: string|null;
+  popCount: number|null; cacheHitRate: number|null; bandwidthGb: number|null;
   rules: Array<{ pathPattern: string; ttlSeconds: number; staleWhileRevalidate: number; cacheKeyIncludes: string[]; enabled: boolean }>;
   recentPurges: any[];
 }
-export interface PurgeEntry { id: string; paths: string[]; status: string; createdAt: string; completedAt?: string }
+export interface PurgeEntry {
+  id: string; paths: string[];
+  /** Node only ever reports pending→complete; a purge with no provider is `skipped` and explains why in `detail`. */
+  status: "pending"|"complete"|"skipped";
+  detail?: string|null;
+  createdAt: string; completedAt?: string|null;
+}
 export interface AiObs {
   windowMinutes: number;
   totals: { requests: number; succeeded: number; failed: number; errorRate: number; avgLatencyMs: number; p50LatencyMs: number; p95LatencyMs: number; totalPromptTokens: number; totalCompletionTokens: number; totalCostUsd: number };
@@ -58,4 +73,47 @@ export const platformApi = {
   cdn: () => api<CdnConfig>("/platform/cdn"),
   updateCdnRules: (rules: CdnConfig["rules"]) => api<CdnConfig["rules"]>("/platform/cdn/rules", { method: "PUT", json: { rules } }),
   purgeCdn: (paths: string[]) => api<PurgeEntry>("/platform/cdn/purge", { method: "POST", json: { paths } }),
+  signUrl: (url: string, ttlSeconds?: number) =>
+    api<{ signedUrl: string; expiresAt: string }>("/platform/cdn/sign-url", { method: "POST", json: { url, ttlSeconds } }),
+  span: (spanId: string) => api<SpanRecord>(`/platform/spans/${spanId}`),
 };
+
+/**
+ * Formatting for the numbers Node hardcodes and this build leaves null. Each
+ * helper returns a dash or a sentence when the measurement is absent, because
+ * the alternative is rendering `nullms`, `NaN%` or Thursday 1 January 1970 on
+ * an operations dashboard.
+ */
+
+/** Replication lag in ms. Null: no replica is being measured, which is not the same as zero lag. */
+export function formatReplicationLag(ms: number | null | undefined): string {
+  return ms === null || ms === undefined ? "—" : `${ms}ms`;
+}
+
+/** Last backup time. Null: a backup has never run, which is not the same as backing up at the epoch. */
+export function formatBackupTime(iso: string | null | undefined): string {
+  if (!iso) return "never recorded";
+  const d = new Date(iso);
+  return Number.isNaN(d.getTime()) ? "never recorded" : d.toLocaleString();
+}
+
+/** Cache hit rate as a percentage. Null: no CDN is reporting. */
+export function formatCacheHitRate(rate: number | null | undefined): string {
+  return rate === null || rate === undefined ? "—" : `${(rate * 100).toFixed(1)}%`;
+}
+
+/** Bandwidth in GB. Null: no CDN is reporting. */
+export function formatBandwidth(gb: number | null | undefined): string {
+  return gb === null || gb === undefined ? "—" : `${gb} GB`;
+}
+
+/**
+ * Tone for a purge status. `skipped` exists because a purge recorded with no
+ * CDN configured must be visible as "nothing happened" rather than coloured
+ * like a completed job.
+ */
+export function purgeTone(status: string): "emerald" | "amber" | "azure" {
+  if (status === "complete") return "emerald";
+  if (status === "pending") return "amber";
+  return "azure";
+}

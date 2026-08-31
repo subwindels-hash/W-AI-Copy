@@ -343,11 +343,22 @@ CREATE TABLE IF NOT EXISTS conversations (
  CONSTRAINT fk_conversation_workspace FOREIGN KEY(workspace_id) REFERENCES workspaces(id) ON DELETE SET NULL,
  CONSTRAINT fk_conversation_creator FOREIGN KEY(created_by_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS agents (
+ id CHAR(36) PRIMARY KEY, organization_id CHAR(36) NOT NULL, name VARCHAR(64) NOT NULL, role VARCHAR(64) NOT NULL,
+ color VARCHAR(32) NOT NULL DEFAULT 'azure', emoji VARCHAR(8) NOT NULL DEFAULT '🤖', description VARCHAR(500) NULL,
+ system_prompt TEXT NULL, department VARCHAR(64) NULL DEFAULT 'General', capabilities JSON NOT NULL, cloud_android_requirements JSON NOT NULL,
+ model_id VARCHAR(160) NULL, temperature DECIMAL(3,2) NOT NULL DEFAULT 0.70, max_tokens INT UNSIGNED NOT NULL DEFAULT 2048,
+ is_built_in TINYINT(1) NOT NULL DEFAULT 0, avatar_style VARCHAR(64) NULL,
+ status ENUM('IDLE','ONLINE','WORKING','ERROR','PAUSED','OFFLINE') NOT NULL DEFAULT 'IDLE', last_activity_at DATETIME NOT NULL,
+ active_task_id CHAR(36) NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL,
+ KEY idx_agents_org_status(organization_id,status), CONSTRAINT fk_agents_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS conversation_participants (
  id CHAR(36) PRIMARY KEY, conversation_id CHAR(36) NOT NULL, user_id CHAR(36) NULL, agent_id CHAR(36) NULL, joined_at DATETIME NOT NULL, last_read_at DATETIME NULL,
  UNIQUE KEY uq_conversation_user(conversation_id,user_id), KEY idx_participant_user(user_id),
  CONSTRAINT fk_participant_conversation FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
- CONSTRAINT fk_participant_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE
+ CONSTRAINT fk_participant_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE,
+ CONSTRAINT fk_participant_agent FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS messages (
  id CHAR(36) PRIMARY KEY, conversation_id CHAR(36) NOT NULL, role ENUM('USER','ASSISTANT','SYSTEM','TOOL') NOT NULL,
@@ -358,7 +369,8 @@ CREATE TABLE IF NOT EXISTS messages (
  KEY idx_message_conversation(conversation_id,created_at), KEY idx_message_user(user_id),
  CONSTRAINT fk_message_conversation FOREIGN KEY(conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
  CONSTRAINT fk_message_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE SET NULL,
- CONSTRAINT fk_message_parent FOREIGN KEY(parent_id) REFERENCES messages(id) ON DELETE SET NULL
+ CONSTRAINT fk_message_parent FOREIGN KEY(parent_id) REFERENCES messages(id) ON DELETE SET NULL,
+ CONSTRAINT fk_message_agent FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS conversation_shares (
@@ -388,23 +400,11 @@ CREATE TABLE IF NOT EXISTS message_attachments (
  CONSTRAINT fk_attachment_uploader FOREIGN KEY(uploader_id) REFERENCES users(id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS agents (
- id CHAR(36) PRIMARY KEY, organization_id CHAR(36) NOT NULL, name VARCHAR(64) NOT NULL, role VARCHAR(64) NOT NULL,
- color VARCHAR(32) NOT NULL DEFAULT 'azure', emoji VARCHAR(8) NOT NULL DEFAULT '🤖', description VARCHAR(500) NULL,
- system_prompt TEXT NULL, department VARCHAR(64) NULL DEFAULT 'General', capabilities JSON NOT NULL, cloud_android_requirements JSON NOT NULL,
- model_id VARCHAR(160) NULL, temperature DECIMAL(3,2) NOT NULL DEFAULT 0.70, max_tokens INT UNSIGNED NOT NULL DEFAULT 2048,
- is_built_in TINYINT(1) NOT NULL DEFAULT 0, avatar_style VARCHAR(64) NULL,
- status ENUM('IDLE','ONLINE','WORKING','ERROR','PAUSED','OFFLINE') NOT NULL DEFAULT 'IDLE', last_activity_at DATETIME NOT NULL,
- active_task_id CHAR(36) NULL, created_at DATETIME NOT NULL, updated_at DATETIME NOT NULL,
- KEY idx_agents_org_status(organization_id,status), CONSTRAINT fk_agents_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS agent_events (
  id CHAR(36) PRIMARY KEY, agent_id CHAR(36) NOT NULL, type VARCHAR(64) NOT NULL, message VARCHAR(500) NOT NULL,
  metadata JSON NOT NULL, created_at DATETIME NOT NULL, KEY idx_agent_events_agent(agent_id,created_at),
  CONSTRAINT fk_agent_events_agent FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-ALTER TABLE conversation_participants ADD CONSTRAINT fk_participant_agent FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE CASCADE;
-ALTER TABLE messages ADD CONSTRAINT fk_message_agent FOREIGN KEY(agent_id) REFERENCES agents(id) ON DELETE SET NULL;
 
 CREATE TABLE IF NOT EXISTS agent_lifecycle (
  agent_id CHAR(36) PRIMARY KEY, state ENUM('ONBOARDING','ACTIVE','TRAINING','RETIRED','ARCHIVED') NOT NULL, since_at DATETIME NOT NULL,
@@ -477,7 +477,7 @@ CREATE TABLE IF NOT EXISTS contact_messages (id CHAR(36) PRIMARY KEY,request_id 
 CREATE TABLE IF NOT EXISTS contact_ai_sessions (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NULL,name VARCHAR(120) NULL,email VARCHAR(255) NULL,messages JSON NOT NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS contact_status_history (id CHAR(36) PRIMARY KEY,request_id CHAR(36) NOT NULL,from_status VARCHAR(30) NULL,to_status VARCHAR(30) NOT NULL,changed_by_user_id CHAR(36) NULL,created_at DATETIME NOT NULL,KEY idx_contact_history(request_id,created_at),CONSTRAINT fk_contact_history_request FOREIGN KEY(request_id) REFERENCES contact_requests(id) ON DELETE CASCADE,CONSTRAINT fk_contact_history_user FOREIGN KEY(changed_by_user_id) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS billing_subscriptions (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL UNIQUE,plan VARCHAR(30) NOT NULL DEFAULT 'starter',status VARCHAR(30) NOT NULL DEFAULT 'active',seats INT UNSIGNED NOT NULL DEFAULT 5,cycle ENUM('monthly','annual') NOT NULL DEFAULT 'monthly',current_period_start DATETIME NOT NULL,current_period_end DATETIME NOT NULL,customer_email VARCHAR(255) NULL,external_id VARCHAR(200) NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,CONSTRAINT fk_billing_sub_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-CREATE TABLE IF NOT EXISTS invoices (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,subscription_id CHAR(36) NULL,number VARCHAR(64) NOT NULL UNIQUE,amount_cents INT UNSIGNED NOT NULL DEFAULT 0,currency CHAR(3) NOT NULL DEFAULT 'USD',status VARCHAR(30) NOT NULL DEFAULT 'draft',due_date DATETIME NULL,paid_at DATETIME NULL,hosted_url VARCHAR(2048) NULL,pdf_url VARCHAR(2048) NULL,lines JSON NOT NULL,void_reason VARCHAR(500) NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_invoice_org(organization_id),CONSTRAINT fk_invoice_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,CONSTRAINT fk_invoice_sub FOREIGN KEY(subscription_id) REFERENCES billing_subscriptions(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS invoices (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,subscription_id CHAR(36) NULL,number VARCHAR(64) NOT NULL UNIQUE,amount_cents INT UNSIGNED NOT NULL DEFAULT 0,currency CHAR(3) NOT NULL DEFAULT 'USD',status VARCHAR(30) NOT NULL DEFAULT 'draft',due_date DATETIME NULL,paid_at DATETIME NULL,hosted_url VARCHAR(2048) NULL,pdf_url VARCHAR(2048) NULL,`lines` JSON NOT NULL,void_reason VARCHAR(500) NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_invoice_org(organization_id),CONSTRAINT fk_invoice_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,CONSTRAINT fk_invoice_sub FOREIGN KEY(subscription_id) REFERENCES billing_subscriptions(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS payment_records (id CHAR(36) PRIMARY KEY,event_id VARCHAR(200) NOT NULL UNIQUE,invoice_id CHAR(36) NULL,status VARCHAR(30) NOT NULL,amount_cents INT UNSIGNED NULL,currency CHAR(3) NULL,meta JSON NOT NULL,created_at DATETIME NOT NULL,CONSTRAINT fk_payment_invoice FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS platform_reviews (id CHAR(36) PRIMARY KEY,user_id CHAR(36) NOT NULL UNIQUE,user_name VARCHAR(120) NOT NULL,rating TINYINT UNSIGNED NOT NULL,title VARCHAR(120) NOT NULL DEFAULT '',content TEXT NOT NULL,status ENUM('published','hidden') NOT NULL DEFAULT 'published',created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_reviews_status(status,created_at),CONSTRAINT fk_review_user FOREIGN KEY(user_id) REFERENCES users(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS crm_companies (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,name VARCHAR(140) NOT NULL,domain VARCHAR(200) NULL,industry VARCHAR(100) NULL,size_band VARCHAR(30) NOT NULL DEFAULT 'unknown',website VARCHAR(300) NULL,city VARCHAR(100) NULL,country VARCHAR(80) NULL,tags JSON NOT NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_crm_company_org(organization_id,name),CONSTRAINT fk_crm_company_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -493,11 +493,11 @@ CREATE TABLE IF NOT EXISTS erp_sales_orders (id CHAR(36) PRIMARY KEY,organizatio
 CREATE TABLE IF NOT EXISTS email_mailboxes (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,name VARCHAR(80) NOT NULL,email_address VARCHAR(254) NOT NULL,provider VARCHAR(30) NOT NULL DEFAULT 'custom',imap_host VARCHAR(200) NULL,imap_port SMALLINT UNSIGNED NULL,smtp_host VARCHAR(200) NULL,smtp_port SMALLINT UNSIGNED NULL,username VARCHAR(200) NULL,password_enc TEXT NULL,status VARCHAR(30) NOT NULL DEFAULT 'pending',last_sync_at DATETIME NULL,error VARCHAR(1000) NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_email_mailbox_org(organization_id),CONSTRAINT fk_email_mailbox_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS email_messages (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,mailbox_id CHAR(36) NOT NULL,thread_id VARCHAR(64) NOT NULL,message_id VARCHAR(320) NOT NULL,direction ENUM('inbound','outbound') NOT NULL,from_name VARCHAR(160) NULL,from_address VARCHAR(254) NOT NULL,to_addresses JSON NOT NULL,cc_addresses JSON NOT NULL,subject VARCHAR(500) NOT NULL,body_text MEDIUMTEXT NOT NULL,body_html MEDIUMTEXT NULL,sent_at DATETIME NULL,received_at DATETIME NOT NULL,labels JSON NOT NULL,is_read TINYINT(1) NOT NULL DEFAULT 0,attachments_count INT UNSIGNED NOT NULL DEFAULT 0,in_reply_to VARCHAR(320) NULL,reference_ids JSON NOT NULL,contact_id CHAR(36) NULL,deal_id CHAR(36) NULL,company_id CHAR(36) NULL,outbox_status VARCHAR(30) NOT NULL DEFAULT 'none',outbox_error TEXT NULL,smtp_response TEXT NULL,delivered_at DATETIME NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_email_message_org(organization_id,received_at),KEY idx_email_thread(organization_id,thread_id,received_at),CONSTRAINT fk_email_message_mailbox FOREIGN KEY(mailbox_id) REFERENCES email_mailboxes(id) ON DELETE CASCADE,CONSTRAINT fk_email_message_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS app_builder_projects(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,name VARCHAR(140) NOT NULL,description TEXT NULL,target_type VARCHAR(30) NOT NULL,tech_stack JSON NOT NULL,system_prompt TEXT NOT NULL,created_by_id CHAR(36) NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_ab_project(organization_id,created_at),CONSTRAINT fk_ab_project_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS app_builder_tasks(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,assigned_agent VARCHAR(80) NOT NULL,agent_group VARCHAR(40) NOT NULL,title VARCHAR(200) NOT NULL,description TEXT NULL,is_completed TINYINT(1) NOT NULL DEFAULT 0,output_code MEDIUMTEXT NULL,generation_source VARCHAR(20) NOT NULL DEFAULT 'manual',completed_at DATETIME NULL,created_at DATETIME NOT NULL,KEY idx_ab_task(project_id,created_at),CONSTRAINT fk_ab_task_project FOREIGN KEY(project_id) REFERENCES app_builder_projects(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS app_builder_runs(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,version VARCHAR(30) NOT NULL,status VARCHAR(30) NOT NULL,logs JSON NOT NULL,error_log JSON NOT NULL,artifact_id CHAR(36) NULL,requested_by CHAR(36) NULL,started_at DATETIME NULL,finalized_at DATETIME NULL,created_at DATETIME NOT NULL,KEY idx_ab_version(project_id,version),KEY idx_ab_run(organization_id,status,created_at),CONSTRAINT fk_ab_run_project FOREIGN KEY(project_id) REFERENCES app_builder_projects(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS app_builder_artifacts(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,run_id CHAR(36) NOT NULL,version VARCHAR(30) NOT NULL,name VARCHAR(200) NOT NULL,target_type VARCHAR(30) NOT NULL,manifest_json MEDIUMTEXT NOT NULL,sbom JSON NOT NULL,sha256 CHAR(64) NOT NULL,size_bytes BIGINT UNSIGNED NOT NULL,published TINYINT(1) NOT NULL DEFAULT 0,released_at DATETIME NULL,created_by_id CHAR(36) NULL,created_at DATETIME NOT NULL,KEY idx_ab_artifact(organization_id,published,created_at),CONSTRAINT fk_ab_artifact_project FOREIGN KEY(project_id) REFERENCES app_builder_projects(id) ON DELETE CASCADE,CONSTRAINT fk_ab_artifact_run FOREIGN KEY(run_id) REFERENCES app_builder_runs(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS app_builder_approvals(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,artifact_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,run_id CHAR(36) NOT NULL,status VARCHAR(20) NOT NULL DEFAULT 'pending',requested_by CHAR(36) NULL,decided_by VARCHAR(120) NULL,decided_at DATETIME NULL,note VARCHAR(500) NULL,created_at DATETIME NOT NULL,KEY idx_ab_approval(organization_id,status,created_at),CONSTRAINT fk_ab_approval_artifact FOREIGN KEY(artifact_id) REFERENCES app_builder_artifacts(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS app_builder_projects(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,name VARCHAR(140) NOT NULL,description TEXT NULL,target_type VARCHAR(30) NOT NULL,tech_stack JSON NOT NULL,system_prompt TEXT NOT NULL,created_by_id CHAR(36) NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_ab_project(organization_id,created_at),CONSTRAINT fk_ab_project_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS app_builder_tasks(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,assigned_agent VARCHAR(80) NOT NULL,agent_group VARCHAR(40) NOT NULL,title VARCHAR(200) NOT NULL,description TEXT NULL,is_completed TINYINT(1) NOT NULL DEFAULT 0,output_code MEDIUMTEXT NULL,generation_source VARCHAR(20) NOT NULL DEFAULT 'manual',completed_at DATETIME NULL,created_at DATETIME NOT NULL,KEY idx_ab_task(project_id,created_at),CONSTRAINT fk_ab_task_project FOREIGN KEY(project_id) REFERENCES app_builder_projects(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS app_builder_runs(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,version VARCHAR(30) NOT NULL,status VARCHAR(30) NOT NULL,logs JSON NOT NULL,error_log JSON NOT NULL,artifact_id CHAR(36) NULL,requested_by CHAR(36) NULL,started_at DATETIME NULL,finalized_at DATETIME NULL,created_at DATETIME NOT NULL,KEY idx_ab_version(project_id,version),KEY idx_ab_run(organization_id,status,created_at),CONSTRAINT fk_ab_run_project FOREIGN KEY(project_id) REFERENCES app_builder_projects(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS app_builder_artifacts(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,run_id CHAR(36) NOT NULL,version VARCHAR(30) NOT NULL,name VARCHAR(200) NOT NULL,target_type VARCHAR(30) NOT NULL,manifest_json MEDIUMTEXT NOT NULL,sbom JSON NOT NULL,sha256 CHAR(64) NOT NULL,size_bytes BIGINT UNSIGNED NOT NULL,published TINYINT(1) NOT NULL DEFAULT 0,released_at DATETIME NULL,created_by_id CHAR(36) NULL,created_at DATETIME NOT NULL,KEY idx_ab_artifact(organization_id,published,created_at),CONSTRAINT fk_ab_artifact_project FOREIGN KEY(project_id) REFERENCES app_builder_projects(id) ON DELETE CASCADE,CONSTRAINT fk_ab_artifact_run FOREIGN KEY(run_id) REFERENCES app_builder_runs(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS app_builder_approvals(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,artifact_id CHAR(36) NOT NULL,project_id CHAR(36) NOT NULL,run_id CHAR(36) NOT NULL,status VARCHAR(20) NOT NULL DEFAULT 'pending',requested_by CHAR(36) NULL,decided_by VARCHAR(120) NULL,decided_at DATETIME NULL,note VARCHAR(500) NULL,created_at DATETIME NOT NULL,KEY idx_ab_approval(organization_id,status,created_at),CONSTRAINT fk_ab_approval_artifact FOREIGN KEY(artifact_id) REFERENCES app_builder_artifacts(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS gift_cards (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,type VARCHAR(30) NOT NULL,code VARCHAR(32) NOT NULL,initial_balance_cents BIGINT UNSIGNED NOT NULL,balance_cents BIGINT UNSIGNED NOT NULL,currency CHAR(3) NOT NULL,status VARCHAR(30) NOT NULL DEFAULT 'issued',pin_hash VARCHAR(255) NULL,issuer_id CHAR(36) NULL,recipient_id CHAR(36) NULL,issued_at DATETIME NOT NULL,expires_at DATETIME NULL,last_used_at DATETIME NULL,personal_message TEXT NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,UNIQUE KEY uq_gift_card_code(code),KEY idx_gc_org_status(organization_id,status,created_at),CONSTRAINT fk_gc_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,CONSTRAINT fk_gc_issuer FOREIGN KEY(issuer_id) REFERENCES users(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS gift_card_transactions (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,card_id CHAR(36) NOT NULL,kind VARCHAR(20) NOT NULL,amount_cents BIGINT NOT NULL,currency CHAR(3) NOT NULL,order_id VARCHAR(190) NULL,created_at DATETIME NOT NULL,UNIQUE KEY uq_gc_order(card_id,order_id),KEY idx_gc_tx_org(organization_id,created_at),CONSTRAINT fk_gc_tx_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,CONSTRAINT fk_gc_tx_card FOREIGN KEY(card_id) REFERENCES gift_cards(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -505,6 +505,748 @@ CREATE TABLE IF NOT EXISTS gift_card_fraud_flags (id CHAR(36) PRIMARY KEY,organi
 CREATE TABLE IF NOT EXISTS gift_card_loyalty_programs (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,name VARCHAR(140) NOT NULL,multiplier DECIMAL(8,3) NOT NULL DEFAULT 1,points_issued BIGINT UNSIGNED NOT NULL DEFAULT 0,member_count INT UNSIGNED NOT NULL DEFAULT 0,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,KEY idx_gc_loyalty_org(organization_id,name),CONSTRAINT fk_gc_loyalty_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 CREATE TABLE IF NOT EXISTS gift_card_invoice_allocations (id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,invoice_id CHAR(36) NOT NULL,card_id CHAR(36) NOT NULL,transaction_id CHAR(36) NOT NULL,amount_cents BIGINT UNSIGNED NOT NULL,currency CHAR(3) NOT NULL,created_at DATETIME NOT NULL,UNIQUE KEY uq_gc_invoice_card(invoice_id,card_id),KEY idx_gc_allocation_org(organization_id,created_at),CONSTRAINT fk_gc_alloc_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,CONSTRAINT fk_gc_alloc_invoice FOREIGN KEY(invoice_id) REFERENCES invoices(id) ON DELETE CASCADE,CONSTRAINT fk_gc_alloc_card FOREIGN KEY(card_id) REFERENCES gift_cards(id),CONSTRAINT fk_gc_alloc_tx FOREIGN KEY(transaction_id) REFERENCES gift_card_transactions(id)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS helpdesk_sequences(organization_id CHAR(36) PRIMARY KEY,next_number INT UNSIGNED NOT NULL,CONSTRAINT fk_hd_seq_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS helpdesk_tickets(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,number VARCHAR(30) NOT NULL,subject VARCHAR(200) NOT NULL,description TEXT NULL,status VARCHAR(20) NOT NULL,priority VARCHAR(20) NOT NULL,channel VARCHAR(20) NOT NULL,requester_name VARCHAR(120) NOT NULL,requester_email VARCHAR(254) NULL,assignee_id CHAR(36) NULL,contact_id CHAR(36) NULL,company_id CHAR(36) NULL,tags JSON NOT NULL,sla_due_at DATETIME NULL,resolved_at DATETIME NULL,closed_at DATETIME NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,UNIQUE KEY uq_hd_number(organization_id,number),KEY idx_hd_queue(organization_id,status,priority,created_at),CONSTRAINT fk_hd_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,CONSTRAINT fk_hd_contact FOREIGN KEY(contact_id) REFERENCES crm_contacts(id) ON DELETE SET NULL,CONSTRAINT fk_hd_company FOREIGN KEY(company_id) REFERENCES crm_companies(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
-CREATE TABLE IF NOT EXISTS helpdesk_comments(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,ticket_id CHAR(36) NOT NULL,author_name VARCHAR(120) NOT NULL,author_id CHAR(36) NULL,body TEXT NOT NULL,internal TINYINT(1) NOT NULL DEFAULT 0,created_at DATETIME NOT NULL,KEY idx_hd_comment(ticket_id,created_at),CONSTRAINT fk_hd_comment_ticket FOREIGN KEY(ticket_id) REFERENCES helpdesk_tickets(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+CREATE TABLE IF NOT EXISTS helpdesk_sequences(organization_id CHAR(36) PRIMARY KEY,next_number INT UNSIGNED NOT NULL,CONSTRAINT fk_hd_seq_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS helpdesk_tickets(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,number VARCHAR(30) NOT NULL,subject VARCHAR(200) NOT NULL,description TEXT NULL,status VARCHAR(20) NOT NULL,priority VARCHAR(20) NOT NULL,channel VARCHAR(20) NOT NULL,requester_name VARCHAR(120) NOT NULL,requester_email VARCHAR(254) NULL,assignee_id CHAR(36) NULL,contact_id CHAR(36) NULL,company_id CHAR(36) NULL,tags JSON NOT NULL,sla_due_at DATETIME NULL,resolved_at DATETIME NULL,closed_at DATETIME NULL,created_at DATETIME NOT NULL,updated_at DATETIME NOT NULL,UNIQUE KEY uq_hd_number(organization_id,number),KEY idx_hd_queue(organization_id,status,priority,created_at),CONSTRAINT fk_hd_org FOREIGN KEY(organization_id) REFERENCES organizations(id) ON DELETE CASCADE,CONSTRAINT fk_hd_contact FOREIGN KEY(contact_id) REFERENCES crm_contacts(id) ON DELETE SET NULL,CONSTRAINT fk_hd_company FOREIGN KEY(company_id) REFERENCES crm_companies(id) ON DELETE SET NULL) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+CREATE TABLE IF NOT EXISTS helpdesk_comments(id CHAR(36) PRIMARY KEY,organization_id CHAR(36) NOT NULL,ticket_id CHAR(36) NOT NULL,author_name VARCHAR(120) NOT NULL,author_id CHAR(36) NULL,body TEXT NOT NULL,internal TINYINT(1) NOT NULL DEFAULT 0,created_at DATETIME NOT NULL,KEY idx_hd_comment(ticket_id,created_at),CONSTRAINT fk_hd_comment_ticket FOREIGN KEY(ticket_id) REFERENCES helpdesk_tickets(id) ON DELETE CASCADE) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Enterprise AI Kernel + AI provider registry (Node Session 39 parity).
+-- Seeded here so a fresh install needs no post-import migration. Existing
+-- installs get the identical objects from application/migrations/002_kernel_module.sql.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS kernel_components (
+  component_key VARCHAR(64) NOT NULL,
+  name VARCHAR(160) NOT NULL,
+  status ENUM('booting','online','degraded','offline','stub') NOT NULL DEFAULT 'online',
+  message_rate INT UNSIGNED NOT NULL DEFAULT 0,
+  error_rate DECIMAL(6,4) NOT NULL DEFAULT 0,
+  last_heartbeat DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (component_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS kernel_events (
+  id CHAR(11) NOT NULL,
+  kind VARCHAR(80) NOT NULL,
+  source VARCHAR(120) NOT NULL,
+  target VARCHAR(120) NULL,
+  payload JSON NULL,
+  organization_id CHAR(36) NULL,
+  user_id CHAR(36) NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_kernel_events_time (created_at),
+  KEY idx_kernel_events_kind (kind, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS kernel_counters (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  counter_key VARCHAR(40) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_kernel_counter_time (counter_key, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS kernel_latencies (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  latency_ms INT UNSIGNED NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_kernel_latency_time (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS kernel_state (
+  state_key VARCHAR(60) NOT NULL,
+  state_value TEXT NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (state_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The 20 components seeded by Node's `KernelService.ensureStarted()`.
+-- `INSERT IGNORE` so re-running this migration never resets a component that
+-- has since taken a heartbeat.
+INSERT IGNORE INTO kernel_components
+  (component_key, name, status, message_rate, error_rate, last_heartbeat, updated_at)
+VALUES
+  ('comm-bus',  'AI Communication Bus',         'stub',   0, 0, NOW(), NOW()),
+  ('compute',   'Compute Allocation',           'online', 0, 0, NOW(), NOW()),
+  ('context',   'Universal Context Mgmt',       'online', 0, 0, NOW(), NOW()),
+  ('diag',      'Self-Diagnostics',             'online', 0, 0, NOW(), NOW()),
+  ('event-bus', 'Event Bus',                    'online', 0, 0, NOW(), NOW()),
+  ('heal',      'Self-Healing',                 'online', 0, 0, NOW(), NOW()),
+  ('health',    'Enterprise Health Monitoring', 'online', 0, 0, NOW(), NOW()),
+  ('kg-sync',   'Knowledge Synchronization',    'stub',   0, 0, NOW(), NOW()),
+  ('media',     'Media Orchestration',          'stub',   0, 0, NOW(), NOW()),
+  ('memory',    'Global Memory Coordination',   'stub',   0, 0, NOW(), NOW()),
+  ('model-sel', 'Intelligent Model Selection',  'online', 0, 0, NOW(), NOW()),
+  ('perf',      'Performance Optimization',     'online', 0, 0, NOW(), NOW()),
+  ('policy',    'Policy Enforcement',           'online', 0, 0, NOW(), NOW()),
+  ('reasoning', 'Global Reasoning Engine (lite)','online', 0, 0, NOW(), NOW()),
+  ('res-agent', 'Agent Scheduling',             'online', 0, 0, NOW(), NOW()),
+  ('res-ai',    'AI Resource Scheduling',       'online', 0, 0, NOW(), NOW()),
+  ('security',  'Security Enforcement',         'online', 0, 0, NOW(), NOW()),
+  ('self-opt',  'Autonomous Self-Optimization', 'online', 0, 0, NOW(), NOW()),
+  ('voice',     'Voice Orchestration',          'stub',   0, 0, NOW(), NOW()),
+  ('workflow',  'Workflow Orchestration',       'online', 0, 0, NOW(), NOW());
+
+-- ---------------------------------------------------------------------------
+-- Tenant Isolation (Node Session 89) + Usage Intelligence (Session 55/123).
+-- Seeded here so a fresh install needs no post-import migration. Existing
+-- installs get the identical objects from
+-- application/migrations/003_tenant_isolation_and_usage.sql.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS tenant_isolation_policies (
+  organization_id CHAR(36) NOT NULL,
+  allow_cross_tenant_export TINYINT(1) NOT NULL DEFAULT 0,
+  allow_external_sharing TINYINT(1) NOT NULL DEFAULT 0,
+  pii_redaction_level ENUM('none','basic','strict') NOT NULL DEFAULT 'basic',
+  retention_days INT NOT NULL DEFAULT 365,
+  region_pin VARCHAR(64) NULL,
+  updated_at DATETIME NOT NULL,
+  updated_by CHAR(36) NULL,
+  PRIMARY KEY (organization_id),
+  CONSTRAINT fk_ti_policy_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS tenant_isolation_runs (
+  id CHAR(14) NOT NULL,
+  organization_id CHAR(36) NOT NULL,
+  status ENUM('compliant','review_required','failed') NOT NULL,
+  score SMALLINT NOT NULL,
+  namespaces JSON NOT NULL,
+  probes JSON NOT NULL,
+  findings JSON NOT NULL,
+  summary VARCHAR(500) NOT NULL,
+  ran_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_ti_runs_org_time (organization_id, ran_at),
+  CONSTRAINT fk_ti_run_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Sentinel rows for the cross-tenant self-test. Deliberately NOT foreign-keyed
+-- to organizations: the probe invents a throwaway organization id that must not
+-- exist, because the thing being proved is that another tenant's scope cannot
+-- see it. A foreign key here would make the probe unrepresentable.
+CREATE TABLE IF NOT EXISTS tenant_isolation_probes (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  probe_key VARCHAR(64) NOT NULL,
+  organization_id CHAR(36) NOT NULL,
+  payload JSON NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_ti_probe_org (organization_id, probe_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS usage_events (
+  id CHAR(22) NOT NULL,
+  organization_id CHAR(36) NOT NULL,
+  feature VARCHAR(64) NOT NULL,
+  actor VARCHAR(120) NOT NULL,
+  quantity DECIMAL(20,4) NOT NULL DEFAULT 0,
+  unit VARCHAR(24) NOT NULL,
+  meta JSON NULL,
+  created_by CHAR(36) NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_usage_events_org_time (organization_id, created_at),
+  CONSTRAINT fk_usage_event_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Security & governance (Node slices 110/114/118 + governance.service.ts).
+-- Seeded here so a fresh install needs no post-import migration. Existing
+-- installs get the identical objects from
+-- application/migrations/004_security_module.sql.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS security_counters (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  counter_key VARCHAR(60) NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_sec_counter_time (counter_key, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS security_breakers (
+  name VARCHAR(80) NOT NULL,
+  state ENUM('closed','open','half-open') NOT NULL DEFAULT 'closed',
+  failures INT UNSIGNED NOT NULL DEFAULT 0,
+  successes INT UNSIGNED NOT NULL DEFAULT 0,
+  opened_at DATETIME NULL,
+  next_probe DATETIME NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS security_incidents (
+  id CHAR(14) NOT NULL,
+  organization_id CHAR(36) NOT NULL,
+  title VARCHAR(200) NOT NULL,
+  description TEXT NOT NULL,
+  severity ENUM('low','medium','high','critical') NOT NULL,
+  status ENUM('reported','investigating','contained','resolved','postmortem') NOT NULL DEFAULT 'reported',
+  reported_by CHAR(36) NULL,
+  area ENUM('auth','data','ai','billing','infra','abuse','other') NOT NULL,
+  timeline JSON NOT NULL,
+  runbook_executions JSON NOT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_sec_incident_org_time (organization_id, created_at),
+  KEY idx_sec_incident_status (status),
+  CONSTRAINT fk_sec_incident_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS security_incident_runbooks (
+  id CHAR(11) NOT NULL,
+  organization_id CHAR(36) NULL,
+  name VARCHAR(100) NOT NULL,
+  trigger_severity ENUM('low','medium','high','critical') NOT NULL,
+  trigger_area ENUM('auth','data','ai','billing','infra','abuse','other') NOT NULL,
+  actions JSON NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_sec_runbook_org (organization_id, trigger_severity, trigger_area),
+  CONSTRAINT fk_sec_runbook_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS security_runbook_executions (
+  id BIGINT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+  runbook_id CHAR(11) NOT NULL,
+  incident_id CHAR(14) NOT NULL,
+  status VARCHAR(20) NOT NULL,
+  output JSON NOT NULL,
+  created_at DATETIME NOT NULL,
+  KEY idx_sec_rbexec_runbook (runbook_id, created_at),
+  KEY idx_sec_rbexec_incident (incident_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS security_access_review_campaigns (
+  id CHAR(36) NOT NULL,
+  organization_id CHAR(36) NOT NULL,
+  dormant_days INT UNSIGNED NOT NULL DEFAULT 90,
+  status VARCHAR(20) NOT NULL DEFAULT 'IN_PROGRESS',
+  snapshot JSON NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_sec_campaign_org_time (organization_id, created_at),
+  CONSTRAINT fk_sec_campaign_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS security_access_review_items (
+  id CHAR(36) NOT NULL,
+  campaign_id CHAR(36) NOT NULL,
+  user_id CHAR(36) NOT NULL,
+  status ENUM('PENDING','APPROVED','REVOKED','QUARANTINED') NOT NULL DEFAULT 'PENDING',
+  reviewed_by CHAR(36) NULL,
+  notes TEXT NULL,
+  created_at DATETIME NOT NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  UNIQUE KEY uq_sec_review_item (campaign_id, user_id),
+  KEY idx_sec_review_campaign (campaign_id, status),
+  CONSTRAINT fk_sec_review_campaign FOREIGN KEY (campaign_id) REFERENCES security_access_review_campaigns(id) ON DELETE CASCADE,
+  CONSTRAINT fk_sec_review_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Global Platform — observability, regions/DR, CDN control plane.
+-- Seeded here so a fresh install needs no post-import migration. Existing
+-- installs get the identical objects from
+-- application/migrations/005_platform_module.sql.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS platform_metric_counters (
+  name VARCHAR(80) NOT NULL,
+  tag_key VARCHAR(120) NOT NULL DEFAULT '',
+  bucket_at DATETIME NOT NULL,
+  value BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (name, tag_key, bucket_at),
+  KEY idx_pmc_time (bucket_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_metric_histograms (
+  name VARCHAR(80) NOT NULL,
+  tag_key VARCHAR(120) NOT NULL DEFAULT '',
+  bucket_at DATETIME NOT NULL,
+  count BIGINT UNSIGNED NOT NULL DEFAULT 0,
+  `sum` DOUBLE NOT NULL DEFAULT 0,
+  `min` DOUBLE NOT NULL DEFAULT 0,
+  `max` DOUBLE NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (name, tag_key, bucket_at),
+  KEY idx_pmh_time (bucket_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_spans (
+  span_id CHAR(16) NOT NULL,
+  trace_id CHAR(32) NOT NULL,
+  parent_span_id CHAR(16) NULL,
+  name VARCHAR(120) NOT NULL,
+  kind ENUM('server','client','internal','producer','consumer') NOT NULL DEFAULT 'internal',
+  organization_id CHAR(36) NULL,
+  user_id CHAR(36) NULL,
+  status ENUM('ok','error') NOT NULL DEFAULT 'ok',
+  started_at DATETIME NOT NULL,
+  ended_at DATETIME NULL,
+  duration_ms INT UNSIGNED NULL,
+  error_message VARCHAR(500) NULL,
+  attributes JSON NOT NULL,
+  created_at DATETIME NOT NULL,
+  PRIMARY KEY (span_id),
+  KEY idx_pspan_trace (trace_id),
+  KEY idx_pspan_time (started_at),
+  CONSTRAINT fk_pspan_org FOREIGN KEY (organization_id) REFERENCES organizations(id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_state (
+  state_key VARCHAR(60) NOT NULL,
+  value JSON NULL,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (state_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_cdn_rules (
+  id CHAR(36) NOT NULL,
+  path_pattern VARCHAR(200) NOT NULL,
+  ttl_seconds INT UNSIGNED NOT NULL DEFAULT 0,
+  stale_while_revalidate INT UNSIGNED NOT NULL DEFAULT 0,
+  cache_key_includes JSON NOT NULL,
+  enabled TINYINT(1) NOT NULL DEFAULT 1,
+  sort_order INT NOT NULL DEFAULT 0,
+  updated_at DATETIME NOT NULL,
+  PRIMARY KEY (id),
+  KEY idx_pcdn_rule_order (sort_order)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_cdn_purges (
+  id CHAR(36) NOT NULL,
+  paths JSON NOT NULL,
+  status ENUM('pending','complete','skipped') NOT NULL DEFAULT 'pending',
+  detail VARCHAR(500) NULL,
+  requested_by CHAR(36) NULL,
+  created_at DATETIME NOT NULL,
+  completed_at DATETIME NULL,
+  PRIMARY KEY (id),
+  KEY idx_pcdn_purge_time (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Cache rules are configuration, not measurement: these are the three defaults
+-- cdn.service.ts ships, so an operator sees the same starting policy.
+INSERT IGNORE INTO platform_cdn_rules (id, path_pattern, ttl_seconds, stale_while_revalidate, cache_key_includes, enabled, sort_order, updated_at) VALUES
+('00000000-0000-4000-8000-000000000301', '/assets/*',       31536000, 0, '[]',                 1, 1, NOW()),
+('00000000-0000-4000-8000-000000000302', '/api/rest/v1/*',         0, 0, '["Authorization"]',  0, 2, NOW()),
+('00000000-0000-4000-8000-000000000303', '/*',                     0, 0, '[]',                 1, 3, NOW());
+
+-- ---------------------------------------------------------------------------
+-- Module Center — signed module package registry (.wmod) + lifecycle state
+-- machine. Seeded here so a fresh install needs no post-import migration.
+-- Existing installs get the identical objects from
+-- application/migrations/006_module_center.sql.
+--
+-- Note: no seed rows. A module registry with zero modules is the correct empty
+-- state; modules only appear when a Super Admin uploads a signed package.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS platform_modules (
+  id                    CHAR(36)     NOT NULL PRIMARY KEY,
+  module_key            VARCHAR(80)  NOT NULL,
+  name                  VARCHAR(100) NOT NULL,
+  package_type          ENUM('module','plugin','integration','approved_software') NOT NULL DEFAULT 'module',
+  description           TEXT         NULL,
+  vendor                VARCHAR(120) NULL,
+  status                ENUM('UPLOADED','SCANNING','VALIDATING','COMPATIBILITY_CHECK','SANDBOX_TEST','VALIDATED','APPROVED','INSTALLING','MIGRATING','HEALTH_CHECK','ACTIVE','DISABLED','FAILED','ROLLING_BACK','QUARANTINED','REMOVING','REMOVED') NOT NULL DEFAULT 'UPLOADED',
+  health                ENUM('UNKNOWN','HEALTHY','DEGRADED','UNHEALTHY','DISABLED','QUARANTINED') NOT NULL DEFAULT 'UNKNOWN',
+  enabled               TINYINT(1)   NOT NULL DEFAULT 0,
+  current_version       VARCHAR(40)  NULL,
+  active_release_id     CHAR(36)     NULL,
+  manifest              JSON         NULL,
+  dependencies          JSON         NULL,
+  permissions           JSON         NULL,
+  runtime_registration  JSON         NULL,
+  installed_by_id       CHAR(36)     NULL,
+  installed_at          DATETIME     NULL,
+  last_health_check_at  DATETIME     NULL,
+  last_error            TEXT         NULL,
+  created_at            DATETIME     NOT NULL,
+  updated_at            DATETIME     NOT NULL,
+  UNIQUE KEY uq_platform_modules_key (module_key),
+  KEY idx_platform_modules_status (status),
+  KEY idx_platform_modules_updated (updated_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_module_releases (
+  id                   CHAR(36)     NOT NULL PRIMARY KEY,
+  module_registry_id   CHAR(36)     NOT NULL,
+  version              VARCHAR(40)  NOT NULL,
+  status               ENUM('UPLOADED','SCANNING','VALIDATING','COMPATIBILITY_CHECK','SANDBOX_TEST','VALIDATED','APPROVED','INSTALLING','MIGRATING','HEALTH_CHECK','ACTIVE','DISABLED','FAILED','ROLLING_BACK','QUARANTINED','REMOVING','REMOVED') NOT NULL DEFAULT 'UPLOADED',
+  checksum             CHAR(64)     NOT NULL,
+  artifact_path        VARCHAR(500) NOT NULL,
+  package_size_bytes   BIGINT       NOT NULL DEFAULT 0,
+  manifest             JSON         NULL,
+  signature_key_id     VARCHAR(120) NULL,
+  signature_verified   TINYINT(1)   NOT NULL DEFAULT 0,
+  scan_status          ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_CONFIGURED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  compatibility_status ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_CONFIGURED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  sandbox_status       ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_CONFIGURED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  approval_status      ENUM('PENDING','APPROVED','REJECTED') NOT NULL DEFAULT 'PENDING',
+  migration_status     ENUM('PENDING','RUNNING','PASSED','FAILED','NOT_REQUIRED','SKIPPED') NOT NULL DEFAULT 'PENDING',
+  verification_report  JSON         NULL,
+  sandbox_report       JSON         NULL,
+  health_report        JSON         NULL,
+  rollback_metadata    JSON         NULL,
+  previous_release_id  CHAR(36)     NULL,
+  uploaded_by_id       CHAR(36)     NULL,
+  verified_at          DATETIME     NULL,
+  sandboxed_at         DATETIME     NULL,
+  approved_by_id       CHAR(36)     NULL,
+  approved_at          DATETIME     NULL,
+  installed_by_id      CHAR(36)     NULL,
+  installed_at         DATETIME     NULL,
+  created_at           DATETIME     NOT NULL,
+  updated_at           DATETIME     NOT NULL,
+  UNIQUE KEY uq_platform_module_releases_version (module_registry_id, version),
+  KEY idx_platform_module_releases_module (module_registry_id),
+  KEY idx_platform_module_releases_status (status),
+  KEY idx_platform_module_releases_checksum (checksum),
+  CONSTRAINT fk_platform_module_releases_module FOREIGN KEY (module_registry_id) REFERENCES platform_modules (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_module_uploads (
+  id               CHAR(36)      NOT NULL PRIMARY KEY,
+  original_name    VARCHAR(255)  NOT NULL,
+  checksum         CHAR(64)      NOT NULL,
+  size_bytes       BIGINT        NOT NULL DEFAULT 0,
+  artifact_path    VARCHAR(500)  NULL,
+  status           ENUM('UPLOADED','SCANNING','VALIDATED','INSTALLING','ACTIVE','DISABLED','FAILED','QUARANTINED','REMOVED') NOT NULL DEFAULT 'UPLOADED',
+  manifest_id      VARCHAR(80)   NULL,
+  manifest_version VARCHAR(40)   NULL,
+  signature_key_id VARCHAR(120)  NULL,
+  report           JSON          NULL,
+  release_id       CHAR(36)      NULL,
+  uploaded_by_id   CHAR(36)      NULL,
+  created_at       DATETIME      NOT NULL,
+  updated_at       DATETIME      NOT NULL,
+  KEY idx_platform_module_uploads_checksum (checksum),
+  KEY idx_platform_module_uploads_release (release_id),
+  KEY idx_platform_module_uploads_created (created_at),
+  CONSTRAINT fk_platform_module_uploads_release FOREIGN KEY (release_id) REFERENCES platform_module_releases (id) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS platform_module_operations (
+  id                CHAR(36)     NOT NULL PRIMARY KEY,
+  module_registry_id CHAR(36)    NOT NULL,
+  release_id        CHAR(36)     NULL,
+  operation_type    ENUM('UPLOAD','VERIFY','SANDBOX_TEST','APPROVE','INSTALL','UPDATE','ENABLE','DISABLE','RESTART','HEALTH_CHECK','ROLLBACK','REMOVE') NOT NULL,
+  status            ENUM('RUNNING','SUCCEEDED','FAILED') NOT NULL DEFAULT 'RUNNING',
+  idempotency_key   VARCHAR(180) NOT NULL,
+  correlation_id    VARCHAR(100) NULL,
+  from_version      VARCHAR(40)  NULL,
+  to_version        VARCHAR(40)  NULL,
+  requested_by_id   CHAR(36)     NULL,
+  request           JSON         NULL,
+  result            JSON         NULL,
+  logs              JSON         NULL,
+  error_code        VARCHAR(80)  NULL,
+  error_message     TEXT         NULL,
+  started_at        DATETIME     NULL,
+  finished_at       DATETIME     NULL,
+  created_at        DATETIME     NOT NULL,
+  updated_at        DATETIME     NOT NULL,
+  UNIQUE KEY uq_platform_module_operations_key (idempotency_key),
+  KEY idx_platform_module_operations_module (module_registry_id),
+  KEY idx_platform_module_operations_type (operation_type),
+  KEY idx_platform_module_operations_created (created_at),
+  CONSTRAINT fk_platform_module_operations_module FOREIGN KEY (module_registry_id) REFERENCES platform_modules (id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Autonomous Organization — board-decision approval register. Seeded here so a
+-- fresh install needs no post-import migration. Existing installs get the
+-- identical table from application/migrations/007_autonomous_module.sql.
+--
+-- No seed rows: an organization with no proposals is the correct empty state.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS autonomous_decisions (
+  -- Node mints ids as `decision-<uuid>` (autonomous.service.ts: uid()).
+  id                   CHAR(45)      NOT NULL PRIMARY KEY,
+  organization_id      CHAR(36)      NOT NULL,
+  title                VARCHAR(200)  NOT NULL,
+  department           VARCHAR(64)   NOT NULL,
+  recommendation       TEXT          NOT NULL,
+  confidence           DECIMAL(4,3)  NOT NULL DEFAULT 0,
+  risk_level           ENUM('low','med','high','critical') NOT NULL DEFAULT 'low',
+  estimated_impact_usd DECIMAL(20,2) NOT NULL DEFAULT 0,
+  status               ENUM('drafted','awaiting_human','approved','rejected','executing','executed') NOT NULL DEFAULT 'awaiting_human',
+  human_approver       CHAR(36)      NULL,
+  reasoning            TEXT          NOT NULL,
+  decision_note        VARCHAR(2000) NULL,
+  created_at           DATETIME      NOT NULL,
+  decided_at           DATETIME      NULL,
+  updated_at           DATETIME      NOT NULL,
+  KEY idx_autonomous_decisions_org (organization_id, created_at),
+  KEY idx_autonomous_decisions_status (organization_id, status),
+  KEY idx_autonomous_decisions_department (organization_id, department)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Benchmark Center — result registry (Session 50). Ported from
+-- apps/api/src/benchmarks/benchmarks.service.ts; see migration
+-- 008_benchmarks_module.sql for an existing installation.
+--
+-- The centre records evaluations performed elsewhere. It does not grade, run
+-- or synthesise them, so no rows are seeded: an organization with no recorded
+-- evaluation reports zero runs, zero average and an all-zero area score card.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS benchmark_runs (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'br-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  area            ENUM('ai_models','ai_employees','ai_workflows','voice_models','vision_models',
+                       'translation_quality','coding_performance','response_accuracy','latency',
+                       'resource_consumption','cost_efficiency','safety_metrics','reliability',
+                       'user_satisfaction') NOT NULL,
+  target_id       VARCHAR(200)  NULL,
+  target_name     VARCHAR(200)  NULL,
+  status          ENUM('queued','running','completed','failed') NOT NULL DEFAULT 'completed',
+  started_at      DATETIME      NOT NULL,
+  completed_at    DATETIME      NULL,
+  duration_ms     INT UNSIGNED  NOT NULL DEFAULT 0,
+  metrics         JSON          NOT NULL,
+  overall_score   DECIMAL(10,4) NOT NULL,
+  passed          TINYINT(1)    NOT NULL DEFAULT 0,
+  notes           VARCHAR(1000) NULL,
+  evaluator       VARCHAR(200)  NOT NULL,
+  evidence        VARCHAR(2000) NOT NULL,
+  imported        TINYINT(1)    NOT NULL DEFAULT 1,
+  created_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_benchmark_runs_seq (seq),
+  KEY idx_benchmark_runs_org (organization_id, seq),
+  KEY idx_benchmark_runs_area (organization_id, area, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Scheduling stores the schedule only. Nothing here runs it: no cron daemon is
+-- started, and creating a schedule must never manufacture a run.
+CREATE TABLE IF NOT EXISTS benchmark_schedules (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'sc-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  area            ENUM('ai_models','ai_employees','ai_workflows','voice_models','vision_models',
+                       'translation_quality','coding_performance','response_accuracy','latency',
+                       'resource_consumption','cost_efficiency','safety_metrics','reliability',
+                       'user_satisfaction') NOT NULL,
+  target_id       VARCHAR(200)  NULL,
+  cron            VARCHAR(64)   NOT NULL DEFAULT '0 0 * * *',
+  enabled         TINYINT(1)    NOT NULL DEFAULT 1,
+  next_run_at     DATETIME      NULL,
+  created_at      DATETIME      NOT NULL,
+  KEY idx_benchmark_schedules_org (organization_id, created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The user-authored annotations ledger (Node's tenantStore with prefix
+-- "bm:notes" and id prefix "bm-"). Only the benchmark centre owns this table:
+-- the other modules that use tenantStore carry different payload shapes and
+-- get their own table when they are ported, rather than sharing a table of
+-- opaque JSON.
+CREATE TABLE IF NOT EXISTS benchmark_notes (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'bm-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  title           VARCHAR(200)  NOT NULL,
+  body            TEXT          NOT NULL,
+  tags            JSON          NOT NULL,
+  created_by      CHAR(36)      NULL,
+  created_at      DATETIME      NOT NULL,
+  updated_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_benchmark_notes_seq (seq),
+  KEY idx_benchmark_notes_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ---------------------------------------------------------------------------
+-- Memory Evolution Engine (Session 47) — ported from
+-- apps/api/src/memoryEvolution/memoryEvolution.service.ts; see migration
+-- 009_memory_evolution_module.sql for an existing installation.
+--
+-- Scoped by organization_id even though Node's `me:*` Redis keys are global:
+-- the register holds enterprise knowledge, and the admin gate Node relies on
+-- does not separate tenants from each other. No memories are seeded — Node's
+-- nine sample memories were opt-in demo data, and production starts empty.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS memory_evolution_memories (
+  id                CHAR(12)      NOT NULL PRIMARY KEY,        -- 'mem-' + 8 hex
+  organization_id   CHAR(36)      NOT NULL,
+  type              ENUM('episodic','semantic','procedural','organizational','department',
+                         'project','user','team','knowledge') NOT NULL,
+  content           TEXT          NOT NULL,
+  confidence        DECIMAL(4,3)  NOT NULL DEFAULT 0.800,
+  access_count      INT UNSIGNED  NOT NULL DEFAULT 1,
+  last_accessed_at  DATETIME      NOT NULL,
+  created_at        DATETIME      NOT NULL,
+  decayed_strength  DECIMAL(6,4)  NOT NULL DEFAULT 1.0000,     -- 1% per day since last access
+  tags              JSON          NOT NULL,
+  scope             VARCHAR(200)  NOT NULL DEFAULT 'enterprise:windels',
+  seq               BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_memory_evolution_memories_seq (seq),
+  KEY idx_me_memories_org (organization_id, seq),
+  KEY idx_me_memories_type (organization_id, type),
+  KEY idx_me_memories_scope (organization_id, scope)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- One row per consolidation pass. Node counts every job ever run for
+-- `consolidationJobs24h`; the name says 24h but the zset is never trimmed, so
+-- the count is reproduced as it is rather than silently time-boxed.
+CREATE TABLE IF NOT EXISTS memory_evolution_jobs (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'cj-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  kind            ENUM('merge','deduplicate','refine','age','forget') NOT NULL,
+  processed_at    DATETIME      NOT NULL,
+  affected        INT UNSIGNED  NOT NULL DEFAULT 0,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_memory_evolution_jobs_seq (seq),
+  KEY idx_me_jobs_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The three counters Node kept as Redis strings. They cannot be derived: a
+-- share leaves no row of its own, and a merge deletes the duplicate it counts.
+CREATE TABLE IF NOT EXISTS memory_evolution_metrics (
+  organization_id     CHAR(36)     NOT NULL PRIMARY KEY,
+  duplicates_merged   INT UNSIGNED NOT NULL DEFAULT 0,
+  memories_forgotten  INT UNSIGNED NOT NULL DEFAULT 0,
+  cross_agent_shares  INT UNSIGNED NOT NULL DEFAULT 0,
+  updated_at          DATETIME     NOT NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ---------------------------------------------------------------------------
+-- Enterprise AI Model Factory (migration 010) — the model lifecycle register.
+-- Same DDL as php/application/migrations/010_model_factory_module.sql, applied
+-- here so a fresh installation needs no follow-up import. The register is
+-- scoped by organization_id; Node's `mf2:*` Redis keys were global. No seed
+-- rows: a factory with nothing registered reports an empty register.
+-- ---------------------------------------------------------------------------
+
+-- `seq` is an auto-increment alongside the CHAR primary key because Node's
+-- tunes and benchmark results were ordered by a millisecond zset score while
+-- its models all carried score 0 — a tie that Redis breaks lexicographically
+-- by id. That ordering is preserved (`ORDER BY id` for models, `ORDER BY seq`
+-- for the two time-ordered collections) so a page shows the same list in the
+-- same order as the Node deployment it replaces.
+--
+-- No seed rows. Node guards its five sample models behind `demoDataEnabled()`
+-- and a production tenant starts empty; the same is true here.
+
+CREATE TABLE IF NOT EXISTS model_factory_models (
+  id                  CHAR(11)      NOT NULL PRIMARY KEY,      -- 'm2-' + 8 hex
+  organization_id     CHAR(36)      NOT NULL,
+  name                VARCHAR(200)  NOT NULL,
+  builder             ENUM('slm','llm','vision','speech','audio','multimodal','domain') NOT NULL,
+  stage               ENUM('research','benchmarking','validation','approval',
+                           'canary','deployed','monitoring','retired') NOT NULL DEFAULT 'research',
+  base_model_id       VARCHAR(64)   NULL,
+  size                VARCHAR(32)   NOT NULL,
+  quant               VARCHAR(32)   NOT NULL,
+  vram_mb             INT UNSIGNED  NOT NULL,
+  benchmark_score     DECIMAL(6,2)  NULL,
+  safety_passed       TINYINT(1)    NULL,                      -- NULL = never evaluated
+  governance_approved TINYINT(1)    NOT NULL DEFAULT 0,
+  canary_pct          TINYINT UNSIGNED NULL,
+  versions            INT UNSIGNED  NOT NULL DEFAULT 1,
+  created_at          DATETIME      NOT NULL,
+  seq                 BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_model_factory_models_seq (seq),
+  KEY idx_model_factory_models_org (organization_id, id),
+  KEY idx_model_factory_models_stage (organization_id, stage)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- One row per measured result. Nothing here computes a score: the evaluator
+-- that ran the benchmark supplies `score` and `pass`, and both are stored as
+-- given. Node's earlier version invented the number (`50 + random * 45` and a
+-- hard-coded `pass: true`); the rewritten service this port mirrors does not.
+CREATE TABLE IF NOT EXISTS model_factory_benchmarks (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'br-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  model_id        CHAR(11)      NOT NULL,
+  benchmark       VARCHAR(120)  NOT NULL,
+  score           DECIMAL(6,2)  NOT NULL,
+  passed          TINYINT(1)    NOT NULL DEFAULT 0,
+  recorded_at     DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_model_factory_benchmarks_seq (seq),
+  KEY idx_model_factory_benchmarks_org (organization_id, seq),
+  KEY idx_model_factory_benchmarks_model (organization_id, model_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Fine-tune jobs. `model_id` is nullable because that is what Node records:
+-- its route reads `req.body.modelId ?? req.params.modelId`, and the body
+-- schema has no `modelId` while the path has no parameter — so Node stores a
+-- job with no model at all. This port accepts an optional `modelId` when the
+-- client sends one (the web client does) and stores NULL when it does not, so
+-- a job can at least be traced back to what it was tuning. Starting a job
+-- never runs one: no trainer is launched here, and `status` stays 'running'
+-- with `progressPct` 0 until something outside the request updates it, which
+-- is exactly as far as Node goes.
+CREATE TABLE IF NOT EXISTS model_factory_fine_tunes (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'ft-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  model_id        CHAR(11)      NULL,
+  dataset         VARCHAR(200)  NOT NULL,
+  method          ENUM('supervised','rlhf','dpo','lora','qlora') NOT NULL,
+  status          ENUM('queued','running','evaluating','complete','failed') NOT NULL DEFAULT 'running',
+  progress_pct    SMALLINT UNSIGNED NOT NULL DEFAULT 0,
+  started_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_model_factory_tunes_seq (seq),
+  KEY idx_model_factory_tunes_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The user-authored annotations ledger (Node's tenantStore with prefix
+-- "mf:notes" and id prefix "mf-"). Only the model factory owns this table.
+CREATE TABLE IF NOT EXISTS model_factory_notes (
+  id              CHAR(11)      NOT NULL PRIMARY KEY,          -- 'mf-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  title           VARCHAR(200)  NOT NULL,
+  body            TEXT          NOT NULL,
+  tags            JSON          NOT NULL,
+  created_by      CHAR(36)      NULL,
+  created_at      DATETIME      NOT NULL,
+  updated_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_model_factory_notes_seq (seq),
+  KEY idx_model_factory_notes_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ---------------------------------------------------------------------------
+-- Final Enterprise Integration & Validation (migration 011) — the report
+-- register. Same DDL as php/application/migrations/011_v76_validation_module.sql,
+-- applied here so a fresh installation needs no follow-up import. No seed rows:
+-- a validation report exists only after somebody runs one.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS v76_reports (
+  id              CHAR(21)      NOT NULL PRIMARY KEY,          -- 'v76r_' + 16 hex
+  organization_id CHAR(36)      NOT NULL,
+  generated_at    DATETIME      NOT NULL,
+  body            JSON          NOT NULL,                      -- the whole report
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_v76_reports_seq (seq),
+  KEY idx_v76_reports_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The user-authored annotations ledger (Node's tenantStore with prefix
+-- "v76:notes" and id prefix "v76-"). Only this module owns this table.
+CREATE TABLE IF NOT EXISTS v76_notes (
+  id              CHAR(12)      NOT NULL PRIMARY KEY,          -- 'v76-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  title           VARCHAR(200)  NOT NULL,
+  body            TEXT          NOT NULL,
+  tags            JSON          NOT NULL,
+  created_by      CHAR(36)      NULL,
+  created_at      DATETIME      NOT NULL,
+  updated_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_v76_notes_seq (seq),
+  KEY idx_v76_notes_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

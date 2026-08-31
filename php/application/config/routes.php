@@ -5,6 +5,121 @@ $route['translate_uri_dashes'] = FALSE;
 $route['healthz'] = 'health/index';
 $route['api/v1/health'] = 'health/index';
 $route['api/v1/health/deep'] = 'health/deep';
+// Enterprise AI Kernel (Node Session 39 parity)
+$route['api/v1/kernel/status'] = 'kernel/status';
+$route['api/v1/kernel/components'] = 'kernel/components';
+$route['api/v1/kernel/dispatch'] = 'kernel/dispatch';
+$route['api/v1/kernel/events'] = 'kernel/events';
+$route['api/v1/kernel/policy/evaluate'] = 'kernel/policy_evaluate';
+$route['api/v1/kernel/resources/grant'] = 'kernel/resources_grant';
+$route['api/v1/kernel/model/select'] = 'kernel/model_select';
+$route['api/v1/kernel/diagnostics/run'] = 'kernel/diagnostics_run';
+// AI provider registry (Node routes/ai.ts parity)
+$route['api/v1/ai/models'] = 'ai/models';
+$route['api/v1/ai/providers'] = 'ai/providers';
+$route['api/v1/ai/health'] = 'ai/health';
+$route['api/v1/ai/usage'] = 'ai/usage';
+$route['api/v1/ai/complete'] = 'ai/complete';
+$route['api/v1/ai/embed'] = 'ai/embed';
+$route['api/v1/ai/test-providers'] = 'ai/test_providers';
+// Tenant Isolation (Node Session 89 parity)
+$route['api/v1/tenant-isolation/policy'] = 'tenant_isolation/policy';
+$route['api/v1/tenant-isolation/compliance/run'] = 'tenant_isolation/compliance_run';
+$route['api/v1/tenant-isolation/compliance/runs/(:any)'] = 'tenant_isolation/compliance_run_item/$1';
+$route['api/v1/tenant-isolation/compliance/runs'] = 'tenant_isolation/compliance_runs';
+$route['api/v1/tenant-isolation/export-check'] = 'tenant_isolation/export_check';
+// Security & governance (Node routes/security.ts parity)
+$route['api/v1/security/scorecard'] = 'security/scorecard';
+$route['api/v1/security/self-test'] = 'security/self_test';
+$route['api/v1/security/prompt-guard/scan'] = 'security/prompt_scan';
+$route['api/v1/security/password-strength'] = 'security/password_strength';
+$route['api/v1/security/breakers/(:any)/reset'] = 'security/breaker_reset/$1';
+$route['api/v1/security/breakers'] = 'security/breakers';
+$route['api/v1/security/rate-limits'] = 'security/rate_limits';
+$route['api/v1/security/events'] = 'security/events';
+$route['api/v1/security/encryption'] = 'security/encryption';
+$route['api/v1/security/incidents/(:any)'] = 'security/incident_item/$1';
+$route['api/v1/security/incidents'] = 'security/incidents_index';
+$route['api/v1/security/access-reviews/run'] = 'security/access_review_run';
+$route['api/v1/security/access-reviews/latest'] = 'security/access_review_latest';
+$route['api/v1/security/access-reviews/attest'] = 'security/access_review_attest';
+$route['api/v1/security/runbooks'] = 'security/runbooks_index';
+// Module Runtime (Node routes/moduleRuntime.ts parity - registration surface
+// plus the guarded module gateway; open to any authenticated user)
+$route['api/v1/module-runtime/health'] = 'module_runtime/health';
+$route['api/v1/module-runtime/modules'] = 'module_runtime/modules';
+$route['api/v1/module-runtime/registrations'] = 'module_runtime/registrations';
+$route['api/v1/module-runtime/(:any)/(.+)'] = 'module_runtime/proxy/$1/$2';
+$route['api/v1/module-runtime/(:any)'] = 'module_runtime/proxy/$1';
+// Autonomous Organization (Node routes/autonomous.ts parity - 6 routes)
+$route['api/v1/autonomous/dashboard/rollup'] = 'autonomous/dashboard_rollup';
+$route['api/v1/autonomous/decisions/(:any)/resolve'] = 'autonomous/decisions_resolve/$1';
+$route['api/v1/autonomous/decisions/(:any)'] = 'autonomous/decisions_item_dispatch/$1';
+$route['api/v1/autonomous/decisions'] = 'autonomous/decisions_dispatch';
+// Benchmark Center (Node routes/benchmarks.ts parity - 8 routes)
+$route['api/v1/benchmarks/dashboard/rollup'] = 'benchmarks/dashboard_rollup';
+$route['api/v1/benchmarks/runs'] = 'benchmarks/runs';
+$route['api/v1/benchmarks/run'] = 'benchmarks/run';
+$route['api/v1/benchmarks/schedule'] = 'benchmarks/schedule';
+$route['api/v1/benchmarks/notes/(:any)'] = 'benchmarks/notes_dispatch/$1';
+$route['api/v1/benchmarks/notes'] = 'benchmarks/notes_dispatch';
+// Memory Evolution (Node routes/memoryEvolution.ts parity - 6 routes, admin only)
+$route['api/v1/memory-evolution/dashboard/rollup'] = 'memory_evolution/dashboard_rollup';
+$route['api/v1/memory-evolution/memories/(:any)/share'] = 'memory_evolution/memory_share/$1';
+$route['api/v1/memory-evolution/memories'] = 'memory_evolution/memories_dispatch';
+$route['api/v1/memory-evolution/consolidate'] = 'memory_evolution/consolidate';
+$route['api/v1/memory-evolution/consolidations'] = 'memory_evolution/consolidations';
+// Enterprise AI Model Factory (Node routes/modelFactory.ts parity - 13 routes, admin only)
+$route['api/v1/model-factory/dashboard/rollup'] = 'model_factory/dashboard_rollup';
+$route['api/v1/model-factory/models/(:any)/advance'] = 'model_factory/model_advance/$1';
+$route['api/v1/model-factory/models/(:any)/benchmark'] = 'model_factory/model_benchmark/$1';
+$route['api/v1/model-factory/models/(:any)/safety'] = 'model_factory/model_safety/$1';
+$route['api/v1/model-factory/models/(:any)/governance-approve'] = 'model_factory/model_governance/$1';
+$route['api/v1/model-factory/models'] = 'model_factory/models_dispatch';
+$route['api/v1/model-factory/fine-tunes'] = 'model_factory/fine_tunes_dispatch';
+$route['api/v1/model-factory/notes/(:any)'] = 'model_factory/notes_dispatch/$1';
+$route['api/v1/model-factory/notes'] = 'model_factory/notes_dispatch';
+// Final Enterprise Integration & Validation (Node routes/v76validation.ts parity - 7 routes, admin only)
+$route['api/v1/validation/report'] = 'v76_validation/report';
+$route['api/v1/validation/run'] = 'v76_validation/run';
+$route['api/v1/validation/history'] = 'v76_validation/history';
+$route['api/v1/validation/notes/(:any)'] = 'v76_validation/notes_dispatch/$1';
+$route['api/v1/validation/notes'] = 'v76_validation/notes_dispatch';
+// Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
+$route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
+$route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';
+$route['api/v1/super-admin/module-center/modules'] = 'module_center/modules_index';
+$route['api/v1/super-admin/module-center/uploads'] = 'module_center/uploads_dispatch';
+$route['api/v1/super-admin/module-center/operations'] = 'module_center/operations_index';
+$route['api/v1/super-admin/module-center/releases/(:any)/verify'] = 'module_center/release_verify/$1';
+$route['api/v1/super-admin/module-center/releases/(:any)/sandbox-test'] = 'module_center/release_sandbox/$1';
+$route['api/v1/super-admin/module-center/releases/(:any)/approve'] = 'module_center/release_approve/$1';
+$route['api/v1/super-admin/module-center/releases/(:any)/install'] = 'module_center/release_install/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/enable'] = 'module_center/module_enable/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/disable'] = 'module_center/module_disable/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/restart'] = 'module_center/module_restart/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/health-check'] = 'module_center/module_health_check/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/rollback'] = 'module_center/module_rollback/$1';
+$route['api/v1/super-admin/module-center/modules/(:any)/remove'] = 'module_center/module_remove/$1';
+// Global Platform (Node routes/platform.ts parity — 15 routes)
+$route['api/v1/platform/metrics'] = 'platform/metrics';
+$route['api/v1/platform/logs'] = 'platform/logs';
+$route['api/v1/platform/traces/(:any)'] = 'platform/trace/$1';
+$route['api/v1/platform/traces'] = 'platform/traces';
+$route['api/v1/platform/spans/(:any)'] = 'platform/span/$1';
+$route['api/v1/platform/ai-observability'] = 'platform/ai_observability';
+$route['api/v1/platform/regions'] = 'platform/regions';
+$route['api/v1/platform/dr'] = 'platform/dr';
+$route['api/v1/platform/failover'] = 'platform/failover';
+$route['api/v1/platform/cdn/sign-url'] = 'platform/cdn_sign_url';
+$route['api/v1/platform/cdn/rules'] = 'platform/cdn_rules';
+$route['api/v1/platform/cdn/purge'] = 'platform/cdn_purge';
+$route['api/v1/platform/cdn'] = 'platform/cdn';
+$route['api/v1/platform/overview'] = 'platform/overview';
+// Usage Intelligence (Node Session 55/123 parity)
+$route['api/v1/usage-intel/dashboard/rollup'] = 'usage_intel/dashboard_rollup';
+$route['api/v1/usage-intel/events/(:any)'] = 'usage_intel/events_item/$1';
+$route['api/v1/usage-intel/events'] = 'usage_intel/events_index';
 $route['api/v1/auth/forgot'] = 'auth/forgot';
 $route['api/v1/auth/reset'] = 'auth/reset';
 $route['api/v1/auth/register'] = 'auth/register';

@@ -608,11 +608,14 @@ function CdnTab() {
   return (
     <div className="space-y-4">
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <Stat label="Provider" value={cfg.provider} tone="bright"/>
-        <Stat label="POPs" value={cfg.popCount} tone="azure"/>
-        <Stat label="Hit rate" value={`${(cfg.cacheHitRate*100).toFixed(0)}%`} tone="emerald"/>
-        <Stat label="Bandwidth" value={`${cfg.bandwidthGb} GB`} tone="violet"/>
+        <Stat label="Provider" value={cfg.provider ?? "none configured"} tone="bright"/>
+        <Stat label="POPs" value={cfg.popCount ?? "—"} tone="azure"/>
+        <Stat label="Hit rate" value={p.formatCacheHitRate(cfg.cacheHitRate)} tone="emerald"/>
+        <Stat label="Bandwidth" value={p.formatBandwidth(cfg.bandwidthGb)} tone="violet"/>
       </div>
+      {!cfg.enabled && (
+        <div className="text-xs text-text-muted">No CDN is configured, so edge metrics are blank rather than estimated — a purge is still recorded, but marked skipped because there is nothing to purge.</div>
+      )}
       <Card>
         <CardHeader><CardTitle>Cache rules</CardTitle><CardDescription>TTL per path pattern</CardDescription></CardHeader>
         <CardContent>
@@ -633,7 +636,7 @@ function CdnTab() {
           <Button variant="warning" onClick={doPurge}>Purge paths</Button>
           {cfg.recentPurges.length>0 && (
             <div className="pt-2 text-xs text-text-muted space-y-1">
-              {cfg.recentPurges.slice(0,5).map((p:any)=>(<div key={p.id} className="font-mono">{new Date(p.createdAt).toLocaleString()} · {p.status} · {p.paths.join(', ')}</div>))}
+              {cfg.recentPurges.slice(0,5).map((p:any)=>(<div key={p.id} className="font-mono">{new Date(p.createdAt).toLocaleString()} · {p.status} · {p.paths.join(', ')}{p.detail ? ` — ${p.detail}` : ""}</div>))}
             </div>
           )}
         </CardContent>
@@ -661,7 +664,7 @@ function DrTab() {
         <Stat label="Status" value={data.status} tone={data.status==="healthy"?"emerald":data.status==="degraded"?"amber":"crimson"}/>
         <Stat label="Primary" value={data.primaryRegion||"—"} tone="azure"/>
         <Stat label="DR replica" value={data.drRegion||"—"} tone="violet"/>
-        <Stat label="Replication lag" value={`${data.replicationLagMs}ms`} tone="teal"/>
+        <Stat label="Replication lag" value={p.formatReplicationLag(data.replicationLagMs)} tone={data.replicationLagMs === null ? "azure" : "teal"}/>
       </div>
       <Card>
         <CardHeader><CardTitle>Replicas</CardTitle></CardHeader>
@@ -672,7 +675,7 @@ function DrTab() {
               <tr key={r.id} className="border-t border-white/5"><td className="py-1.5 font-mono">{r.id}</td><td className="capitalize">{r.status}</td><td>{r.rpoSeconds}s</td><td>{r.rtoSeconds}s</td></tr>
             ))}</tbody>
           </table>
-          <div className="text-xs text-text-muted pt-3">Last backup: {new Date(data.lastBackupAt).toLocaleString()} · status: {data.backupStatus}</div>
+          <div className="text-xs text-text-muted pt-3">Last backup: {p.formatBackupTime(data.lastBackupAt)} · status: {data.backupStatus}</div>
         </CardContent>
       </Card>
       <Card>

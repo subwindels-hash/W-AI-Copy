@@ -2,9 +2,18 @@
 
 application/cache/*
 !application/cache/index.html
+!application/cache/sessions/
+!application/cache/sessions/index.html
 
 application/logs/*
 !application/logs/index.html
+
+assets/uploads/*
+!assets/uploads/.htaccess
+!assets/uploads/index.html
+
+application/storage/uploads/*
+!application/storage/uploads/.gitkeep
 
 !application/*/.htaccess
 

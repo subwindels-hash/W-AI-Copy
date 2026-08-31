@@ -23,7 +23,14 @@ export interface SecuritySelfTest {
 /** Envelope-encryption key metadata. Never carries key material. */
 export interface EncryptionKeyInfo {
   id: string;
-  createdAt: string;
+  /**
+   * Null when the runtime keeps no key metadata. Node ships key files with
+   * creation dates; the PHP build derives one key from VP_ENCRYPTION_KEY and
+   * records nothing about it, so it reports null rather than inventing a date
+   * that would make key age look measurable. The dashboard renders "not
+   * recorded" for null.
+   */
+  createdAt: string | null;
   primary: boolean;
 }
 
@@ -36,15 +43,18 @@ export interface EncryptionStatus {
 /**
  * Response-hardening flags reported to the dashboard.
  *
- * Booleans mean "this header is being sent", not "this header is correct" —
- * the values are read back from the helmet configuration.
+ * Booleans mean "this header is being sent", not "this header is correct".
+ * `xFrame` and `referrerPolicy` are null when the header is not emitted, which
+ * is the normal case for a deployment that does not configure a framing policy
+ * — null, not "DENY", because claiming a policy that is not on the wire is
+ * worse than admitting there is none.
  */
 export interface SecurityHeaderStatus {
   hsts: boolean;
   csp: boolean;
   noSniff: boolean;
-  xFrame: string;
-  referrerPolicy: string;
+  xFrame: string | null;
+  referrerPolicy: string | null;
 }
 
 export interface SecurityScorecard {
@@ -119,3 +129,130 @@ export const CreateSecurityIncidentSchema = z.object({
   area: z.enum(SECURITY_INCIDENT_AREAS),
 });
 export type CreateSecurityIncidentInput = z.infer<typeof CreateSecurityIncidentSchema>;
+
+/* ── Incident response, access reviews and runbooks ────────────────────
+ *
+ * These eight endpoints existed only as untyped JSON in the route file and in
+ * the governance service, so the dashboard had no way to consume them without
+ * re-declaring the shapes. They are declared here for the same reason as the
+ * block above: one description, imported by both sides.
+ */
+
+export const SECURITY_INCIDENT_STATUSES = [
+  "reported", "investigating", "contained", "resolved", "postmortem",
+] as const;
+export type SecurityIncidentStatus = (typeof SECURITY_INCIDENT_STATUSES)[number];
+
+export interface SecurityIncident {
+  id: string;
+  title: string;
+  description: string;
+  severity: SecurityIncidentSeverity;
+  status: SecurityIncidentStatus;
+  reportedBy: string;
+  area: SecurityIncidentArea;
+  createdAt: string;
+  updatedAt: string;
+  timeline: Array<{ at: string; actor: string; note: string }>;
+  runbookExecutions: Array<{ runbookId: string; status: string; output: Record<string, unknown> }>;
+}
+
+export const UpdateSecurityIncidentSchema = z.object({
+  status: z.enum(SECURITY_INCIDENT_STATUSES).optional(),
+  note: z.string().max(2000).optional(),
+});
+
+export const ListSecurityIncidentsQuerySchema = z.object({
+  status: z.enum(SECURITY_INCIDENT_STATUSES).optional(),
+  limit: z.coerce.number().min(1).max(200).optional(),
+});
+
+/** Actions an incident runbook can perform. Validated server-side. */
+export const RUNBOOK_ACTIONS = ["NOTIFY_ADMIN", "REVOKE_TOKENS", "QUARANTINE_REPORTER"] as const;
+export type RunbookAction = (typeof RUNBOOK_ACTIONS)[number];
+
+export const CreateRunbookSchema = z.object({
+  name: z.string().min(2).max(100),
+  triggerSeverity: z.enum(SECURITY_INCIDENT_SEVERITIES),
+  triggerArea: z.enum(SECURITY_INCIDENT_AREAS),
+  actions: z.array(z.enum(RUNBOOK_ACTIONS)).min(1),
+});
+
+export interface RunbookExecution {
+  id: number;
+  incidentId: string;
+  status: string;
+  output: Record<string, unknown>;
+  createdAt: string;
+}
+
+export interface IncidentRunbook {
+  id: string;
+  organizationId: string | null;
+  name: string;
+  triggerSeverity: SecurityIncidentSeverity;
+  triggerArea: SecurityIncidentArea;
+  actions: RunbookAction[];
+  enabled: boolean;
+  createdAt: string;
+  executions: RunbookExecution[];
+}
+
+export const ACCESS_REVIEW_ITEM_STATUSES = ["PENDING", "APPROVED", "REVOKED", "QUARANTINED"] as const;
+export type AccessReviewItemStatus = (typeof ACCESS_REVIEW_ITEM_STATUSES)[number];
+
+export interface AccessReviewItem {
+  id: string;
+  campaignId: string;
+  userId: string;
+  status: AccessReviewItemStatus;
+  reviewedById: string | null;
+  notes: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AccessReviewCampaign {
+  id: string;
+  organizationId: string;
+  dormantDays: number;
+  status: string;
+  createdAt: string;
+  items: AccessReviewItem[];
+}
+
+export interface DormantUser {
+  userId: string;
+  email: string;
+  role: string;
+  /** Null when the account has never been seen active. */
+  lastLoginAt: string | null;
+  daysInactive: number;
+}
+
+export interface AccessReview {
+  campaignId: string;
+  generatedAt: string;
+  dormantUsers: DormantUser[];
+  adminCount: number;
+  superAdminCount: number;
+  recommendations: string[];
+}
+
+export interface AccessReviewRunResult {
+  campaign: AccessReviewCampaign;
+  review: AccessReview;
+}
+
+export const RunAccessReviewSchema = z.object({
+  dormantDays: z.coerce.number().int().min(7).max(365).optional(),
+});
+
+export const ACCESS_REVIEW_ATTEST_STATUSES = ["APPROVED", "REVOKED", "QUARANTINED"] as const;
+export type AccessReviewAttestStatus = (typeof ACCESS_REVIEW_ATTEST_STATUSES)[number];
+
+export const AttestAccessReviewSchema = z.object({
+  itemId: z.string().min(1),
+  status: z.enum(ACCESS_REVIEW_ATTEST_STATUSES),
+  notes: z.string().max(500).optional(),
+});

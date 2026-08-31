@@ -24,7 +24,7 @@ export interface TiNamespaceAudit {
 
 export interface TiFinding {
   severity: "high" | "medium" | "low";
-  scope: "redis" | "probe" | "policy";
+  scope: "redis" | "database" | "probe" | "policy";
   message: string;
   detail?: string;
 }

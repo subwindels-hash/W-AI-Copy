@@ -1,5 +1,10 @@
 # Unfinished Modules — historical audit; closed 2026-08-16
 
+> **Superseded for current work:** see **`docs/UNFINISHED_MODULES_CURRENT.md`**
+> (2026-08-30), which enumerates the live queue — 1 STUB in the TypeScript build
+> (`_scaffolds`, 262 quarantined drafts) and 127 unfinished modules in the PHP
+> build (2 partial + 125 not ported).
+
 > **Current status (Session 197):** `node audit/build-inventory.mjs` reports
 > **144 modules / 144 COMPLETE / 0 PARTIAL / 0 STUB**. The last inventory STUB,
 > `nativeAi`, is now a first-party Native AI Studio with its own authenticated

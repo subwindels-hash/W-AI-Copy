@@ -25,6 +25,9 @@ export default function SecurityPage() {
           <TabsTrigger value="ratelimits">Rate Limits</TabsTrigger>
           <TabsTrigger value="breakers">Circuit Breakers</TabsTrigger>
           <TabsTrigger value="selftest">Self-Test</TabsTrigger>
+          <TabsTrigger value="incidents">Incidents</TabsTrigger>
+          <TabsTrigger value="access">Access Reviews</TabsTrigger>
+          <TabsTrigger value="runbooks">Runbooks</TabsTrigger>
         </TabsList>
         <TabsContent value="overview"><OverviewTab/></TabsContent>
         <TabsContent value="events"><EventsTab/></TabsContent>
@@ -34,6 +37,9 @@ export default function SecurityPage() {
         <TabsContent value="ratelimits"><RateLimitTab/></TabsContent>
         <TabsContent value="breakers"><BreakersTab/></TabsContent>
         <TabsContent value="selftest"><SelfTestTab/></TabsContent>
+        <TabsContent value="incidents"><IncidentsTab/></TabsContent>
+        <TabsContent value="access"><AccessReviewTab/></TabsContent>
+        <TabsContent value="runbooks"><RunbooksTab/></TabsContent>
       </Tabs>
     </div>
   );
@@ -63,6 +69,16 @@ function OverviewTab() {
   const { data, refresh } = useRefresh(() => s.securityApi.scorecard(), 5000);
   if (!data) return <Skeleton/>;
   const scoreTone = data.score >= 90 ? "emerald" : data.score >= 70 ? "azure" : data.score >= 50 ? "amber" : "crimson";
+  // The headers block reports what the server actually sent, not a config
+  // file — count the ones that are really active.
+  const headerList: Array<[string, boolean]> = [
+    ["HSTS", !!data.headers.hsts],
+    ["CSP", !!data.headers.csp],
+    ["noSniff", !!data.headers.noSniff],
+    ["X-Frame", data.headers.xFrame != null],
+    ["Referrer-Policy", !!data.headers.referrerPolicy],
+  ];
+  const headersActive = headerList.filter(([, on]) => on).length;
   return (
     <div className="space-y-4">
       <div className="flex justify-between items-center">
@@ -76,7 +92,7 @@ function OverviewTab() {
         <Stat label="Rate-limited reqs" value={data.rateLimitedRequests} tone={data.rateLimitedRequests>0?"amber":"emerald"}/>
         <Stat label="Open breakers" value={data.openBreakers} tone={data.openBreakers>0?"crimson":"emerald"}/>
         <Stat label="Encryption keys" value={data.encryptionKeys.length} tone="violet" sub={data.encryptionKeys.map(k=>k.id+(k.primary?" (primary)":"")).join(",")}/>
-        <Stat label="Headers" value="all set" tone="teal" sub="HSTS · CSP · noSniff · X-Frame · Referrer-Policy"/>
+        <Stat label="Headers" value={`${headersActive}/5 active`} tone={headersActive===5?"emerald":headersActive>=3?"amber":"crimson"} sub={headerList.filter(([,on])=>!on).map(([n])=>n).join(", ") || "all five emitted"}/>
         <Stat label="Security events" value={data.totalSecurityEvents} tone="azure"/>
       </div>
       <Card>
@@ -84,7 +100,7 @@ function OverviewTab() {
         <CardContent>
           <ul className="grid md:grid-cols-2 gap-2 text-sm">
             {Object.entries(data.headers).map(([k,v])=>(
-              <li key={k} className="flex items-center gap-2"><span className="h-2 w-2 rounded-full bg-emerald"/><span className="font-mono text-xs text-text-bright">{k}</span><span className="text-text-muted text-xs">{typeof v==='boolean'?(v?'on':'off'):String(v)}</span></li>
+              <li key={k} className="flex items-center gap-2"><span className={cn("h-2 w-2 rounded-full", v?"bg-emerald":"bg-slate-600")}/><span className="font-mono text-xs text-text-bright">{k}</span><span className="text-text-muted text-xs">{typeof v==='boolean'?(v?'on':'off'):(v==null?'not set':String(v))}</span></li>
             ))}
           </ul>
         </CardContent>
@@ -96,23 +112,26 @@ function OverviewTab() {
 function EventsTab() {
   const { data, refresh } = useRefresh(() => s.securityApi.events(200), 3000);
   if (!data) return <Skeleton/>;
+  // Normalised because Node serves log-ring entries and the PHP runtime serves
+  // durable audit rows; see normalizeEvent in @/lib/security.
+  const events = (data ?? []).map(s.normalizeEvent);
   return (
     <div className="space-y-3">
-      <div className="flex justify-between items-center"><p className="text-sm text-text-muted">Security-relevant warnings and errors (last 200)</p><Button size="sm" variant="outline" onClick={refresh}>Refresh</Button></div>
+      <div className="flex justify-between items-center"><p className="text-sm text-text-muted">Security-relevant audit events (last 200)</p><Button size="sm" variant="outline" onClick={refresh}>Refresh</Button></div>
       <Card>
         <CardContent className="p-0">
           <div className="font-mono text-xs max-h-[65vh] overflow-y-auto">
-            {data.length===0 && <div className="p-6 text-center text-text-muted">No security events in ring buffer.</div>}
-            {data.map((l:any,i:number)=>(
-              <div key={i} className={cn("px-3 py-1 border-b border-white/5 flex gap-2",
-                l.level==="error"||l.level==="fatal"?"bg-crimson/5":l.level==="warn"?"bg-amber/5":""
+            {events.length===0 && <div className="p-6 text-center text-text-muted">No security events recorded yet.</div>}
+            {events.map((e)=>(
+              <div key={e.id} className={cn("px-3 py-1 border-b border-white/5 flex gap-2",
+                e.severity==="error"?"bg-crimson/5":e.severity==="warn"?"bg-amber/5":""
               )}>
-                <span className="text-text-muted shrink-0 w-20">{l.time?.slice(11,23)}</span>
-                <span className={cn("shrink-0 w-12 uppercase", {
-                  "text-crimson font-bold":l.level==="fatal"||l.level==="error",
-                  "text-amber":l.level==="warn","text-azure":l.level==="info","text-teal":l.level==="debug"
-                })}>{l.level}</span>
-                <span className="text-text-main truncate">{l.msg}</span>
+                <span className="text-text-muted shrink-0 w-24">{e.at ? new Date(e.at).toISOString().slice(11,19) : "\u2014"}</span>
+                <span className={cn("shrink-0 w-56 truncate", {
+                  "text-crimson":e.severity==="error","text-amber":e.severity==="warn","text-azure":e.severity==="info"
+                })}>{e.type}</span>
+                <span className="text-text-muted shrink-0 w-24 truncate">{e.actor ?? "\u2014"}</span>
+                <span className="text-text-main truncate">{e.detail}</span>
               </div>
             ))}
           </div>
@@ -138,7 +157,7 @@ function EncryptionTab() {
           <table className="w-full text-sm">
             <thead><tr className="text-xs text-text-muted text-left"><th className="py-1">ID</th><th>Created</th><th>Status</th></tr></thead>
             <tbody>{data.keys.map(k=>(
-              <tr key={k.id} className="border-t border-white/5"><td className="py-1.5 font-mono">{k.id}</td><td className="text-text-muted">{new Date(k.createdAt).toLocaleString()}</td><td>{k.primary?<Badge variant="emerald">primary</Badge>:<Badge variant="slate">standby</Badge>}</td></tr>
+              <tr key={k.id} className="border-t border-white/5"><td className="py-1.5 font-mono">{k.id}</td><td className="text-text-muted">{k.createdAt ? new Date(k.createdAt).toLocaleString() : "not recorded"}</td><td>{k.primary?<Badge variant="emerald">primary</Badge>:<Badge variant="slate">standby</Badge>}</td></tr>
             ))}</tbody>
           </table>
         </CardContent>
@@ -289,6 +308,269 @@ function SelfTestTab() {
             </table>}
         </CardContent>
       </Card>
+    </div>
+  );
+}
+
+/* ── Incident response ─────────────────────────────────────────────────── */
+
+const SEVERITIES: s.SecurityIncidentSeverity[] = ["low", "medium", "high", "critical"];
+const AREAS: s.SecurityIncidentArea[] = ["auth", "data", "ai", "billing", "infra", "abuse", "other"];
+const STATUSES: s.SecurityIncidentStatus[] = ["reported", "investigating", "contained", "resolved", "postmortem"];
+const ACTIONS: s.RunbookAction[] = ["NOTIFY_ADMIN", "REVOKE_TOKENS", "QUARANTINE_REPORTER"];
+
+function IncidentsTab() {
+  const { data, refresh } = useRefresh(() => s.securityApi.incidents({ limit: 50 }));
+  // Executions only carry a runbook id; the name is what makes an
+  // auto-execution legible, so resolve it against the runbook list.
+  const { data: runbooks } = useRefresh(() => s.securityApi.runbooks());
+  const runbookName = (id: string) => (runbooks ?? []).find(r => r.id === id)?.name ?? id;
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [description, setDescription] = useState("");
+  const [severity, setSeverity] = useState<s.SecurityIncidentSeverity>("high");
+  const [area, setArea] = useState<s.SecurityIncidentArea>("auth");
+  const [busy, setBusy] = useState(false);
+  const [selected, setSelected] = useState<string | null>(null);
+  const [note, setNote] = useState("");
+
+  async function report() {
+    if (title.trim().length < 3 || description.trim().length < 3) { toast.error("Title and description are both required."); return; }
+    setBusy(true);
+    try {
+      await s.securityApi.reportIncident({ title, description, severity, area });
+      toast.success("Incident reported. Matching runbooks ran automatically.");
+      setTitle(""); setDescription(""); setOpen(false); refresh();
+    } catch (e: any) { toast.error(e?.message ?? "Could not report the incident."); }
+    finally { setBusy(false); }
+  }
+
+  async function advance(id: string, status: s.SecurityIncidentStatus, noteText?: string) {
+    try {
+      await s.securityApi.updateIncident(id, { status, note: noteText });
+      toast.success("Incident updated."); setNote(""); refresh();
+    } catch (e: any) { toast.error(e?.message ?? "Could not update the incident."); }
+  }
+
+  if (!data) return <Skeleton/>;
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-text-muted">Reported incidents for this organization. Matching runbooks execute on report.</p>
+        <div className="flex gap-2"><Button size="sm" variant="outline" onClick={refresh}>Refresh</Button><Button size="sm" onClick={()=>setOpen(!open)}>{open?"Cancel":"Report incident"}</Button></div>
+      </div>
+      {open && (
+        <Card><CardContent className="space-y-2 pt-4">
+          <Input value={title} onChange={e=>setTitle(e.target.value)} placeholder="Incident title"/>
+          <textarea value={description} onChange={e=>setDescription(e.target.value)} rows={3} placeholder="What happened?" className="w-full rounded border border-white/10 bg-bg-deep px-3 py-2 text-sm"/>
+          <div className="flex flex-wrap gap-2">
+            <select value={severity} onChange={e=>setSeverity(e.target.value as s.SecurityIncidentSeverity)} className="rounded border border-white/10 bg-bg-deep px-2 py-1.5 text-sm">
+              {SEVERITIES.map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={area} onChange={e=>setArea(e.target.value as s.SecurityIncidentArea)} className="rounded border border-white/10 bg-bg-deep px-2 py-1.5 text-sm">
+              {AREAS.map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+            <Button size="sm" onClick={report} disabled={busy}>{busy?"Reporting…":"Submit"}</Button>
+          </div>
+        </CardContent></Card>
+      )}
+      {data.length===0 && <Card><CardContent className="py-6 text-center text-text-muted text-sm">No incidents reported.</CardContent></Card>}
+      {data.map(inc=>(
+        <Card key={inc.id}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base">{inc.title}</CardTitle>
+              <div className="flex items-center gap-2">
+                <Badge variant={inc.severity==="critical"?"crimson":inc.severity==="high"?"amber":"slate"}>{inc.severity}</Badge>
+                <Badge variant={inc.status==="resolved"?"emerald":inc.status==="reported"?"amber":"azure"}>{inc.status}</Badge>
+              </div>
+            </div>
+            <CardDescription className="font-mono text-xs">{inc.id} · {inc.area} · reported {new Date(inc.createdAt).toLocaleString()}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <p className="text-sm text-text-main whitespace-pre-wrap">{inc.description}</p>
+            {inc.runbookExecutions.length>0 && (
+              <div className="rounded border border-white/10 bg-bg-deep p-2 text-xs">
+                <div className="text-text-muted mb-1">Runbooks executed automatically</div>
+                {inc.runbookExecutions.map((ex,i)=>(
+                  <div key={i} className="font-mono">{runbookName(ex.runbookId)} · {ex.status} · {Object.values(ex.output ?? {}).join(" ")}</div>
+                ))}
+              </div>
+            )}
+            <div className="flex flex-wrap items-center gap-2">
+              <select value="" onChange={e=>{ if (e.target.value) advance(inc.id, e.target.value as s.SecurityIncidentStatus); }} className="rounded border border-white/10 bg-bg-deep px-2 py-1 text-xs">
+                <option value="">Advance status…</option>
+                {STATUSES.map(v=><option key={v} value={v}>{v}</option>)}
+              </select>
+              <Button size="sm" variant="outline" onClick={()=>setSelected(selected===inc.id?null:inc.id)}>Timeline ({inc.timeline.length})</Button>
+            </div>
+            {selected===inc.id && (
+              <div className="space-y-1">
+                <ul className="text-xs space-y-1">
+                  {inc.timeline.map((t,i)=>(
+                    <li key={i} className="text-text-muted"><span className="font-mono">{new Date(t.at).toLocaleString()}</span> · <span className="text-text-main">{t.actor}</span> · {t.note}</li>
+                  ))}
+                </ul>
+                <div className="flex gap-2">
+                  <Input value={note} onChange={e=>setNote(e.target.value)} placeholder="Add a timeline note…" className="text-xs"/>
+                  <Button size="sm" variant="outline" onClick={()=>advance(inc.id, inc.status, note)}>Add note</Button>
+                </div>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
+    </div>
+  );
+}
+
+function AccessReviewTab() {
+  const { data, refresh } = useRefresh(() => s.securityApi.latestAccessReview(), 0);
+  const [running, setRunning] = useState(false);
+  const [result, setResult] = useState<s.AccessReviewRunResult | null>(null);
+  const [dormantDays, setDormantDays] = useState(90);
+
+  async function run() {
+    setRunning(true);
+    try { setResult(await s.securityApi.runAccessReview(dormantDays)); toast.success("Access review generated."); }
+    catch (e: any) { toast.error(e?.message ?? "Could not run the access review."); }
+    finally { setRunning(false); }
+  }
+
+  async function attest(itemId: string, status: s.AccessReviewAttestStatus) {
+    try { await s.securityApi.attestAccessItem(itemId, status); toast.success(`Marked ${status}.`); if (result) refresh(); }
+    catch (e: any) { toast.error(e?.message ?? "Could not record the attestation."); }
+  }
+
+  const review = result?.review ?? data;
+  const items = result?.campaign?.items ?? [];
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-text-muted">Dormant accounts and privileged-role counts for this organization.</p>
+        <div className="flex items-center gap-2">
+          <Input type="number" value={dormantDays} onChange={e=>setDormantDays(Number(e.target.value))} className="w-24" min={7} max={365}/>
+          <Button size="sm" onClick={run} disabled={running}>{running?"Running…":"Run review"}</Button>
+        </div>
+      </div>
+      {!review && <Card><CardContent className="py-6 text-center text-text-muted text-sm">No access review has been run yet.</CardContent></Card>}
+      {review && (
+        <>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            <Stat label="Dormant accounts" value={review.dormantUsers.length} tone={review.dormantUsers.length?"amber":"emerald"} sub={`>${result?.campaign?.dormantDays ?? dormantDays} days inactive`}/>
+            <Stat label="Admins" value={review.adminCount} tone="azure"/>
+            <Stat label="Super admins" value={review.superAdminCount} tone={review.superAdminCount>3?"amber":"violet"}/>
+            <Stat label="Generated" value={new Date(review.generatedAt).toLocaleTimeString()} tone="bright"/>
+          </div>
+          {review.recommendations.length>0 && (
+            <Card><CardHeader><CardTitle>Recommendations</CardTitle></CardHeader><CardContent>
+              <ul className="text-sm list-disc list-inside text-text-main">{review.recommendations.map((r,i)=><li key={i}>{r}</li>)}</ul>
+            </CardContent></Card>
+          )}
+          <Card><CardHeader><CardTitle>Dormant accounts</CardTitle></CardHeader><CardContent className="p-0">
+            {review.dormantUsers.length===0 && <div className="p-6 text-center text-text-muted text-sm">Nothing dormant. Healthy.</div>}
+            <table className="w-full text-sm">
+              <thead><tr className="text-xs text-text-muted text-left"><th className="px-3 py-2">Account</th><th>Role</th><th>Last activity</th><th>Days inactive</th><th/></tr></thead>
+              <tbody>{review.dormantUsers.map(u=>{
+                const item = items.find(i=>i.userId===u.userId);
+                return (
+                  <tr key={u.userId} className="border-t border-white/5">
+                    <td className="px-3 py-2 font-mono text-xs">{u.email}</td>
+                    <td>{u.role}</td>
+                    <td className="text-xs text-text-muted">{u.lastLoginAt?new Date(u.lastLoginAt).toLocaleDateString():"never recorded"}</td>
+                    <td>{u.daysInactive}</td>
+                    <td className="text-right space-x-1">
+                      {item ? (
+                        <>
+                          <Button size="sm" variant="outline" onClick={()=>attest(item.id,"APPROVED")}>Approve</Button>
+                          <Button size="sm" variant="outline" onClick={()=>attest(item.id,"REVOKED")}>Revoke</Button>
+                          <Button size="sm" variant="outline" onClick={()=>attest(item.id,"QUARANTINED")}>Quarantine</Button>
+                        </>
+                      ) : <span className="text-xs text-text-muted">run a review to attest</span>}
+                    </td>
+                  </tr>
+                );
+              })}</tbody>
+            </table>
+          </CardContent></Card>
+        </>
+      )}
+    </div>
+  );
+}
+
+function RunbooksTab() {
+  const { data, refresh } = useRefresh(() => s.securityApi.runbooks());
+  const [open, setOpen] = useState(false);
+  const [name, setName] = useState("");
+  const [severity, setSeverity] = useState<s.SecurityIncidentSeverity>("high");
+  const [area, setArea] = useState<s.SecurityIncidentArea>("auth");
+  const [actions, setActions] = useState<s.RunbookAction[]>(["NOTIFY_ADMIN"]);
+  const [busy, setBusy] = useState(false);
+
+  function toggleAction(a: s.RunbookAction) {
+    setActions(prev => prev.includes(a) ? prev.filter(x=>x!==a) : [...prev, a]);
+  }
+
+  async function create() {
+    if (name.trim().length < 2 || actions.length === 0) { toast.error("A name and at least one action are required."); return; }
+    setBusy(true);
+    try { await s.securityApi.createRunbook({ name, triggerSeverity: severity, triggerArea: area, actions }); toast.success("Runbook created."); setName(""); setOpen(false); refresh(); }
+    catch (e: any) { toast.error(e?.message ?? "Could not create the runbook."); }
+    finally { setBusy(false); }
+  }
+
+  if (!data) return <Skeleton/>;
+  return (
+    <div className="space-y-3">
+      <div className="flex justify-between items-center">
+        <p className="text-sm text-text-muted">Runbooks run automatically when a matching incident is reported.</p>
+        <div className="flex gap-2"><Button size="sm" variant="outline" onClick={refresh}>Refresh</Button><Button size="sm" onClick={()=>setOpen(!open)}>{open?"Cancel":"New runbook"}</Button></div>
+      </div>
+      {open && (
+        <Card><CardContent className="space-y-2 pt-4">
+          <Input value={name} onChange={e=>setName(e.target.value)} placeholder="Runbook name"/>
+          <div className="flex flex-wrap gap-2">
+            <select value={severity} onChange={e=>setSeverity(e.target.value as s.SecurityIncidentSeverity)} className="rounded border border-white/10 bg-bg-deep px-2 py-1.5 text-sm">
+              {SEVERITIES.map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+            <select value={area} onChange={e=>setArea(e.target.value as s.SecurityIncidentArea)} className="rounded border border-white/10 bg-bg-deep px-2 py-1.5 text-sm">
+              {AREAS.map(v=><option key={v} value={v}>{v}</option>)}
+            </select>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {ACTIONS.map(a=>(
+              <button key={a} type="button" onClick={()=>toggleAction(a)}
+                className={cn("rounded border px-2 py-1 text-xs font-mono", actions.includes(a)?"border-azure/60 bg-azure/10 text-azure":"border-white/10 text-text-muted")}>
+                {a}
+              </button>
+            ))}
+          </div>
+          <Button size="sm" onClick={create} disabled={busy}>{busy?"Creating…":"Create runbook"}</Button>
+        </CardContent></Card>
+      )}
+      {data.length===0 && <Card><CardContent className="py-6 text-center text-text-muted text-sm">No runbooks defined.</CardContent></Card>}
+      {data.map(rb=>(
+        <Card key={rb.id}>
+          <CardHeader className="pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base">{rb.name}</CardTitle>
+              <Badge variant={rb.enabled?"emerald":"slate"}>{rb.enabled?"enabled":"disabled"}</Badge>
+            </div>
+            <CardDescription className="font-mono text-xs">{rb.id} · triggers on {rb.triggerSeverity}/{rb.triggerArea}</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-2">
+            <div className="flex flex-wrap gap-1">{rb.actions.map(a=><Badge key={a} variant="violet">{a}</Badge>)}</div>
+            {rb.executions.length>0 && (
+              <div className="rounded border border-white/10 bg-bg-deep p-2 text-xs space-y-1">
+                {rb.executions.map(ex=>(
+                  <div key={ex.id} className="text-text-muted"><span className="font-mono">{new Date(ex.createdAt).toLocaleString()}</span> · {ex.incidentId} · {ex.status} · {Object.values(ex.output ?? {}).join(" ")}</div>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ))}
     </div>
   );
 }
