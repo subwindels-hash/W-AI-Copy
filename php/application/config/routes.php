@@ -79,6 +79,12 @@ $route['api/v1/model-factory/models'] = 'model_factory/models_dispatch';
 $route['api/v1/model-factory/fine-tunes'] = 'model_factory/fine_tunes_dispatch';
 $route['api/v1/model-factory/notes/(:any)'] = 'model_factory/notes_dispatch/$1';
 $route['api/v1/model-factory/notes'] = 'model_factory/notes_dispatch';
+// Final Enterprise Integration & Validation (Node routes/v76validation.ts parity - 7 routes, admin only)
+$route['api/v1/validation/report'] = 'v76_validation/report';
+$route['api/v1/validation/run'] = 'v76_validation/run';
+$route['api/v1/validation/history'] = 'v76_validation/history';
+$route['api/v1/validation/notes/(:any)'] = 'v76_validation/notes_dispatch/$1';
+$route['api/v1/validation/notes'] = 'v76_validation/notes_dispatch';
 // Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
 $route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
 $route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';

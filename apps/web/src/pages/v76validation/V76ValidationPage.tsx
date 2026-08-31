@@ -115,7 +115,10 @@ export function V76ValidationPage() {
 
   if (!report) return <div className="p-6 text-sm text-text-muted">{err ? `Error: ${err}` : "Loading validation report…"}</div>;
 
-  const empty = report.totalSystems === 0 && history.length === 0 && notes.length === 0;
+  // A read on an organization with nothing stored runs the first probe
+  // itself, so "no runs yet" means no stored reports — the figures below
+  // are still real, they were measured moments ago by that first run.
+  const empty = history.length === 0;
 
   return (
     <div className="mx-auto max-w-6xl space-y-6">
@@ -134,8 +137,8 @@ export function V76ValidationPage() {
         <div className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-4 flex items-start gap-3">
           <AlertTriangle className="h-5 w-5 text-amber-400 mt-0.5" />
           <div className="text-sm">
-            <div className="font-semibold text-text-bright">No validation runs yet</div>
-            <div className="text-text-muted">This organization has not run a probe. Click <em>Re-run probe</em> to build the first report. Counts below are honest zeros until then.</div>
+            <div className="font-semibold text-text-bright">No stored reports yet</div>
+            <div className="text-text-muted">Nothing was on file, so loading this page ran the first probe. The counts below are that run's measurements. <em>Re-run probe</em> stores another.</div>
           </div>
         </div>
       )}
@@ -148,8 +151,8 @@ export function V76ValidationPage() {
       </div>
 
       <div className="grid gap-4 md:grid-cols-2">
-        <Card><CardHeader><CardDescription>Consent gate (S36/S40)</CardDescription></CardHeader><CardContent><PassBadge passed={report.consentGateEnforced} /><div className="text-xs text-text-muted mt-2">Voice cloning blocks without a recorded consent.</div></CardContent></Card>
-        <Card><CardHeader><CardDescription>Governance gate (S39/S40/S81)</CardDescription></CardHeader><CardContent><PassBadge passed={report.governanceGateEnforced} /><div className="text-xs text-text-muted mt-2">High-risk execution requires two approvals.</div></CardContent></Card>
+        <Card><CardHeader><CardDescription>Consent gate (S36/S40)</CardDescription></CardHeader><CardContent><PassBadge passed={report.consentGateEnforced} /><div className="text-xs text-text-muted mt-2">Reported only when a check measured it. This build reports false — the checklist item says why.</div></CardContent></Card>
+        <Card><CardHeader><CardDescription>Governance gate (S39/S40/S81)</CardDescription></CardHeader><CardContent><PassBadge passed={report.governanceGateEnforced} /><div className="text-xs text-text-muted mt-2">Reported only when a check measured it. This build reports false — the checklist item says why.</div></CardContent></Card>
       </div>
 
       <Card>
@@ -227,7 +230,7 @@ export function V76ValidationPage() {
       <Card>
         <CardHeader>
           <CardTitle>Notes</CardTitle>
-          <CardDescription>Per-org annotations the operator attaches to validation runs. Real Redis writes; every read reflects real state.</CardDescription>
+          <CardDescription>Per-org annotations the operator attaches to validation runs. Every write is stored; every read reflects what is on file.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
           {notes.length === 0 ? (

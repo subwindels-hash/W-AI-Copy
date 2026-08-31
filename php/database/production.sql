@@ -1216,3 +1216,37 @@ CREATE TABLE IF NOT EXISTS model_factory_notes (
   UNIQUE KEY uk_model_factory_notes_seq (seq),
   KEY idx_model_factory_notes_org (organization_id, seq)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+
+-- ---------------------------------------------------------------------------
+-- Final Enterprise Integration & Validation (migration 011) — the report
+-- register. Same DDL as php/application/migrations/011_v76_validation_module.sql,
+-- applied here so a fresh installation needs no follow-up import. No seed rows:
+-- a validation report exists only after somebody runs one.
+-- ---------------------------------------------------------------------------
+
+CREATE TABLE IF NOT EXISTS v76_reports (
+  id              CHAR(21)      NOT NULL PRIMARY KEY,          -- 'v76r_' + 16 hex
+  organization_id CHAR(36)      NOT NULL,
+  generated_at    DATETIME      NOT NULL,
+  body            JSON          NOT NULL,                      -- the whole report
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_v76_reports_seq (seq),
+  KEY idx_v76_reports_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- The user-authored annotations ledger (Node's tenantStore with prefix
+-- "v76:notes" and id prefix "v76-"). Only this module owns this table.
+CREATE TABLE IF NOT EXISTS v76_notes (
+  id              CHAR(12)      NOT NULL PRIMARY KEY,          -- 'v76-' + 8 hex
+  organization_id CHAR(36)      NOT NULL,
+  title           VARCHAR(200)  NOT NULL,
+  body            TEXT          NOT NULL,
+  tags            JSON          NOT NULL,
+  created_by      CHAR(36)      NULL,
+  created_at      DATETIME      NOT NULL,
+  updated_at      DATETIME      NOT NULL,
+  seq             BIGINT UNSIGNED NOT NULL AUTO_INCREMENT,
+  UNIQUE KEY uk_v76_notes_seq (seq),
+  KEY idx_v76_notes_org (organization_id, seq)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;

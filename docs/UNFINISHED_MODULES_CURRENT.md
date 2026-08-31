@@ -8,14 +8,15 @@ Companion to `docs/UNFINISHED_MODULES.md`, which is the historical Sessions 155�
 |---|---|---|
 | Source of truth | `audit/build-inventory.mjs` (re-run) | `php/application/controllers/` + `docs/PHP_MODULE_PARITY.md` |
 | Modules considered | 156 | 155 (the 156 minus `_scaffolds`) |
-| Finished | 155 `COMPLETE` | 39 ported |
-| **Unfinished** | **1 STUB** | **2 partial + 114 not ported** |
+| Finished | 155 `COMPLETE` | 40 ported |
+| **Unfinished** | **1 STUB** | **2 partial + 113 not ported** |
 
-**Completed since this ledger was written:** `kernel`, `tenantIsolation`, `usage`, `security` and `platform` (2026-08-30) — 58 endpoints, 22 new MySQL tables, migrations `002_kernel_module.sql`, `003_tenant_isolation_and_usage.sql`, `004_security_module.sql` and `005_platform_module.sql` — and `moduleCenter`, `moduleRuntime`, `autonomous`, `benchmarks`, `memoryEvolution` and
-`modelFactory` (2026-08-31) — 50 more endpoints, 15 new MySQL tables, migrations
+**Completed since this ledger was written:** `kernel`, `tenantIsolation`, `usage`, `security` and `platform` (2026-08-30) — 58 endpoints, 22 new MySQL tables, migrations `002_kernel_module.sql`, `003_tenant_isolation_and_usage.sql`, `004_security_module.sql` and `005_platform_module.sql` — and `moduleCenter`, `moduleRuntime`, `autonomous`, `benchmarks`, `memoryEvolution`,
+`modelFactory` and `v76validation` (2026-08-31) — 57 more endpoints, 17 new MySQL tables, migrations
 `006_module_center.sql`, `007_autonomous_module.sql`, `008_benchmarks_module.sql`,
-`009_memory_evolution_module.sql` and `010_model_factory_module.sql`. Ten parity specs under
-`tests/php-api/` cover them (81 + 77 + 153 + 146 + 124 + 54 + 157 + 146 + 112 + 207 = 1,257 checks). They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
+`009_memory_evolution_module.sql`, `010_model_factory_module.sql` and `011_v76_validation_module.sql`.
+Eleven parity specs under `tests/php-api/` cover them (81 + 77 + 153 + 146 + 124 + 54 + 157 + 146 +
+112 + 207 + 118 = 1,375 checks). They are now listed as ported in `docs/PHP_MODULE_PARITY.md` and removed from §2.2 below.
 
 > **The committed `audit/module-inventory.json` is stale** — 153 records, every status `COMPLETE`.
 > It predates later modules and the `_scaffolds/` quarantine. Reproduce this document with:
@@ -337,7 +338,7 @@ deployment concern (move the key to KMS/Vault), not a fabricated guarantee.
 
 ---
 
-## 2. PHP / cPanel build — 114 unfinished modules
+## 2. PHP / cPanel build — 113 unfinished modules
 
 PHP ships 41 controllers and 47 models. Every path with no controller falls through
 `application/config/routes.php` (`$route['api/v1/(:any)'] = 'api/dispatch/$1'`) to
@@ -350,9 +351,9 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | `composer` (Composer / Workflows) | 27 | 2262 | `Workflows.php` | workflow engine only — task, action-item, Talk, condition, loop, delay, AI and approval nodes; other node types return HTTP 501 `NODE_NOT_IMPLEMENTED`; the Composer canvas is not ported |
 | `collaboration` (Collaboration primitives) | 71 | 2722 | `Workspace.php` | workspace dashboard + tasks only; the other collaboration primitives have no PHP controller |
 
-### 2.2 Not ported at all (114) — each returns 501 on the PHP build
+### 2.2 Not ported at all (113) — each returns 501 on the PHP build
 
-#### AI / ML platform — 8
+#### AI / ML platform — 7
 
 | # | Module | Title | Routes | SLOC |
 |---|---|---|---|---|
@@ -363,7 +364,6 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 5 | `nativeAiApi` | nativeAiApi | 16 | 1798 |
 | 6 | `scientific` | Scientific Research (S68) | 12 | 599 |
 | 7 | `training` | Training / LoRA (S60) | 11 | 752 |
-| 8 | `v76validation` | S76 Final Validation | 7 | 881 |
 
 #### Media / creative — 16
 
@@ -511,11 +511,11 @@ PHP ships 41 controllers and 47 models. Every path with no controller falls thro
 | 6 | `sportsIntelligence` | sportsIntelligence | 24 | 4510 |
 | 7 | `uxIntelligence` | UX Intelligence (S78) | 12 | 862 |
 
-Totals: AI / ML platform 8, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 21, Mobile / devices / channels 20, Other 7 = **114**.  
+Totals: AI / ML platform 7, Media / creative 16, Voice / wake 1, Commerce / payments 13, Industry / verticals 15, Data / intelligence 13, Platform / infra 21, Mobile / devices / channels 20, Other 7 = **113**.  
 
 Removed since the last revision: `moduleCenter` (13 routes), `moduleRuntime` (4 routes), `autonomous`
-(6 routes), `benchmarks` (8 routes), `memoryEvolution` (6 routes) and `modelFactory` (13 routes) are
-ported and validated — see `docs/PHP_MODULE_PARITY.md`.
+(6 routes), `benchmarks` (8 routes), `memoryEvolution` (6 routes), `modelFactory` (13 routes) and
+`v76validation` (7 routes) are ported and validated — see `docs/PHP_MODULE_PARITY.md`.
 
 ### 2.3 Named gaps inside the 28 "fully ported" modules
 
