@@ -47,6 +47,21 @@ export interface Mf2BenchmarkResult {
   at: string;
 }
 
+/**
+ * An annotation on the factory itself — Node's tenantStore ledger behind the
+ * `/notes` routes. The payload is deliberately three fields: a title, a body
+ * and tags. It is not a model field and it is not derived from anything, so
+ * nothing in the dashboard counts it.
+ */
+export interface Mf2Note {
+  id: string;
+  title: string;
+  body: string;
+  tags: string[];
+  createdAt: string;
+  createdBy?: string;
+}
+
 export interface Mf2Dashboard {
   totalModels: number;
   byStage: Record<Mf2Stage, number>;

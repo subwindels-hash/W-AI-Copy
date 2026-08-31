@@ -217,8 +217,9 @@ importing them — still no Terminal:
 2. **Download** the migration file you need (`002_kernel_module.sql`,
    `003_tenant_isolation_and_usage.sql`, `004_security_module.sql`,
    `005_platform_module.sql`, `006_module_center.sql`,
-   `007_autonomous_module.sql`, `008_benchmarks_module.sql` or
-   `009_memory_evolution_module.sql`) to your computer.
+   `007_autonomous_module.sql`, `008_benchmarks_module.sql`,
+   `009_memory_evolution_module.sql` or `010_model_factory_module.sql`) to your
+   computer.
 3. cPanel → **phpMyAdmin** → select the database → **Import** → **Choose File** →
    pick the downloaded file → **Go**.
 4. Reload the site. Nothing else changes: no files are replaced, no keys are
@@ -237,6 +238,7 @@ already applied, changes nothing.
 | `007_autonomous_module.sql` | The Autonomous Organization approval register: `autonomous_decisions`. Until it is imported, `/api/v1/autonomous/*` returns `501 MODULE_NOT_MIGRATED`. No seed data is added — an organization with no proposals is the correct empty state, and the dashboard's budgets, board seats and AI executives stay zero because no backing ledger is shipped with it. |
 | `008_benchmarks_module.sql` | The Benchmark Center result registry: `benchmark_runs`, `benchmark_schedules` and `benchmark_notes`. Until it is imported, `/api/v1/benchmarks/*` returns `501 MODULE_NOT_MIGRATED`. No runs are seeded: an organization that has never recorded an evaluation reports zero runs, a zero average and fourteen zero area scores, and a result can only be recorded with an evaluator and an evidence reference. |
 | `009_memory_evolution_module.sql` | The Memory Evolution register: `memory_evolution_memories`, `memory_evolution_jobs` and `memory_evolution_metrics`. Until it is imported, `/api/v1/memory-evolution/*` returns `501 MODULE_NOT_MIGRATED`. All six routes are administrator-only. No memories are seeded — Node's nine sample memories were demo data, so a fresh organization reports an empty register. |
+| `010_model_factory_module.sql` | The Model Factory: `model_factory_models`, `model_factory_benchmarks`, `model_factory_fine_tunes` and `model_factory_notes`. Until it is imported, `/api/v1/model-factory/*` returns `501 MODULE_NOT_MIGRATED`. All thirteen routes are administrator-only. No models are seeded — Node's five sample models were demo data, so a fresh organization reports eight zero stages and an empty register. |
 Upgrading files (uploading a newer package over an older one) is independent of
 this step and safe on its own — but the new endpoints will keep returning 501
 until the matching migration has been imported.

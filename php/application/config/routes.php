@@ -69,6 +69,16 @@ $route['api/v1/memory-evolution/memories/(:any)/share'] = 'memory_evolution/memo
 $route['api/v1/memory-evolution/memories'] = 'memory_evolution/memories_dispatch';
 $route['api/v1/memory-evolution/consolidate'] = 'memory_evolution/consolidate';
 $route['api/v1/memory-evolution/consolidations'] = 'memory_evolution/consolidations';
+// Enterprise AI Model Factory (Node routes/modelFactory.ts parity - 13 routes, admin only)
+$route['api/v1/model-factory/dashboard/rollup'] = 'model_factory/dashboard_rollup';
+$route['api/v1/model-factory/models/(:any)/advance'] = 'model_factory/model_advance/$1';
+$route['api/v1/model-factory/models/(:any)/benchmark'] = 'model_factory/model_benchmark/$1';
+$route['api/v1/model-factory/models/(:any)/safety'] = 'model_factory/model_safety/$1';
+$route['api/v1/model-factory/models/(:any)/governance-approve'] = 'model_factory/model_governance/$1';
+$route['api/v1/model-factory/models'] = 'model_factory/models_dispatch';
+$route['api/v1/model-factory/fine-tunes'] = 'model_factory/fine_tunes_dispatch';
+$route['api/v1/model-factory/notes/(:any)'] = 'model_factory/notes_dispatch/$1';
+$route['api/v1/model-factory/notes'] = 'model_factory/notes_dispatch';
 // Module Center (Node routes/moduleCenter.ts parity - 13 routes, super admin only)
 $route['api/v1/super-admin/module-center/dashboard'] = 'module_center/dashboard';
 $route['api/v1/super-admin/module-center/modules/(:any)'] = 'module_center/module_item/$1';
